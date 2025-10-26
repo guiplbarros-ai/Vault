@@ -1,0 +1,212 @@
+'use client'
+
+import { Dialog } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import { X, Calendar, Wallet, Tag, Hash, TrendingUp, CreditCard } from 'lucide-react'
+import type { Transaction } from '@/lib/hooks/use-transacoes'
+import { Button } from '@/components/ui/button'
+
+interface TransactionDetailModalProps {
+  transaction: Transaction | null
+  isOpen: boolean
+  onClose: () => void
+}
+
+export function TransactionDetailModal({
+  transaction,
+  isOpen,
+  onClose,
+}: TransactionDetailModalProps) {
+  if (!transaction) return null
+
+  const isReceita = transaction.valor > 0
+  const isParcelado = transaction.parcela_n && transaction.parcelas_total
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-neutral-200">
+            <h2 className="text-2xl font-bold text-neutral-900">
+              Detalhes da Transação
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 space-y-6">
+            {/* Valor */}
+            <div className="text-center pb-6 border-b border-neutral-100">
+              <div className="text-sm text-neutral-500 mb-2">Valor</div>
+              <div
+                className={`text-4xl font-bold ${
+                  isReceita ? 'text-success-600' : 'text-error-600'
+                }`}
+              >
+                {formatCurrency(transaction.valor)}
+              </div>
+              {transaction.valorOriginal && transaction.moedaOriginal && (
+                <div className="text-sm text-neutral-500 mt-2">
+                  Original: {formatCurrency(transaction.valorOriginal)}{' '}
+                  {transaction.moedaOriginal}
+                </div>
+              )}
+            </div>
+
+            {/* Grid de Informações */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Data */}
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  <Calendar className="h-5 w-5 text-primary-500" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-neutral-700">Data</div>
+                  <div className="text-sm text-neutral-900">
+                    {formatDate(transaction.data, 'long')}
+                  </div>
+                </div>
+              </div>
+
+              {/* Conta */}
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  <Wallet className="h-5 w-5 text-primary-500" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-neutral-700">Conta</div>
+                  <div className="text-sm text-neutral-900">
+                    {transaction.conta?.apelido || 'N/A'}
+                  </div>
+                  <div className="text-xs text-neutral-500">
+                    {transaction.conta?.tipo || 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Categoria */}
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  <Tag className="h-5 w-5 text-primary-500" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-neutral-700">Categoria</div>
+                  <div className="text-sm text-neutral-900">
+                    {transaction.categoria ? (
+                      <Badge variant="primary">
+                        {transaction.categoria.grupo
+                          ? `${transaction.categoria.grupo} > `
+                          : ''}
+                        {transaction.categoria.nome}
+                      </Badge>
+                    ) : (
+                      <span className="text-neutral-400">Sem categoria</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tipo */}
+              {transaction.tipo && (
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <TrendingUp className="h-5 w-5 text-primary-500" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-neutral-700">Tipo</div>
+                    <div className="text-sm text-neutral-900">
+                      <Badge
+                        variant={
+                          transaction.tipo === 'RECEITA'
+                            ? 'success'
+                            : transaction.tipo === 'DESPESA'
+                            ? 'error'
+                            : 'neutral'
+                        }
+                      >
+                        {transaction.tipo}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Saldo Após */}
+              {transaction.saldo_apos !== null && (
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <TrendingUp className="h-5 w-5 text-primary-500" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-neutral-700">
+                      Saldo Após
+                    </div>
+                    <div className="text-sm text-neutral-900">
+                      {formatCurrency(transaction.saldo_apos)}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Parcelamento */}
+              {isParcelado && (
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <CreditCard className="h-5 w-5 text-primary-500" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-neutral-700">
+                      Parcelamento
+                    </div>
+                    <div className="text-sm text-neutral-900">
+                      Parcela {transaction.parcela_n} de {transaction.parcelas_total}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ID Externo */}
+              {transaction.idExterno && (
+                <div className="flex items-start gap-3 md:col-span-2">
+                  <div className="flex-shrink-0 mt-1">
+                    <Hash className="h-5 w-5 text-primary-500" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-neutral-700">
+                      ID Externo
+                    </div>
+                    <div className="text-xs text-neutral-600 font-mono">
+                      {transaction.idExterno}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Descrição */}
+            <div className="border-t border-neutral-100 pt-4">
+              <div className="text-sm font-medium text-neutral-700 mb-2">
+                Descrição
+              </div>
+              <div className="text-sm text-neutral-900 bg-neutral-50 p-3 rounded-lg">
+                {transaction.descricao}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-6 border-t border-neutral-200 flex justify-end">
+            <Button onClick={onClose}>Fechar</Button>
+          </div>
+        </div>
+      </div>
+    </Dialog>
+  )
+}

@@ -1,0 +1,33 @@
+{
+	"name": "@cortex/etl",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./parsers": "./src/parsers/index.ts",
+		"./templates": "./src/templates/index.ts"
+	},
+	"scripts": {
+		"dev": "node --loader ts-node/esm src/cli/import.ts",
+		"test": "vitest",
+		"test:watch": "vitest --watch",
+		"test:e2e": "tsx scripts/e2e-test.ts",
+		"generate:large-file": "tsx scripts/generate-large-file.ts"
+	},
+	"dependencies": {
+		"@cortex/services": "workspace:*",
+		"@supabase/supabase-js": "^2.47.10",
+		"dotenv": "^16.4.7",
+		"papaparse": "^5.4.1",
+		"xml2js": "^0.6.2"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"@types/papaparse": "^5.3.15",
+		"@types/xml2js": "^0.4.14",
+		"tsx": "^4.19.2",
+		"typescript": "^5.7.2",
+		"vitest": "^2.1.8"
+	}
+}
