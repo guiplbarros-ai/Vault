@@ -51,20 +51,20 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', showClose
       <div
         className={cn(
           'relative z-10 w-full mx-4',
-          'bg-white dark:bg-neutral-900',
-          'rounded-lg shadow-xl',
-          'border border-neutral-200 dark:border-neutral-800',
+          'bg-surface text-text',
+          'rounded-2xl shadow-card',
+          'border border-line/25',
           sizeClasses[size]
         )}
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-line/25 bg-elev rounded-t-2xl">
             {title && <h2 className="text-lg font-semibold">{title}</h2>}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="p-1 rounded-lg hover:bg-surface transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

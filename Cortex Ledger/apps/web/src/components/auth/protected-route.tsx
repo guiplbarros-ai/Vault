@@ -9,7 +9,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
+    console.log('🔐 ProtectedRoute:', { loading, hasUser: !!user, userId: user?.id })
+
     if (!loading && !user) {
+      console.log('⚠️ Sem usuário, redirecionando para /login')
       router.push('/login')
     }
   }, [user, loading, router])

@@ -65,7 +65,7 @@ export function TransactionFilters({
       <div className="space-y-4">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-neutral-400" />
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted" />
           <Input
             placeholder="Buscar por descrição..."
             value={search}
@@ -78,7 +78,7 @@ export function TransactionFilters({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Conta */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+            <label className="block text-sm font-medium mb-1.5 text-text">
               Conta
             </label>
             <Select value={contaId} onChange={(e) => onContaChange(e.target.value)}>
@@ -93,7 +93,7 @@ export function TransactionFilters({
 
           {/* Categoria */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+            <label className="block text-sm font-medium mb-1.5 text-text">
               Categoria
             </label>
             <Select
@@ -112,7 +112,7 @@ export function TransactionFilters({
 
           {/* Tipo */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+            <label className="block text-sm font-medium mb-1.5 text-text">
               Tipo
             </label>
             <Select value={tipo} onChange={(e) => onTipoChange(e.target.value)}>
@@ -125,7 +125,7 @@ export function TransactionFilters({
 
           {/* Data Início */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+            <label className="block text-sm font-medium mb-1.5 text-text">
               Data Início
             </label>
             <Input
@@ -137,7 +137,7 @@ export function TransactionFilters({
 
           {/* Data Fim */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-neutral-700">
+            <label className="block text-sm font-medium mb-1.5 text-text">
               Data Fim
             </label>
             <Input

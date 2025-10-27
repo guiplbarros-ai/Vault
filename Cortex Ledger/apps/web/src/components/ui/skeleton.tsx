@@ -34,7 +34,7 @@ export function Skeleton({ className, variant = 'pulse', ...props }: SkeletonPro
   return (
     <div
       className={cn(
-        'bg-neutral-200 dark:bg-neutral-800',
+        'bg-elev',
         {
           'animate-pulse': variant === 'pulse',
           'animate-shimmer': variant === 'wave',
@@ -81,7 +81,7 @@ export function SkeletonText({ lines = 3, className }: SkeletonTextProps) {
  */
 export function SkeletonCard() {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="rounded-2xl border border-line/25 bg-surface p-6 shadow-card">
       <div className="space-y-4">
         <Skeleton className="h-6 w-1/3" />
         <SkeletonText lines={3} />
@@ -110,7 +110,7 @@ export function SkeletonTable({ rows = 5, columns = 4 }: SkeletonTableProps) {
   return (
     <div className="w-full space-y-3">
       {/* Header */}
-      <div className="flex gap-4 border-b border-neutral-200 pb-2 dark:border-neutral-800">
+      <div className="flex gap-4 border-b border-line/25 pb-2">
         {Array.from({ length: columns }).map((_, i) => (
           <Skeleton key={i} className="h-4 flex-1" />
         ))}

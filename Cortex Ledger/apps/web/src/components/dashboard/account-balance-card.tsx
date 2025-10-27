@@ -41,14 +41,14 @@ export function AccountBalanceCard({ apelido, tipo, saldo, moeda }: AccountBalan
       <CardBody>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary-50 p-2.5 dark:bg-primary-950">
-              <Icon className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+            <div className="rounded-lg bg-elev p-2.5">
+              <Icon className="h-5 w-5 text-text" />
             </div>
             <div>
-              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
+              <p className="text-sm font-medium text-text">
                 {apelido}
               </p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">{tipoLabel}</p>
+              <p className="text-xs text-muted">{tipoLabel}</p>
             </div>
           </div>
         </div>
@@ -58,10 +58,10 @@ export function AccountBalanceCard({ apelido, tipo, saldo, moeda }: AccountBalan
             <span
               className={`text-2xl font-bold ${
                 isNegative
-                  ? 'text-error-600 dark:text-error-400'
+                  ? 'text-danger'
                   : isPositive
-                  ? 'text-success-600 dark:text-success-400'
-                  : 'text-neutral-900 dark:text-neutral-50'
+                  ? 'text-success'
+                  : 'text-text'
               }`}
             >
               {formatCurrency(saldo, moeda)}

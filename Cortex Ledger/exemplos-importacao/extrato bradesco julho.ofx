@@ -1,0 +1,239 @@
+OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+	<SIGNONMSGSRSV1>
+		<SONRS>
+			<STATUS>
+				<CODE>0
+				<SEVERITY>INFO
+			</STATUS>
+			<DTSERVER>00000000000000
+			<LANGUAGE>POR
+		</SONRS>
+	</SIGNONMSGSRSV1>
+	<BANKMSGSRSV1>
+		<STMTTRNRS>
+			<TRNUID>1001
+			<STATUS>
+				<CODE>0
+				<SEVERITY>INFO
+			</STATUS>
+			<STMTRS>
+				<CURDEF>BRL
+				<BANKACCTFROM>
+					<BANKID>0237
+					<ACCTID>513/21121
+					<ACCTTYPE>CHECKING
+				</BANKACCTFROM>
+				<BANKTRANLIST>
+					<DTSTART>20250701000000
+					<DTEND>20250731000000
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250701000000[-03:EST]
+						<TRNAMT>1296.00
+						<FITID>N20062:01/07/25:1296.0:1357553: Transfe Pix: Rem: Leticia Pires de Reze 01/07
+						<CHECKNUM>1357553
+						<MEMO>Transfe Pix Rem: Leticia Pires de Reze 01/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250703000000[-03:EST]
+						<TRNAMT>648.00
+						<FITID>N2007F:03/07/25:648.0:0920355: Transfe Pix: Rem: Aline f Goncalves Mou 03/07
+						<CHECKNUM>0920355
+						<MEMO>Transfe Pix Rem: Aline f Goncalves Mou 03/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250703000000[-03:EST]
+						<TRNAMT>30020.00
+						<FITID>N2009C:03/07/25:30020.0:1659532: Transfe Pix: Rem: San Remo Company Ltda 03/07
+						<CHECKNUM>1659532
+						<MEMO>Transfe Pix Rem: San Remo Company Ltda 03/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250704000000[-03:EST]
+						<TRNAMT>10852.65
+						<FITID>N200B9:04/07/25:10852.65:0737368: Transfe Pix: Rem: San Remo Company Ltda 04/07
+						<CHECKNUM>0737368
+						<MEMO>Transfe Pix Rem: San Remo Company Ltda 04/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250707000000[-03:EST]
+						<TRNAMT>186.00
+						<FITID>N200D6:07/07/25:186.0:1931473: Transfe Pix: Rem: Isaque Felix Seabra   06/07
+						<CHECKNUM>1931473
+						<MEMO>Transfe Pix Rem: Isaque Felix Seabra 06/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250707000000[-03:EST]
+						<TRNAMT>186.00
+						<FITID>N200F3:07/07/25:186.0:1938099: Transfe Pix: Rem: Alex Moura Martins da 06/07
+						<CHECKNUM>1938099
+						<MEMO>Transfe Pix Rem: Alex Moura Martins da 06/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250708000000[-03:EST]
+						<TRNAMT>-807.90
+						<FITID>N20110:08/07/25:-807.9:1327108: Transfe Pix: Des: Guilherme Pereira de  08/07
+						<CHECKNUM>1327108
+						<MEMO>Transfe Pix Des: Guilherme Pereira de 08/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250710000000[-03:EST]
+						<TRNAMT>191790.00
+						<FITID>N2012E:10/07/25:191790.0:1016195: Transfe Pix: Rem: Guilherme Pereira de  10/07
+						<CHECKNUM>1016195
+						<MEMO>Transfe Pix Rem: Guilherme Pereira de 10/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250710000000[-03:EST]
+						<TRNAMT>226.00
+						<FITID>N2014B:10/07/25:226.0:1313380: Transfe Pix: Rem: Guilherme Pereira de  10/07
+						<CHECKNUM>1313380
+						<MEMO>Transfe Pix Rem: Guilherme Pereira de 10/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250710000000[-03:EST]
+						<TRNAMT>-51.80
+						<FITID>N20168:10/07/25:-51.8:0000102: Pagto Cobranca: Bradesco Seg-resid/outros
+						<CHECKNUM>0000102
+						<MEMO>Pagto Cobranca Bradesco Seg-resid/outros
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250710000000[-03:EST]
+						<TRNAMT>-10536.16
+						<FITID>N20186:10/07/25:-10536.16:3990191: Gasto c Credito:
+						<CHECKNUM>3990191
+						<MEMO>Gasto c Credito 
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250710000000[-03:EST]
+						<TRNAMT>-230000.00
+						<FITID>N201A3:10/07/25:-230000.0:1910513: Aplicacao Cdb:
+						<CHECKNUM>1910513
+						<MEMO>Aplicacao Cdb 
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250710000000[-03:EST]
+						<TRNAMT>-1570.00
+						<FITID>N201C0:10/07/25:-1570.0:1018147: Transfe Pix: Des: Guilherme Pereira de  10/07
+						<CHECKNUM>1018147
+						<MEMO>Transfe Pix Des: Guilherme Pereira de 10/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250710000000[-03:EST]
+						<TRNAMT>-1500.00
+						<FITID>N201DE:10/07/25:-1500.0:1022536: Transfe Pix: Des: Guilherme Pereira de  10/07
+						<CHECKNUM>1022536
+						<MEMO>Transfe Pix Des: Guilherme Pereira de 10/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250710000000[-03:EST]
+						<TRNAMT>-4490.19
+						<FITID>N201FC:10/07/25:-4490.19:1027355: Transfe Pix: Des: Ligia Barbieri Mantov 10/07
+						<CHECKNUM>1027355
+						<MEMO>Transfe Pix Des: Ligia Barbieri Mantov 10/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250710000000[-03:EST]
+						<TRNAMT>-866.66
+						<FITID>N2021A:10/07/25:-866.66:1020219: Pix Qrcode Din: Des: vg Consultoria de Pes 10/07
+						<CHECKNUM>1020219
+						<MEMO>Pix Qrcode Din Des: vg Consultoria de Pes 10/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250710000000[-03:EST]
+						<TRNAMT>-153.17
+						<FITID>N20238:10/07/25:-153.17:5554785: Conta Telefone: Claro S/a - Movel-155547851
+						<CHECKNUM>5554785
+						<MEMO>Conta Telefone Claro S/a - Movel-155547851
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250711000000[-03:EST]
+						<TRNAMT>-517.02
+						<FITID>N20256:11/07/25:-517.02:3820259: Conta Luz: Cemig Distrib./mg-8138202596
+						<CHECKNUM>3820259
+						<MEMO>Conta Luz Cemig Distrib./mg-8138202596
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250716000000[-03:EST]
+						<TRNAMT>18.35
+						<FITID>N20274:16/07/25:18.35:1606728: Rendimentos: Poup Facil-depos a Partir 4/5/12
+						<CHECKNUM>1606728
+						<MEMO>Rendimentos Poup Facil-depos a Partir 4/5/12
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250716000000[-03:EST]
+						<TRNAMT>1297.25
+						<FITID>N20291:16/07/25:1297.25:1619596: Transfe Pix: Rem: San Remo Company Ltda 16/07
+						<CHECKNUM>1619596
+						<MEMO>Transfe Pix Rem: San Remo Company Ltda 16/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250718000000[-03:EST]
+						<TRNAMT>-2000.00
+						<FITID>N202AE:18/07/25:-2000.0:1543262: Transfe Pix: Des: Guilherme Pereira de  18/07
+						<CHECKNUM>1543262
+						<MEMO>Transfe Pix Des: Guilherme Pereira de 18/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>DEBIT
+						<DTPOSTED>20250718000000[-03:EST]
+						<TRNAMT>-900.00
+						<FITID>N202CC:18/07/25:-900.0:1501072: Pix Qrcode Din: Des: Receita Federal       18/07
+						<CHECKNUM>1501072
+						<MEMO>Pix Qrcode Din Des: Receita Federal 18/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20250722000000[-03:EST]
+						<TRNAMT>13609.11
+						<FITID>N202EA:22/07/25:13609.11:2006155: Transfe Pix: Rem: Evandro de Lacerda e  22/07
+						<CHECKNUM>2006155
+						<MEMO>Transfe Pix Rem: Evandro de Lacerda e 22/07
+					</STMTTRN>
+					<STMTTRN>
+						<TRNTYPE>CREDIT
+						<DTPOSTED>20251024000000[-03:EST]
+						<TRNAMT>12.21
+						<FITID>N20022:24/10/25:12.21:2406748: Rendimentos: Poup Facil-depos a Partir 4/5/12
+						<CHECKNUM>2406748
+						<MEMO>Rendimentos Poup Facil-depos a Partir 4/5/12
+					</STMTTRN>
+				</BANKTRANLIST>
+				<LEDGERBAL>
+					<BALAMT>14752.46
+					<DTASOF>20250722000000[-03:EST]
+				</LEDGERBAL>
+			</STMTRS>
+		</STMTTRNRS>
+	</BANKMSGSRSV1>
+</OFX>

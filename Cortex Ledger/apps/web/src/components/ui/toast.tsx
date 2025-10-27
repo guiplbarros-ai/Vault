@@ -61,37 +61,37 @@ export const useToast = () => {
 
 function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   const icons = {
-    success: <CheckCircle className="w-5 h-5 text-success-500" />,
-    error: <AlertCircle className="w-5 h-5 text-error-500" />,
-    warning: <AlertTriangle className="w-5 h-5 text-warning-500" />,
-    info: <Info className="w-5 h-5 text-primary-500" />,
+    success: <CheckCircle className="w-5 h-5 text-success" />,
+    error: <AlertCircle className="w-5 h-5 text-danger" />,
+    warning: <AlertTriangle className="w-5 h-5 text-warning" />,
+    info: <Info className="w-5 h-5 text-info" />,
   }
 
   const borderColors = {
-    success: 'border-l-success-500',
-    error: 'border-l-error-500',
-    warning: 'border-l-warning-500',
-    info: 'border-l-primary-500',
+    success: 'border-l-success',
+    error: 'border-l-danger',
+    warning: 'border-l-warning',
+    info: 'border-l-info',
   }
 
   return (
     <div
       className={cn(
-        'flex items-start gap-3 p-4 rounded-lg shadow-lg',
-        'bg-white dark:bg-neutral-900',
-        'border border-neutral-200 dark:border-neutral-800 border-l-4',
+        'flex items-start gap-3 p-4 rounded-xl shadow-card',
+        'bg-surface text-text',
+        'border border-line/25 border-l-4',
         borderColors[toast.type],
         'animate-in slide-in-from-right-full'
       )}
     >
       {icons[toast.type]}
       <div className="flex-1">
-        {toast.title && <p className="font-semibold">{toast.title}</p>}
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">{toast.message}</p>
+        {toast.title && <p className="font-semibold text-text">{toast.title}</p>}
+        <p className="text-sm text-muted">{toast.message}</p>
       </div>
       <button
         onClick={onClose}
-        className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+        className="p-1 rounded-lg hover:bg-elev transition-colors"
       >
         <X className="w-4 h-4" />
       </button>

@@ -1,20 +1,40 @@
 'use client'
 
+import { memo, useEffect, useState } from 'react'
 import { Card, CardHeader, CardBody } from '@/components/ui/card'
 import { ChartWrapper } from '@/components/charts/chart-wrapper'
 import { useEvolutionData } from '@/lib/hooks/use-evolution-data'
 import { Loader2, TrendingUp, TrendingDown } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { chartTheme } from '@/lib/chart-theme'
 import type { EChartsOption } from 'echarts'
 
-export function EvolutionChart() {
-  const { data, isLoading, error } = useEvolutionData(6)
+export const EvolutionChart = memo(function EvolutionChart() {
+  const { data, isLoading, error } = useEvolutionData(3)
+  const [theme, setTheme] = useState(chartTheme.light)
+
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains('dark')
+    setTheme(isDark ? chartTheme.dark : chartTheme.light)
+
+    const observer = new MutationObserver(() => {
+      const isDark = document.documentElement.classList.contains('dark')
+      setTheme(isDark ? chartTheme.dark : chartTheme.light)
+    })
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    })
+
+    return () => observer.disconnect()
+  }, [])
 
   if (isLoading) {
     return (
       <Card>
         <CardBody className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand" />
         </CardBody>
       </Card>
     )
@@ -24,7 +44,7 @@ export function EvolutionChart() {
     return (
       <Card>
         <CardBody className="p-6">
-          <p className="text-sm text-error-600">Erro ao carregar dados de evolução</p>
+          <p className="text-sm text-danger">Erro ao carregar dados de evolução</p>
         </CardBody>
       </Card>
     )
@@ -82,7 +102,7 @@ export function EvolutionChart() {
         data: data.map((d) => d.receitas),
         smooth: true,
         itemStyle: {
-          color: '#4CAF50',
+          color: chartTheme.semantic.income,
         },
         lineStyle: {
           width: 3,
@@ -97,11 +117,11 @@ export function EvolutionChart() {
             colorStops: [
               {
                 offset: 0,
-                color: 'rgba(76, 175, 80, 0.3)',
+                color: `${chartTheme.semantic.income}4D`,
               },
               {
                 offset: 1,
-                color: 'rgba(76, 175, 80, 0.05)',
+                color: `${chartTheme.semantic.income}0D`,
               },
             ],
           },
@@ -113,7 +133,7 @@ export function EvolutionChart() {
         data: data.map((d) => d.despesas),
         smooth: true,
         itemStyle: {
-          color: '#E53935',
+          color: chartTheme.semantic.expense,
         },
         lineStyle: {
           width: 3,
@@ -128,11 +148,11 @@ export function EvolutionChart() {
             colorStops: [
               {
                 offset: 0,
-                color: 'rgba(229, 57, 53, 0.3)',
+                color: `${chartTheme.semantic.expense}4D`,
               },
               {
                 offset: 1,
-                color: 'rgba(229, 57, 53, 0.05)',
+                color: `${chartTheme.semantic.expense}0D`,
               },
             ],
           },
@@ -144,7 +164,7 @@ export function EvolutionChart() {
         data: data.map((d) => d.saldo),
         smooth: true,
         itemStyle: {
-          color: '#339686',
+          color: theme.series.primary,
         },
         lineStyle: {
           width: 4,
@@ -164,23 +184,23 @@ export function EvolutionChart() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+            <h3 className="text-lg font-semibold text-text">
               Evolução M/M
             </h3>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Receitas e despesas (últimos 6 meses)
+            <p className="text-sm text-muted">
+              Receitas e despesas (últimos 3 meses)
             </p>
           </div>
           {variacao !== 0 && (
             <div className="flex items-center gap-2">
               {variacao >= 0 ? (
-                <TrendingUp className="h-5 w-5 text-success-500" />
+                <TrendingUp className="h-5 w-5 status-success" />
               ) : (
-                <TrendingDown className="h-5 w-5 text-error-500" />
+                <TrendingDown className="h-5 w-5 status-danger" />
               )}
               <span
                 className={`text-sm font-medium ${
-                  variacao >= 0 ? 'text-success-600' : 'text-error-600'
+                  variacao >= 0 ? 'status-success' : 'status-danger'
                 }`}
               >
                 {variacao >= 0 ? '+' : ''}
@@ -195,4 +215,4 @@ export function EvolutionChart() {
       </CardBody>
     </Card>
   )
-}
+})

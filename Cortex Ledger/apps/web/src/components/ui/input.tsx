@@ -12,27 +12,27 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <label className="mb-1.5 block text-sm font-medium text-text">
             {label}
-            {props.required && <span className="ml-1 text-error-500">*</span>}
+            {props.required && <span className="ml-1 text-danger">*</span>}
           </label>
         )}
         <input
           ref={ref}
           className={cn(
-            'w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200',
-            'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
-            'placeholder:text-neutral-400 dark:placeholder:text-neutral-600',
-            error ? 'border-error-500' : 'border-neutral-300 dark:border-neutral-700',
-            'bg-white dark:bg-neutral-900',
+            'flex h-10 w-full rounded-xl border border-line/25 bg-surface px-3 py-2 text-sm text-text',
+            'placeholder:text-muted',
+            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20',
             'disabled:cursor-not-allowed disabled:opacity-50',
+            'transition-all duration-200',
+            error && 'border-danger focus-visible:ring-danger/20',
             className
           )}
           {...props}
         />
-        {error && <p className="mt-1 text-xs text-error-500">{error}</p>}
+        {error && <p className="mt-1 text-xs text-danger">{error}</p>}
         {helperText && !error && (
-          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{helperText}</p>
+          <p className="mt-1 text-xs text-muted">{helperText}</p>
         )}
       </div>
     )

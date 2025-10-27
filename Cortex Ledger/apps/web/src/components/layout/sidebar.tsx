@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -14,7 +15,7 @@ import {
 import { cn } from '@/lib/utils'
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', href: '/home', icon: LayoutDashboard },
   { name: 'Transações', href: '/transacoes', icon: Receipt },
   { name: 'Orçamento', href: '/orcamento', icon: PieChart },
   { name: 'Relatórios', href: '/relatorios', icon: TrendingUp },
@@ -23,15 +24,15 @@ const navigation = [
   { name: 'Configurações', href: '/configuracoes', icon: Settings },
 ]
 
-export function Sidebar() {
+export const Sidebar = memo(function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+    <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-line/25 bg-surface">
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center border-b border-neutral-200 px-6 dark:border-neutral-800">
-          <h1 className="text-xl font-bold text-primary-500">Cortex Ledger</h1>
+        <div className="flex h-16 items-center border-b border-line/25 px-6">
+          <h1 className="text-xl font-bold text-brand">Cortex Ledger</h1>
         </div>
 
         {/* Navigation */}
@@ -43,10 +44,10 @@ export function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-400'
-                    : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                    ? 'bg-brand text-brand-contrast'
+                    : 'text-text hover:bg-elev'
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -57,8 +58,8 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-neutral-200 p-4 dark:border-neutral-800">
-          <div className="text-xs text-neutral-500 dark:text-neutral-400">
+        <div className="border-t border-line/25 p-4">
+          <div className="text-xs text-muted">
             <div className="font-medium">Cortex Ledger v1.0</div>
             <div className="mt-1">Local-first finance</div>
           </div>
@@ -66,4 +67,4 @@ export function Sidebar() {
       </div>
     </aside>
   )
-}
+})

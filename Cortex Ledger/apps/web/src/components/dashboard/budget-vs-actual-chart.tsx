@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Card, CardHeader, CardBody } from '@/components/ui/card'
 import { ChartWrapper } from '@/components/charts/chart-wrapper'
 import { useBudgetData } from '@/lib/hooks/use-budget-data'
@@ -7,14 +8,14 @@ import { Loader2, AlertCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import type { EChartsOption } from 'echarts'
 
-export function BudgetVsActualChart() {
+export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
   const { data, isLoading, error } = useBudgetData()
 
   if (isLoading) {
     return (
       <Card>
         <CardBody className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand" />
         </CardBody>
       </Card>
     )
@@ -24,7 +25,7 @@ export function BudgetVsActualChart() {
     return (
       <Card>
         <CardBody className="p-6">
-          <p className="text-sm text-error-600">Erro ao carregar dados do orçamento</p>
+          <p className="text-sm text-danger">Erro ao carregar dados do orçamento</p>
         </CardBody>
       </Card>
     )
@@ -34,12 +35,12 @@ export function BudgetVsActualChart() {
     return (
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+          <h3 className="text-lg font-semibold text-text">
             Orçado vs. Realizado
           </h3>
         </CardHeader>
         <CardBody className="p-6">
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="text-sm text-muted">
             Nenhum orçamento configurado para este mês. Configure orçamentos para ver esta
             visualização.
           </p>
@@ -136,23 +137,23 @@ export function BudgetVsActualChart() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+            <h3 className="text-lg font-semibold text-text">
               Orçado vs. Realizado
             </h3>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            <p className="text-sm text-muted">
               Comparativo por categoria no mês atual
             </p>
           </div>
           {(overBudget > 0 || nearLimit > 0) && (
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-warning-500" />
+              <AlertCircle className="h-5 w-5 text-warning" />
               <div className="text-sm">
                 {overBudget > 0 && (
-                  <span className="font-medium text-error-600">{overBudget} acima</span>
+                  <span className="font-medium text-danger">{overBudget} acima</span>
                 )}
-                {overBudget > 0 && nearLimit > 0 && <span className="text-neutral-500"> · </span>}
+                {overBudget > 0 && nearLimit > 0 && <span className="text-muted"> · </span>}
                 {nearLimit > 0 && (
-                  <span className="font-medium text-warning-600">{nearLimit} próximo</span>
+                  <span className="font-medium text-warning">{nearLimit} próximo</span>
                 )}
               </div>
             </div>
@@ -164,4 +165,4 @@ export function BudgetVsActualChart() {
       </CardBody>
     </Card>
   )
-}
+})

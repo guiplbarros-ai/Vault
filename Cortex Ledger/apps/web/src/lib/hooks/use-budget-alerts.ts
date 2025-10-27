@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
+import { TRANSACTION_TYPE } from '@/lib/constants'
 
 export interface BudgetAlert {
   id: string
@@ -12,7 +13,7 @@ export interface BudgetAlert {
   valor_realizado: number
   percentual: number
   tipo_alerta: '80' | '100' | 'excedido'
-  mes_ref: string
+  mes: string
 }
 
 async function fetchBudgetAlerts(mesRef?: Date): Promise<BudgetAlert[]> {
@@ -21,19 +22,44 @@ async function fetchBudgetAlerts(mesRef?: Date): Promise<BudgetAlert[]> {
   const fim = format(endOfMonth(mes), 'yyyy-MM-dd')
   const mesFormatted = format(startOfMonth(mes), 'yyyy-MM-dd')
 
-  // Buscar orçamentos do mês
+  // TEMPORARY: Buscar orçamentos sem relacionamento categoria até migration
   const { data: orcamentos, error: errorOrcamentos } = await supabase
     .from('orcamento')
-    .select('*, categoria:categoria_id (id, nome, grupo)')
-    .eq('mes_ref', mesFormatted)
+    .select('*')
+    .eq('mes', mesFormatted)
 
-  if (errorOrcamentos) throw errorOrcamentos
+  if (errorOrcamentos) {
+    console.error('Error fetching budgets:', errorOrcamentos)
+    return []
+  }
 
   if (!orcamentos || orcamentos.length === 0) {
     return []
   }
 
-  // Buscar transações do mês para cada categoria
+  // Buscar categorias separadamente
+  const categoriaIds = [...new Set(orcamentos.map((o: any) => o.categoria_id).filter(Boolean))]
+  let categorias: Record<string, any> = {}
+
+  if (categoriaIds.length > 0) {
+    const { data: categoriasData } = await supabase
+      .from('categoria')
+      .select('id, nome, grupo')
+      .in('id', categoriaIds)
+
+    if (categoriasData) {
+      categorias = Object.fromEntries(
+        categoriasData.map((cat: any) => [cat.id, cat])
+      )
+    }
+  }
+
+  // TEMPORARY: Como categoria_id não existe em transacao, retornar array vazio
+  // Após migration, descomentar o código abaixo para calcular alertas
+  console.warn('⚠️ Budget alerts disabled until categoria_id migration is applied to transacao table')
+  return []
+
+  /* UNCOMMENT AFTER MIGRATION:
   const alerts: BudgetAlert[] = []
 
   for (const orcamento of orcamentos) {
@@ -41,7 +67,8 @@ async function fetchBudgetAlerts(mesRef?: Date): Promise<BudgetAlert[]> {
       .from('transacao')
       .select('valor')
       .eq('categoria_id', orcamento.categoria_id)
-      .eq('tipo', 'DESPESA')
+      .eq('tipo', TRANSACTION_TYPE.DEBITO)
+      .lt('valor', 0)
       .gte('data', inicio)
       .lte('data', fim)
 
@@ -55,7 +82,6 @@ async function fetchBudgetAlerts(mesRef?: Date): Promise<BudgetAlert[]> {
 
     const percentual = (valorRealizado / orcamento.valor_planejado) * 100
 
-    // Determinar tipo de alerta
     let tipoAlerta: '80' | '100' | 'excedido' | null = null
 
     if (percentual >= 100) {
@@ -64,26 +90,24 @@ async function fetchBudgetAlerts(mesRef?: Date): Promise<BudgetAlert[]> {
       tipoAlerta = '80'
     }
 
-    // Só adiciona se houver alerta
     if (tipoAlerta) {
-      const categoria = Array.isArray(orcamento.categoria)
-        ? orcamento.categoria[0]
-        : orcamento.categoria
+      const categoria = categorias[orcamento.categoria_id]
 
       alerts.push({
         id: orcamento.id,
         categoria_nome: categoria?.nome || 'Sem nome',
         categoria_grupo: categoria?.grupo || 'Sem grupo',
-        valor_planejado: orcamento.valor_planejado,
+        valor_planejado: orcamento.valor_alvo,
         valor_realizado: valorRealizado,
         percentual,
         tipo_alerta: tipoAlerta,
-        mes_ref: orcamento.mes_ref,
+        mes: orcamento.mes,
       })
     }
   }
 
   return alerts
+  */
 }
 
 export function useBudgetAlerts(mesRef?: Date) {

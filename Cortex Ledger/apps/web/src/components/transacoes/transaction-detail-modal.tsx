@@ -26,15 +26,15 @@ export function TransactionDetailModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-surface text-text rounded-2xl shadow-card border border-line/25 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-neutral-200">
-            <h2 className="text-2xl font-bold text-neutral-900">
+          <div className="flex items-center justify-between p-6 border-b border-line/25 bg-elev rounded-t-2xl">
+            <h2 className="text-2xl font-bold text-text">
               Detalhes da Transação
             </h2>
             <button
               onClick={onClose}
-              className="text-neutral-400 hover:text-neutral-600 transition-colors"
+              className="text-muted hover:text-text transition-colors"
             >
               <X className="h-6 w-6" />
             </button>
@@ -43,17 +43,17 @@ export function TransactionDetailModal({
           {/* Content */}
           <div className="p-6 space-y-6">
             {/* Valor */}
-            <div className="text-center pb-6 border-b border-neutral-100">
-              <div className="text-sm text-neutral-500 mb-2">Valor</div>
+            <div className="text-center pb-6 border-b border-line/20">
+              <div className="text-sm text-muted mb-2">Valor</div>
               <div
                 className={`text-4xl font-bold ${
-                  isReceita ? 'text-success-600' : 'text-error-600'
+                  isReceita ? 'text-success' : 'text-danger'
                 }`}
               >
                 {formatCurrency(transaction.valor)}
               </div>
               {transaction.valorOriginal && transaction.moedaOriginal && (
-                <div className="text-sm text-neutral-500 mt-2">
+                <div className="text-sm text-muted mt-2">
                   Original: {formatCurrency(transaction.valorOriginal)}{' '}
                   {transaction.moedaOriginal}
                 </div>
@@ -65,11 +65,11 @@ export function TransactionDetailModal({
               {/* Data */}
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 mt-1">
-                  <Calendar className="h-5 w-5 text-primary-500" />
+                  <Calendar className="h-5 w-5 text-brand" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-neutral-700">Data</div>
-                  <div className="text-sm text-neutral-900">
+                  <div className="text-sm font-medium text-text">Data</div>
+                  <div className="text-sm text-text">
                     {formatDate(transaction.data, 'long')}
                   </div>
                 </div>
@@ -78,14 +78,14 @@ export function TransactionDetailModal({
               {/* Conta */}
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 mt-1">
-                  <Wallet className="h-5 w-5 text-primary-500" />
+                  <Wallet className="h-5 w-5 text-brand" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-neutral-700">Conta</div>
-                  <div className="text-sm text-neutral-900">
+                  <div className="text-sm font-medium text-text">Conta</div>
+                  <div className="text-sm text-text">
                     {transaction.conta?.apelido || 'N/A'}
                   </div>
-                  <div className="text-xs text-neutral-500">
+                  <div className="text-xs text-muted">
                     {transaction.conta?.tipo || 'N/A'}
                   </div>
                 </div>
@@ -94,11 +94,11 @@ export function TransactionDetailModal({
               {/* Categoria */}
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 mt-1">
-                  <Tag className="h-5 w-5 text-primary-500" />
+                  <Tag className="h-5 w-5 text-brand" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-neutral-700">Categoria</div>
-                  <div className="text-sm text-neutral-900">
+                  <div className="text-sm font-medium text-text">Categoria</div>
+                  <div className="text-sm text-text">
                     {transaction.categoria ? (
                       <Badge variant="primary">
                         {transaction.categoria.grupo
@@ -107,7 +107,7 @@ export function TransactionDetailModal({
                         {transaction.categoria.nome}
                       </Badge>
                     ) : (
-                      <span className="text-neutral-400">Sem categoria</span>
+                      <span className="text-muted">Sem categoria</span>
                     )}
                   </div>
                 </div>
@@ -117,21 +117,21 @@ export function TransactionDetailModal({
               {transaction.tipo && (
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 mt-1">
-                    <TrendingUp className="h-5 w-5 text-primary-500" />
+                    <TrendingUp className="h-5 w-5 text-brand" />
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-neutral-700">Tipo</div>
-                    <div className="text-sm text-neutral-900">
+                    <div className="text-sm font-medium text-text">Tipo</div>
+                    <div className="text-sm text-text">
                       <Badge
                         variant={
-                          transaction.tipo === 'RECEITA'
+                          transaction.tipo === 'credito'
                             ? 'success'
-                            : transaction.tipo === 'DESPESA'
+                            : transaction.tipo === 'debito'
                             ? 'error'
                             : 'neutral'
                         }
                       >
-                        {transaction.tipo}
+                        {transaction.tipo === 'credito' ? 'Receita' : transaction.tipo === 'debito' ? 'Despesa' : transaction.tipo}
                       </Badge>
                     </div>
                   </div>
@@ -142,13 +142,13 @@ export function TransactionDetailModal({
               {transaction.saldo_apos !== null && (
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 mt-1">
-                    <TrendingUp className="h-5 w-5 text-primary-500" />
+                    <TrendingUp className="h-5 w-5 text-brand" />
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-neutral-700">
+                    <div className="text-sm font-medium text-text">
                       Saldo Após
                     </div>
-                    <div className="text-sm text-neutral-900">
+                    <div className="text-sm text-text">
                       {formatCurrency(transaction.saldo_apos)}
                     </div>
                   </div>
@@ -159,13 +159,13 @@ export function TransactionDetailModal({
               {isParcelado && (
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 mt-1">
-                    <CreditCard className="h-5 w-5 text-primary-500" />
+                    <CreditCard className="h-5 w-5 text-brand" />
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-neutral-700">
+                    <div className="text-sm font-medium text-text">
                       Parcelamento
                     </div>
-                    <div className="text-sm text-neutral-900">
+                    <div className="text-sm text-text">
                       Parcela {transaction.parcela_n} de {transaction.parcelas_total}
                     </div>
                   </div>
@@ -176,13 +176,13 @@ export function TransactionDetailModal({
               {transaction.idExterno && (
                 <div className="flex items-start gap-3 md:col-span-2">
                   <div className="flex-shrink-0 mt-1">
-                    <Hash className="h-5 w-5 text-primary-500" />
+                    <Hash className="h-5 w-5 text-brand" />
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-neutral-700">
+                    <div className="text-sm font-medium text-text">
                       ID Externo
                     </div>
-                    <div className="text-xs text-neutral-600 font-mono">
+                    <div className="text-xs text-muted font-mono">
                       {transaction.idExterno}
                     </div>
                   </div>
@@ -191,18 +191,18 @@ export function TransactionDetailModal({
             </div>
 
             {/* Descrição */}
-            <div className="border-t border-neutral-100 pt-4">
-              <div className="text-sm font-medium text-neutral-700 mb-2">
+            <div className="border-t border-line/20 pt-4">
+              <div className="text-sm font-medium text-text mb-2">
                 Descrição
               </div>
-              <div className="text-sm text-neutral-900 bg-neutral-50 p-3 rounded-lg">
+              <div className="text-sm text-text bg-elev p-3 rounded-lg">
                 {transaction.descricao}
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-neutral-200 flex justify-end">
+          <div className="p-6 border-t border-line/25 flex justify-end bg-elev rounded-b-2xl">
             <Button onClick={onClose}>Fechar</Button>
           </div>
         </div>

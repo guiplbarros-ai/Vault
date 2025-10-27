@@ -3,6 +3,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
+import { requireSession, formatSupabaseError } from '@/lib/query-utils'
+import { TRANSACTION_TYPE } from '@/lib/constants'
 
 export interface TopExpense {
   id: string
@@ -28,6 +30,14 @@ export function useTopExpenses(limit: number = 5, mes?: Date) {
   return useQuery({
     queryKey: ['top-expenses', limit, inicio, fim],
     queryFn: async () => {
+      // Verificar se há sessão ativa
+      const session = await requireSession()
+      if (!session) {
+        return []
+      }
+
+      // TEMPORARY FIX: Query without categoria_id until migration is applied
+      // TODO: After running migration (see MIGRATION-REQUIRED.md), uncomment the full query
       const { data, error } = await supabase
         .from('transacao')
         .select(
@@ -36,19 +46,18 @@ export function useTopExpenses(limit: number = 5, mes?: Date) {
           descricao,
           valor,
           data,
-          categoria:categoria_id (id, nome, grupo),
           conta:conta_id (id, apelido)
         `
         )
-        .eq('tipo', 'DESPESA')
+        .eq('tipo', TRANSACTION_TYPE.DEBITO)
+        .lt('valor', 0) // Despesas têm valor negativo
         .gte('data', inicio)
         .lte('data', fim)
-        .order('valor', { ascending: false })
+        .order('valor', { ascending: true }) // Ordem crescente para pegar os valores mais negativos primeiro
         .limit(limit)
 
       if (error) {
-        console.error('Error fetching top expenses:', error)
-        throw error
+        throw formatSupabaseError(error, 'fetch top expenses')
       }
 
       // Supabase retorna relacionamentos como arrays, precisamos mapear
@@ -57,10 +66,11 @@ export function useTopExpenses(limit: number = 5, mes?: Date) {
         descricao: item.descricao,
         valor: item.valor,
         data: item.data,
-        categoria: Array.isArray(item.categoria) ? item.categoria[0] : item.categoria,
+        categoria: null, // TEMPORARY: Will be available after migration
         conta: Array.isArray(item.conta) ? item.conta[0] : item.conta,
       })) as TopExpense[]
     },
     staleTime: 1000 * 60, // 1 minuto
+    retry: 1, // Reduzir tentativas para falhar mais rápido
   })
 }

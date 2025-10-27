@@ -15,9 +15,9 @@ export const TableHeader = forwardRef<HTMLTableSectionElement, HTMLAttributes<HT
       <thead
         ref={ref}
         className={cn(
-          'text-xs font-semibold uppercase tracking-wider',
-          'text-neutral-700 dark:text-neutral-300',
-          'bg-neutral-50 dark:bg-neutral-900',
+      'text-xs font-semibold uppercase tracking-wider',
+      'text-text',
+      'bg-elev',
           className
         )}
         {...props}
@@ -41,7 +41,7 @@ export const TableRow = forwardRef<HTMLTableRowElement, HTMLAttributes<HTMLTable
     return (
       <tr
         ref={ref}
-        className={cn('hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors', className)}
+    className={cn('hover:bg-surface/50 transition-colors', className)}
         {...props}
       />
     )
@@ -55,7 +55,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, ThHTMLAttributes<HTMLT
     return (
       <th
         ref={ref}
-        className={cn('px-4 py-3 border-b border-neutral-200 dark:border-neutral-800', className)}
+    className={cn('px-4 py-3 border-b border-line/20', className)}
         {...props}
       />
     )
@@ -69,7 +69,7 @@ export const TableCell = forwardRef<HTMLTableCellElement, TdHTMLAttributes<HTMLT
     return (
       <td
         ref={ref}
-        className={cn('px-4 py-3 border-b border-neutral-200 dark:border-neutral-800', className)}
+    className={cn('px-4 py-3 border-b border-line/20', className)}
         {...props}
       />
     )

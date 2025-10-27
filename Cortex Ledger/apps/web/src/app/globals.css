@@ -1,100 +1,361 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* Cortex Ledger Design System - Color Tokens */
+/* ============================================
+   PALETA CREME & BORDEAUX OLIVE
+   Cortex Ledger — Financial Clarity
+   ============================================ */
+
+/* LIGHT MODE – padrão */
 :root {
-  /* Primary - Verde Acqua (Teal) */
-  --color-primary-50: #f0fdfa;
-  --color-primary-100: #ccfbf1;
-  --color-primary-200: #99f6e4;
-  --color-primary-300: #5eead4;
-  --color-primary-400: #2dd4bf;
-  --color-primary-500: #14b8a6; /* Main brand color */
-  --color-primary-600: #0d9488;
-  --color-primary-700: #0f766e;
-  --color-primary-800: #115e59;
-  --color-primary-900: #134e4a;
+  /* Neutros estruturais */
+  --bg: 252 246 210;      /* #FCF6D2 – canvas principal */
+  --surface: 251 226 185; /* #FBE2B9 – cards, inputs */
+  --elev: 198 195 154;    /* #C6C39A – elevação sutil, toolbars */
+  --line: 40 31 32;       /* #281F20 – bordas, divisores */
 
-  /* Neutral - Grafite (Slate) */
-  --color-neutral-50: #f8fafc;
-  --color-neutral-100: #f1f5f9;
-  --color-neutral-200: #e2e8f0;
-  --color-neutral-300: #cbd5e1;
-  --color-neutral-400: #94a3b8;
-  --color-neutral-500: #64748b;
-  --color-neutral-600: #475569;
-  --color-neutral-700: #334155;
-  --color-neutral-800: #1e293b;
-  --color-neutral-900: #0f172a;
-  --color-neutral-950: #020617;
+  /* Texto */
+  --text: 40 31 32;       /* #281F20 – texto primário */
+  --muted: 78 63 65;      /* #4E3F41 – texto secundário (derivado) */
 
-  /* Semantic Colors */
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #3b82f6;
+  /* Marca & Ações */
+  --brand: 40 31 32;            /* #281F20 – botão primário */
+  --brand-contrast: 252 246 210; /* #FCF6D2 – texto em botões primários */
+
+  /* Estados semânticos */
+  --success: 58 142 110;   /* #3A8E6E – oliva + verde */
+  --warning: 196 150 60;   /* #C4963C – oliva quente */
+  --danger: 165 65 72;     /* #A54148 – bordeaux avermelhado */
+  --info: 116 116 92;      /* #74745C – oliva neutra */
+
+  /* Raio de borda padrão */
+  --radius: 0.75rem; /* 12px */
+  --radius-card: 16px;
+  --radius-input: 12px;
+  --radius-modal: 20px;
+
+  /* Sombras */
+  --shadow-sm: 0 2px 8px rgba(40, 31, 32, 0.08);
+  --shadow-card: 0 6px 24px rgba(40, 31, 32, 0.08);
+  --shadow-lg: 0 12px 32px rgba(40, 31, 32, 0.12);
 }
 
+/* DARK MODE – invertendo hierarquia com tons quentes */
+.dark {
+  --bg: 40 31 32;         /* #281F20 – canvas escuro */
+  --surface: 54 42 44;    /* #362A2C – cards */
+  --elev: 70 56 58;       /* #46383A – elevação */
+  --line: 198 195 154;    /* #C6C39A – bordas claras */
+
+  --text: 252 246 210;    /* #FCF6D2 – texto claro */
+  --muted: 224 211 188;   /* #E0D3BC – texto secundário */
+
+  --brand: 251 226 185;        /* #FBE2B9 – botão primário claro */
+  --brand-contrast: 40 31 32;  /* #281F20 – texto escuro em botões */
+
+  --success: 165 224 192; /* #A5E0C0 – versão clara */
+  --warning: 238 196 118; /* #EEC476 */
+  --danger: 230 140 145;  /* #E68C91 */
+  --info: 198 195 154;    /* #C6C39A */
+
+  /* Sombras ajustadas para dark */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* ============================================
+   BASE LAYER
+   ============================================ */
+
 @layer base {
-  * {
-    @apply border-neutral-200 dark:border-neutral-800;
+  *, *::before, *::after {
+    border-color: rgb(var(--line) / 0.25);
   }
 
   html {
-    @apply h-full;
+    height: 100%;
   }
 
   body {
-    @apply h-full bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50;
-    @apply font-sans antialiased;
+    height: 100%;
+    background-color: rgb(var(--bg));
+    color: rgb(var(--text));
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-size: 15px;
+    line-height: 1.6;
   }
 
+  h1, h2, h3, h4, h5, h6 {
+    color: rgb(var(--text));
+    font-weight: 600;
+  }
+
+  ::selection {
+    background: rgb(var(--brand) / 0.25);
+    color: rgb(var(--text));
+  }
+
+  /* Scrollbars */
   ::-webkit-scrollbar {
-    @apply w-2 h-2;
+    width: 8px;
+    height: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-neutral-100 dark:bg-neutral-900;
+    background: rgb(var(--surface));
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-neutral-300 dark:bg-neutral-700 rounded-full;
+    background: rgb(var(--line) / 0.4);
+    border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-neutral-400 dark:bg-neutral-600;
+    background: rgb(var(--line) / 0.6);
   }
 }
 
+/* ============================================
+   COMPONENTS LAYER
+   ============================================ */
+
 @layer components {
+  /* Cards */
   .card {
-    @apply bg-white dark:bg-neutral-900 rounded-lg shadow-md;
-    @apply border border-neutral-200 dark:border-neutral-800;
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--line) / 0.25);
+    border-radius: 20px;
+    box-shadow: var(--shadow-card);
   }
 
   .card-hover {
-    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+    transition: all 0.2s ease;
   }
 
+  .card-hover:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  .card-elev {
+    background-color: rgb(var(--elev));
+  }
+
+  /* Botões */
   .btn {
-    @apply inline-flex items-center justify-center rounded-lg;
-    @apply px-4 py-2 text-sm font-medium transition-all duration-200;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-radius: var(--radius-input);
+    padding: 0.625rem 1rem;
+    outline: none;
+  }
+
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgb(var(--brand) / 0.25);
   }
 
   .btn-primary {
-    @apply bg-teal-500 text-white hover:bg-teal-600 active:bg-teal-700;
+    background-color: rgb(var(--brand));
+    color: rgb(var(--brand-contrast));
+    font-weight: 600;
+  }
+
+  .btn-primary:hover {
+    filter: brightness(0.9);
   }
 
   .btn-secondary {
-    @apply bg-neutral-200 text-neutral-900 hover:bg-neutral-300 active:bg-neutral-400;
-    @apply dark:bg-neutral-800 dark:text-neutral-50 dark:hover:bg-neutral-700;
+    background-color: rgb(var(--surface));
+    color: rgb(var(--text));
+    border: 1px solid rgb(var(--line) / 0.25);
   }
 
+  .btn-secondary:hover {
+    background-color: rgb(var(--elev));
+  }
+
+  .btn-ghost {
+    background-color: transparent;
+    color: rgb(var(--text));
+    border: 1px solid rgb(var(--line) / 0.25);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-input);
+  }
+
+  .btn-ghost:hover {
+    background-color: rgb(var(--surface));
+  }
+
+  .btn-danger {
+    background-color: rgb(var(--danger));
+    color: white;
+    font-weight: 600;
+  }
+
+  .btn-danger:hover {
+    filter: brightness(0.9);
+  }
+
+  /* Inputs */
   .input {
-    @apply w-full rounded-lg border border-neutral-300 dark:border-neutral-700;
-    @apply bg-white dark:bg-neutral-900 px-3 py-2 text-sm transition-colors duration-200;
-    @apply focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent;
+    width: 100%;
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--line) / 0.25);
+    color: rgb(var(--text));
+    border-radius: 12px;
+    padding: 0.625rem 0.75rem;
+    transition: all 0.2s ease;
+  }
+
+  .input::placeholder {
+    color: rgb(var(--muted));
+  }
+
+  .input:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgb(var(--brand) / 0.2);
+    border-color: transparent;
+  }
+
+  /* Labels */
+  .label {
+    font-size: 0.75rem;
+    color: rgb(var(--muted));
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+
+  /* Borders */
+  .border-subtle {
+    border-color: rgb(var(--line) / 0.25);
+  }
+
+  /* Tables */
+  .table-header {
+    background-color: rgb(var(--elev));
+    color: rgb(var(--text));
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .table-row {
+    border-bottom: 1px solid rgb(var(--line) / 0.2);
+    transition: background-color 0.15s ease;
+  }
+
+  .table-row:hover {
+    background-color: rgb(var(--surface) / 0.5);
+  }
+
+  /* Status classes */
+  .status-success {
+    color: rgb(var(--success));
+  }
+
+  .status-danger {
+    color: rgb(var(--danger));
+  }
+
+  .status-warning {
+    color: rgb(var(--warning));
+  }
+
+  .status-info {
+    color: rgb(var(--info));
+  }
+}
+
+/* ============================================
+   UTILITIES LAYER
+   ============================================ */
+
+@layer utilities {
+  /* Typography */
+  .h1 {
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+    font-weight: 700;
+  }
+
+  .h2 {
+    font-size: 1.375rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+  }
+
+  .h3 {
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+  }
+
+  /* KPIs */
+  .kpi {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 600;
+  }
+
+  @media (min-width: 768px) {
+    .kpi {
+      font-size: 2.25rem;
+      line-height: 2.5rem;
+    }
+  }
+
+  /* Spacing */
+  .space-card {
+    padding: 1.5rem;
+  }
+
+  .space-control {
+    padding: 0.75rem;
+  }
+
+  .section {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-top: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .section {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      padding-top: 1.5rem;
+    }
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgb(var(--line) / 0.25);
+  }
+
+  /* Text balance */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Backgrounds com gradientes sutis */
+  .bg-hero {
+    background: radial-gradient(90% 70% at 10% -10%, rgb(var(--brand) / 0.12) 0%, rgba(0, 0, 0, 0) 55%),
+                radial-gradient(60% 40% at 90% 0%, rgb(var(--brand) / 0.08) 0%, rgba(0, 0, 0, 0) 60%),
+                linear-gradient(180deg, rgb(var(--surface) / 0.5), transparent 45%);
   }
 }

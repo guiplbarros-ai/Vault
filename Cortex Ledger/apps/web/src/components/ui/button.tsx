@@ -3,25 +3,28 @@ import { cn } from '@/lib/utils'
 import { cva, type VariantProps } from 'class-variance-authority'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        primary: 'bg-teal-500 text-white hover:bg-teal-600 active:bg-teal-700',
-        secondary: 'bg-neutral-200 text-neutral-900 hover:bg-neutral-300',
-        danger: 'bg-red-500 text-white hover:bg-red-600',
-        outline: 'border border-neutral-300 bg-transparent hover:bg-neutral-50',
-        ghost: 'hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-800',
+        default: 'bg-brand text-brand-contrast hover:brightness-90 focus-visible:ring-brand/25',
+        primary: 'bg-brand text-brand-contrast hover:brightness-90 focus-visible:ring-brand/25',
+        destructive: 'bg-danger text-white hover:brightness-90 focus-visible:ring-danger/25',
+        outline: 'border border-line/25 bg-surface hover:bg-elev focus-visible:ring-line/20',
+        secondary: 'border border-line/25 bg-surface text-text hover:bg-elev focus-visible:ring-line/20',
+        ghost: 'hover:bg-surface focus-visible:ring-line/15',
+        link: 'text-brand underline-offset-4 hover:underline',
       },
       size: {
-        sm: 'h-8 px-3 text-xs',
-        md: 'h-10 px-4',
-        lg: 'h-12 px-6',
+        default: 'h-10 px-4 py-2.5',
+        sm: 'h-9 rounded-lg px-3',
+        lg: 'h-11 rounded-xl px-6',
+        icon: 'h-10 w-10',
       },
     },
     defaultVariants: {
-      variant: 'primary',
-      size: 'md',
+      variant: 'default',
+      size: 'default',
     },
   }
 )

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export interface DFCData {
   mes: string
@@ -9,53 +10,68 @@ export interface DFCData {
   saldo: number
 }
 
-async function fetchDFCData(months: number = 6): Promise<DFCData[]> {
-  const result: DFCData[] = []
+async function fetchDFCData(months: number = 3): Promise<DFCData[]> {
   const now = new Date()
+  const oldestMonth = subMonths(now, months - 1)
+  const startDate = format(startOfMonth(oldestMonth), 'yyyy-MM-dd')
+  const endDate = format(endOfMonth(now), 'yyyy-MM-dd')
+
+  // Buscar todas as transações de uma vez
+  const { data: allTransactions, error } = await supabase
+    .from('transacao')
+    .select('valor, data')
+    .gte('data', startDate)
+    .lte('data', endDate)
+
+  if (error) {
+    console.error('Error fetching DFC data:', error)
+    throw error
+  }
+
+  // Agrupar por mês
+  const monthlyData: Record<string, { entradas: number; saidas: number }> = {}
 
   for (let i = months - 1; i >= 0; i--) {
     const date = subMonths(now, i)
-    const startDate = format(startOfMonth(date), 'yyyy-MM-dd')
-    const endDate = format(endOfMonth(date), 'yyyy-MM-dd')
+    const key = format(date, 'yyyy-MM')
+    monthlyData[key] = { entradas: 0, saidas: 0 }
+  }
 
-    const { data, error } = await supabase
-      .from('transacao')
-      .select('valor')
-      .gte('data', startDate)
-      .lte('data', endDate)
+  // Processar todas as transações
+  (allTransactions || []).forEach((t) => {
+    const monthKey = t.data.substring(0, 7) // 'yyyy-MM'
+    if (!monthlyData[monthKey]) return
 
-    if (error) {
-      console.error('Error fetching DFC data:', error)
-      continue
+    const valor = parseFloat(t.valor)
+    if (valor > 0) {
+      monthlyData[monthKey].entradas += valor
+    } else {
+      monthlyData[monthKey].saidas += Math.abs(valor)
     }
+  })
 
-    const transactions = data || []
-    const entradas = transactions
-      .filter((t) => parseFloat(t.valor) > 0)
-      .reduce((sum, t) => sum + parseFloat(t.valor), 0)
-
-    const saidas = Math.abs(
-      transactions
-        .filter((t) => parseFloat(t.valor) < 0)
-        .reduce((sum, t) => sum + parseFloat(t.valor), 0)
-    )
-
-    const saldo = entradas - saidas
+  // Criar array de resultados
+  const result: DFCData[] = []
+  for (let i = months - 1; i >= 0; i--) {
+    const date = subMonths(now, i)
+    const key = format(date, 'yyyy-MM')
+    const { entradas, saidas } = monthlyData[key]
 
     result.push({
-      mes: format(date, 'MMM/yy'),
+      mes: format(date, 'MMM/yy', { locale: ptBR }),
       entradas,
       saidas,
-      saldo,
+      saldo: entradas - saidas,
     })
   }
 
   return result
 }
 
-export function useDFCData(months: number = 6) {
+export function useDFCData(months: number = 3) {
   return useQuery({
     queryKey: ['dfc', months],
     queryFn: () => fetchDFCData(months),
+    staleTime: 1000 * 60, // 1 minuto
   })
 }

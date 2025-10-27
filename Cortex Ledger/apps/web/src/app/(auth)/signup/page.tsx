@@ -61,11 +61,11 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 dark:bg-neutral-950">
+    <div className="flex min-h-screen items-center justify-center bg-bg px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="mb-4 flex justify-center">
-            <h1 className="text-3xl font-bold text-primary-500">Cortex Ledger</h1>
+            <h1 className="text-3xl font-bold text-text">Cortex Ledger</h1>
           </div>
           <CardTitle className="text-2xl text-center">Criar conta</CardTitle>
           <CardDescription className="text-center">
@@ -134,7 +134,7 @@ export default function SignupPage() {
 
           <div className="mt-4 text-center text-sm">
             Já tem uma conta?{' '}
-            <Link href="/login" className="text-primary-500 hover:underline">
+            <Link href="/login" className="text-brand hover:underline">
               Fazer login
             </Link>
           </div>

@@ -1,17 +1,18 @@
 'use client'
 
+import { memo } from 'react'
 import { useAccounts } from '@/lib/hooks/use-accounts'
 import { AccountBalanceCard } from './account-balance-card'
 import { Card, CardBody } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
 
-export function AccountsOverview() {
+export const AccountsOverview = memo(function AccountsOverview() {
   const { data: accounts, isLoading, error } = useAccounts()
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand" />
       </div>
     )
   }
@@ -20,7 +21,7 @@ export function AccountsOverview() {
     return (
       <Card>
         <CardBody>
-          <p className="text-sm text-error-600">
+          <p className="text-sm text-danger">
             Erro ao carregar contas. Verifique sua conexão.
           </p>
         </CardBody>
@@ -32,7 +33,7 @@ export function AccountsOverview() {
     return (
       <Card>
         <CardBody>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="text-sm text-muted">
             Nenhuma conta encontrada. Importe suas transações para começar.
           </p>
         </CardBody>
@@ -47,4 +48,4 @@ export function AccountsOverview() {
       ))}
     </div>
   )
-}
+})

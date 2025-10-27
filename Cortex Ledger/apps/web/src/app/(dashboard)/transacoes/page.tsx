@@ -59,10 +59,8 @@ export default function TransacoesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Transações</h1>
-          <p className="text-neutral-500 mt-1">
-            Visualize e gerencie suas transações financeiras
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-text">Transações</h1>
+          <p className="text-muted mt-1">Visualize e gerencie suas transações financeiras</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handleExportCSV} variant="outline">

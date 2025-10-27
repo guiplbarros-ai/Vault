@@ -18,6 +18,8 @@ importers:
         specifier: ^2.3.3
         version: 2.5.8
 
+  apps/desktop: {}
+
   apps/web:
     dependencies:
       '@radix-ui/react-avatar':
@@ -4935,7 +4937,7 @@ snapshots:
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 20.19.23
+      '@types/node': 22.18.12
 
   '@types/xml2js@0.4.14':
     dependencies:

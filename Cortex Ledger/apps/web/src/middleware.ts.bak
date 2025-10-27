@@ -52,6 +52,8 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
+  console.log('🔍 Middleware:', { pathname, hasSession: !!session, userId: session?.user?.id })
+
   // Rotas públicas
   const publicRoutes = ['/login', '/signup']
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
@@ -68,6 +70,7 @@ export async function middleware(request: NextRequest) {
 
   // Redirect para /login se não autenticado e tentando acessar rota protegida
   if (!session && !isPublicRoute) {
+    console.log('❌ Sem sessão, redirecionando para /login')
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
@@ -75,6 +78,7 @@ export async function middleware(request: NextRequest) {
 
   // Redirect para / se autenticado e tentando acessar /login ou /signup
   if (session && isPublicRoute) {
+    console.log('✅ Usuário autenticado em rota pública, redirecionando para /')
     return NextResponse.redirect(new URL('/', request.url))
   }
 

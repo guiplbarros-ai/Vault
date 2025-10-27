@@ -34,14 +34,14 @@ export function TransactionsTable({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-neutral-500">Carregando transações...</div>
+        <div className="text-muted">Carregando transações...</div>
       </div>
     )
   }
 
   if (transactions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-neutral-500">
+      <div className="flex flex-col items-center justify-center py-12 text-muted">
         <p className="text-lg font-medium">Nenhuma transação encontrada</p>
         <p className="text-sm">Tente ajustar os filtros ou importar novos dados</p>
       </div>
@@ -51,50 +51,50 @@ export function TransactionsTable({
   return (
     <div className="space-y-4">
       {/* Table */}
-      <div className="rounded-lg border border-neutral-200 overflow-hidden">
+      <div className="rounded-2xl border border-line/25 overflow-hidden bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-200">
+            <thead className="bg-elev border-b border-line/20">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                   Data
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                   Descrição
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                   Conta
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
                   Categoria
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-muted uppercase tracking-wider">
                   Valor
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-xs font-semibold text-muted uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-neutral-200">
+            <tbody className="bg-surface divide-y divide-line/20">
               {transactions.map((transaction) => (
                 <tr
                   key={transaction.id}
-                  className="hover:bg-neutral-50 transition-colors cursor-pointer"
+                  className="hover:bg-elev transition-colors cursor-pointer"
                   onClick={() => onViewDetails(transaction)}
                 >
-                  <td className="px-4 py-3 text-sm text-neutral-900 whitespace-nowrap">
+                  <td className="px-4 py-3 text-sm text-text whitespace-nowrap">
                     {formatDate(transaction.data)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-neutral-900 max-w-md">
+                  <td className="px-4 py-3 text-sm text-text max-w-md">
                     <div className="truncate">{transaction.descricao}</div>
                     {transaction.parcela_n && transaction.parcelas_total && (
-                      <div className="text-xs text-neutral-500 mt-1">
+                      <div className="text-xs text-muted mt-1">
                         Parcela {transaction.parcela_n}/{transaction.parcelas_total}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-neutral-600 whitespace-nowrap">
+                  <td className="px-4 py-3 text-sm text-muted whitespace-nowrap">
                     {transaction.conta?.apelido || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
@@ -103,14 +103,14 @@ export function TransactionsTable({
                         {transaction.categoria.nome}
                       </Badge>
                     ) : (
-                      <span className="text-neutral-400 text-xs">Sem categoria</span>
+                      <span className="text-muted text-xs">Sem categoria</span>
                     )}
                   </td>
                   <td
                     className={`px-4 py-3 text-sm font-semibold text-right whitespace-nowrap ${
                       transaction.valor > 0
-                        ? 'text-success-600'
-                        : 'text-error-600'
+                        ? 'text-success'
+                        : 'text-danger'
                     }`}
                   >
                     {formatCurrency(transaction.valor)}

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { TRANSACTION_TYPE } from '@/lib/constants'
 
 export interface EvolutionData {
   mes: string
@@ -13,52 +14,60 @@ export interface EvolutionData {
   variacao: number // Percentual de variação M/M
 }
 
-export function useEvolutionData(meses: number = 6) {
+export function useEvolutionData(meses: number = 3) {
   return useQuery({
     queryKey: ['evolution-data', meses],
     queryFn: async () => {
       const now = new Date()
-      const promises = []
+      const oldestMonth = subMonths(now, meses - 1)
+      const inicio = format(startOfMonth(oldestMonth), 'yyyy-MM-dd')
+      const fim = format(endOfMonth(now), 'yyyy-MM-dd')
 
-      // Buscar dados dos últimos N meses
+      // Buscar todas as transações de uma vez
+      const { data: allTransactions, error } = await supabase
+        .from('transacao')
+        .select('valor, tipo, data')
+        .gte('data', inicio)
+        .lte('data', fim)
+
+      if (error) throw error
+
+      // Agrupar por mês
+      const monthlyData: Record<string, { receitas: number; despesas: number }> = {}
+
       for (let i = meses - 1; i >= 0; i--) {
         const mesRef = subMonths(now, i)
-        const inicio = format(startOfMonth(mesRef), 'yyyy-MM-dd')
-        const fim = format(endOfMonth(mesRef), 'yyyy-MM-dd')
-
-        const promise = supabase
-          .from('transacao')
-          .select('valor, tipo')
-          .gte('data', inicio)
-          .lte('data', fim)
-          .then(({ data, error }) => {
-            if (error) throw error
-
-            const receitas = (data || [])
-              .filter((t) => t.tipo === 'RECEITA')
-              .reduce((acc, t) => acc + t.valor, 0)
-
-            const despesas = Math.abs(
-              (data || [])
-                .filter((t) => t.tipo === 'DESPESA')
-                .reduce((acc, t) => acc + t.valor, 0)
-            )
-
-            const saldo = receitas - despesas
-
-            return {
-              mes: format(mesRef, 'MMM/yy', { locale: ptBR }),
-              receitas,
-              despesas,
-              saldo,
-              variacao: 0, // Will calculate below
-            }
-          })
-
-        promises.push(promise)
+        const key = format(mesRef, 'yyyy-MM')
+        monthlyData[key] = { receitas: 0, despesas: 0 }
       }
 
-      const results = await Promise.all(promises)
+      // Processar todas as transações
+      (allTransactions || []).forEach((t) => {
+        const monthKey = t.data.substring(0, 7) // 'yyyy-MM'
+        if (!monthlyData[monthKey]) return
+
+        if (t.tipo === TRANSACTION_TYPE.CREDITO && t.valor > 0) {
+          monthlyData[monthKey].receitas += t.valor
+        } else if (t.tipo === TRANSACTION_TYPE.DEBITO && t.valor < 0) {
+          monthlyData[monthKey].despesas += Math.abs(t.valor)
+        }
+      })
+
+      // Criar array de resultados
+      const results = []
+      for (let i = meses - 1; i >= 0; i--) {
+        const mesRef = subMonths(now, i)
+        const key = format(mesRef, 'yyyy-MM')
+        const { receitas, despesas } = monthlyData[key]
+
+        results.push({
+          mes: format(mesRef, 'MMM/yy', { locale: ptBR }),
+          receitas,
+          despesas,
+          saldo: receitas - despesas,
+          variacao: 0, // Will calculate below
+        })
+      }
 
       // Calcular variação M/M
       const evolutionData: EvolutionData[] = results.map((current, index) => {

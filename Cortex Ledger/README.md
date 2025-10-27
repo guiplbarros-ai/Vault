@@ -64,6 +64,7 @@ Cortex Ledger/
 - Node.js ≥ 20
 - pnpm ≥ 9
 - Conta Supabase (projeto: `xborrshstfcvzrxyqyor`)
+- macOS (para aplicativo desktop)
 
 ### Instalação
 
@@ -113,6 +114,40 @@ supabase db push --project-ref xborrshstfcvzrxyqyor
 ### Validar RLS
 
 Siga as instruções em `supabase/tests/RLS-VALIDATION.md`
+
+## Aplicativo Desktop (macOS)
+
+O Cortex Ledger possui um aplicativo nativo para macOS que abre a aplicação web no Chrome:
+
+### Instalar
+
+O aplicativo já está instalado em `/Applications/Cortex Ledger.app`
+
+### Usar
+
+1. Inicie o servidor web:
+   ```bash
+   pnpm dev:web
+   ```
+
+2. Abra o aplicativo:
+   - Clique no ícone no Launchpad/Dock
+   - Ou execute: `pnpm open:desktop`
+   - Ou pesquise "Cortex Ledger" no Spotlight
+
+3. Para manter no Dock permanentemente:
+   - Clique com botão direito no ícone do Dock
+   - Opções → Manter no Dock
+
+### Recriar/Personalizar
+
+```bash
+cd apps/desktop
+./create-mac-app.sh
+cp -r "Cortex Ledger.app" /Applications/
+```
+
+Veja mais detalhes em `apps/desktop/README.md`
 
 ## Estrutura de Desenvolvimento
 

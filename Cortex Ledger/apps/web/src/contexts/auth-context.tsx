@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -23,8 +23,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
+    let mounted = true
+
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
@@ -33,16 +36,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -50,17 +57,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (error) throw error
-
-      router.push('/')
       return { error: null }
     } catch (error) {
       return { error: error as Error }
     }
-  }
+  }, [])
 
-  const signUp = async (email: string, password: string, name?: string) => {
+  const signUp = useCallback(async (email: string, password: string, name?: string) => {
     try {
-      const { error, data } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -71,43 +76,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (error) throw error
-
-      // Create user profile
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('user_profile')
-          .insert({
-            user_id: data.user.id,
-            email: email,
-            nome: name || null,
-            moeda_padrao: 'BRL',
-            fuso_horario: 'America/Sao_Paulo',
-            modo_tema: 'light',
-          })
-
-        if (profileError) throw profileError
-      }
-
-      router.push('/')
+      router.push('/login')
       return { error: null }
     } catch (error) {
       return { error: error as Error }
     }
-  }
+  }, [router])
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut()
     router.push('/login')
-  }
+  }, [router])
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     session,
     loading,
     signIn,
     signUp,
     signOut,
-  }
+  }), [user, session, loading, signIn, signUp, signOut])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

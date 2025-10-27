@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Card, CardHeader, CardBody } from '@/components/ui/card'
 import { ChartWrapper } from '@/components/charts/chart-wrapper'
 import { useDFCData } from '@/lib/hooks/use-dfc-data'
@@ -7,8 +8,8 @@ import { Loader2, TrendingDown, TrendingUp } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import type { EChartsOption } from 'echarts'
 
-export function DFCChart() {
-  const { data, isLoading, error } = useDFCData(6)
+export const DFCChart = memo(function DFCChart() {
+  const { data, isLoading, error } = useDFCData(3)
 
   if (isLoading) {
     return (
@@ -119,7 +120,7 @@ export function DFCChart() {
               DFC Simplificado
             </h3>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Entradas - Saídas (últimos 6 meses)
+              Entradas - Saídas (últimos 3 meses)
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -143,4 +144,4 @@ export function DFCChart() {
       </CardBody>
     </Card>
   )
-}
+})

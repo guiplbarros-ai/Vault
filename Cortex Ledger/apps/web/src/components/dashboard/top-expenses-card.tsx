@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Card, CardHeader, CardBody } from '@/components/ui/card'
 import { useTopExpenses } from '@/lib/hooks/use-top-expenses'
 import { Loader2, TrendingDown } from 'lucide-react'
@@ -8,14 +9,14 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
 
-export function TopExpensesCard() {
+export const TopExpensesCard = memo(function TopExpensesCard() {
   const { data: expenses, isLoading, error } = useTopExpenses(5)
 
   if (isLoading) {
     return (
       <Card>
         <CardBody className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand" />
         </CardBody>
       </Card>
     )
@@ -25,7 +26,7 @@ export function TopExpensesCard() {
     return (
       <Card>
         <CardBody className="p-6">
-          <p className="text-sm text-error-600">Erro ao carregar despesas</p>
+          <p className="text-sm text-danger">Erro ao carregar despesas</p>
         </CardBody>
       </Card>
     )
@@ -35,15 +36,15 @@ export function TopExpensesCard() {
     return (
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+          <h3 className="text-lg font-semibold text-text">
             Top 5 Despesas
           </h3>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="text-sm text-muted">
             Maiores gastos do mês atual
           </p>
         </CardHeader>
         <CardBody className="p-6">
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="text-sm text-muted">
             Nenhuma despesa encontrada neste mês.
           </p>
         </CardBody>
@@ -56,14 +57,14 @@ export function TopExpensesCard() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+            <h3 className="text-lg font-semibold text-text">
               Top 5 Despesas
             </h3>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            <p className="text-sm text-muted">
               Maiores gastos do mês atual
             </p>
           </div>
-          <TrendingDown className="h-5 w-5 text-error-500" />
+          <TrendingDown className="h-5 w-5 text-danger" />
         </div>
       </CardHeader>
       <CardBody>
@@ -71,17 +72,17 @@ export function TopExpensesCard() {
           {expenses.map((expense, index) => (
             <div
               key={expense.id}
-              className="flex items-center justify-between border-b border-neutral-200 pb-3 last:border-0 dark:border-neutral-700"
+              className="flex items-center justify-between border-b border-line/20 pb-3 last:border-0"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-error-100 text-sm font-semibold text-error-700 dark:bg-error-900 dark:text-error-300">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-danger text-sm font-semibold text-brand-contrast">
                   #{index + 1}
                 </div>
                 <div>
-                  <div className="font-medium text-neutral-900 dark:text-neutral-50">
+                  <div className="font-medium text-text">
                     {expense.descricao}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+                  <div className="flex items-center gap-2 text-xs text-muted">
                     {expense.categoria && (
                       <Badge variant="neutral" className="text-xs">
                         {expense.categoria.nome}
@@ -94,11 +95,11 @@ export function TopExpensesCard() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-lg font-semibold text-error-600 dark:text-error-400">
+                <div className="text-lg font-semibold text-danger">
                   {formatCurrency(Math.abs(expense.valor))}
                 </div>
                 {expense.conta && (
-                  <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                  <div className="text-xs text-muted">
                     {expense.conta.apelido}
                   </div>
                 )}
@@ -109,4 +110,4 @@ export function TopExpensesCard() {
       </CardBody>
     </Card>
   )
-}
+})

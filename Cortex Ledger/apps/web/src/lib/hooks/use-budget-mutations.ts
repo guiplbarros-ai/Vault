@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { startOfMonth, format } from 'date-fns'
+import { requireSession, formatSupabaseError } from '@/lib/query-utils'
 
 export interface BudgetInput {
   categoria_id: string
@@ -20,19 +21,28 @@ export interface BudgetUpdate extends Partial<BudgetInput> {
 async function createBudget(input: BudgetInput) {
   const mesFormatted = format(startOfMonth(input.mes_ref), 'yyyy-MM-dd')
 
+  console.log('Creating budget with:', {
+    categoria_id: input.categoria_id,
+    mes: mesFormatted,
+    valor_alvo: input.valor_planejado,
+  })
+
   const { data, error } = await supabase
     .from('orcamento')
     .insert({
       categoria_id: input.categoria_id,
-      mes_ref: mesFormatted,
-      valor_planejado: input.valor_planejado,
-      valor_alerta_80: input.valor_alerta_80 || input.valor_planejado * 0.8,
-      valor_alerta_100: input.valor_alerta_100 || input.valor_planejado,
+      mes: mesFormatted,
+      valor_alvo: input.valor_planejado,
     })
     .select()
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('Error creating budget:', error)
+    throw error
+  }
+
+  console.log('Budget created successfully:', data)
   return data
 }
 
@@ -53,10 +63,13 @@ export function useCreateBudget() {
 async function updateBudget(input: BudgetUpdate) {
   const { id, mes_ref, ...rest } = input
 
-  const updateData: any = { ...rest }
+  const updateData: any = {}
+
+  if (rest.categoria_id) updateData.categoria_id = rest.categoria_id
+  if (rest.valor_planejado) updateData.valor_alvo = rest.valor_planejado
 
   if (mes_ref) {
-    updateData.mes_ref = format(startOfMonth(mes_ref), 'yyyy-MM-dd')
+    updateData.mes = format(startOfMonth(mes_ref), 'yyyy-MM-dd')
   }
 
   const { data, error } = await supabase
@@ -109,10 +122,8 @@ export function useDeleteBudget() {
 export interface Budget {
   id: string
   categoria_id: string
-  mes_ref: string
-  valor_planejado: number
-  valor_alerta_80: number
-  valor_alerta_100: number
+  mes: string
+  valor_alvo: number
   categoria?: {
     id: string
     nome: string
@@ -121,28 +132,52 @@ export interface Budget {
 }
 
 async function fetchBudgets(mesRef?: Date): Promise<Budget[]> {
+  // Verificar se há sessão ativa
+  const session = await requireSession()
+  if (!session) {
+    return []
+  }
+
+  // TEMPORARY: Query without categoria relationship until migration is applied
   let query = supabase
     .from('orcamento')
-    .select('*, categoria:categoria_id (id, nome, grupo)')
-    .order('mes_ref', { ascending: false })
+    .select('*')
+    .order('mes', { ascending: false })
 
   if (mesRef) {
     const mesFormatted = format(startOfMonth(mesRef), 'yyyy-MM-dd')
-    query = query.eq('mes_ref', mesFormatted)
+    query = query.eq('mes', mesFormatted)
   }
 
   const { data, error } = await query
 
-  if (error) throw error
+  if (error) {
+    throw formatSupabaseError(error, 'fetch budgets')
+  }
+
+  // Buscar categorias separadamente
+  const categoriaIds = [...new Set((data || []).map((item: any) => item.categoria_id).filter(Boolean))]
+
+  let categorias: Record<string, any> = {}
+  if (categoriaIds.length > 0) {
+    const { data: categoriasData, error: categoriasError } = await supabase
+      .from('categoria')
+      .select('id, nome, grupo')
+      .in('id', categoriaIds)
+
+    if (!categoriasError && categoriasData) {
+      categorias = Object.fromEntries(
+        categoriasData.map((cat: any) => [cat.id, cat])
+      )
+    }
+  }
 
   return (data || []).map((item: any) => ({
     id: item.id,
     categoria_id: item.categoria_id,
-    mes_ref: item.mes_ref,
-    valor_planejado: item.valor_planejado,
-    valor_alerta_80: item.valor_alerta_80,
-    valor_alerta_100: item.valor_alerta_100,
-    categoria: Array.isArray(item.categoria) ? item.categoria[0] : item.categoria,
+    mes: item.mes,
+    valor_alvo: item.valor_alvo,
+    categoria: categorias[item.categoria_id] || null,
   })) as Budget[]
 }
 

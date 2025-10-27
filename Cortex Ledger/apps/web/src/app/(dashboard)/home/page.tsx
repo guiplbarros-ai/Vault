@@ -9,10 +9,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-neutral-500">
-          Visão geral das suas finanças
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight text-text">Dashboard</h1>
+        <p className="text-muted">Visão geral das suas finanças</p>
       </div>
 
       {/* Saldo por Conta */}
