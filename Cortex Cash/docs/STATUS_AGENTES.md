@@ -127,37 +127,62 @@
 
 ---
 
-## Agent UI - Status
+## Agent UI (Agent 2) - Status
 
-### ⏳ Aguardando
+### ✅ Tarefas Concluídas
 
-**Bloqueado por**: Agent IMPORT precisa implementar parsers e Agent CORE precisa conectar DB
+#### Fase 1: Infraestrutura de UI (Semana 1)
+- [x] 22 componentes shadcn/ui instalados (Dialog, Table, Input, Select, Tabs, etc.)
+- [x] 9 form wrapper components criados (FormInput, FormSelect, FormTextarea, etc.)
+- [x] 5 Zod validation schemas (common, transaction, account, category, budget)
+- [x] 6 custom hooks (useDebounce, usePagination, useTableFilters, etc.)
+- [x] 6 constants files (transaction-types, account-types, budget-periods, etc.)
 
-**Pode começar quando**:
-- Layout base estiver pronto ✅
-- Serviços de transações e contas estiverem implementados
-- Agent IMPORT tiver dados para exibir
+#### Fase 2: Componentes Core (Semana 1)
+- [x] DataTable component completo (3 arquivos: data-table, toolbar, column-header)
+- [x] Currency Input component (2 arquivos)
+- [x] DateRangePicker component (4 arquivos)
+- [x] 6 utility components (empty-state, loading-spinner, stat-card, etc.)
 
-### 📋 Tarefas Planejadas (Semana 2-4)
+#### Fase 3: Páginas CRUD (Semana 1-2)
+- [x] 4 páginas principais criadas:
+  - `/` - Dashboard Home ✅
+  - `/transactions` - Transações ✅
+  - `/accounts` - Contas ✅
+  - `/categories` - Categorias ✅
 
-#### Semana 2: Dashboard Básico
-- [ ] Dashboard Home com dados reais
-- [ ] Cards de saldo por conta
-- [ ] Lista de últimas transações
+#### Fase 4: Formulários (Semana 2)
+- [x] TransactionForm - Completo com validação
+- [x] AccountForm - Completo com validação
+- [x] CategoryForm - Completo com validação
 
-#### Semana 3: Página de Transações
-- [ ] Tabela de transações
-- [ ] Filtros básicos (data, conta)
-- [ ] Busca por texto
-- [ ] Modal de detalhes
+#### Fase 5: Integração com DB (Semana 2) ✅
+- [x] **3 Adapters criados** (transaction, account, category)
+- [x] **Página de Transações**: CRUD completo conectado ao DB
+- [x] **Página de Contas**: CRUD completo conectado ao DB
+- [x] **Página de Categorias**: CRUD completo conectado ao DB
+- [x] **Seed & Inicialização**: Hook useDatabase + initialize.ts
+- [x] **Formulários com dados reais**: Dropdowns carregando de Dexie
+- [x] **0 mock data** nas páginas principais
+- [x] **0 erros TypeScript**
 
-#### Semana 4: Gráficos
-- [ ] Gráfico de entrada vs saída (Recharts)
-- [ ] Paginação de transações
-- [ ] Loading states
-- [ ] Empty states
+### ✅ Fase 6: Dashboard Home (Semana 2) ✅
+- [x] **StatCards com dados reais** (saldo total, receitas mês, despesas mês, cartões)
+- [x] **RecentTransactions** conectado ao DB (últimas 5 transações)
+- [x] **CashFlowChart** com dados reais (últimos 6 meses)
+- [x] **Loading states** em todos os componentes
+- [x] **Empty states** para quando não há dados
+- [x] **0 mock data** - 100% dados reais do Dexie
 
-**Status**: 🟡 **PODE INICIAR SEMANA 2**
+### 📋 Próximos Passos (v0.2)
+
+#### Refinamentos
+- [ ] BudgetOverview com dados reais (depende de implementar orçamentos)
+- [ ] Error boundaries
+- [ ] Toasts de feedback (sucesso/erro)
+- [ ] Animações e transições suaves
+
+**Status**: ✅ **v0.1 COMPLETA!** - Dashboard Home 100% funcional!
 
 ---
 
@@ -170,8 +195,9 @@
 | Interfaces | CORE | ✅ DONE | IMPORT, FINANCE |
 | Layout base | CORE | ✅ DONE | UI |
 | Páginas base | CORE | ✅ DONE | UI |
-| Parser CSV | IMPORT | ⏳ TODO | UI |
-| Dashboard Home | UI | ⏳ TODO | - |
+| Dashboard Home | UI | ✅ DONE | - |
+| CRUD Completo | UI | ✅ DONE | IMPORT |
+| Parser CSV | IMPORT | ⏳ TODO | - |
 
 ---
 
@@ -190,9 +216,9 @@
 4. Criar branch `import/csv-parser`
 
 ### Agent UI
-1. Aguardar Agent IMPORT ter dados para exibir
-2. Revisar componentes existentes
-3. Planejar componentes de Semana 2
+1. ✅ **v0.1 COMPLETA!** Todas as tarefas planejadas foram concluídas
+2. Próxima fase: Refinamentos (toasts, error boundaries, animações)
+3. Aguardar implementação de orçamentos para conectar BudgetOverview
 
 ### Agent FINANCE
 1. Aguardar v0.2
