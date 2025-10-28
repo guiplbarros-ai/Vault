@@ -28,6 +28,22 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
   },
+
+
+  async redirects() {
+    return [
+      { source: '/home', destination: '/', permanent: false },
+      { source: '/contas', destination: '/', permanent: false },
+      { source: '/categorias', destination: '/', permanent: false },
+      { source: '/orcamento', destination: '/', permanent: false },
+      { source: '/regras', destination: '/', permanent: false },
+      { source: '/relatorios', destination: '/', permanent: false },
+      { source: '/transacoes', destination: '/', permanent: false },
+      { source: '/transacoes-nova', destination: '/', permanent: false },
+      { source: '/cartoes', destination: '/', permanent: false },
+      { source: '/importar', destination: '/', permanent: false }
+    ];
+  },
 };
 
 export default nextConfig;

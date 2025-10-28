@@ -1,20 +1,31 @@
 {
-	"$schema": "https://turbo.build/schema.json",
-	"globalDependencies": ["**/.env"],
-	"tasks": {
-		"build": {
-			"dependsOn": ["^build"],
-			"outputs": ["dist/**", ".next/**", "!.next/cache/**"]
-		},
-		"dev": {
-			"cache": false,
-			"persistent": true
-		},
-		"drizzle:generate": {
-			"cache": false
-		},
-		"drizzle:push": {
-			"cache": false
-		}
-	}
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "**/.env"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "!.next/cache/**"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "drizzle:generate": {
+      "cache": false
+    },
+    "drizzle:push": {
+      "cache": false
+    },
+    "typecheck": {
+      "cache": false
+    }
+  }
 }
