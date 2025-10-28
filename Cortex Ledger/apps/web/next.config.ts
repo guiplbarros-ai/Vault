@@ -41,7 +41,9 @@ const nextConfig: NextConfig = {
       { source: '/transacoes', destination: '/', permanent: false },
       { source: '/transacoes-nova', destination: '/', permanent: false },
       { source: '/cartoes', destination: '/', permanent: false },
-      { source: '/importar', destination: '/', permanent: false }
+      { source: '/importar', destination: '/', permanent: false },
+      { source: '/login', destination: '/', permanent: false },
+      { source: '/signup', destination: '/', permanent: false }
     ];
   },
 };
