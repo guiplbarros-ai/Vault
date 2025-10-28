@@ -10,6 +10,7 @@ import type { Transacao, CreateTransacaoDTO } from '../types';
 import type { ITransacaoService } from './interfaces';
 import { generateHash } from '../utils/format';
 import { validateDTO, createTransacaoSchema } from '../validations/dtos';
+import { NotFoundError, ValidationError, DatabaseError } from '../errors';
 
 export class TransacaoService implements ITransacaoService {
   async listTransacoes(filters?: {
@@ -113,10 +114,11 @@ export class TransacaoService implements ITransacaoService {
   }
 
   async createTransacao(data: CreateTransacaoDTO): Promise<Transacao> {
-    // Validate input
-    const validatedData = validateDTO(createTransacaoSchema, data);
+    try {
+      // Validate input
+      const validatedData = validateDTO(createTransacaoSchema, data);
 
-    const db = getDB();
+      const db = getDB();
 
     const id = crypto.randomUUID();
     const now = new Date();
@@ -143,18 +145,25 @@ export class TransacaoService implements ITransacaoService {
       updated_at: now,
     };
 
-    await db.transacoes.add(transacao);
+      await db.transacoes.add(transacao);
 
-    return transacao;
+      return transacao;
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      throw new DatabaseError('Erro ao criar transação', error as Error);
+    }
   }
 
   async updateTransacao(id: string, data: Partial<CreateTransacaoDTO>): Promise<Transacao> {
-    const db = getDB();
+    try {
+      const db = getDB();
 
-    const existing = await db.transacoes.get(id);
-    if (!existing) {
-      throw new Error(`Transação ${id} não encontrada`);
-    }
+      const existing = await db.transacoes.get(id);
+      if (!existing) {
+        throw new NotFoundError('Transação', id);
+      }
 
     const updated: Partial<Transacao> = {
       ...data,
@@ -167,14 +176,20 @@ export class TransacaoService implements ITransacaoService {
       updated.classificacao_origem = 'manual';
     }
 
-    await db.transacoes.update(id, updated);
+      await db.transacoes.update(id, updated);
 
-    const result = await db.transacoes.get(id);
-    if (!result) {
-      throw new Error(`Erro ao recuperar transação atualizada ${id}`);
+      const result = await db.transacoes.get(id);
+      if (!result) {
+        throw new DatabaseError(`Erro ao recuperar transação atualizada ${id}`);
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
+        throw error;
+      }
+      throw new DatabaseError('Erro ao atualizar transação', error as Error);
     }
-
-    return result;
   }
 
   async deleteTransacao(id: string): Promise<void> {

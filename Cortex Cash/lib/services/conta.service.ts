@@ -7,6 +7,7 @@
 
 import { getDB } from '../db/client';
 import type { Conta, Instituicao } from '../types';
+import { NotFoundError, DatabaseError } from '../errors';
 
 export class ContaService {
   /**
@@ -119,7 +120,7 @@ export class ContaService {
   async getSaldoTotal(contaId: string): Promise<number> {
     const conta = await this.getContaById(contaId);
     if (!conta) {
-      throw new Error(`Conta ${contaId} não encontrada`);
+      throw new NotFoundError('Conta', contaId);
     }
 
     const saldoTransacoes = await this.getSaldoConta(contaId);
@@ -151,48 +152,62 @@ export class ContaService {
    * Atualiza uma conta
    */
   async updateConta(id: string, data: Partial<Omit<Conta, 'id' | 'created_at' | 'updated_at'>>): Promise<Conta> {
-    const db = getDB();
+    try {
+      const db = getDB();
 
-    const existing = await db.contas.get(id);
-    if (!existing) {
-      throw new Error(`Conta ${id} não encontrada`);
+      const existing = await db.contas.get(id);
+      if (!existing) {
+        throw new NotFoundError('Conta', id);
+      }
+
+      await db.contas.update(id, {
+        ...data,
+        updated_at: new Date(),
+      });
+
+      const result = await db.contas.get(id);
+      if (!result) {
+        throw new DatabaseError(`Erro ao recuperar conta atualizada ${id}`);
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
+        throw error;
+      }
+      throw new DatabaseError('Erro ao atualizar conta', error as Error);
     }
-
-    await db.contas.update(id, {
-      ...data,
-      updated_at: new Date(),
-    });
-
-    const result = await db.contas.get(id);
-    if (!result) {
-      throw new Error(`Erro ao recuperar conta atualizada ${id}`);
-    }
-
-    return result;
   }
 
   /**
    * Ativa/desativa uma conta
    */
   async toggleAtiva(id: string): Promise<Conta> {
-    const db = getDB();
+    try {
+      const db = getDB();
 
-    const conta = await db.contas.get(id);
-    if (!conta) {
-      throw new Error(`Conta ${id} não encontrada`);
+      const conta = await db.contas.get(id);
+      if (!conta) {
+        throw new NotFoundError('Conta', id);
+      }
+
+      await db.contas.update(id, {
+        ativa: !conta.ativa,
+        updated_at: new Date(),
+      });
+
+      const result = await db.contas.get(id);
+      if (!result) {
+        throw new DatabaseError(`Erro ao recuperar conta atualizada ${id}`);
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
+        throw error;
+      }
+      throw new DatabaseError('Erro ao alternar estado da conta', error as Error);
     }
-
-    await db.contas.update(id, {
-      ativa: !conta.ativa,
-      updated_at: new Date(),
-    });
-
-    const result = await db.contas.get(id);
-    if (!result) {
-      throw new Error(`Erro ao recuperar conta atualizada ${id}`);
-    }
-
-    return result;
   }
 
   /**

@@ -9,6 +9,7 @@ import { getDB } from '../db/client';
 import type { Categoria, CreateCategoriaDTO } from '../types';
 import type { ICategoriaService } from './interfaces';
 import { validateDTO, createCategoriaSchema } from '../validations/dtos';
+import { NotFoundError, ValidationError, DatabaseError } from '../errors';
 
 export class CategoriaService implements ICategoriaService {
   async listCategorias(options?: {
@@ -80,10 +81,11 @@ export class CategoriaService implements ICategoriaService {
   }
 
   async createCategoria(data: CreateCategoriaDTO): Promise<Categoria> {
-    // Validate input
-    const validatedData = validateDTO(createCategoriaSchema, data);
+    try {
+      // Validate input
+      const validatedData = validateDTO(createCategoriaSchema, data);
 
-    const db = getDB();
+      const db = getDB();
 
     const id = crypto.randomUUID();
     const now = new Date();
@@ -101,30 +103,43 @@ export class CategoriaService implements ICategoriaService {
       updated_at: now,
     };
 
-    await db.categorias.add(categoria);
+      await db.categorias.add(categoria);
 
-    return categoria;
+      return categoria;
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      throw new DatabaseError('Erro ao criar categoria', error as Error);
+    }
   }
 
   async updateCategoria(id: string, data: Partial<CreateCategoriaDTO>): Promise<Categoria> {
-    const db = getDB();
+    try {
+      const db = getDB();
 
-    const existing = await db.categorias.get(id);
-    if (!existing) {
-      throw new Error(`Categoria ${id} não encontrada`);
+      const existing = await db.categorias.get(id);
+      if (!existing) {
+        throw new NotFoundError('Categoria', id);
+      }
+
+      await db.categorias.update(id, {
+        ...data,
+        updated_at: new Date(),
+      });
+
+      const result = await db.categorias.get(id);
+      if (!result) {
+        throw new DatabaseError(`Erro ao recuperar categoria atualizada ${id}`);
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
+        throw error;
+      }
+      throw new DatabaseError('Erro ao atualizar categoria', error as Error);
     }
-
-    await db.categorias.update(id, {
-      ...data,
-      updated_at: new Date(),
-    });
-
-    const result = await db.categorias.get(id);
-    if (!result) {
-      throw new Error(`Erro ao recuperar categoria atualizada ${id}`);
-    }
-
-    return result;
   }
 
   async deleteCategoria(id: string): Promise<void> {
