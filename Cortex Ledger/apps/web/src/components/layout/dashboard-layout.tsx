@@ -8,7 +8,7 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout = memo(function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-bg">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-graphite-950">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden pl-64">
         <Header />

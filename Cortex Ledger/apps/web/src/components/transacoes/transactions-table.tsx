@@ -34,14 +34,14 @@ export function TransactionsTable({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-muted">Carregando transações...</div>
+        <div className="text-slate-600 dark:text-graphite-300">Carregando transações...</div>
       </div>
     )
   }
 
   if (transactions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted">
+      <div className="flex flex-col items-center justify-center py-12 text-slate-600 dark:text-graphite-300">
         <p className="text-lg font-medium">Nenhuma transação encontrada</p>
         <p className="text-sm">Tente ajustar os filtros ou importar novos dados</p>
       </div>
@@ -51,50 +51,50 @@ export function TransactionsTable({
   return (
     <div className="space-y-4">
       {/* Table */}
-      <div className="rounded-2xl border border-line/25 overflow-hidden bg-surface">
+      <div className="rounded-2xl border border-slate-200 dark:border-graphite-700 overflow-hidden bg-white dark:bg-graphite-800">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-elev border-b border-line/20">
+            <thead className="bg-slate-100 dark:bg-graphite-700 border-b border-slate-200 dark:border-graphite-700">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-graphite-300 uppercase tracking-wider">
                   Data
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-graphite-300 uppercase tracking-wider">
                   Descrição
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-graphite-300 uppercase tracking-wider">
                   Conta
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-graphite-300 uppercase tracking-wider">
                   Categoria
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-graphite-300 uppercase tracking-wider">
                   Valor
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-muted uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-graphite-300 uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-surface divide-y divide-line/20">
+            <tbody className="bg-white dark:bg-graphite-800 divide-y divide-slate-200 dark:border-graphite-700">
               {transactions.map((transaction) => (
                 <tr
                   key={transaction.id}
-                  className="hover:bg-elev transition-colors cursor-pointer"
+                  className="hover:bg-slate-100 dark:bg-graphite-700 transition-colors cursor-pointer"
                   onClick={() => onViewDetails(transaction)}
                 >
-                  <td className="px-4 py-3 text-sm text-text whitespace-nowrap">
+                  <td className="px-4 py-3 text-sm text-slate-900 dark:text-graphite-100 whitespace-nowrap">
                     {formatDate(transaction.data)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-text max-w-md">
+                  <td className="px-4 py-3 text-sm text-slate-900 dark:text-graphite-100 max-w-md">
                     <div className="truncate">{transaction.descricao}</div>
                     {transaction.parcela_n && transaction.parcelas_total && (
-                      <div className="text-xs text-muted mt-1">
+                      <div className="text-xs text-slate-600 dark:text-graphite-300 mt-1">
                         Parcela {transaction.parcela_n}/{transaction.parcelas_total}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted whitespace-nowrap">
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-graphite-300 whitespace-nowrap">
                     {transaction.conta?.apelido || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
@@ -103,21 +103,21 @@ export function TransactionsTable({
                         {transaction.categoria.nome}
                       </Badge>
                     ) : (
-                      <span className="text-muted text-xs">Sem categoria</span>
+                      <span className="text-slate-600 dark:text-graphite-300 text-xs">Sem categoria</span>
                     )}
                   </td>
                   <td
                     className={`px-4 py-3 text-sm font-semibold text-right whitespace-nowrap ${
                       transaction.valor > 0
                         ? 'text-success'
-                        : 'text-danger'
+                        : 'text-error-600'
                     }`}
                   >
                     {formatCurrency(transaction.valor)}
                   </td>
                   <td className="px-4 py-3 text-center whitespace-nowrap">
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
@@ -143,7 +143,7 @@ export function TransactionsTable({
 
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => onPageChange(1)}
             disabled={!hasPrev}
@@ -151,7 +151,7 @@ export function TransactionsTable({
             <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => onPageChange(page - 1)}
             disabled={!hasPrev}
@@ -166,7 +166,7 @@ export function TransactionsTable({
           </div>
 
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => onPageChange(page + 1)}
             disabled={!hasNext}
@@ -174,7 +174,7 @@ export function TransactionsTable({
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => onPageChange(totalPages)}
             disabled={!hasNext}

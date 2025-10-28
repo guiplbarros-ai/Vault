@@ -1,3 +1,5 @@
+import type { EChartsOption } from 'echarts'
+
 /**
  * Tema de cores para gráficos (Recharts)
  * Paleta Creme & Bordeaux Olive
@@ -48,6 +50,51 @@ export const chartTheme = {
     expense: "#A54148",   // danger - bordeaux avermelhado
     transfer: "#74745C",  // info - oliva neutra
     budget: "#C4963C",    // warning - oliva quente
+  },
+};
+
+/**
+ * Tema ECharts — Cortex Ledger v1
+ * Segue as diretrizes do UI-FRONTEND-GUIDE.md seção 8
+ */
+export const cortexEchartsTheme = {
+  color: [
+    '#12B5A2', // Receita / série positiva (brand-600)
+    '#E2555A', // Despesa (error-600)
+    '#B8891A', // Orçado (insight-600)
+    '#3B4552', // Realizado (graphite-500)
+    '#63E0D1', // Variação brand (brand-400)
+    '#C26719', // Alertas (warning-600)
+  ],
+  textStyle: {
+    color: 'var(--text)',
+    fontFamily: 'Inter, sans-serif',
+  },
+  title: {
+    textStyle: {
+      color: 'var(--text)',
+      fontWeight: 600,
+    },
+  },
+  axisLine: {
+    lineStyle: {
+      color: 'var(--border)',
+    },
+  },
+  axisLabel: {
+    color: 'var(--text-muted)',
+  },
+  splitLine: {
+    lineStyle: {
+      color: 'var(--border)',
+    },
+  },
+  tooltip: {
+    backgroundColor: 'var(--surface)',
+    borderColor: 'var(--border)',
+    textStyle: {
+      color: 'var(--text)',
+    },
   },
 };
 

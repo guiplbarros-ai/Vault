@@ -134,7 +134,7 @@ export default function RegrasPage() {
 						</div>
 						<div className="flex items-center gap-2 mt-4">
 							<Button onClick={createRule}>Salvar</Button>
-							<Button variant="outline" onClick={()=>{setCreating(false); setNewExpr('')}}>Cancelar</Button>
+							<Button variant="secondary" onClick={()=>{setCreating(false); setNewExpr('')}}>Cancelar</Button>
 						</div>
 					</CardContent>
 				</Card>
@@ -171,16 +171,16 @@ export default function RegrasPage() {
 										)}
 									</div>
 									<div className="flex items-center gap-2">
-										<Button variant="outline" size="sm" disabled={idx===0} onClick={()=>move(r.id,'up')} title="Mover para cima"><ArrowUp className="h-4 w-4" /></Button>
-										<Button variant="outline" size="sm" disabled={idx===regras.length-1} onClick={()=>move(r.id,'down')} title="Mover para baixo"><ArrowDown className="h-4 w-4" /></Button>
+										<Button variant="secondary" size="sm" disabled={idx===0} onClick={()=>move(r.id,'up')} title="Mover para cima"><ArrowUp className="h-4 w-4" /></Button>
+										<Button variant="secondary" size="sm" disabled={idx===regras.length-1} onClick={()=>move(r.id,'down')} title="Mover para baixo"><ArrowDown className="h-4 w-4" /></Button>
 										{editingId === r.id ? (
 											<>
 												<Button size="sm" onClick={()=>saveEdit(r.id)}>Salvar</Button>
-												<Button size="sm" variant="outline" onClick={()=>setEditingId(null)}>Cancelar</Button>
+												<Button size="sm" variant="secondary" onClick={()=>setEditingId(null)}>Cancelar</Button>
 											</>
 										) : (
 											<>
-												<Button variant="outline" size="sm" onClick={()=>startEdit(r)}>Editar</Button>
+												<Button variant="secondary" size="sm" onClick={()=>startEdit(r)}>Editar</Button>
 												<Button variant="destructive" size="sm" onClick={()=>deleteRule(r.id)}><X className="h-4 w-4" /></Button>
 											</>
 										)}

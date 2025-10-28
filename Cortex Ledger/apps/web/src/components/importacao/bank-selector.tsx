@@ -29,8 +29,8 @@ export function BankSelector({ selected, onSelect }: BankSelectorProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <Building2 className="h-4 w-4 text-muted" />
-        <label className="text-sm font-medium text-text">Banco (opcional)</label>
+        <Building2 className="h-4 w-4 text-slate-600 dark:text-graphite-300" />
+        <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">Banco (opcional)</label>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -42,13 +42,13 @@ export function BankSelector({ selected, onSelect }: BankSelectorProps) {
             className={cn(
               'relative overflow-hidden rounded-xl border-2 p-4 text-left transition-all',
               selected === bank.id
-                ? 'border-brand bg-surface shadow-card'
-                : 'border-line/25 bg-surface hover:bg-elev hover:shadow-card'
+                ? 'border-brand-600 bg-white dark:bg-graphite-800 shadow-card'
+                : 'border-slate-200 dark:border-graphite-700/25 bg-white dark:bg-graphite-800 hover:bg-slate-100 dark:bg-graphite-700 hover:shadow-card'
             )}
           >
             {bank.id === 'auto' && selected === bank.id && (
               <div className="absolute right-2 top-2">
-                <Sparkles className="h-4 w-4 text-brand" />
+                <Sparkles className="h-4 w-4 text-brand-600" />
               </div>
             )}
 
@@ -56,8 +56,8 @@ export function BankSelector({ selected, onSelect }: BankSelectorProps) {
             <p className={cn(
               'text-sm font-medium',
               selected === bank.id
-                ? 'text-brand'
-                : 'text-text'
+                ? 'text-brand-600'
+                : 'text-slate-900 dark:text-graphite-100'
             )}>
               {bank.name}
             </p>
@@ -66,7 +66,7 @@ export function BankSelector({ selected, onSelect }: BankSelectorProps) {
       </div>
 
       {selected === 'auto' && (
-        <p className="flex items-start gap-2 rounded-xl border border-line/25 bg-surface p-3 text-xs text-info">
+        <p className="flex items-start gap-2 rounded-xl border border-slate-200 dark:border-graphite-700/25 bg-white dark:bg-graphite-800 p-3 text-xs text-info">
           <Sparkles className="mt-0.5 h-3 w-3 flex-shrink-0 text-info" />
           <span>
             O sistema analisará o arquivo e detectará automaticamente o formato e banco de origem.

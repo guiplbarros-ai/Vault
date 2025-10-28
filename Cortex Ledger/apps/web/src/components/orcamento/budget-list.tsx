@@ -51,7 +51,7 @@ export function BudgetList({ mesRef, onEdit }: BudgetListProps) {
     return (
       <Card>
         <CardBody className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-brand" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
         </CardBody>
       </Card>
     )
@@ -61,7 +61,7 @@ export function BudgetList({ mesRef, onEdit }: BudgetListProps) {
     return (
       <Card>
         <CardBody className="p-6">
-          <div className="flex items-center gap-2 text-danger">
+          <div className="flex items-center gap-2 text-error-600">
             <AlertCircle className="h-5 w-5" />
             <span className="text-sm">Erro ao carregar orçamentos</span>
           </div>
@@ -74,7 +74,7 @@ export function BudgetList({ mesRef, onEdit }: BudgetListProps) {
     return (
       <Card>
         <CardBody className="p-6">
-          <p className="text-center text-sm text-muted">
+          <p className="text-center text-sm text-slate-600 dark:text-graphite-300">
             Nenhum orçamento configurado{mesRef ? ' para este mês' : ''}.
           </p>
         </CardBody>
@@ -99,7 +99,7 @@ export function BudgetList({ mesRef, onEdit }: BudgetListProps) {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-text">
+                      <h4 className="font-semibold text-slate-900 dark:text-graphite-100">
                         {categoriaNome}
                       </h4>
                       {percentual > 100 && (
@@ -113,7 +113,7 @@ export function BudgetList({ mesRef, onEdit }: BudgetListProps) {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted mt-0.5">
+                    <p className="text-xs text-slate-600 dark:text-graphite-300 mt-0.5">
                       {budget.categoria?.grupo || ''} •{' '}
                       {format(new Date(budget.mes), "MMMM 'de' yyyy", { locale: ptBR })}
                     </p>
@@ -121,7 +121,7 @@ export function BudgetList({ mesRef, onEdit }: BudgetListProps) {
 
                   <div className="flex items-center gap-2">
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => onEdit(budget)}
                       title="Editar"
@@ -129,7 +129,7 @@ export function BudgetList({ mesRef, onEdit }: BudgetListProps) {
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() =>
                         handleDelete(budget.id, budget.categoria?.nome || 'esta categoria')
@@ -150,17 +150,17 @@ export function BudgetList({ mesRef, onEdit }: BudgetListProps) {
                 {/* Valores */}
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-xs text-muted">Orçado</p>
-                    <p className="text-lg font-semibold text-text">
+                    <p className="text-xs text-slate-600 dark:text-graphite-300">Orçado</p>
+                    <p className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
                       {formatCurrency(budget.valor_alvo)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted">Realizado</p>
+                    <p className="text-xs text-slate-600 dark:text-graphite-300">Realizado</p>
                     <p
                       className={`text-lg font-semibold ${
                         percentual > 100
-                          ? 'text-danger'
+                          ? 'text-error-600'
                           : percentual > 80
                           ? 'text-warning'
                           : 'text-success'
@@ -170,11 +170,11 @@ export function BudgetList({ mesRef, onEdit }: BudgetListProps) {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted">Disponível</p>
+                    <p className="text-xs text-slate-600 dark:text-graphite-300">Disponível</p>
                     <p
                       className={`text-lg font-semibold ${
                         disponivel < 0
-                          ? 'text-danger'
+                          ? 'text-error-600'
                           : 'text-success'
                       }`}
                     >
@@ -186,24 +186,24 @@ export function BudgetList({ mesRef, onEdit }: BudgetListProps) {
                 {/* Barra de Progresso */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted">Progresso</span>
+                    <span className="text-slate-600 dark:text-graphite-300">Progresso</span>
                     <span
                       className={`font-semibold ${
                         percentual > 100
-                          ? 'text-danger'
+                          ? 'text-error-600'
                           : percentual > 80
                           ? 'text-warning'
-                          : 'text-text'
+                          : 'text-slate-900 dark:text-graphite-100'
                       }`}
                     >
                       {percentual.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="h-2.5 w-full rounded-full bg-elev overflow-hidden">
+                  <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-graphite-700 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         percentual > 100
-                          ? 'bg-danger'
+                          ? 'bg-error-600'
                           : percentual > 80
                           ? 'bg-warning'
                           : 'bg-success'

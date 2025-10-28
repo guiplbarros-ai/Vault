@@ -13,7 +13,7 @@ import { TransactionsTable } from '@/components/transacoes/transactions-table'
 import { TransactionDetailModal } from '@/components/transacoes/transaction-detail-modal'
 import { useTransactions, type Transaction } from '@/lib/hooks/use-transacoes'
 import { useFiltros } from '@/lib/hooks/use-filtros'
-import { useContas } from '@/lib/hooks/use-contas'
+import { useAccounts } from '@/lib/hooks/use-contas'
 import {
   Upload,
   List,
@@ -47,7 +47,7 @@ export default function TransacoesNovaPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
 
   const { filtros, updateFiltro, resetFiltros, hasActiveFilters, apiFilters } = useFiltros()
-  const { data: contasData } = useContas()
+  const { data: contasData } = useAccounts()
 
   // Fetch transactions with filters
   const { data, isLoading, refetch } = useTransactions({
@@ -147,15 +147,15 @@ export default function TransacoesNovaPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-text">Transações</h1>
-          <p className="text-muted mt-1">Importe, visualize e gerencie suas transações financeiras</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-graphite-100">Transações</h1>
+          <p className="text-slate-600 dark:text-graphite-300 mt-1">Importe, visualize e gerencie suas transações financeiras</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleExportCSV} variant="outline" size="sm">
+          <Button onClick={handleExportCSV} variant="secondary" size="sm">
             <Download className="h-4 w-4 mr-2" />
             CSV
           </Button>
-          <Button onClick={handleExportExcel} variant="outline" size="sm">
+          <Button onClick={handleExportExcel} variant="secondary" size="sm">
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Excel
           </Button>
@@ -204,10 +204,10 @@ export default function TransacoesNovaPage() {
           <Card>
             <CardBody className="p-6">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-text">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
                   Todas as Transações
                 </h3>
-                <p className="text-sm text-muted">
+                <p className="text-sm text-slate-600 dark:text-graphite-300">
                   {data?.total || 0} transações encontradas
                 </p>
               </div>
@@ -244,7 +244,7 @@ export default function TransacoesNovaPage() {
 
                 {/* Conta */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-text">
+                  <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">
                     Conta de Destino *
                   </label>
                   <Select
@@ -263,7 +263,7 @@ export default function TransacoesNovaPage() {
 
                 {/* Banco */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-text">
+                  <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">
                     Banco (opcional)
                   </label>
                   <Select
@@ -278,7 +278,7 @@ export default function TransacoesNovaPage() {
                     <option value="c6">🏦 C6 Bank</option>
                     <option value="inter">🟠 Inter</option>
                   </Select>
-                  <p className="text-xs text-muted">
+                  <p className="text-xs text-slate-600 dark:text-graphite-300">
                     O sistema detecta automaticamente o banco pelo conteúdo do arquivo
                   </p>
                 </div>
@@ -364,17 +364,17 @@ export default function TransacoesNovaPage() {
                 <div className="flex items-center gap-3 mb-4">
                   <CheckCircle className="w-6 h-6 text-success" />
                   <div>
-                    <h4 className="font-semibold text-text">
+                    <h4 className="font-semibold text-slate-900 dark:text-graphite-100">
                       Arquivos Baixados do Drive
                     </h4>
-                    <p className="text-sm text-muted">
+                    <p className="text-sm text-slate-600 dark:text-graphite-300">
                       {selectedFiles.length} arquivo{selectedFiles.length > 1 ? 's' : ''} pronto
                       {selectedFiles.length > 1 ? 's' : ''} para importação
                     </p>
                   </div>
                 </div>
 
-                <p className="text-sm text-muted mb-4">
+                <p className="text-sm text-slate-600 dark:text-graphite-300 mb-4">
                   Vá para a aba <strong>Upload</strong> para configurar e importar os arquivos.
                 </p>
 

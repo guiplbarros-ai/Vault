@@ -1,18 +1,35 @@
 import { HTMLAttributes, forwardRef } from 'react'
 import { cn } from '@/lib/utils'
+import { cva, type VariantProps } from 'class-variance-authority'
 
-export interface CardProps extends HTMLAttributes<HTMLDivElement> {
+const cardVariants = cva(
+  'rounded-xl2 border',
+  {
+    variants: {
+      variant: {
+        light: 'bg-white shadow-card border-slate-200',
+        dark: 'bg-graphite-800 shadow-cardDark border-graphite-700',
+        default: 'bg-white dark:bg-graphite-800 shadow-card dark:shadow-cardDark border-slate-200 dark:border-graphite-700',
+      }
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  }
+)
+
+export interface CardProps extends HTMLAttributes<HTMLDivElement>, VariantProps<typeof cardVariants> {
   hover?: boolean
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, hover, ...props }, ref) => {
+  ({ className, variant, hover, ...props }, ref) => {
     return (
       <div
         ref={ref}
         className={cn(
-          'rounded-2xl border border-line/25 bg-surface shadow-card',
-          hover && 'transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5',
+          cardVariants({ variant }),
+          hover && 'transition-all duration-200 hover:shadow-card hover:-translate-y-0.5',
           className
         )}
         {...props}
@@ -42,7 +59,7 @@ export const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadi
     return (
       <h3
         ref={ref}
-        className={cn('text-xl font-semibold leading-none tracking-tight text-text', className)}
+        className={cn('text-xl font-semibold leading-none tracking-tight text-slate-900 dark:text-graphite-100', className)}
         {...props}
       />
     )
@@ -56,7 +73,7 @@ export const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<H
     return (
       <p
         ref={ref}
-        className={cn('text-sm text-muted', className)}
+        className={cn('text-sm text-slate-600 dark:text-graphite-300', className)}
         {...props}
       />
     )

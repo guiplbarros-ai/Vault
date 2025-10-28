@@ -96,18 +96,18 @@ export function BudgetForm({ budget, onClose, mesRef }: BudgetFormProps) {
     <form onSubmit={handleSubmit} className="space-y-5">
           {/* Error Message */}
           {errors.submit && (
-            <div className="rounded-xl bg-surface p-4 border border-danger">
-              <p className="text-sm text-danger">{errors.submit}</p>
+            <div className="rounded-xl bg-white dark:bg-graphite-800 p-4 border border-error-600">
+              <p className="text-sm text-error-600">{errors.submit}</p>
             </div>
           )}
 
           {/* Categoria */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-text">
+            <label className="mb-2 block text-sm font-medium text-slate-900 dark:text-graphite-100">
               Categoria *
             </label>
             {loadingCategorias ? (
-              <div className="flex items-center gap-2 text-sm text-muted">
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-graphite-300">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Carregando categorias...
               </div>
@@ -130,12 +130,12 @@ export function BudgetForm({ budget, onClose, mesRef }: BudgetFormProps) {
                   ))}
                 </Select>
                 {errors.categoria && (
-                  <p className="mt-1 text-xs text-danger">
+                  <p className="mt-1 text-xs text-error-600">
                     {errors.categoria}
                   </p>
                 )}
                 {isEditing && (
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-1 text-xs text-slate-600 dark:text-graphite-300">
                     A categoria não pode ser alterada ao editar
                   </p>
                 )}
@@ -145,7 +145,7 @@ export function BudgetForm({ budget, onClose, mesRef }: BudgetFormProps) {
 
           {/* Mês */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-text">
+            <label className="mb-2 block text-sm font-medium text-slate-900 dark:text-graphite-100">
               Mês de Referência *
             </label>
             <Input
@@ -158,17 +158,17 @@ export function BudgetForm({ budget, onClose, mesRef }: BudgetFormProps) {
               className={errors.mes ? 'border-error-500' : ''}
             />
             {errors.mes && (
-              <p className="mt-1 text-xs text-danger">{errors.mes}</p>
+              <p className="mt-1 text-xs text-error-600">{errors.mes}</p>
             )}
           </div>
 
           {/* Valor Planejado */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-text">
+            <label className="mb-2 block text-sm font-medium text-slate-900 dark:text-graphite-100">
               Valor Planejado *
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-600 dark:text-graphite-300">
                 R$
               </span>
               <Input
@@ -184,16 +184,16 @@ export function BudgetForm({ budget, onClose, mesRef }: BudgetFormProps) {
               />
             </div>
             {errors.valor && (
-              <p className="mt-1 text-xs text-danger">{errors.valor}</p>
+              <p className="mt-1 text-xs text-error-600">{errors.valor}</p>
             )}
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-xs text-slate-600 dark:text-graphite-300">
               Use vírgula para separar os centavos (ex: 1500,00)
             </p>
           </div>
 
           {/* Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-line/25">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-graphite-700/25">
+            <Button type="button" variant="secondary" onClick={onClose} disabled={isLoading}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading}>

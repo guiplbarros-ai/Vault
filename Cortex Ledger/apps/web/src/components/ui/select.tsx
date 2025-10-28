@@ -6,7 +6,32 @@ import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
-const Select = SelectPrimitive.Root
+// Native HTML select component
+export interface SelectSharedProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  className?: string
+}
+
+const Select = React.forwardRef<HTMLSelectElement, SelectSharedProps>(
+  ({ className, ...props }, ref) => (
+    <select
+      ref={ref}
+      className={cn(
+        'flex h-10 w-full items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors',
+        'bg-white dark:bg-graphite-700',
+        'border-slate-300 dark:border-graphite-600',
+        'text-slate-900 dark:text-graphite-100',
+        'placeholder:text-slate-500 dark:placeholder:text-graphite-300',
+        'focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-600',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        className
+      )}
+      {...props}
+    />
+  )
+)
+Select.displayName = 'Select'
+
+const RadixSelect = SelectPrimitive.Root
 
 const SelectGroup = SelectPrimitive.Group
 
@@ -19,10 +44,13 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'flex h-10 w-full items-center justify-between rounded-xl border border-line/25 bg-surface px-3 py-2 text-sm text-text',
-      'placeholder:text-muted focus:outline-none focus:ring-4 focus:ring-brand/20',
+      'flex h-10 w-full items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors',
+      'bg-white dark:bg-graphite-700',
+      'border-slate-300 dark:border-graphite-600',
+      'text-slate-900 dark:text-graphite-100',
+      'placeholder:text-slate-500 dark:placeholder:text-graphite-300',
+      'focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-600',
       'disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
-      'transition-all duration-200',
       className
     )}
     {...props}
@@ -78,7 +106,10 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl border border-line/25 bg-surface text-text shadow-card',
+        'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-lg border shadow-card',
+        'bg-white dark:bg-graphite-800',
+        'border-slate-200 dark:border-graphite-700',
+        'text-slate-900 dark:text-graphite-100',
         'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
         'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2',
@@ -126,7 +157,8 @@ const SelectItem = React.forwardRef<
     ref={ref}
     className={cn(
       'relative flex w-full cursor-default select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-sm outline-none',
-      'focus:bg-elev focus:text-text',
+      'hover:bg-brand-100/40 dark:hover:bg-graphite-600/30',
+      'focus:bg-brand-100/40 dark:focus:bg-graphite-600/30',
       'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       'transition-colors duration-150',
       className
@@ -135,7 +167,7 @@ const SelectItem = React.forwardRef<
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <Check className="h-4 w-4 text-brand-600" />
       </SelectPrimitive.ItemIndicator>
     </span>
 
@@ -158,6 +190,7 @@ SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 
 export {
   Select,
+  RadixSelect,
   SelectGroup,
   SelectValue,
   SelectTrigger,

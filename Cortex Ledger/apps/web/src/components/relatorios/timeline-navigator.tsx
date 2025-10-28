@@ -85,7 +85,7 @@ export function TimelineNavigator({
             className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all ${
               mode === modeKey
                 ? 'bg-brand text-brand-contrast shadow-card'
-                : 'bg-elev text-text hover:bg-surface'
+                : 'bg-slate-100 dark:bg-graphite-700 text-slate-900 dark:text-graphite-100 hover:bg-white dark:bg-graphite-800'
             }`}
           >
             {modeLabels[modeKey]}
@@ -94,7 +94,7 @@ export function TimelineNavigator({
       </div>
 
       {/* Timeline Navigator */}
-      <div className="flex items-center justify-between rounded-2xl border border-line/25 bg-surface p-4">
+      <div className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-graphite-700/25 bg-white dark:bg-graphite-800 p-4">
         <Button
           variant="ghost"
           size="sm"
@@ -106,8 +106,8 @@ export function TimelineNavigator({
 
         <div className="flex flex-1 items-center justify-center gap-3">
           <div className="text-center">
-            <p className="text-lg font-semibold capitalize text-text">{getDateRangeLabel()}</p>
-            <p className="text-xs text-muted">
+            <p className="text-lg font-semibold capitalize text-slate-900 dark:text-graphite-100">{getDateRangeLabel()}</p>
+            <p className="text-xs text-slate-600 dark:text-graphite-300">
               {mode === 'month' && 'Visualização mensal'}
               {mode === '3-months' && 'Últimos 3 meses'}
               {mode === '6-months' && 'Últimos 6 meses'}
@@ -117,7 +117,7 @@ export function TimelineNavigator({
 
           {!isCurrentMonth && (
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={handleToday}
               className="ml-4"

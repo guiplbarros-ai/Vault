@@ -15,10 +15,10 @@ export function ReportSummaryCards({ summary, isLoading }: ReportSummaryCardsPro
         {[...Array(4)].map((_, i) => (
           <div
             key={i}
-            className="animate-pulse rounded-2xl border border-line/25 bg-surface p-6"
+            className="animate-pulse rounded-2xl border border-slate-200 dark:border-graphite-700/25 bg-white dark:bg-graphite-800 p-6"
           >
-            <div className="h-4 w-20 rounded bg-elev" />
-            <div className="mt-2 h-8 w-32 rounded bg-elev" />
+            <div className="h-4 w-20 rounded bg-slate-100 dark:bg-graphite-700" />
+            <div className="mt-2 h-8 w-32 rounded bg-slate-100 dark:bg-graphite-700" />
           </div>
         ))}
       </div>
@@ -36,31 +36,31 @@ export function ReportSummaryCards({ summary, isLoading }: ReportSummaryCardsPro
       value: summary.totalReceitas,
       icon: TrendingUp,
       color: 'text-success',
-      bgColor: 'bg-elev',
+      bgColor: 'bg-slate-100 dark:bg-graphite-700',
       format: 'currency',
     },
     {
       title: 'Total Despesas',
       value: summary.totalDespesas,
       icon: TrendingDown,
-      color: 'text-danger',
-      bgColor: 'bg-elev',
+      color: 'text-error-600',
+      bgColor: 'bg-slate-100 dark:bg-graphite-700',
       format: 'currency',
     },
     {
       title: 'Saldo',
       value: summary.saldo,
       icon: DollarSign,
-      color: summary.saldo >= 0 ? 'text-success' : 'text-danger',
-      bgColor: 'bg-elev',
+      color: summary.saldo >= 0 ? 'text-success' : 'text-error-600',
+      bgColor: 'bg-slate-100 dark:bg-graphite-700',
       format: 'currency',
     },
     {
       title: 'Taxa de Poupança',
       value: taxaPoupanca,
       icon: Percent,
-      color: taxaPoupanca >= 20 ? 'text-success' : taxaPoupanca >= 10 ? 'text-warning' : 'text-danger',
-      bgColor: 'bg-elev',
+      color: taxaPoupanca >= 20 ? 'text-success' : taxaPoupanca >= 10 ? 'text-warning' : 'text-error-600',
+      bgColor: 'bg-slate-100 dark:bg-graphite-700',
       format: 'percent',
     },
   ] as const
@@ -70,11 +70,11 @@ export function ReportSummaryCards({ summary, isLoading }: ReportSummaryCardsPro
       {cards.map((card) => (
         <div
           key={card.title}
-          className="rounded-2xl border border-line/25 bg-surface p-6"
+          className="rounded-2xl border border-slate-200 dark:border-graphite-700/25 bg-white dark:bg-graphite-800 p-6"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-slate-600 dark:text-graphite-300">
                 {card.title}
               </p>
               <p className={`mt-2 text-3xl font-bold ${card.color}`}>

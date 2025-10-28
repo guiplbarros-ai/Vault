@@ -58,6 +58,7 @@
 
 * **Importação manual** CSV/OFX/Excel com **assistente de mapeamento** + **templates** por instituição.
 * **Contas suportadas:** banco, cartão e investimentos (saldo/posição consolidada).
+* **Gestão completa de cartões de crédito**: faturas, limite disponível, lançamentos futuros, vencimento, pagamentos e melhor dia de compra.
 * **Classificação automática** usando **regras** (regex/contains/starts/ends) + **IA** (OpenAI),
   com **regra do usuário sempre priorizada** e IA **apenas sugerindo** (confirmação manual em massa).
 * **Dedupe** por hash (data, valor, descrição normalizada, conta).
@@ -211,9 +212,363 @@
 
 ---
 
-## 6. Domínio de Dados e Esquema
+## 6. Gestão de Cartões de Crédito
 
-### 6.1 Entidades e atributos essenciais
+### 6.1 Visão Geral
+
+A aba **Cartões de Crédito** centraliza toda a gestão de cartões, incluindo:
+- Visão consolidada de todos os cartões
+- Faturas abertas e fechadas
+- Limite disponível e utilização
+- Lançamentos futuros (compras ainda não faturadas)
+- Histórico de pagamentos
+- Melhor dia de compra (maximizar prazo de pagamento)
+- Alertas de vencimento e limite
+
+### 6.2 Funcionalidades Principais
+
+#### 6.2.1 Dashboard de Cartões
+
+**Cards de resumo:**
+* **Total em aberto**: soma de todas as faturas não pagas
+* **Próximo vencimento**: data e valor da próxima fatura
+* **Limite total disponível**: soma dos limites disponíveis de todos os cartões
+* **Utilização média**: percentual médio de uso dos limites
+
+**Lista de cartões:**
+* Nome/apelido do cartão (ex.: "Amex Platinum **** 09294")
+* Bandeira (Visa, Master, Amex, Elo)
+* Limite total e disponível com barra de progresso
+* Fatura atual (valor e vencimento)
+* Status visual (cores por % de utilização: <50% verde, 50-80% amarelo, >80% vermelho)
+
+#### 6.2.2 Detalhes do Cartão
+
+**Informações básicas:**
+* Nome/apelido (editável)
+* Instituição emissora
+* Últimos 4 dígitos
+* Bandeira
+* Tipo (nacional/internacional)
+* Status (ativo/bloqueado/cancelado)
+
+**Configurações financeiras:**
+* Limite total
+* Dia de fechamento da fatura
+* Dia de vencimento
+* Melhor dia de compra (calculado automaticamente: dia seguinte ao fechamento)
+* Prazo médio de pagamento (vencimento - fechamento)
+
+**Custos e taxas:**
+* Anuidade (valor e próximo vencimento)
+* Taxa de juros rotativos (% a.m.)
+* Taxa de parcelamento sem juros (quando aplicável)
+* IOF para compras internacionais
+* Histórico de tarifas cobradas
+
+#### 6.2.3 Gestão de Faturas
+
+**Fatura atual (aberta):**
+* Valor total acumulado
+* Data de fechamento
+* Data de vencimento
+* Dias restantes para fechamento/vencimento
+* Lista de lançamentos com filtros (data, categoria, valor)
+* Parceladas (mostrar parcela atual + restantes)
+* Opção de simulação de pagamento (total/mínimo/parcial)
+
+**Faturas anteriores:**
+* Lista histórica com status (paga/atrasada/parcial)
+* Valor original e pago
+* Data de pagamento
+* Opção de visualizar lançamentos da fatura
+* Link para transação de pagamento (quando disponível)
+
+**Faturas futuras:**
+* Projeção de lançamentos já cadastrados (recorrentes + parceladas)
+* Alertas de lançamentos grandes esperados
+* Estimativa de valor baseada em histórico
+
+#### 6.2.4 Lançamentos Futuros
+
+**Compras não faturadas:**
+* Transações realizadas após o fechamento da última fatura
+* Previsão de qual fatura irão compor
+* Totalização por fatura futura
+* Destaque para compras grandes (> R$ 500)
+
+**Parceladas ativas:**
+* Lista de compras parceladas em andamento
+* Valor total, valor da parcela, parcelas pagas/restantes
+* Próxima parcela (data e valor)
+* Valor total ainda devido
+* Opção de simular quitação antecipada (quando disponível)
+
+#### 6.2.5 Análises e Insights
+
+**Padrões de uso:**
+* Categorias mais gastas no cartão
+* Evolução mensal de gastos (últimos 6 meses)
+* Dia da semana/mês com mais transações
+* Comerciantes recorrentes
+
+**Otimização financeira:**
+* Sugestão de melhor cartão para compra (baseado em vencimento e limite)
+* Alerta de parceladas se acumulando (mais de 3 ativas)
+* Comparação de uso vs. limite (histórico)
+* Projeção de fatura futura baseada em padrão
+
+**Alertas inteligentes:**
+* Fatura próxima do limite (80%, 90%, 100%)
+* Vencimento em X dias (configurável: 7, 5, 3, 1)
+* Transação incomum detectada (valor ou comerciante)
+* Várias parceladas ativas (risco de comprometimento)
+* Anuidade próxima do vencimento
+
+#### 6.2.6 Integração com Orçamento
+
+* Gastos no cartão contam para o orçamento por categoria
+* Diferenciação entre regime de caixa (data de pagamento) e competência (data da compra)
+* Alertas de orçamento considerando lançamentos futuros
+* Visão de impacto: "Esta compra vai estourar o orçamento de X"
+
+### 6.3 Fluxos de Uso
+
+#### F6.1 — Adicionar novo cartão
+1. Usuário clica "Adicionar cartão"
+2. Preenche dados básicos (nome, instituição, últimos 4 dígitos, bandeira)
+3. Configura limite, fechamento e vencimento
+4. Sistema calcula melhor dia de compra
+5. Cartão aparece na lista com status ativo
+
+**Aceite:**
+* Cartão criado e visível na lista
+* Cálculo do melhor dia correto
+* Pode importar extrato imediatamente
+
+#### F6.2 — Visualizar fatura atual
+1. Usuário seleciona um cartão
+2. Sistema mostra fatura aberta com lançamentos
+3. Parceladas aparecem com indicador (3/12)
+4. Total atualizado em tempo real
+5. Barra de progresso mostra utilização do limite
+
+**Aceite:**
+* Valor total correto (soma de lançamentos + parceladas)
+* Dias para fechamento/vencimento visíveis
+* Filtros funcionando (categoria, período, valor)
+
+#### F6.3 — Registrar pagamento de fatura
+1. Usuário clica "Pagar fatura"
+2. Seleciona conta de origem
+3. Informa valor (total/mínimo/outro) e data
+4. Sistema cria transação de débito na conta e crédito no cartão
+5. Fatura marcada como paga (ou parcialmente paga)
+6. Limite disponível atualizado
+
+**Aceite:**
+* Transação registrada em ambas as contas
+* Saldo e limite atualizados corretamente
+* Histórico de pagamento registrado
+* Se pagamento parcial, saldo devedor atualizado
+
+#### F6.4 — Visualizar melhor dia de compra
+1. Usuário acessa detalhes do cartão
+2. Sistema mostra "Melhor dia: dia X (próximo ao fechamento)"
+3. Tooltip explica: "Comprando no dia X, você tem o maior prazo de pagamento (Y dias)"
+4. Calendário visual destaca o melhor período
+
+**Aceite:**
+* Cálculo correto: (dia_fechamento + 1) para maximizar prazo
+* Explicação clara do motivo
+* Visual intuitivo
+
+#### F6.5 — Alertas de vencimento
+1. Sistema verifica diariamente faturas próximas do vencimento
+2. Quando falta X dias (configurável), dispara alerta
+3. Toast aparece: "Fatura do Amex vence em 3 dias (R$ 2.450,00)"
+4. Usuário pode clicar para ir direto ao pagamento
+5. Alerta some após pagamento ou dismissal
+
+**Aceite:**
+* Alertas disparam nos dias corretos
+* Não dispara para faturas já pagas
+* Link para pagamento funciona
+* Configuração de antecedência personalizável
+
+### 6.4 Extensões do Modelo de Dados
+
+**Tabela `cartao_credito` (estende `conta`):**
+```typescript
+{
+  id: string (PK, FK para conta)
+  bandeira: 'visa' | 'master' | 'amex' | 'elo' | 'outro'
+  ultimos_digitos: string (4 chars)
+  limite_total: number
+  limite_disponivel: number (calculado)
+  dia_fechamento: number (1-31)
+  dia_vencimento: number (1-31)
+  melhor_dia_compra: number (calculado: dia_fechamento + 1)
+  taxa_juros_mes: number (opcional)
+  anuidade_valor: number (opcional)
+  anuidade_proximo_venc: string (ISO date, opcional)
+  tipo_cartao: 'nacional' | 'internacional'
+  status: 'ativo' | 'bloqueado' | 'cancelado'
+}
+```
+
+**Tabela `fatura`:**
+```typescript
+{
+  id: string (PK)
+  cartao_id: string (FK)
+  mes_referencia: string (YYYY-MM)
+  data_fechamento: string (ISO date)
+  data_vencimento: string (ISO date)
+  valor_total: number
+  valor_pago: number
+  status: 'aberta' | 'fechada' | 'paga' | 'atrasada' | 'parcial'
+  data_pagamento: string (ISO date, nullable)
+  transacao_pagamento_id: string (FK, nullable)
+  created_at: string
+  updated_at: string
+}
+```
+
+**Extensão da tabela `transacao` para cartões:**
+```typescript
+{
+  // campos existentes +
+  fatura_id: string (FK, nullable) // vincula à fatura
+  is_parcelada: boolean
+  parcela_atual: number (nullable)
+  parcelas_total: number (nullable)
+  valor_total_parcelado: number (nullable) // valor original antes de parcelar
+  compra_internacional: boolean (default false)
+  moeda_original: string (nullable)
+  taxa_conversao: number (nullable)
+  iof: number (nullable)
+}
+```
+
+**Tabela `alerta_cartao`:**
+```typescript
+{
+  id: string (PK)
+  user_id: string (FK)
+  cartao_id: string (FK, nullable) // null = alertas globais
+  tipo: 'vencimento' | 'limite' | 'transacao_incomum' | 'anuidade' | 'parceladas_acumuladas'
+  limiar: number (ex: 80 para alertar a 80% do limite)
+  ativo: boolean
+  created_at: string
+}
+```
+
+### 6.5 Regras de Negócio Específicas
+
+**Cálculo de limite disponível:**
+```typescript
+limite_disponivel = limite_total - (fatura_aberta + lancamentos_futuros)
+```
+
+**Determinação da fatura de um lançamento:**
+* Se `data_transacao <= data_fechamento_fatura`: vai para fatura atual
+* Se `data_transacao > data_fechamento_fatura`: vai para próxima fatura
+
+**Melhor dia de compra:**
+* Calculado como `(dia_fechamento + 1) % 31 || 1`
+* Maximiza o prazo entre compra e vencimento
+* Exemplo: fechamento dia 10, melhor dia é 11 (terá ~40 dias para pagar)
+
+**Parceladas no cartão:**
+* Cada parcela é uma transação separada com referência à compra original
+* `valor_total_parcelado` armazena o valor original
+* Faturas futuras já mostram parcelas previstas
+* Usuário pode vincular manualmente se importação não detectar
+
+**Pagamento de fatura:**
+* Cria transação de saída na conta bancária
+* Cria transação de entrada no cartão (positiva, tipo "pagamento_fatura")
+* Atualiza `fatura.status` e `fatura.valor_pago`
+* Recalcula `limite_disponivel`
+
+**Compras internacionais:**
+* `moeda_original` e `valor_original` preservados
+* IOF calculado (6,38% típico) e registrado separadamente
+* Taxa de conversão salva para auditoria
+* Categoria "Taxas/IOF" pode ser usada para o IOF
+
+### 6.6 UI/UX da Aba Cartões
+
+**Layout:**
+* Header: "Cartões de Crédito" + botão "Adicionar cartão"
+* Cards de resumo no topo (total aberto, próximo vencimento, limite disponível, utilização)
+* Lista de cartões em grid (2-3 colunas)
+* Ao clicar em um cartão: drawer lateral com detalhes + tabs (Fatura Atual, Histórico, Configurações)
+
+**Paleta específica:**
+* Verde: limite saudável (<50%), fatura paga
+* Amarelo: atenção (50-80% limite, vencimento próximo)
+* Vermelho: crítico (>80% limite, fatura atrasada)
+* Azul: informações neutras (melhor dia, total de cartões)
+
+**Ícones (Lucide):**
+* `CreditCard`: cartão geral
+* `AlertTriangle`: alertas de limite/vencimento
+* `Calendar`: datas de fechamento/vencimento
+* `TrendingUp`: limite disponível/utilização
+* `Receipt`: fatura
+* `DollarSign`: pagamentos
+
+**Responsividade:**
+* Desktop: grid 3 colunas
+* Tablet: grid 2 colunas
+* Mobile: lista vertical (1 coluna)
+
+### 6.7 Integrações
+
+**Com Importação:**
+* Templates de CSV/OFX reconhecem cartões automaticamente
+* Vincular transações importadas à fatura correta
+* Detectar parceladas por padrões (ex.: "3/12" na descrição)
+
+**Com Classificação:**
+* Transações de pagamento de fatura auto-categorizadas como "Pagamento Cartão"
+* IOF auto-categorizado como "Taxas/IOF"
+* Regras específicas para descrições de cartão (ex.: "FATURA AMEX")
+
+**Com Orçamento:**
+* Gastos no cartão impactam orçamento na categoria correta
+* Lançamentos futuros podem ser incluídos na projeção (toggle)
+* Alertas de orçamento consideram compras pendentes
+
+**Com Dashboards:**
+* DFC mostra entrada (pagamento recebido) e saída (compras)
+* Evolução M/M compara gastos no cartão
+* Top despesas inclui transações de cartão
+
+**Com Recorrências:**
+* Assinaturas no cartão detectadas automaticamente
+* Sugestão de criar recorrência para lançamentos mensais similares
+
+### 6.8 Critérios de Aceite Gerais
+
+* Criar/editar/excluir cartão funciona
+* Importar extrato vincula transações ao cartão e fatura corretos
+* Cálculo de limite disponível sempre preciso
+* Fatura fecha automaticamente na data correta
+* Próxima fatura criada automaticamente após fechamento
+* Alertas disparam nos momentos corretos (vencimento, limite)
+* Pagamento de fatura registra transações e atualiza saldos
+* Parceladas exibem progresso (ex.: "Parcela 5 de 12")
+* Melhor dia de compra calculado e exibido corretamente
+* UI responsiva e performática (lista de 10 cartões carrega em <1s)
+
+---
+
+## 7. Domínio de Dados e Esquema
+
+### 7.1 Entidades e atributos essenciais
 
 * **instituicao**: `id`, `nome`, `tipo` (banco/cartão/corretora), `created_at`.
 * **conta**: `id`, `instituicao_id`, `apelido`, `tipo` (corrente, poupança, cartão, corretora), `moeda='BRL'`, `ativa`.

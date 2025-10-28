@@ -53,33 +53,20 @@ async function fetchBudgetData(month: Date = new Date()): Promise<BudgetVsActual
     }
   }
 
-  // TEMPORARY: Retornar apenas dados de orçamento sem valores realizados
-  // Após migration, descomentar código abaixo para buscar valores reais
-  const result: BudgetVsActualData[] = orcamentos.map((orc: any) => {
-    const categoria = categorias[orc.categoria_id]
-    return {
-      categoria: categoria?.nome || 'Sem categoria',
-      orcado: parseFloat(orc.valor_alvo || orc.valor_planejado || '0'),
-      realizado: 0, // TEMPORARY: Will be calculated after migration
-      percentual: 0,
-    }
-  })
-
-  return result.sort((a, b) => b.orcado - a.orcado)
-
-  /* UNCOMMENT AFTER MIGRATION:
+  // Buscar valores realizados
   const result: BudgetVsActualData[] = await Promise.all(
     orcamentos.map(async (orc: any) => {
       const categoriaId = orc.categoria_id
       const categoria = categorias[categoriaId]
 
+      // Buscar transações da categoria no período
       const { data: transacoes } = await supabase
         .from('transacao')
         .select('valor')
         .eq('categoria_id', categoriaId)
         .gte('data', startDate)
         .lte('data', endDate)
-        .lt('valor', 0)
+        .lt('valor', 0) // Apenas despesas (valores negativos)
 
       const realizado = Math.abs(
         (transacoes || []).reduce((sum, t) => sum + parseFloat(t.valor), 0)
@@ -98,7 +85,6 @@ async function fetchBudgetData(month: Date = new Date()): Promise<BudgetVsActual
   )
 
   return result.sort((a, b) => b.realizado - a.realizado)
-  */
 }
 
 export function useBudgetData(month?: Date) {

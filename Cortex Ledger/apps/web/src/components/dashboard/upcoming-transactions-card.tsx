@@ -15,7 +15,7 @@ export function UpcomingTransactionsCard() {
     return (
       <Card>
         <CardBody className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
         </CardBody>
       </Card>
     )
@@ -36,17 +36,17 @@ export function UpcomingTransactionsCard() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary-500" />
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+            <Calendar className="h-5 w-5 text-brand-600" />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
               Próximos Lançamentos
             </h3>
           </div>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="text-sm text-slate-600 dark:text-graphite-300">
             Recorrências e parcelas nos próximos 30 dias
           </p>
         </CardHeader>
         <CardBody className="p-6">
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="text-sm text-slate-600 dark:text-graphite-300">
             Nenhum lançamento previsto para os próximos 30 dias.
           </p>
         </CardBody>
@@ -69,12 +69,12 @@ export function UpcomingTransactionsCard() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary-500" />
+            <Calendar className="h-5 w-5 text-brand-600" />
             <div>
-              <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
                 Próximos Lançamentos
               </h3>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              <p className="text-sm text-slate-600 dark:text-graphite-300">
                 {upcoming.length} {upcoming.length === 1 ? 'lançamento previsto' : 'lançamentos previstos'}
               </p>
             </div>
@@ -90,27 +90,27 @@ export function UpcomingTransactionsCard() {
             return (
               <div
                 key={item.id}
-                className="flex items-center justify-between border-b border-neutral-200 pb-3 last:border-0 dark:border-neutral-700"
+                className="flex items-center justify-between border-b border-slate-200 dark:border-graphite-700 pb-3 last:border-0"
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
                       item.tipo === 'RECORRENTE'
-                        ? 'bg-primary-100 dark:bg-primary-900'
+                        ? 'bg-brand-100 dark:bg-brand-900'
                         : 'bg-warning-100 dark:bg-warning-900'
                     }`}
                   >
                     {item.tipo === 'RECORRENTE' ? (
-                      <Repeat className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                      <Repeat className="h-5 w-5 text-brand-600" />
                     ) : (
-                      <CreditCard className="h-5 w-5 text-warning-600 dark:text-warning-400" />
+                      <CreditCard className="h-5 w-5 text-warning-600" />
                     )}
                   </div>
                   <div>
-                    <div className="font-medium text-neutral-900 dark:text-neutral-50">
+                    <div className="font-medium text-slate-900 dark:text-graphite-100">
                       {item.descricao}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-graphite-300">
                       {item.categoria && (
                         <Badge variant="neutral" className="text-xs">
                           {item.categoria.nome}
@@ -118,13 +118,13 @@ export function UpcomingTransactionsCard() {
                       )}
                       <span>{format(new Date(item.proximo_vencimento), "d 'de' MMMM", { locale: ptBR })}</span>
                       {item.periodicidade && (
-                        <span className="text-neutral-400">• {item.periodicidade}</span>
+                        <span className="text-slate-500 dark:text-graphite-400">• {item.periodicidade}</span>
                       )}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+                  <div className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
                     {formatCurrency(item.valor_estimado)}
                   </div>
                   <Badge variant={urgency} className="text-xs">

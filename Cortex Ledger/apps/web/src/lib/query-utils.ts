@@ -21,6 +21,11 @@ export async function requireSession() {
  * Formata erros do Supabase para melhor logging
  */
 export function formatSupabaseError(error: any, context: string) {
+  if (!error) {
+    console.error(`Error in ${context}: Unknown error (error object is null/undefined)`)
+    return new Error(`Failed to ${context}`)
+  }
+
   console.error(`Error in ${context}:`, {
     message: error.message,
     details: error.details,

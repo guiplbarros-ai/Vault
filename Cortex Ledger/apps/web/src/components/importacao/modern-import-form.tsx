@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
+  RadixSelect as Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -92,8 +92,8 @@ export function ModernImportForm({ contas }: ModernImportFormProps) {
         {/* File Upload */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Upload className="h-4 w-4 text-muted" />
-            <label className="text-sm font-medium text-text">
+            <Upload className="h-4 w-4 text-slate-600 dark:text-graphite-300" />
+            <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">
               1. Selecione o arquivo de extrato ou fatura
             </label>
           </div>
@@ -107,7 +107,7 @@ export function ModernImportForm({ contas }: ModernImportFormProps) {
 
         {/* Account Selection */}
         <div className="space-y-3">
-          <label className="text-sm font-medium text-text">
+          <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">
             2. Escolha a conta de destino
           </label>
           <Select value={contaId} onValueChange={setContaId} disabled={loading}>
@@ -154,12 +154,12 @@ export function ModernImportForm({ contas }: ModernImportFormProps) {
       {result && <ImportResult {...result} />}
 
       {/* Help Section */}
-      <div className="rounded-2xl border border-line/25 bg-surface p-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-graphite-700/25 bg-white dark:bg-graphite-800 p-4">
         <div className="flex gap-3">
           <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-info" />
-          <div className="space-y-2 text-sm text-text">
+          <div className="space-y-2 text-sm text-slate-900 dark:text-graphite-100">
             <p className="font-semibold">Formatos Suportados:</p>
-            <ul className="space-y-1 text-muted">
+            <ul className="space-y-1 text-slate-600 dark:text-graphite-300">
               <li className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-info" />
                 <span><strong>CSV:</strong> Extratos do Bradesco, Itaú, Inter, etc.</span>
@@ -173,7 +173,7 @@ export function ModernImportForm({ contas }: ModernImportFormProps) {
                 <span><strong>Faturas:</strong> CSV de cartões de crédito (AMEX, Aeternum, etc.)</span>
               </li>
             </ul>
-            <p className="mt-3 text-xs text-muted">
+            <p className="mt-3 text-xs text-slate-600 dark:text-graphite-300">
               💡 O sistema detecta automaticamente duplicatas e evita importações repetidas usando hash de transações.
             </p>
           </div>

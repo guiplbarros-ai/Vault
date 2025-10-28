@@ -2,6 +2,7 @@
 
 import { ChartWrapper } from '@/components/charts/chart-wrapper'
 import type { CategoryBreakdown } from '@/lib/hooks/use-report-data'
+import type { EChartsOption } from 'echarts'
 
 interface CategoryBreakdownChartProps {
   data: CategoryBreakdown[]
@@ -32,22 +33,24 @@ export function CategoryBreakdownChart({
     )
   }
 
-  const chartData = data.map((item) => ({
+  const colors = [
+    'hsl(var(--chart-1))',
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+    'hsl(var(--chart-5))',
+  ]
+
+  const chartData = data.map((item, index) => ({
     name: item.categoria,
     value: item.total,
-    grupo: item.grupo,
-    percentual: item.percentual.toFixed(1),
+    itemStyle: {
+      color: colors[index % colors.length],
+    },
   }))
 
   const chartConfig = data.reduce(
     (acc, item, index) => {
-      const colors = [
-        'hsl(var(--chart-1))',
-        'hsl(var(--chart-2))',
-        'hsl(var(--chart-3))',
-        'hsl(var(--chart-4))',
-        'hsl(var(--chart-5))',
-      ]
       acc[item.categoria] = {
         label: item.categoria,
         color: colors[index % colors.length],
@@ -57,16 +60,32 @@ export function CategoryBreakdownChart({
     {} as Record<string, { label: string; color: string }>
   )
 
+  const option: EChartsOption = {
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c} ({d}%)',
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: '50%',
+        data: chartData,
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        },
+      },
+    ],
+  }
+
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
       <h3 className="mb-4 text-lg font-semibold">Despesas por Categoria</h3>
 
-      <ChartWrapper
-        type="pie"
-        data={chartData}
-        config={chartConfig}
-        height={300}
-      />
+      <ChartWrapper option={option} height="300px" />
 
       <div className="mt-6 space-y-2">
         {data.slice(0, 5).map((item, index) => (

@@ -36,39 +36,56 @@ export function useTopExpenses(limit: number = 5, mes?: Date) {
         return []
       }
 
-      // TEMPORARY FIX: Query without categoria_id until migration is applied
-      // TODO: After running migration (see MIGRATION-REQUIRED.md), uncomment the full query
-      const { data, error } = await supabase
-        .from('transacao')
-        .select(
-          `
-          id,
-          descricao,
-          valor,
-          data,
-          conta:conta_id (id, apelido)
-        `
-        )
-        .eq('tipo', TRANSACTION_TYPE.DEBITO)
-        .lt('valor', 0) // Despesas têm valor negativo
-        .gte('data', inicio)
-        .lte('data', fim)
-        .order('valor', { ascending: true }) // Ordem crescente para pegar os valores mais negativos primeiro
-        .limit(limit)
+      try {
+        const { data, error } = await supabase
+          .from('transacao')
+          .select('id, descricao, valor, data, conta_id')
+          .eq('tipo', TRANSACTION_TYPE.DEBITO)
+          .lt('valor', 0) // Despesas têm valor negativo
+          .gte('data', inicio)
+          .lte('data', fim)
+          .order('valor', { ascending: true }) // Ordem crescente para pegar os valores mais negativos primeiro
+          .limit(limit)
 
-      if (error) {
-        throw formatSupabaseError(error, 'fetch top expenses')
+        if (error) {
+          console.error('Supabase error in fetch top expenses:', error)
+          throw formatSupabaseError(error, 'fetch top expenses')
+        }
+
+        if (!data || data.length === 0) {
+          return []
+        }
+
+        // Buscar contas separadamente
+        const contaIds = [...new Set(data.map(t => t.conta_id).filter(Boolean))]
+        let contas: Record<string, any> = {}
+
+        if (contaIds.length > 0) {
+          const { data: contasData } = await supabase
+            .from('conta')
+            .select('id, apelido')
+            .in('id', contaIds)
+
+          if (contasData) {
+            contas = Object.fromEntries(
+              contasData.map((conta: any) => [conta.id, conta])
+            )
+          }
+        }
+
+        // Mapear dados (sem categoria por enquanto)
+        return data.map((item: any) => ({
+          id: item.id,
+          descricao: item.descricao,
+          valor: item.valor,
+          data: item.data,
+          categoria: null, // Categoria será implementada futuramente
+          conta: item.conta_id ? contas[item.conta_id] : null,
+        })) as TopExpense[]
+      } catch (err) {
+        console.error('Error fetching top expenses:', err)
+        return []
       }
-
-      // Supabase retorna relacionamentos como arrays, precisamos mapear
-      return (data || []).map((item: any) => ({
-        id: item.id,
-        descricao: item.descricao,
-        valor: item.valor,
-        data: item.data,
-        categoria: null, // TEMPORARY: Will be available after migration
-        conta: Array.isArray(item.conta) ? item.conta[0] : item.conta,
-      })) as TopExpense[]
     },
     staleTime: 1000 * 60, // 1 minuto
     retry: 1, // Reduzir tentativas para falhar mais rápido

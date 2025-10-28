@@ -102,7 +102,7 @@ export function BudgetAlerts() {
               </div>
             </div>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => handleDismiss(alert.id)}
               className="ml-2 h-6 w-6 p-0"

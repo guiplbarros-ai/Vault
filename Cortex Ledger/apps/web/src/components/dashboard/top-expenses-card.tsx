@@ -16,7 +16,7 @@ export const TopExpensesCard = memo(function TopExpensesCard() {
     return (
       <Card>
         <CardBody className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-brand" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
         </CardBody>
       </Card>
     )
@@ -26,7 +26,7 @@ export const TopExpensesCard = memo(function TopExpensesCard() {
     return (
       <Card>
         <CardBody className="p-6">
-          <p className="text-sm text-danger">Erro ao carregar despesas</p>
+          <p className="text-sm text-error-600">Erro ao carregar despesas</p>
         </CardBody>
       </Card>
     )
@@ -36,15 +36,15 @@ export const TopExpensesCard = memo(function TopExpensesCard() {
     return (
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold text-text">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
             Top 5 Despesas
           </h3>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-slate-600 dark:text-graphite-300">
             Maiores gastos do mês atual
           </p>
         </CardHeader>
         <CardBody className="p-6">
-          <p className="text-sm text-muted">
+          <p className="text-sm text-slate-600 dark:text-graphite-300">
             Nenhuma despesa encontrada neste mês.
           </p>
         </CardBody>
@@ -57,14 +57,14 @@ export const TopExpensesCard = memo(function TopExpensesCard() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-text">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
               Top 5 Despesas
             </h3>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-slate-600 dark:text-graphite-300">
               Maiores gastos do mês atual
             </p>
           </div>
-          <TrendingDown className="h-5 w-5 text-danger" />
+          <TrendingDown className="h-5 w-5 text-error-600" />
         </div>
       </CardHeader>
       <CardBody>
@@ -72,17 +72,17 @@ export const TopExpensesCard = memo(function TopExpensesCard() {
           {expenses.map((expense, index) => (
             <div
               key={expense.id}
-              className="flex items-center justify-between border-b border-line/20 pb-3 last:border-0"
+              className="flex items-center justify-between border-b border-slate-200 dark:border-graphite-700 pb-3 last:border-0"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-danger text-sm font-semibold text-brand-contrast">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-error-600 text-sm font-semibold text-white">
                   #{index + 1}
                 </div>
                 <div>
-                  <div className="font-medium text-text">
+                  <div className="font-medium text-slate-900 dark:text-graphite-100">
                     {expense.descricao}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted">
+                  <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-graphite-300">
                     {expense.categoria && (
                       <Badge variant="neutral" className="text-xs">
                         {expense.categoria.nome}
@@ -95,11 +95,11 @@ export const TopExpensesCard = memo(function TopExpensesCard() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-lg font-semibold text-danger">
+                <div className="text-lg font-semibold text-error-600">
                   {formatCurrency(Math.abs(expense.valor))}
                 </div>
                 {expense.conta && (
-                  <div className="text-xs text-muted">
+                  <div className="text-xs text-slate-600 dark:text-graphite-300">
                     {expense.conta.apelido}
                   </div>
                 )}

@@ -185,11 +185,23 @@ supabase secrets list --project-ref xborrshstfcvzrxyqyor
 
 ## Documentação
 
-- **Setup Completo:** `supabase/README.md`
-- **Testes RLS:** `supabase/tests/RLS-VALIDATION.md`
-- **PRD:** `PRD-v1.md` (Product Requirements Document)
-- **Plano Supabase:** `Supabase-Plan.md`
-- **Relatório Agent A:** `AGENT_A_REPORT.md`
+### 📚 Documentação Principal
+- **[Começar Aqui](./docs/LEIA-ME-PRIMEIRO.md)** — Navegação principal
+- **[Status do Projeto](./docs/reports/STATUS-REPORT.md)** — Relatório consolidado (v5.0)
+- **[PRD v1](./PRD-v1.md)** — Product Requirements Document
+
+### 🔧 Guias Técnicos
+- **[Guia de Backend](./docs/guides/DESBLOQUEIO-BACKEND-GUIA.md)** — Setup migrations e deploy
+- **[Guia de UI](./docs/guides/UI-FRONTEND-GUIDE.md)** — Design System
+- **[Setup Supabase](./supabase/README.md)** — Configuração completa
+
+### 🏗️ Arquitetura
+- **[Arquitetura Geral](./docs/architecture/ARCHITECTURE.md)** — Decisões arquiteturais
+- **[Arquitetura de Importação](./docs/architecture/ARQUITETURA-IMPORTACAO.md)** — ETL e parsers
+- **[Validação RLS](./supabase/tests/RLS-VALIDATION.md)** — Testes de segurança
+
+### 📁 Toda a Documentação
+Veja o índice completo em **[docs/README.md](./docs/README.md)**
 
 ## Segurança
 
@@ -210,25 +222,66 @@ Execute os testes RLS para garantir isolamento completo entre usuários:
 pnpm tsx supabase/tests/rls-test.ts
 ```
 
+## Status do Projeto
+
+> **Última atualização:** 27 de outubro de 2025
+
+```
+Backend:   ██████████████████████████████████████████ 100%
+Frontend:  ███████████████████████████████████████░░░  95%
+═══════════════════════════════════════════════════
+TOTAL:     ███████████████████████████████████████░░░  97%
+```
+
+### ✅ Completo
+- Schema PostgreSQL (11 tabelas)
+- Migrations SQL (3 arquivos)
+- Edge Function de classificação
+- Parsers CSV/OFX (Bradesco, Aeternum, Amex)
+- Dedupe e normalização
+- Autenticação completa
+- Layout responsivo com sidebar
+- 14+ componentes UI com Design System
+- Dashboard com gráficos ECharts
+- 10 páginas funcionais
+- Sistema de filtros e paginação
+- Dark mode
+
+### 🟡 Em Progresso
+- Aplicação completa do Design System (35% → 100%)
+- Features de orçamento (CRUD completo)
+- Upload drag-and-drop importação
+- Gestão de regras de classificação
+
+### 📊 Detalhes Completos
+Veja o [Status Report](./docs/reports/STATUS-REPORT.md) para métricas detalhadas e próximos passos.
+
 ## Roadmap
 
-### Batch 2C (Atual) - Fundação Supabase
+### Próximas Semanas
+1. **Aplicar migrations** no Supabase (5min)
+2. **Deploy Edge Function** (5min)
+3. **Completar Design System** (1-2 dias)
+4. **Features Agent F** (2-3 dias) — Orçamento, Importação, Regras
+5. **Testes E2E** (1 dia)
+6. **Beta Fechado** (1-3 usuários)
 
-- [x] **Agent A (DB/RLS/Types):** Schema, triggers, RLS, Drizzle ✅
-- [ ] **Agent B (Edge Functions):** `classify_batch` com regras + OpenAI
-- [ ] **Agent C (Import):** Parser CSV/OFX + batch upsert
+**Estimativa para Beta:** 1 semana
 
 ### Futuras Versões
-
-- Dashboard web (Next.js + Tailwind)
-- Gráficos interativos (ECharts)
+- Performance optimization
+- Polimento UX (empty states, loading skeletons)
+- Documentação de usuário
 - Mobile app (React Native)
 - Notificações push (Realtime)
 - Integração com Open Banking
 
 ## Contribuindo
 
-Este é um projeto em desenvolvimento seguindo um plano multi-agente. Consulte `Supabase-Plan.md` para entender a arquitetura e divisão de trabalho.
+Este é um projeto em desenvolvimento ativo. Consulte:
+- **[Status Report](./docs/reports/STATUS-REPORT.md)** para o estado atual
+- **[Arquitetura](./docs/architecture/ARCHITECTURE.md)** para decisões técnicas
+- **[PRD v1](./PRD-v1.md)** para requisitos do produto
 
 ## Licença
 
@@ -236,5 +289,5 @@ Este é um projeto em desenvolvimento seguindo um plano multi-agente. Consulte `
 
 ---
 
-**Status Atual:** Batch 2C - Agent A concluído ✅
-**Próximo:** Agent B (classify_batch) e Agent C (import pipeline)
+**Servidor dev rodando em:** http://localhost:3000
+**Documentação completa:** [docs/README.md](./docs/README.md)

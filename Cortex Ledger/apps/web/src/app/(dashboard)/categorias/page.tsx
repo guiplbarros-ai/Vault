@@ -111,7 +111,7 @@ export default function CategoriasPage() {
       <div className="section card bg-hero-gadsden flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Categorias</h1>
-          <p className="text-sm text-muted">Gerencie e organize suas transações</p>
+          <p className="text-sm text-slate-600 dark:text-graphite-300">Gerencie e organize suas transações</p>
         </div>
         <Button onClick={handleCreate} className="btn-primary">
           <Plus className="mr-2 h-4 w-4" />
@@ -123,12 +123,12 @@ export default function CategoriasPage() {
       <div className="section grid gap-4 md:grid-cols-3">
         <Card className="card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm uppercase tracking-wide text-muted">Total de Categorias</CardTitle>
-            <FolderClosed className="h-4 w-4 text-muted" />
+            <CardTitle className="text-sm uppercase tracking-wide text-slate-600 dark:text-graphite-300">Total de Categorias</CardTitle>
+            <FolderClosed className="h-4 w-4 text-slate-600 dark:text-graphite-300" />
           </CardHeader>
           <CardContent>
             <div className="kpi">{categorias.length}</div>
-            <p className="text-xs text-muted">
+            <p className="text-xs text-slate-600 dark:text-graphite-300">
               {categorias.filter((c) => c.ativa).length} ativas
             </p>
           </CardContent>
@@ -136,18 +136,18 @@ export default function CategoriasPage() {
 
         <Card className="card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm uppercase tracking-wide text-muted">Grupos</CardTitle>
-            <FolderClosed className="h-4 w-4 text-muted" />
+            <CardTitle className="text-sm uppercase tracking-wide text-slate-600 dark:text-graphite-300">Grupos</CardTitle>
+            <FolderClosed className="h-4 w-4 text-slate-600 dark:text-graphite-300" />
           </CardHeader>
           <CardContent>
             <div className="kpi">{grupos.length}</div>
-            <p className="text-xs text-muted">grupos diferentes</p>
+            <p className="text-xs text-slate-600 dark:text-graphite-300">grupos diferentes</p>
           </CardContent>
         </Card>
 
         <Card className="card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm uppercase tracking-wide text-muted">Filtro</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-wide text-slate-600 dark:text-graphite-300">Filtro</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ export default function CategoriasPage() {
 
       {/* Search */}
       <div className="section relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600 dark:text-graphite-300" />
         <Input
           placeholder="Buscar por nome ou grupo..."
           value={search}

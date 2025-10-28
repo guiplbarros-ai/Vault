@@ -29,6 +29,9 @@ export const metadata: Metadata = {
     ],
   },
   manifest: "/site.webmanifest",
+};
+
+export const viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#FCF6D2" },
     { media: "(prefers-color-scheme: dark)", color: "#281F20" },
@@ -41,8 +44,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+    <html lang="pt-BR" className="dark" suppressHydrationWarning>
+      <body className={inter.variable}>
         <ToastProvider>
           <Providers>
             <AuthProvider>

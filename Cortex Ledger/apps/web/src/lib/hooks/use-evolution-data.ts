@@ -54,7 +54,7 @@ export function useEvolutionData(meses: number = 3) {
       })
 
       // Criar array de resultados
-      const results = []
+      const results: Array<Omit<EvolutionData, 'variacao'> & { variacao: number }> = []
       for (let i = meses - 1; i >= 0; i--) {
         const mesRef = subMonths(now, i)
         const key = format(mesRef, 'yyyy-MM')

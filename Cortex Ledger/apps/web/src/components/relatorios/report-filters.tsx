@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Filter, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
+  RadixSelect as Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -98,7 +98,7 @@ export function ReportFiltersComponent({ filters, onFiltersChange }: ReportFilte
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Button
-          variant="outline"
+          variant="secondary"
           onClick={() => setShowFilters(!showFilters)}
           className="gap-2"
         >
@@ -120,10 +120,10 @@ export function ReportFiltersComponent({ filters, onFiltersChange }: ReportFilte
       </div>
 
       {showFilters && (
-        <div className="grid gap-4 rounded-2xl border border-line/25 bg-surface p-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 rounded-2xl border border-slate-200 dark:border-graphite-700/25 bg-white dark:bg-graphite-800 p-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Período */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text">Período</label>
+            <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">Período</label>
             <Select
               value={filters.periodo || 'mes-atual'}
               onValueChange={handlePeriodoChange}
@@ -145,7 +145,7 @@ export function ReportFiltersComponent({ filters, onFiltersChange }: ReportFilte
           {/* Data Início */}
           {filters.periodo === 'personalizado' && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-text">Data Início</label>
+              <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">Data Início</label>
               <Input
                 type="date"
                 value={filters.dataInicio || ''}
@@ -159,7 +159,7 @@ export function ReportFiltersComponent({ filters, onFiltersChange }: ReportFilte
           {/* Data Fim */}
           {filters.periodo === 'personalizado' && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-text">Data Fim</label>
+              <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">Data Fim</label>
               <Input
                 type="date"
                 value={filters.dataFim || ''}
@@ -172,7 +172,7 @@ export function ReportFiltersComponent({ filters, onFiltersChange }: ReportFilte
 
           {/* Categoria */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text">Categoria</label>
+            <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">Categoria</label>
             <Select
               value={filters.categoriaId || 'todas'}
               onValueChange={(value) =>
@@ -198,7 +198,7 @@ export function ReportFiltersComponent({ filters, onFiltersChange }: ReportFilte
 
           {/* Conta */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text">Conta</label>
+            <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">Conta</label>
             <Select
               value={filters.contaId || 'todas'}
               onValueChange={(value) =>
@@ -224,7 +224,7 @@ export function ReportFiltersComponent({ filters, onFiltersChange }: ReportFilte
 
           {/* Tipo */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text">Tipo</label>
+            <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">Tipo</label>
             <Select
               value={filters.tipo || 'todos'}
               onValueChange={(value) =>

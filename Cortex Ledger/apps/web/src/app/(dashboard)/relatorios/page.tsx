@@ -106,15 +106,15 @@ export default function RelatoriosPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-text">Relatórios</h1>
-          <p className="mt-1 text-muted">Análise detalhada das suas finanças com filtros avançados</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-graphite-100">Relatórios</h1>
+          <p className="mt-1 text-slate-600 dark:text-graphite-300">Análise detalhada das suas finanças com filtros avançados</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleExportRelatorio} variant="outline">
+          <Button onClick={handleExportRelatorio} variant="secondary">
             <Download className="mr-2 h-4 w-4" />
             Relatório CSV
           </Button>
-          <Button onClick={handleExportExcel} variant="outline">
+          <Button onClick={handleExportExcel} variant="secondary">
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             Excel
           </Button>

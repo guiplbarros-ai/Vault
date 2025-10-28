@@ -12,7 +12,7 @@ export const AccountsOverview = memo(function AccountsOverview() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-brand" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
       </div>
     )
   }
@@ -21,7 +21,7 @@ export const AccountsOverview = memo(function AccountsOverview() {
     return (
       <Card>
         <CardBody>
-          <p className="text-sm text-danger">
+          <p className="text-sm text-error-600">
             Erro ao carregar contas. Verifique sua conexão.
           </p>
         </CardBody>
@@ -33,7 +33,7 @@ export const AccountsOverview = memo(function AccountsOverview() {
     return (
       <Card>
         <CardBody>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-slate-600 dark:text-graphite-300">
             Nenhuma conta encontrada. Importe suas transações para começar.
           </p>
         </CardBody>

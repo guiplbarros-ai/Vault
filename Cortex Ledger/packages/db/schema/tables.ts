@@ -65,10 +65,24 @@ export const transacao = pgTable(
 		linkOriginalId: uuid("link_original_id"),
 		valorOriginal: numeric("valor_original", { precision: 14, scale: 2 }),
 		moedaOriginal: text("moeda_original"),
+		// Campos de cartão de crédito
+		faturaId: uuid("fatura_id"),
+		isParcelada: boolean("is_parcelada").default(false),
+		parcelaAtual: integer("parcela_atual"),
+		valorTotalParcelado: numeric("valor_total_parcelado", {
+			precision: 12,
+			scale: 2,
+		}),
+		compraOriginalId: uuid("compra_original_id"),
+		compraInternacional: boolean("compra_internacional").default(false),
+		taxaConversao: numeric("taxa_conversao", { precision: 10, scale: 6 }),
+		iof: numeric("iof", { precision: 10, scale: 2 }),
 	},
 	(table) => [
 		uniqueIndex("idx_tx_user_hash").on(table.userId, table.hashDedupe),
 		index("idx_tx_user_conta_data").on(table.userId, table.contaId, table.data),
+		index("idx_transacao_fatura").on(table.faturaId),
+		index("idx_transacao_compra_original").on(table.compraOriginalId),
 	],
 );
 
@@ -151,6 +165,115 @@ export const preferencias = pgTable("preferencias", {
 	limitesAlerta: jsonb("limites_alerta"),
 });
 
+export const cartaoCredito = pgTable(
+	"cartao_credito",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		contaId: uuid("conta_id")
+			.notNull()
+			.references(() => conta.id, { onDelete: "cascade" }),
+		nome: text("nome").notNull(),
+		instituicao: text("instituicao").notNull(),
+		bandeira: text("bandeira").notNull(),
+		ultimosDigitos: text("ultimos_digitos").notNull(),
+		tipoCartao: text("tipo_cartao").notNull().default("nacional"),
+		limiteTotal: numeric("limite_total", { precision: 12, scale: 2 })
+			.notNull()
+			.default("0"),
+		limiteDisponivel: numeric("limite_disponivel", { precision: 12, scale: 2 })
+			.notNull()
+			.default("0"),
+		diaFechamento: integer("dia_fechamento").notNull(),
+		diaVencimento: integer("dia_vencimento").notNull(),
+		melhorDiaCompra: integer("melhor_dia_compra"),
+		anuidadeValor: numeric("anuidade_valor", { precision: 10, scale: 2 }),
+		anuidadeProximoVenc: date("anuidade_proximo_venc"),
+		taxaJurosMes: numeric("taxa_juros_mes", { precision: 5, scale: 2 }),
+		status: text("status").notNull().default("ativo"),
+		userId: uuid("user_id").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		index("idx_cartao_credito_user").on(table.userId),
+		index("idx_cartao_credito_conta").on(table.contaId),
+		index("idx_cartao_credito_status").on(table.status),
+		uniqueIndex("idx_cartao_credito_user_conta").on(
+			table.userId,
+			table.contaId,
+		),
+	],
+);
+
+export const fatura = pgTable(
+	"fatura",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		cartaoId: uuid("cartao_id")
+			.notNull()
+			.references(() => cartaoCredito.id, { onDelete: "cascade" }),
+		mesReferencia: text("mes_referencia").notNull(),
+		dataFechamento: date("data_fechamento").notNull(),
+		dataVencimento: date("data_vencimento").notNull(),
+		valorTotal: numeric("valor_total", { precision: 12, scale: 2 })
+			.notNull()
+			.default("0"),
+		valorPago: numeric("valor_pago", { precision: 12, scale: 2 })
+			.notNull()
+			.default("0"),
+		valorMinimo: numeric("valor_minimo", { precision: 12, scale: 2 }),
+		status: text("status").notNull().default("aberta"),
+		dataPagamento: date("data_pagamento"),
+		transacaoPagamentoId: uuid("transacao_pagamento_id").references(
+			() => transacao.id,
+		),
+		userId: uuid("user_id").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		index("idx_fatura_cartao").on(table.cartaoId),
+		index("idx_fatura_user").on(table.userId),
+		index("idx_fatura_status").on(table.status),
+		index("idx_fatura_vencimento").on(table.dataVencimento),
+		index("idx_fatura_mes_ref").on(table.mesReferencia),
+		uniqueIndex("idx_fatura_cartao_mes").on(table.cartaoId, table.mesReferencia),
+	],
+);
+
+export const alertaCartao = pgTable(
+	"alerta_cartao",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		userId: uuid("user_id").notNull(),
+		cartaoId: uuid("cartao_id").references(() => cartaoCredito.id, {
+			onDelete: "cascade",
+		}),
+		tipo: text("tipo").notNull(),
+		limiar: numeric("limiar", { precision: 10, scale: 2 }),
+		diasAntecedencia: integer("dias_antecedencia"),
+		ativo: boolean("ativo").notNull().default(true),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		index("idx_alerta_cartao_user").on(table.userId),
+		index("idx_alerta_cartao_cartao").on(table.cartaoId),
+	],
+);
+
 // Relations
 
 export const instituicaoRelations = relations(instituicao, ({ many }) => ({
@@ -210,5 +333,36 @@ export const metaRelations = relations(meta, ({ one }) => ({
 	conta: one(conta, {
 		fields: [meta.contaId],
 		references: [conta.id],
+	}),
+}));
+
+export const cartaoCreditoRelations = relations(
+	cartaoCredito,
+	({ one, many }) => ({
+		conta: one(conta, {
+			fields: [cartaoCredito.contaId],
+			references: [conta.id],
+		}),
+		faturas: many(fatura),
+		alertas: many(alertaCartao),
+	}),
+);
+
+export const faturaRelations = relations(fatura, ({ one, many }) => ({
+	cartao: one(cartaoCredito, {
+		fields: [fatura.cartaoId],
+		references: [cartaoCredito.id],
+	}),
+	transacaoPagamento: one(transacao, {
+		fields: [fatura.transacaoPagamentoId],
+		references: [transacao.id],
+	}),
+	transacoes: many(transacao),
+}));
+
+export const alertaCartaoRelations = relations(alertaCartao, ({ one }) => ({
+	cartao: one(cartaoCredito, {
+		fields: [alertaCartao.cartaoId],
+		references: [cartaoCredito.id],
 	}),
 }));

@@ -61,39 +61,52 @@ export const useToast = () => {
 
 function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   const icons = {
-    success: <CheckCircle className="w-5 h-5 text-success" />,
-    error: <AlertCircle className="w-5 h-5 text-danger" />,
-    warning: <AlertTriangle className="w-5 h-5 text-warning" />,
-    info: <Info className="w-5 h-5 text-info" />,
+    success: <CheckCircle className="w-5 h-5 text-success-600" />,
+    error: <AlertCircle className="w-5 h-5 text-error-600" />,
+    warning: <AlertTriangle className="w-5 h-5 text-warning-600" />,
+    info: <Info className="w-5 h-5 text-info-600" />,
   }
 
-  const borderColors = {
-    success: 'border-l-success',
-    error: 'border-l-danger',
-    warning: 'border-l-warning',
-    info: 'border-l-info',
+  const styles = {
+    success: 'bg-success-100 border-success-600',
+    error: 'bg-error-100 border-error-600',
+    warning: 'bg-warning-100 border-warning-600',
+    info: 'bg-info-100 border-info-600',
+  }
+
+  const textColors = {
+    success: 'text-success-600',
+    error: 'text-error-600',
+    warning: 'text-warning-600',
+    info: 'text-info-600',
   }
 
   return (
     <div
       className={cn(
-        'flex items-start gap-3 p-4 rounded-xl shadow-card',
-        'bg-surface text-text',
-        'border border-line/25 border-l-4',
-        borderColors[toast.type],
+        'flex items-start gap-3 p-4 rounded-xl2 shadow-card',
+        'bg-white dark:bg-graphite-800',
+        'border-l-4',
+        styles[toast.type],
         'animate-in slide-in-from-right-full'
       )}
     >
       {icons[toast.type]}
       <div className="flex-1">
-        {toast.title && <p className="font-semibold text-text">{toast.title}</p>}
-        <p className="text-sm text-muted">{toast.message}</p>
+        {toast.title && (
+          <p className="font-semibold text-slate-900 dark:text-graphite-100">
+            {toast.title}
+          </p>
+        )}
+        <p className={cn('text-sm', textColors[toast.type])}>
+          {toast.message}
+        </p>
       </div>
       <button
         onClick={onClose}
-        className="p-1 rounded-lg hover:bg-elev transition-colors"
+        className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-graphite-700 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400"
       >
-        <X className="w-4 h-4" />
+        <X className="w-4 h-4 text-slate-600 dark:text-graphite-300" />
       </button>
     </div>
   )

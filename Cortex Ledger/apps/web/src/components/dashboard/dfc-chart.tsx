@@ -6,6 +6,7 @@ import { ChartWrapper } from '@/components/charts/chart-wrapper'
 import { useDFCData } from '@/lib/hooks/use-dfc-data'
 import { Loader2, TrendingDown, TrendingUp } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { cortexEchartsTheme } from '@/lib/chart-theme'
 import type { EChartsOption } from 'echarts'
 
 export const DFCChart = memo(function DFCChart() {
@@ -15,7 +16,7 @@ export const DFCChart = memo(function DFCChart() {
     return (
       <Card>
         <CardBody className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
         </CardBody>
       </Card>
     )
@@ -32,7 +33,12 @@ export const DFCChart = memo(function DFCChart() {
   }
 
   const option: EChartsOption = {
+    color: cortexEchartsTheme.color,
+    textStyle: cortexEchartsTheme.textStyle,
     tooltip: {
+      backgroundColor: cortexEchartsTheme.tooltip.backgroundColor,
+      borderColor: cortexEchartsTheme.tooltip.borderColor,
+      textStyle: cortexEchartsTheme.tooltip.textStyle,
       trigger: 'axis',
       axisPointer: {
         type: 'shadow',
@@ -53,6 +59,7 @@ export const DFCChart = memo(function DFCChart() {
     legend: {
       data: ['Entradas', 'Saídas', 'Saldo'],
       bottom: 0,
+      textStyle: cortexEchartsTheme.textStyle,
     },
     grid: {
       left: '3%',
@@ -64,10 +71,15 @@ export const DFCChart = memo(function DFCChart() {
     xAxis: {
       type: 'category',
       data: data.map((d) => d.mes),
+      axisLine: cortexEchartsTheme.axisLine,
+      axisLabel: cortexEchartsTheme.axisLabel,
+      splitLine: cortexEchartsTheme.splitLine,
     },
     yAxis: {
       type: 'value',
+      axisLine: cortexEchartsTheme.axisLine,
       axisLabel: {
+        color: cortexEchartsTheme.axisLabel.color,
         formatter: (value: number) => {
           if (value >= 1000) {
             return `R$ ${(value / 1000).toFixed(1)}k`
@@ -75,6 +87,7 @@ export const DFCChart = memo(function DFCChart() {
           return `R$ ${value}`
         },
       },
+      splitLine: cortexEchartsTheme.splitLine,
     },
     series: [
       {
@@ -82,7 +95,7 @@ export const DFCChart = memo(function DFCChart() {
         type: 'bar',
         data: data.map((d) => d.entradas),
         itemStyle: {
-          color: '#4CAF50',
+          color: '#12B5A2', // brand-600 para receitas/entradas
         },
       },
       {
@@ -90,7 +103,7 @@ export const DFCChart = memo(function DFCChart() {
         type: 'bar',
         data: data.map((d) => d.saidas),
         itemStyle: {
-          color: '#E53935',
+          color: '#E2555A', // error-600 para despesas/saídas
         },
       },
       {
@@ -98,7 +111,7 @@ export const DFCChart = memo(function DFCChart() {
         type: 'line',
         data: data.map((d) => d.saldo),
         itemStyle: {
-          color: '#339686',
+          color: '#12B5A2', // brand-600 para saldo
         },
         lineStyle: {
           width: 3,
@@ -116,18 +129,18 @@ export const DFCChart = memo(function DFCChart() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
               DFC Simplificado
             </h3>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            <p className="text-sm text-slate-600 dark:text-graphite-300">
               Entradas - Saídas (últimos 3 meses)
             </p>
           </div>
           <div className="flex items-center gap-2">
             {variation >= 0 ? (
-              <TrendingUp className="h-5 w-5 text-success-500" />
+              <TrendingUp className="h-5 w-5 text-success-600" />
             ) : (
-              <TrendingDown className="h-5 w-5 text-error-500" />
+              <TrendingDown className="h-5 w-5 text-error-600" />
             )}
             <span
               className={`text-sm font-medium ${

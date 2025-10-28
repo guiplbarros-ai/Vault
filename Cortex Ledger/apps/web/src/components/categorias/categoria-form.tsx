@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Select,
+  RadixSelect as Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -87,7 +87,7 @@ export function CategoriaForm({
             </Select>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => setUsarNovoGrupo(true)}
               disabled={isLoading}
             >
@@ -105,7 +105,7 @@ export function CategoriaForm({
             />
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="icon"
               onClick={() => {
                 setUsarNovoGrupo(false)
@@ -134,7 +134,7 @@ export function CategoriaForm({
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={isLoading}>
           Cancelar
         </Button>
         <Button type="submit" disabled={isLoading}>

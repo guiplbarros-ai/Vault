@@ -129,7 +129,7 @@ export function FileUpload({ onFileSelect, acceptedFormats = ['.csv', '.ofx', '.
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={handleRemove}>
+            <Button variant="secondary" size="sm" onClick={handleRemove}>
               <X className="h-4 w-4" />
             </Button>
           </div>

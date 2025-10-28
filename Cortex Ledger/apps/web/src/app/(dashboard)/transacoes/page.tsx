@@ -1,14 +1,19 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Download, FileSpreadsheet } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TransactionFilters } from '@/components/transacoes/transaction-filters'
 import { TransactionsTable } from '@/components/transacoes/transactions-table'
-import { TransactionDetailModal } from '@/components/transacoes/transaction-detail-modal'
 import { useTransactions, type Transaction } from '@/lib/hooks/use-transacoes'
 import { useFiltros } from '@/lib/hooks/use-filtros'
+
+// Lazy load TransactionDetailModal (only when viewing details)
+const TransactionDetailModal = dynamic(() => import('@/components/transacoes/transaction-detail-modal').then(mod => ({ default: mod.TransactionDetailModal })), {
+  loading: () => null
+})
 
 export default function TransacoesPage() {
   const [page, setPage] = useState(1)
@@ -59,15 +64,15 @@ export default function TransacoesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-text">Transações</h1>
-          <p className="text-muted mt-1">Visualize e gerencie suas transações financeiras</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-graphite-100">Transações</h1>
+          <p className="text-slate-600 dark:text-graphite-300 mt-1">Visualize e gerencie suas transações financeiras</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleExportCSV} variant="outline">
+          <Button onClick={handleExportCSV} variant="secondary">
             <Download className="h-4 w-4 mr-2" />
             CSV
           </Button>
-          <Button onClick={handleExportExcel} variant="outline">
+          <Button onClick={handleExportExcel} variant="secondary">
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Excel
           </Button>

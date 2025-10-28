@@ -6,7 +6,7 @@ import { ChartWrapper } from '@/components/charts/chart-wrapper'
 import { useEvolutionData } from '@/lib/hooks/use-evolution-data'
 import { Loader2, TrendingUp, TrendingDown } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { chartTheme } from '@/lib/chart-theme'
+import { cortexEchartsTheme, chartTheme } from '@/lib/chart-theme'
 import type { EChartsOption } from 'echarts'
 
 export const EvolutionChart = memo(function EvolutionChart() {
@@ -34,7 +34,7 @@ export const EvolutionChart = memo(function EvolutionChart() {
     return (
       <Card>
         <CardBody className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-brand" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
         </CardBody>
       </Card>
     )
@@ -44,14 +44,19 @@ export const EvolutionChart = memo(function EvolutionChart() {
     return (
       <Card>
         <CardBody className="p-6">
-          <p className="text-sm text-danger">Erro ao carregar dados de evolução</p>
+          <p className="text-sm text-error-600">Erro ao carregar dados de evolução</p>
         </CardBody>
       </Card>
     )
   }
 
   const option: EChartsOption = {
+    color: cortexEchartsTheme.color,
+    textStyle: cortexEchartsTheme.textStyle,
     tooltip: {
+      backgroundColor: cortexEchartsTheme.tooltip.backgroundColor,
+      borderColor: cortexEchartsTheme.tooltip.borderColor,
+      textStyle: cortexEchartsTheme.tooltip.textStyle,
       trigger: 'axis',
       axisPointer: {
         type: 'cross',
@@ -71,6 +76,7 @@ export const EvolutionChart = memo(function EvolutionChart() {
     legend: {
       data: ['Receitas', 'Despesas', 'Saldo'],
       bottom: 0,
+      textStyle: cortexEchartsTheme.textStyle,
     },
     grid: {
       left: '3%',
@@ -83,10 +89,15 @@ export const EvolutionChart = memo(function EvolutionChart() {
       type: 'category',
       data: data.map((d) => d.mes),
       boundaryGap: false,
+      axisLine: cortexEchartsTheme.axisLine,
+      axisLabel: cortexEchartsTheme.axisLabel,
+      splitLine: cortexEchartsTheme.splitLine,
     },
     yAxis: {
       type: 'value',
+      axisLine: cortexEchartsTheme.axisLine,
       axisLabel: {
+        color: cortexEchartsTheme.axisLabel.color,
         formatter: (value: number) => {
           if (value >= 1000) {
             return `R$ ${(value / 1000).toFixed(1)}k`
@@ -94,6 +105,7 @@ export const EvolutionChart = memo(function EvolutionChart() {
           return `R$ ${value}`
         },
       },
+      splitLine: cortexEchartsTheme.splitLine,
     },
     series: [
       {
@@ -102,7 +114,7 @@ export const EvolutionChart = memo(function EvolutionChart() {
         data: data.map((d) => d.receitas),
         smooth: true,
         itemStyle: {
-          color: chartTheme.semantic.income,
+          color: '#12B5A2', // brand-600 para receitas
         },
         lineStyle: {
           width: 3,
@@ -117,11 +129,11 @@ export const EvolutionChart = memo(function EvolutionChart() {
             colorStops: [
               {
                 offset: 0,
-                color: `${chartTheme.semantic.income}4D`,
+                color: 'rgba(18, 181, 162, 0.3)',
               },
               {
                 offset: 1,
-                color: `${chartTheme.semantic.income}0D`,
+                color: 'rgba(18, 181, 162, 0.05)',
               },
             ],
           },
@@ -133,7 +145,7 @@ export const EvolutionChart = memo(function EvolutionChart() {
         data: data.map((d) => d.despesas),
         smooth: true,
         itemStyle: {
-          color: chartTheme.semantic.expense,
+          color: '#E2555A', // error-600 para despesas
         },
         lineStyle: {
           width: 3,
@@ -148,11 +160,11 @@ export const EvolutionChart = memo(function EvolutionChart() {
             colorStops: [
               {
                 offset: 0,
-                color: `${chartTheme.semantic.expense}4D`,
+                color: 'rgba(226, 85, 90, 0.3)',
               },
               {
                 offset: 1,
-                color: `${chartTheme.semantic.expense}0D`,
+                color: 'rgba(226, 85, 90, 0.05)',
               },
             ],
           },
@@ -164,7 +176,7 @@ export const EvolutionChart = memo(function EvolutionChart() {
         data: data.map((d) => d.saldo),
         smooth: true,
         itemStyle: {
-          color: theme.series.primary,
+          color: '#3B4552', // graphite-500 para saldo
         },
         lineStyle: {
           width: 4,
@@ -184,23 +196,23 @@ export const EvolutionChart = memo(function EvolutionChart() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-text">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
               Evolução M/M
             </h3>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-slate-600 dark:text-graphite-300">
               Receitas e despesas (últimos 3 meses)
             </p>
           </div>
           {variacao !== 0 && (
             <div className="flex items-center gap-2">
               {variacao >= 0 ? (
-                <TrendingUp className="h-5 w-5 status-success" />
+                <TrendingUp className="h-5 w-5 text-success-600" />
               ) : (
-                <TrendingDown className="h-5 w-5 status-danger" />
+                <TrendingDown className="h-5 w-5 text-error-600" />
               )}
               <span
                 className={`text-sm font-medium ${
-                  variacao >= 0 ? 'status-success' : 'status-danger'
+                  variacao >= 0 ? 'text-success-600' : 'text-error-600'
                 }`}
               >
                 {variacao >= 0 ? '+' : ''}

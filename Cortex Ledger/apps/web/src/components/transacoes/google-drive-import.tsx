@@ -249,7 +249,7 @@ export function GoogleDriveImport({ onFilesImport }: GoogleDriveImportProps) {
                   Arquivos Disponíveis ({files.length})
                 </h3>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={selectAll}>
+                  <Button variant="secondary" size="sm" onClick={selectAll}>
                     {selectedFiles.size === files.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
                   </Button>
                   <Button

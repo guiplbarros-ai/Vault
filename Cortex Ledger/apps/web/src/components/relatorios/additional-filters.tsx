@@ -3,7 +3,7 @@
 import { Filter, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
+  RadixSelect as Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -43,7 +43,7 @@ export function AdditionalFilters({ filters, onFiltersChange }: AdditionalFilter
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => setShowFilters(!showFilters)}
           className="gap-2"
@@ -71,10 +71,10 @@ export function AdditionalFilters({ filters, onFiltersChange }: AdditionalFilter
       </div>
 
       {showFilters && (
-        <div className="grid gap-3 rounded-2xl border border-line/25 bg-surface p-4 md:grid-cols-3">
+        <div className="grid gap-3 rounded-2xl border border-slate-200 dark:border-graphite-700/25 bg-white dark:bg-graphite-800 p-4 md:grid-cols-3">
           {/* Categoria */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text">Categoria</label>
+            <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">Categoria</label>
             <Select
               value={filters.categoriaId || 'todas'}
               onValueChange={(value) =>
@@ -100,7 +100,7 @@ export function AdditionalFilters({ filters, onFiltersChange }: AdditionalFilter
 
           {/* Conta */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text">Conta</label>
+            <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">Conta</label>
             <Select
               value={filters.contaId || 'todas'}
               onValueChange={(value) =>
@@ -126,7 +126,7 @@ export function AdditionalFilters({ filters, onFiltersChange }: AdditionalFilter
 
           {/* Tipo */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text">Tipo</label>
+            <label className="text-sm font-medium text-slate-900 dark:text-graphite-100">Tipo</label>
             <Select
               value={filters.tipo || 'todos'}
               onValueChange={(value) =>

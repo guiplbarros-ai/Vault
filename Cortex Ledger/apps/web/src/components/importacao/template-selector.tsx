@@ -68,7 +68,7 @@ interface TemplateSelectorProps {
 export function TemplateSelector({ selectedTemplate, onSelectTemplate }: TemplateSelectorProps) {
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold text-text">
+      <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-graphite-100">
         Selecione o Template
       </h3>
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -77,7 +77,7 @@ export function TemplateSelector({ selectedTemplate, onSelectTemplate }: Templat
             key={template.id}
             className={`cursor-pointer transition-all hover:shadow-md ${
               selectedTemplate === template.id
-                ? 'ring-2 ring-brand'
+                ? 'ring-2 ring-brand-600'
                 : ''
             }`}
             onClick={() => onSelectTemplate(template.id)}
@@ -86,14 +86,14 @@ export function TemplateSelector({ selectedTemplate, onSelectTemplate }: Templat
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-text">
+                    <h4 className="font-semibold text-slate-900 dark:text-graphite-100">
                       {template.nome}
                     </h4>
                     {selectedTemplate === template.id && (
-                      <Check className="h-4 w-4 text-brand" />
+                      <Check className="h-4 w-4 text-brand-600" />
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-1 text-xs text-slate-600 dark:text-graphite-300">
                     {template.descricao}
                   </p>
                 </div>
@@ -112,12 +112,12 @@ export function TemplateSelector({ selectedTemplate, onSelectTemplate }: Templat
               </div>
               {template.colunas && template.colunas.length > 0 && (
                 <div className="mt-3">
-                  <p className="mb-1 text-xs font-medium text-muted">Colunas:</p>
+                  <p className="mb-1 text-xs font-medium text-slate-600 dark:text-graphite-300">Colunas:</p>
                   <div className="flex flex-wrap gap-1">
                     {template.colunas.map((col) => (
                       <span
                         key={col}
-                        className="rounded bg-elev px-2 py-0.5 text-xs text-text"
+                        className="rounded bg-slate-100 dark:bg-graphite-700 px-2 py-0.5 text-xs text-slate-900 dark:text-graphite-100"
                       >
                         {col}
                       </span>

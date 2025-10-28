@@ -65,7 +65,7 @@ export function TransactionFilters({
       <div className="space-y-4">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted" />
+          <Search className="absolute left-3 top-3 h-4 w-4 text-slate-600 dark:text-graphite-300" />
           <Input
             placeholder="Buscar por descrição..."
             value={search}
@@ -78,7 +78,7 @@ export function TransactionFilters({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Conta */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-text">
+            <label className="block text-sm font-medium mb-1.5 text-slate-900 dark:text-graphite-100">
               Conta
             </label>
             <Select value={contaId} onChange={(e) => onContaChange(e.target.value)}>
@@ -93,7 +93,7 @@ export function TransactionFilters({
 
           {/* Categoria */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-text">
+            <label className="block text-sm font-medium mb-1.5 text-slate-900 dark:text-graphite-100">
               Categoria
             </label>
             <Select
@@ -112,7 +112,7 @@ export function TransactionFilters({
 
           {/* Tipo */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-text">
+            <label className="block text-sm font-medium mb-1.5 text-slate-900 dark:text-graphite-100">
               Tipo
             </label>
             <Select value={tipo} onChange={(e) => onTipoChange(e.target.value)}>
@@ -125,7 +125,7 @@ export function TransactionFilters({
 
           {/* Data Início */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-text">
+            <label className="block text-sm font-medium mb-1.5 text-slate-900 dark:text-graphite-100">
               Data Início
             </label>
             <Input
@@ -137,7 +137,7 @@ export function TransactionFilters({
 
           {/* Data Fim */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 text-text">
+            <label className="block text-sm font-medium mb-1.5 text-slate-900 dark:text-graphite-100">
               Data Fim
             </label>
             <Input
@@ -151,7 +151,7 @@ export function TransactionFilters({
         {/* Reset Button */}
         {hasActiveFilters && (
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={onReset}>
+            <Button variant="secondary" size="sm" onClick={onReset}>
               <X className="h-4 w-4 mr-2" />
               Limpar Filtros
             </Button>

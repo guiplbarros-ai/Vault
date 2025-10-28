@@ -1,107 +1,118 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
+import { useRequireGuest } from '@/hooks/use-require-guest'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/toast'
 
 export default function LoginPage() {
   const { signIn } = useAuth()
   const { showToast } = useToast()
+  const { initialized } = useRequireGuest() // Redireciona se já autenticado
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Não renderiza até verificar autenticação
+  if (!initialized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-graphite-950">
+        <div className="text-center">
+          <div className="mb-4 mx-auto h-12 w-12 animate-spin rounded-full border-4 border-brand-600 border-t-transparent"></div>
+          <p className="text-sm text-slate-600 dark:text-graphite-300">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    const { error } = await signIn(email, password)
+    try {
+      const { error } = await signIn(email, password)
 
-    if (error) {
+      if (error) {
+        showToast({
+          type: 'error',
+          title: 'Erro ao fazer login',
+          message: error.message,
+        })
+        setLoading(false)
+      } else {
+        // Login bem-sucedido - redireciona
+        console.log('✅ Redirecionando para /home')
+        router.replace('/home')
+      }
+    } catch (err) {
+      console.error('❌ Erro inesperado:', err)
       showToast({
         type: 'error',
-        title: 'Erro ao fazer login',
-        message: error.message,
+        title: 'Erro',
+        message: 'Ocorreu um erro inesperado. Tente novamente.',
       })
       setLoading(false)
-    } else {
-      console.log('🚀 Login bem-sucedido! Redirecionando imediatamente...')
-      // Redirect immediately
-      window.location.href = '/'
     }
   }
 
   return (
-    <div
-      className="min-h-screen bg-bg px-4 py-14"
-      style={{
-        background:
-          'radial-gradient(60% 45% at 50% 0%, rgba(40,31,32,0.08) 0%, rgba(0,0,0,0) 60%), linear-gradient(180deg, rgba(251,226,185,0.35) 0%, rgba(252,246,210,0.8) 60%)',
-      }}
-    >
-      <div
-        className="mx-auto grid max-w-6xl grid-cols-1 overflow-hidden rounded-2xl ring-1 ring-line/25 md:grid-cols-2"
-        style={{
-          boxShadow:
-            '0 26px 70px rgba(40,31,32,0.28), 0 10px 28px rgba(40,31,32,0.14)',
-          background:
-            'linear-gradient(135deg, rgba(198,195,154,0.42) 0%, rgba(251,226,185,0.75) 100%)',
-        }}
-      >
+    <div className="min-h-screen bg-slate-50 dark:bg-graphite-950 px-4 py-16">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 overflow-hidden rounded-xl2 md:grid-cols-2 shadow-card dark:shadow-cardDark">
         {/* Painel ilustrativo (lado esquerdo) */}
-        <div className="relative hidden md:block bg-elev p-8">
+        <div className="relative hidden md:block bg-brand-600 p-10">
           <div className="absolute inset-0 pointer-events-none" aria-hidden>
-            <div className="absolute -left-16 -top-24 h-72 w-72 rounded-full bg-brand/10 blur-2xl" />
-            <div className="absolute right-0 bottom-0 h-80 w-80 rounded-full bg-line/10 blur-2xl" />
+            <div className="absolute -left-16 -top-24 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
+            <div className="absolute right-0 bottom-0 h-80 w-80 rounded-full bg-white/10 blur-2xl" />
           </div>
 
-          <div className="relative z-10 flex h-full flex-col justify-center">
+          <div className="relative z-10 flex h-full flex-col justify-center text-[color:var(--brand-contrast)]">
             <div className="mb-6 flex items-center gap-3">
               <img src="/icon-64x64.png" alt="Cortex Ledger" className="h-10 w-10 rounded-lg" />
-              <h1 className="text-2xl font-bold text-text">Cortex Ledger</h1>
+              <h1 className="text-2xl font-bold">Cortex Ledger</h1>
             </div>
-            <h2 className="text-3xl font-bold text-text">Bem-vindo de volta!</h2>
-            <p className="mt-3 max-w-sm text-muted">
+            <h2 className="text-3xl font-bold">Bem-vindo de volta!</h2>
+            <p className="mt-3 max-w-sm opacity-90">
               Controle financeiro local-first com IA. Importação inteligente, categorização
               automática e relatórios claros.
             </p>
 
-            <ul className="mt-6 space-y-2 text-sm text-text">
+            <ul className="mt-6 space-y-2 text-sm">
               <li className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-brand" /> Importação CSV/OFX
+                <span className="h-1.5 w-1.5 rounded-full bg-white" /> Importação CSV/OFX
               </li>
               <li className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-brand" /> Regras e categorias
+                <span className="h-1.5 w-1.5 rounded-full bg-white" /> Regras e categorias
                 automáticas
               </li>
               <li className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-brand" /> Relatórios elegantes
+                <span className="h-1.5 w-1.5 rounded-full bg-white" /> Relatórios elegantes
               </li>
             </ul>
           </div>
         </div>
 
         {/* Formulário (lado direito) */}
-        <div className="bg-elev p-7 md:p-12 md:border-l md:border-line/25">
+        <div className="bg-white dark:bg-graphite-800 p-8 md:p-12 border-l border-slate-200 dark:border-graphite-700">
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6 text-center md:hidden">
               <img src="/icon-64x64.png" alt="Cortex Ledger" className="mx-auto h-10 w-10" />
-              <h1 className="mt-3 text-2xl font-bold text-text">Cortex Ledger</h1>
+              <h1 className="mt-3 text-2xl font-bold text-slate-900 dark:text-graphite-100">Cortex Ledger</h1>
             </div>
 
-            <h2 className="text-xl font-semibold text-text">Entrar</h2>
-            <p className="mt-1 text-sm text-muted">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-graphite-100">Entrar</h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-graphite-300">
               Digite seu email e senha para acessar sua conta
             </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-slate-700 dark:text-graphite-200">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -110,11 +121,11 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="bg-surface border-line/25"
+                  className="bg-slate-50 dark:bg-graphite-900 border-slate-300 dark:border-graphite-600"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="password" className="text-slate-700 dark:text-graphite-200">Senha</Label>
                 <Input
                   id="password"
                   type="password"
@@ -123,36 +134,46 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="bg-surface border-line/25"
+                  className="bg-slate-50 dark:bg-graphite-900 border-slate-300 dark:border-graphite-600"
                 />
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <label className="inline-flex items-center gap-2 text-muted">
-                  <input type="checkbox" className="h-4 w-4 rounded border-line/50" />
+                <label className="inline-flex items-center gap-2 text-slate-600 dark:text-graphite-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 dark:border-graphite-600 text-brand-600 focus:ring-2 focus:ring-brand-400 focus:ring-offset-0"
+                  />
                   Lembrar-me
                 </label>
-                <Link href="#" className="text-brand hover:underline">
+                <Link href="/forgot-password" className="text-brand-600 hover:text-brand-700 transition-colors">
                   Esqueci minha senha
                 </Link>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading} loading={loading}>
+              <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Entrando...' : 'Entrar'}
               </Button>
             </form>
 
-            <div className="mt-4 text-center text-sm">
+            <div className="mt-4 text-center text-sm text-slate-600 dark:text-graphite-300">
               Não tem uma conta?{' '}
-              <Link href="/signup" className="text-brand hover:underline">
+              <Link href="/signup" className="text-brand-600 hover:text-brand-700 transition-colors">
                 Criar conta
               </Link>
             </div>
 
-            <div className="mt-6 text-center text-xs text-muted">
-              <p>Contas de teste:</p>
-              <p className="mt-1">alice@exemplo.com / senha123</p>
-              <p>bob@exemplo.com / senha123</p>
+            <div className="mt-6 text-center text-xs">
+              <p className="text-slate-600 dark:text-graphite-300">Contas de teste:</p>
+              <div className="mt-2 space-y-1">
+                <p className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-graphite-700 text-slate-700 dark:text-graphite-200 inline-block text-xs">
+                  alice@exemplo.com / senha123
+                </p>
+                <br />
+                <p className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-graphite-700 text-slate-700 dark:text-graphite-200 inline-block text-xs">
+                  bob@exemplo.com / senha123
+                </p>
+              </div>
             </div>
           </div>
         </div>

@@ -19,7 +19,7 @@ export function BudgetOverview({ mesRef }: BudgetOverviewProps) {
         {[1, 2, 3, 4].map((i) => (
           <Card key={i}>
             <CardBody className="flex items-center justify-center p-6">
-              <Loader2 className="h-6 w-6 animate-spin text-brand" />
+              <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
             </CardBody>
           </Card>
         ))}
@@ -46,8 +46,8 @@ export function BudgetOverview({ mesRef }: BudgetOverviewProps) {
       label: 'Total Orçado',
       value: totalOrcado,
       icon: DollarSign,
-      color: 'text-text',
-      bgColor: 'bg-elev',
+      color: 'text-slate-900 dark:text-graphite-100',
+      bgColor: 'bg-slate-100 dark:bg-graphite-700',
     },
     {
       label: 'Total Realizado',
@@ -55,16 +55,16 @@ export function BudgetOverview({ mesRef }: BudgetOverviewProps) {
       icon: TrendingUp,
       color:
         percentualGeral > 100
-          ? 'text-danger'
+          ? 'text-error-600'
           : percentualGeral > 80
           ? 'text-warning'
           : 'text-success',
       bgColor:
         percentualGeral > 100
-          ? 'bg-elev'
+          ? 'bg-slate-100 dark:bg-graphite-700'
           : percentualGeral > 80
-          ? 'bg-elev'
-          : 'bg-elev',
+          ? 'bg-slate-100 dark:bg-graphite-700'
+          : 'bg-slate-100 dark:bg-graphite-700',
       badge: `${percentualGeral.toFixed(1)}%`,
     },
     {
@@ -73,12 +73,12 @@ export function BudgetOverview({ mesRef }: BudgetOverviewProps) {
       icon: TrendingDown,
       color:
         totalDisponivel < 0
-          ? 'text-danger'
+          ? 'text-error-600'
           : 'text-success',
       bgColor:
         totalDisponivel < 0
-          ? 'bg-elev'
-          : 'bg-elev',
+          ? 'bg-slate-100 dark:bg-graphite-700'
+          : 'bg-slate-100 dark:bg-graphite-700',
     },
     {
       label: 'Categorias com Alerta',
@@ -86,16 +86,16 @@ export function BudgetOverview({ mesRef }: BudgetOverviewProps) {
       icon: AlertCircle,
       color:
         categoriasExcedidas > 0
-          ? 'text-danger'
+          ? 'text-error-600'
           : categoriasProximoLimite > 0
           ? 'text-warning'
-          : 'text-muted',
+          : 'text-slate-600 dark:text-graphite-300',
       bgColor:
         categoriasExcedidas > 0
-          ? 'bg-elev'
+          ? 'bg-slate-100 dark:bg-graphite-700'
           : categoriasProximoLimite > 0
-          ? 'bg-elev'
-          : 'bg-elev',
+          ? 'bg-slate-100 dark:bg-graphite-700'
+          : 'bg-slate-100 dark:bg-graphite-700',
       subtitle:
         categoriasExcedidas > 0
           ? `${categoriasExcedidas} excedida${categoriasExcedidas > 1 ? 's' : ''}`
@@ -115,11 +115,11 @@ export function BudgetOverview({ mesRef }: BudgetOverviewProps) {
             <CardBody className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-muted">
+                  <p className="text-sm font-medium text-slate-600 dark:text-graphite-300">
                     {stat.label}
                   </p>
                   <div className="mt-2 flex items-baseline gap-2">
-                    <p className="text-2xl font-bold text-text">
+                    <p className="text-2xl font-bold text-slate-900 dark:text-graphite-100">
                       {stat.isCount ? stat.value : formatCurrency(stat.value)}
                     </p>
                     {stat.badge && (
@@ -138,7 +138,7 @@ export function BudgetOverview({ mesRef }: BudgetOverviewProps) {
                     )}
                   </div>
                   {stat.subtitle && (
-                    <p className="mt-1 text-xs text-muted">
+                    <p className="mt-1 text-xs text-slate-600 dark:text-graphite-300">
                       {stat.subtitle}
                     </p>
                   )}

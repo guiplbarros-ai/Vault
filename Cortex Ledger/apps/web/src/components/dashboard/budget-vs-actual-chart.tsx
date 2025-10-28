@@ -6,6 +6,7 @@ import { ChartWrapper } from '@/components/charts/chart-wrapper'
 import { useBudgetData } from '@/lib/hooks/use-budget-data'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { cortexEchartsTheme } from '@/lib/chart-theme'
 import type { EChartsOption } from 'echarts'
 
 export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
@@ -15,7 +16,7 @@ export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
     return (
       <Card>
         <CardBody className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-brand" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
         </CardBody>
       </Card>
     )
@@ -25,7 +26,7 @@ export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
     return (
       <Card>
         <CardBody className="p-6">
-          <p className="text-sm text-danger">Erro ao carregar dados do orçamento</p>
+          <p className="text-sm text-error-600">Erro ao carregar dados do orçamento</p>
         </CardBody>
       </Card>
     )
@@ -35,12 +36,12 @@ export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
     return (
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold text-text">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
             Orçado vs. Realizado
           </h3>
         </CardHeader>
         <CardBody className="p-6">
-          <p className="text-sm text-muted">
+          <p className="text-sm text-slate-600 dark:text-graphite-300">
             Nenhum orçamento configurado para este mês. Configure orçamentos para ver esta
             visualização.
           </p>
@@ -50,7 +51,12 @@ export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
   }
 
   const option: EChartsOption = {
+    color: cortexEchartsTheme.color,
+    textStyle: cortexEchartsTheme.textStyle,
     tooltip: {
+      backgroundColor: cortexEchartsTheme.tooltip.backgroundColor,
+      borderColor: cortexEchartsTheme.tooltip.borderColor,
+      textStyle: cortexEchartsTheme.tooltip.textStyle,
       trigger: 'axis',
       axisPointer: {
         type: 'shadow',
@@ -78,6 +84,7 @@ export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
     legend: {
       data: ['Orçado', 'Realizado'],
       bottom: 0,
+      textStyle: cortexEchartsTheme.textStyle,
     },
     grid: {
       left: '3%',
@@ -89,14 +96,19 @@ export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
     xAxis: {
       type: 'category',
       data: data.map((d) => d.categoria),
+      axisLine: cortexEchartsTheme.axisLine,
       axisLabel: {
+        color: cortexEchartsTheme.axisLabel.color,
         interval: 0,
         rotate: data.length > 5 ? 45 : 0,
       },
+      splitLine: cortexEchartsTheme.splitLine,
     },
     yAxis: {
       type: 'value',
+      axisLine: cortexEchartsTheme.axisLine,
       axisLabel: {
+        color: cortexEchartsTheme.axisLabel.color,
         formatter: (value: number) => {
           if (value >= 1000) {
             return `R$ ${(value / 1000).toFixed(1)}k`
@@ -104,6 +116,7 @@ export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
           return `R$ ${value}`
         },
       },
+      splitLine: cortexEchartsTheme.splitLine,
     },
     series: [
       {
@@ -111,7 +124,7 @@ export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
         type: 'bar',
         data: data.map((d) => d.orcado),
         itemStyle: {
-          color: '#339686',
+          color: '#B8891A', // insight-600 para orçado (mostarda)
         },
       },
       {
@@ -121,7 +134,8 @@ export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
         itemStyle: {
           color: (params: any) => {
             const item = data[params.dataIndex]
-            return item.percentual > 100 ? '#E53935' : item.percentual > 80 ? '#FF7733' : '#4CAF50'
+            // error-600 para >100%, warning-600 para >80%, success-600 para <80%
+            return item.percentual > 100 ? '#E2555A' : item.percentual > 80 ? '#C26719' : '#16A34A'
           },
         },
       },
@@ -137,23 +151,23 @@ export const BudgetVsActualChart = memo(function BudgetVsActualChart() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-text">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-graphite-100">
               Orçado vs. Realizado
             </h3>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-slate-600 dark:text-graphite-300">
               Comparativo por categoria no mês atual
             </p>
           </div>
           {(overBudget > 0 || nearLimit > 0) && (
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-warning" />
+              <AlertCircle className="h-5 w-5 text-warning-600" />
               <div className="text-sm">
                 {overBudget > 0 && (
-                  <span className="font-medium text-danger">{overBudget} acima</span>
+                  <span className="font-medium text-error-600">{overBudget} acima</span>
                 )}
-                {overBudget > 0 && nearLimit > 0 && <span className="text-muted"> · </span>}
+                {overBudget > 0 && nearLimit > 0 && <span className="text-slate-600 dark:text-graphite-300"> · </span>}
                 {nearLimit > 0 && (
-                  <span className="font-medium text-warning">{nearLimit} próximo</span>
+                  <span className="font-medium text-warning-600">{nearLimit} próximo</span>
                 )}
               </div>
             </div>

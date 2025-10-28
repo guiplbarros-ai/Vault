@@ -203,7 +203,7 @@ export function FileUploadZone({
               <h4 className="font-semibold text-text">
                 Arquivos Selecionados ({files.length})
               </h4>
-              <Button variant="outline" size="sm" onClick={clearAll}>
+              <Button variant="secondary" size="sm" onClick={clearAll}>
                 Limpar Todos
               </Button>
             </div>
@@ -245,7 +245,7 @@ export function FileUploadZone({
                       <AlertCircle className="w-5 h-5 text-danger" />
                     )}
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => removeFile(index)}
                       className="h-8 w-8 p-0"

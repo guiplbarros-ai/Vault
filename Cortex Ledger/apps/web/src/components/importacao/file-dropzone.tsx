@@ -64,15 +64,15 @@ export function FileDropzone({
 
   if (selectedFile) {
     return (
-      <div className="rounded-2xl border-2 border-line/25 bg-surface p-6">
+      <div className="rounded-2xl border-2 border-slate-200 dark:border-graphite-700/25 bg-white dark:bg-graphite-800 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-elev">
-              <File className="h-6 w-6 text-text" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-graphite-700">
+              <File className="h-6 w-6 text-slate-900 dark:text-graphite-100" />
             </div>
             <div>
               <p className="font-medium">{selectedFile.name}</p>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-slate-600 dark:text-graphite-300">
                 {(selectedFile.size / 1024).toFixed(2)} KB
               </p>
             </div>
@@ -81,7 +81,7 @@ export function FileDropzone({
             type="button"
             onClick={onClear}
             disabled={disabled}
-            className="rounded-lg p-2 text-muted hover:bg-elev hover:text-text disabled:opacity-50"
+            className="rounded-lg p-2 text-slate-600 dark:text-graphite-300 hover:bg-slate-100 dark:bg-graphite-700 hover:text-slate-900 dark:text-graphite-100 disabled:opacity-50"
           >
             <X className="h-5 w-5" />
           </button>
@@ -99,8 +99,8 @@ export function FileDropzone({
       className={cn(
         'relative rounded-2xl border-2 border-dashed transition-all',
         isDragging
-          ? 'border-brand bg-surface'
-          : 'border-line/25 bg-surface hover:border-brand',
+          ? 'border-brand-600 bg-white dark:bg-graphite-800'
+          : 'border-slate-200 dark:border-graphite-700/25 bg-white dark:bg-graphite-800 hover:border-brand-600',
         disabled && 'cursor-not-allowed opacity-50'
       )}
     >
@@ -116,13 +116,13 @@ export function FileDropzone({
         <div
           className={cn(
             'mb-4 flex h-16 w-16 items-center justify-center rounded-full transition-colors',
-            isDragging ? 'bg-elev' : 'bg-elev'
+            isDragging ? 'bg-slate-100 dark:bg-graphite-700' : 'bg-slate-100 dark:bg-graphite-700'
           )}
         >
           <Upload
             className={cn(
               'h-8 w-8 transition-colors',
-              isDragging ? 'text-brand' : 'text-muted'
+              isDragging ? 'text-brand-600' : 'text-slate-600 dark:text-graphite-300'
             )}
           />
         </div>
@@ -131,15 +131,15 @@ export function FileDropzone({
           {isDragging ? 'Solte o arquivo aqui' : 'Arraste seu arquivo aqui'}
         </h3>
 
-        <p className="mb-4 text-sm text-muted">
+        <p className="mb-4 text-sm text-slate-600 dark:text-graphite-300">
           ou clique para selecionar
         </p>
 
-        <div className="flex flex-wrap justify-center gap-2 text-xs text-muted">
-          <span className="rounded-full bg-elev px-3 py-1">
+        <div className="flex flex-wrap justify-center gap-2 text-xs text-slate-600 dark:text-graphite-300">
+          <span className="rounded-full bg-slate-100 dark:bg-graphite-700 px-3 py-1">
             CSV
           </span>
-          <span className="rounded-full bg-elev px-3 py-1">
+          <span className="rounded-full bg-slate-100 dark:bg-graphite-700 px-3 py-1">
             OFX
           </span>
         </div>

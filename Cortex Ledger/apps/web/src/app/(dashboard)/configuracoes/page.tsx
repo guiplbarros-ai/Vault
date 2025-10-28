@@ -4,8 +4,8 @@ export default function ConfiguracoesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-text">Configurações</h1>
-        <p className="text-muted">Configure suas preferências e perfil</p>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-graphite-100">Configurações</h1>
+        <p className="text-slate-600 dark:text-graphite-300">Configure suas preferências e perfil</p>
       </div>
 
       <Card>
@@ -16,7 +16,7 @@ export default function ConfiguracoesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-muted">
+          <p className="text-slate-600 dark:text-graphite-300">
             Esta página permitirá configurar moeda, fuso horário, tema e outras preferências.
           </p>
         </CardContent>
