@@ -6,7 +6,10 @@
     "build": "next build",
     "dev": "NODE_OPTIONS='--no-warnings' next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -71,9 +74,13 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/ui": "^4.0.4",
+    "fake-indexeddb": "^6.2.4",
+    "jsdom": "^27.0.1",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.4"
   }
 }

@@ -193,10 +193,8 @@ export class CategoriaService implements ICategoriaService {
   async searchCategorias(termo: string, tipo?: string): Promise<Categoria[]> {
     const db = getDB();
 
-    let categorias = await db.categorias
-      .where('ativa')
-      .equals(true)
-      .toArray();
+    let categorias = await db.categorias.toArray();
+    categorias = categorias.filter(c => c.ativa === true);
 
     const termoLower = termo.toLowerCase();
     categorias = categorias.filter((c) =>

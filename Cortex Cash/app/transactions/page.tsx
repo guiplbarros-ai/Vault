@@ -28,6 +28,7 @@ import type { TransactionFormData } from "@/lib/validations"
 import { transacaoService } from "@/lib/services/transacao.service"
 import { mapFormDataToDTO, mapDBTypeToFormType } from "@/lib/adapters"
 import type { Transacao } from "@/lib/types"
+import { toast } from "sonner"
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transacao[]>([])
@@ -51,6 +52,9 @@ export default function TransactionsPage() {
       setTransactions(data)
     } catch (error) {
       console.error('Erro ao carregar transações:', error)
+      toast.error('Erro ao carregar transações', {
+        description: 'Não foi possível carregar as transações. Tente novamente.',
+      })
     } finally {
       setLoading(false)
     }
@@ -165,8 +169,14 @@ export default function TransactionsPage() {
       await loadTransactions() // Recarrega a lista
       setDeleteDialogOpen(false)
       setTransactionToDelete(null)
+      toast.success('Transação excluída', {
+        description: 'A transação foi excluída com sucesso.',
+      })
     } catch (error) {
       console.error('Erro ao excluir transação:', error)
+      toast.error('Erro ao excluir transação', {
+        description: 'Não foi possível excluir a transação. Tente novamente.',
+      })
     }
   }
 
@@ -177,8 +187,14 @@ export default function TransactionsPage() {
       await transacaoService.createTransacao(dto)
       await loadTransactions() // Recarrega a lista
       setFormDialogOpen(false)
+      toast.success('Transação criada', {
+        description: 'A transação foi criada com sucesso.',
+      })
     } catch (error) {
       console.error('Erro ao criar transação:', error)
+      toast.error('Erro ao criar transação', {
+        description: 'Não foi possível criar a transação. Verifique os dados e tente novamente.',
+      })
     } finally {
       setFormLoading(false)
     }

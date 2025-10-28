@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { ValidationError } from '../errors';
 
 // ============================================================================
 // Enum schemas (for tipo validation)
@@ -32,7 +33,7 @@ export const createInstituicaoSchema = z.object({
  * Schema for CreateContaDTO
  */
 export const createContaSchema = z.object({
-  instituicao_id: z.string().uuid('ID de instituição inválido'),
+  instituicao_id: z.string().min(1, 'ID de instituição é obrigatório'),
   nome: z.string().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
   tipo: tipoContaSchema,
   agencia: z.string().max(20, 'Agência muito longa').optional(),
@@ -47,9 +48,9 @@ export const createContaSchema = z.object({
  * Schema for CreateTransacaoDTO
  */
 export const createTransacaoSchema = z.object({
-  conta_id: z.string().uuid('ID de conta inválido'),
-  categoria_id: z.string().uuid('ID de categoria inválido').optional(),
-  data: z.union([z.date(), z.string().datetime('Data inválida')]),
+  conta_id: z.string().min(1, 'ID de conta é obrigatório'),
+  categoria_id: z.string().min(1, 'ID de categoria é obrigatório').optional(),
+  data: z.union([z.date(), z.string().min(1, 'Data é obrigatória')]),
   descricao: z.string().min(1, 'Descrição é obrigatória').max(200, 'Descrição muito longa'),
   valor: z.number().positive('Valor deve ser positivo').finite('Valor deve ser um número válido'),
   tipo: tipoTransacaoSchema,
@@ -89,8 +90,8 @@ export function validateDTO<T>(schema: z.ZodSchema<T>, data: unknown): T {
   const result = schema.safeParse(data);
 
   if (!result.success) {
-    const errors = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
-    throw new Error(`Validation failed: ${errors}`);
+    const errors = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`);
+    throw new ValidationError(`Validation failed: ${errors.join(', ')}`, errors);
   }
 
   return result.data;

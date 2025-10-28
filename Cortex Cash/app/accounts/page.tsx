@@ -29,6 +29,7 @@ import type { AccountFormData } from "@/lib/validations"
 import { contaService } from "@/lib/services/conta.service"
 import { mapFormDataToCreateConta, mapDBAccountTypeToFormType } from "@/lib/adapters"
 import type { Conta } from "@/lib/types"
+import { toast } from "sonner"
 
 const getAccountIcon = (type: string) => {
   const icons = {
@@ -65,6 +66,9 @@ export default function AccountsPage() {
       setAccounts(data)
     } catch (error) {
       console.error('Erro ao carregar contas:', error)
+      toast.error('Erro ao carregar contas', {
+        description: 'Não foi possível carregar as contas. Tente novamente.',
+      })
     } finally {
       setLoading(false)
     }
@@ -78,8 +82,14 @@ export default function AccountsPage() {
       await loadAccounts()
       setDeleteDialogOpen(false)
       setAccountToDelete(null)
+      toast.success('Conta excluída', {
+        description: 'A conta foi excluída com sucesso.',
+      })
     } catch (error) {
       console.error('Erro ao excluir conta:', error)
+      toast.error('Erro ao excluir conta', {
+        description: 'Não foi possível excluir a conta. Tente novamente.',
+      })
     }
   }
 
@@ -92,8 +102,14 @@ export default function AccountsPage() {
       await contaService.createConta(contaData)
       await loadAccounts()
       setFormDialogOpen(false)
+      toast.success('Conta criada', {
+        description: 'A conta foi criada com sucesso.',
+      })
     } catch (error) {
       console.error('Erro ao criar conta:', error)
+      toast.error('Erro ao criar conta', {
+        description: 'Não foi possível criar a conta. Verifique os dados e tente novamente.',
+      })
     } finally {
       setFormLoading(false)
     }

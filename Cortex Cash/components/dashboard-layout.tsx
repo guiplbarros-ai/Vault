@@ -9,6 +9,7 @@ import { LayoutDashboard, ArrowLeftRight, Wallet, PieChart, CreditCard, Settings
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { Toaster } from "sonner"
 
 const navigation = [
   { name: "Painel", href: "/", icon: LayoutDashboard },
@@ -139,6 +140,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         {/* Page content */}
         <main className="p-6">{children}</main>
       </div>
+
+      {/* Toast notifications */}
+      <Toaster
+        position="top-right"
+        expand={false}
+        richColors
+        closeButton
+        toastOptions={{
+          style: {
+            background: 'hsl(var(--card))',
+            color: 'hsl(var(--card-foreground))',
+            border: '1px solid hsl(var(--border))',
+          },
+        }}
+      />
     </div>
   )
 }

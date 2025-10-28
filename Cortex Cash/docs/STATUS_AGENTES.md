@@ -174,15 +174,24 @@
 - [x] **Empty states** para quando não há dados
 - [x] **0 mock data** - 100% dados reais do Dexie
 
-### 📋 Próximos Passos (v0.2)
+### ✅ Fase 7: Refinamentos UX (Semana 2) ✅
+- [x] **Toast notifications** com sonner
+- [x] **Feedback visual** em todas operações CRUD:
+  - Criar: "✅ [Item] criado com sucesso"
+  - Excluir: "✅ [Item] excluído com sucesso"
+  - Erro: "❌ Erro ao [ação]. Descrição do erro."
+- [x] **Integrado em 3 páginas**: Transactions, Accounts, Categories
+- [x] **Styled toast** com tema dark mode
 
-#### Refinamentos
+### 📋 Próximos Passos (v0.2+)
+
+#### Refinamentos Avançados
 - [ ] BudgetOverview com dados reais (depende de implementar orçamentos)
-- [ ] Error boundaries
-- [ ] Toasts de feedback (sucesso/erro)
-- [ ] Animações e transições suaves
+- [ ] Error boundaries para captura de erros
+- [ ] Animações e transições suaves com framer-motion
+- [ ] Skeleton screens para loading states
 
-**Status**: ✅ **v0.1 COMPLETA!** - Dashboard Home 100% funcional!
+**Status**: ✅ **v0.1 COMPLETA + Refinamentos UX!** - Sistema 100% funcional com feedback visual!
 
 ---
 

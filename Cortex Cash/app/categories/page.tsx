@@ -30,6 +30,7 @@ import type { CategoryFormData } from "@/lib/validations"
 import { categoriaService } from "@/lib/services/categoria.service"
 import { mapFormDataToCreateCategoria, mapDBCategoryTypeToFormType } from "@/lib/adapters"
 import type { Categoria } from "@/lib/types"
+import { toast } from "sonner"
 
 export default function CategoriesPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([])
@@ -50,6 +51,9 @@ export default function CategoriesPage() {
       setCategorias(data)
     } catch (error) {
       console.error('Erro ao carregar categorias:', error)
+      toast.error('Erro ao carregar categorias', {
+        description: 'Não foi possível carregar as categorias. Tente novamente.',
+      })
     } finally {
       setLoading(false)
     }
@@ -63,8 +67,14 @@ export default function CategoriesPage() {
       await loadCategorias()
       setDeleteDialogOpen(false)
       setCategoryToDelete(null)
+      toast.success('Categoria excluída', {
+        description: 'A categoria foi excluída com sucesso.',
+      })
     } catch (error) {
       console.error('Erro ao excluir categoria:', error)
+      toast.error('Erro ao excluir categoria', {
+        description: 'Não foi possível excluir a categoria. Tente novamente.',
+      })
     }
   }
 
@@ -75,8 +85,14 @@ export default function CategoriesPage() {
       await categoriaService.createCategoria(dto)
       await loadCategorias()
       setFormDialogOpen(false)
+      toast.success('Categoria criada', {
+        description: 'A categoria foi criada com sucesso.',
+      })
     } catch (error) {
       console.error('Erro ao criar categoria:', error)
+      toast.error('Erro ao criar categoria', {
+        description: 'Não foi possível criar a categoria. Verifique os dados e tente novamente.',
+      })
     } finally {
       setFormLoading(false)
     }

@@ -23,12 +23,10 @@ export class ContaService {
     const db = getDB();
     const incluirInativas = options?.incluirInativas || false;
 
-    let contas: Conta[];
+    let contas: Conta[] = await db.contas.toArray();
 
-    if (incluirInativas) {
-      contas = await db.contas.toArray();
-    } else {
-      contas = await db.contas.where('ativa').equals(true).toArray();
+    if (!incluirInativas) {
+      contas = contas.filter(c => c.ativa === true);
     }
 
     // Ordenar
