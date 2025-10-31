@@ -378,14 +378,14 @@ export default function CategoriesPage() {
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#3B5563]">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-white">
                 {dialogMode === "create" && "Nova Categoria"}
                 {dialogMode === "edit" && "Editar Categoria"}
                 {dialogMode === "subcategoria" && "Nova Subcategoria"}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-white/70">
                 {dialogMode === "create" &&
                   "Crie uma nova categoria para organizar suas transações."}
                 {dialogMode === "edit" &&

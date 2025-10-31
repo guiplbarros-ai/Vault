@@ -1,18 +1,15 @@
 "use client";
 
 import * as React from "react";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Categoria, TipoTransacao } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FormInput, FormSelect, FormColorPicker } from "@/components/forms";
+import { Separator } from "@/components/ui/separator";
+import { Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "sonner";
 
 // Ícones mais comuns para categorias
 const ICONES_COMUNS = [
@@ -23,25 +20,16 @@ const ICONES_COMUNS = [
   "🛍️", "💚", "↔️"
 ];
 
-// Cores predefinidas
-const CORES_PREDEFINIDAS = [
-  { nome: "Vermelho", valor: "#ef4444" },
-  { nome: "Laranja", valor: "#f97316" },
-  { nome: "Âmbar", valor: "#f59e0b" },
-  { nome: "Amarelo", valor: "#eab308" },
-  { nome: "Lima", valor: "#84cc16" },
-  { nome: "Verde", valor: "#10b981" },
-  { nome: "Esmeralda", valor: "#059669" },
-  { nome: "Teal", valor: "#14b8a6" },
-  { nome: "Ciano", valor: "#06b6d4" },
-  { nome: "Azul", valor: "#3b82f6" },
-  { nome: "Índigo", valor: "#6366f1" },
-  { nome: "Violeta", valor: "#8b5cf6" },
-  { nome: "Roxo", valor: "#a855f7" },
-  { nome: "Fúcsia", valor: "#d946ef" },
-  { nome: "Rosa", valor: "#ec4899" },
-  { nome: "Cinza", valor: "#6b7280" },
-];
+// Schema de validação
+const categorySchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório").max(50, "Nome muito longo"),
+  tipo: z.enum(["despesa", "receita", "transferencia"]),
+  grupo: z.string().max(50, "Grupo muito longo").optional(),
+  icone: z.string().max(10, "Ícone inválido").optional(),
+  cor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor deve estar no formato hexadecimal").optional(),
+});
+
+type CategoryFormData = z.infer<typeof categorySchema>;
 
 export interface CategoryFormProps {
   categoria?: Categoria;
@@ -55,172 +43,230 @@ export interface CategoryFormProps {
     cor?: string;
   }) => Promise<void>;
   onCancel: () => void;
+  isLoading?: boolean;
 }
+
+const TIPO_OPTIONS = [
+  { value: "despesa", label: "Despesa" },
+  { value: "receita", label: "Receita" },
+  { value: "transferencia", label: "Transferência" },
+];
 
 export function CategoryForm({
   categoria,
   categoriaPai,
   onSubmit,
   onCancel,
+  isLoading = false,
 }: CategoryFormProps) {
-  const [nome, setNome] = React.useState(categoria?.nome || "");
-  const [tipo, setTipo] = React.useState<TipoTransacao>(
-    categoria?.tipo || categoriaPai?.tipo || "despesa"
-  );
-  const [grupo, setGrupo] = React.useState(categoria?.grupo || "");
   const [icone, setIcone] = React.useState(categoria?.icone || "📁");
-  const [cor, setCor] = React.useState(categoria?.cor || "#2d9b9b");
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const methods = useForm<CategoryFormData>({
+    resolver: zodResolver(categorySchema),
+    defaultValues: {
+      nome: categoria?.nome || "",
+      tipo: categoria?.tipo || categoriaPai?.tipo || "despesa",
+      grupo: categoria?.grupo || "",
+      icone: categoria?.icone || "📁",
+      cor: categoria?.cor || "#2d9b9b",
+    },
+  });
 
-    if (!nome.trim()) {
-      toast.error("Nome é obrigatório");
-      return;
+  const handleSubmit = methods.handleSubmit(
+    async (data: CategoryFormData) => {
+      setSubmitting(true);
+      try {
+        await onSubmit({
+          nome: data.nome.trim(),
+          tipo: data.tipo,
+          grupo: data.grupo?.trim() || undefined,
+          pai_id: categoriaPai?.id,
+          icone: icone,
+          cor: data.cor,
+        });
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    (errors) => {
+      console.error("[CategoryForm] Erros de validação:", errors);
     }
+  );
 
-    setIsSubmitting(true);
-    try {
-      await onSubmit({
-        nome: nome.trim(),
-        tipo,
-        grupo: grupo.trim() || undefined,
-        pai_id: categoriaPai?.id,
-        icone,
-        cor,
-      });
-      toast.success(
-        categoria ? "Categoria atualizada!" : "Categoria criada!"
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Erro ao salvar categoria"
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // Sync icone state with form
+  React.useEffect(() => {
+    methods.setValue("icone", icone);
+  }, [icone, methods]);
+
+  const isEditing = !!categoria;
+  const isSubcategory = !!categoriaPai;
+  const canEditType = !isEditing && !isSubcategory;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {categoriaPai && (
-        <div className="p-3 bg-muted rounded-md">
-          <p className="text-sm text-muted-foreground">
-            Subcategoria de:{" "}
-            <span className="font-medium text-foreground">
-              {categoriaPai.icone} {categoriaPai.nome}
-            </span>
-          </p>
-        </div>
-      )}
+    <FormProvider {...methods}>
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6"
+        style={
+          {
+            "--label-color": "#ffffff",
+            "--description-color": "rgba(255, 255, 255, 0.7)",
+          } as React.CSSProperties
+        }
+      >
+        {/* Informação de subcategoria */}
+        {categoriaPai && (
+          <div
+            className="p-3 rounded-lg"
+            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+          >
+            <p className="text-sm text-white/70">
+              Subcategoria de:{" "}
+              <span className="font-medium text-white">
+                {categoriaPai.icone} {categoriaPai.nome}
+              </span>
+            </p>
+          </div>
+        )}
 
-      <div className="space-y-2">
-        <Label htmlFor="nome">Nome *</Label>
-        <Input
-          id="nome"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Ex: Alimentação, Transporte..."
-          required
-          maxLength={50}
-        />
-      </div>
+        {/* Informações Básicas */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-white">Informações Básicas</h3>
+            <Separator className="bg-white/20" />
+          </div>
 
-      {!categoria && !categoriaPai && (
-        <div className="space-y-2">
-          <Label htmlFor="tipo">Tipo *</Label>
-          <Select value={tipo} onValueChange={(v) => setTipo(v as TipoTransacao)}>
-            <SelectTrigger id="tipo">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="despesa">Despesa</SelectItem>
-              <SelectItem value="receita">Receita</SelectItem>
-              <SelectItem value="transferencia">Transferência</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <Label htmlFor="grupo">Grupo (opcional)</Label>
-        <Input
-          id="grupo"
-          value={grupo}
-          onChange={(e) => setGrupo(e.target.value)}
-          placeholder="Ex: Moradia, Lazer..."
-          maxLength={50}
-        />
-        <p className="text-xs text-muted-foreground">
-          Use para agrupar categorias relacionadas
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Ícone</Label>
-        <div className="grid grid-cols-10 gap-2">
-          {ICONES_COMUNS.map((i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setIcone(i)}
-              className={`p-2 text-2xl rounded border-2 hover:border-primary transition-colors ${
-                icone === i ? "border-primary bg-accent" : "border-border"
-              }`}
-            >
-              {i}
-            </button>
-          ))}
-        </div>
-        <Input
-          value={icone}
-          onChange={(e) => setIcone(e.target.value)}
-          placeholder="Ou digite um emoji..."
-          maxLength={2}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Cor</Label>
-        <div className="grid grid-cols-8 gap-2">
-          {CORES_PREDEFINIDAS.map((c) => (
-            <button
-              key={c.valor}
-              type="button"
-              onClick={() => setCor(c.valor)}
-              className={`w-full h-10 rounded border-2 transition-all ${
-                cor === c.valor ? "border-primary scale-110" : "border-border"
-              }`}
-              style={{ backgroundColor: c.valor }}
-              title={c.nome}
+          <div className="form-dark-input">
+            <FormInput
+              name="nome"
+              label="Nome"
+              placeholder="Ex: Alimentação, Transporte..."
+              required
+              className="!bg-[#1e293b] !text-white !border-white/20 placeholder:!text-white/50"
+              description="Nome da categoria"
             />
-          ))}
-        </div>
-        <Input
-          type="color"
-          value={cor}
-          onChange={(e) => setCor(e.target.value)}
-        />
-      </div>
+          </div>
 
-      <div className="flex justify-end gap-2 pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isSubmitting}
-        >
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting
-            ? "Salvando..."
-            : categoria
-            ? "Atualizar"
-            : "Criar Categoria"}
-        </Button>
-      </div>
-    </form>
+          {canEditType && (
+            <div className="form-dark-select">
+              <FormSelect
+                name="tipo"
+                label="Tipo"
+                options={TIPO_OPTIONS}
+                required
+                description="Tipo de transação"
+              />
+            </div>
+          )}
+
+          <div className="form-dark-input">
+            <FormInput
+              name="grupo"
+              label="Grupo (opcional)"
+              placeholder="Ex: Moradia, Lazer..."
+              className="!bg-[#1e293b] !text-white !border-white/20 placeholder:!text-white/50"
+              description="Use para agrupar categorias relacionadas"
+            />
+          </div>
+        </div>
+
+        {/* Personalização */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-white">Personalização</h3>
+            <Separator className="bg-white/20" />
+          </div>
+
+          {/* Seletor de Ícone */}
+          <div className="space-y-3">
+            <Label className="text-white text-sm font-medium">Ícone</Label>
+            <div className="grid grid-cols-9 gap-2">
+              {ICONES_COMUNS.map((i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setIcone(i)}
+                  className={`p-2 text-2xl rounded-lg border-2 transition-all hover:scale-105 ${
+                    icone === i
+                      ? "border-[#18B0A4] bg-[#18B0A4]/20 scale-105"
+                      : "border-white/20 hover:border-white/40"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      icone === i
+                        ? "rgba(24, 176, 164, 0.2)"
+                        : "rgba(255, 255, 255, 0.05)",
+                  }}
+                >
+                  {i}
+                </button>
+              ))}
+            </div>
+
+            {/* Input customizado para emoji */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-[#1e293b] border border-white/20">
+              <span className="text-3xl">{icone}</span>
+              <input
+                type="text"
+                value={icone}
+                onChange={(e) => setIcone(e.target.value)}
+                placeholder="Ou digite um emoji..."
+                maxLength={10}
+                className="flex-1 bg-transparent text-white placeholder:text-white/50 outline-none text-sm"
+              />
+            </div>
+            <p className="text-xs text-white/60">
+              Selecione um ícone ou digite qualquer emoji
+            </p>
+          </div>
+
+          {/* Seletor de Cor */}
+          <div className="form-dark-input">
+            <FormColorPicker
+              name="cor"
+              label="Cor"
+              description="Cor para identificação visual da categoria"
+            />
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={submitting || isLoading}
+            style={{
+              borderColor: "rgba(255, 255, 255, 0.2)",
+              color: "#ffffff",
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={submitting || isLoading}
+            className="min-w-[120px]"
+            style={{
+              backgroundColor: "#18B0A4",
+              color: "#ffffff",
+            }}
+          >
+            {submitting || isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Salvando...
+              </>
+            ) : isEditing ? (
+              "Atualizar"
+            ) : (
+              "Criar Categoria"
+            )}
+          </Button>
+        </div>
+      </form>
+    </FormProvider>
   );
 }

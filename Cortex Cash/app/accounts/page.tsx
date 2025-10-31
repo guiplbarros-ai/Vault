@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLocalizationSettings } from '@/app/providers/settings-provider'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
@@ -62,6 +63,8 @@ export default function AccountsPage() {
   const [editMode, setEditMode] = useState(false)
   const [accountTransactions, setAccountTransactions] = useState<Transacao[]>([])
   const [loadingTransactions, setLoadingTransactions] = useState(false)
+
+  const { formatCurrency: formatCurrencyWithSettings } = useLocalizationSettings()
 
   // Carrega contas do banco
   useEffect(() => {
@@ -190,10 +193,7 @@ export default function AccountsPage() {
   }
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(Math.abs(value))
+    return formatCurrencyWithSettings(Math.abs(value))
   }
 
   const totalBalance = accounts.reduce((sum, account) => sum + (account.saldo_atual || 0), 0)
