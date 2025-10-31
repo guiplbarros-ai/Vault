@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useSetting, useLocalizationSettings } from '@/app/providers/settings-provider'
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react"
@@ -12,6 +13,16 @@ export function RecentTransactions() {
   const [transactions, setTransactions] = useState<Transacao[]>([])
   const [categorias, setCategorias] = useState<Record<string, Categoria>>({})
   const [loading, setLoading] = useState(true)
+  const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme')
+  const { formatCurrency: formatCurrencyWithSettings } = useLocalizationSettings()
+
+  // Detecta se está em dark mode
+  const isDark = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    if (theme === 'dark') return true
+    if (theme === 'light') return false
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  }, [theme])
 
   useEffect(() => {
     loadData()
@@ -55,23 +66,30 @@ export function RecentTransactions() {
   }
 
   const formatCurrency = (value: number) => {
-    return Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    // Retorna apenas o valor numérico formatado (sem símbolo R$)
+    const formatted = formatCurrencyWithSettings(Math.abs(value))
+    return formatted.replace('R$', '').trim()
   }
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 shadow-md border" style={{
+      background: isDark
+        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
+        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+      backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
+    }}>
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-foreground">Transações Recentes</h3>
-        <p className="text-sm text-muted-foreground">Sua atividade financeira mais recente</p>
+        <h3 className={isDark ? "text-lg font-bold text-white" : "text-lg font-bold text-foreground"}>Transações Recentes</h3>
+        <p className={isDark ? "text-sm text-white/70" : "text-sm text-muted-foreground"}>Sua atividade financeira mais recente</p>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className={isDark ? "h-8 w-8 animate-spin text-white/50" : "h-8 w-8 animate-spin text-muted-foreground"} />
         </div>
       ) : transactions.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-sm text-muted-foreground">Nenhuma transação encontrada</p>
+          <p className={isDark ? "text-sm text-white/70" : "text-sm text-muted-foreground"}>Nenhuma transação encontrada</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -82,25 +100,33 @@ export function RecentTransactions() {
             return (
               <div key={transaction.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`rounded-lg p-2 ${isIncome ? "bg-accent/10" : "bg-muted"}`}>
+                  <div className={`rounded-lg p-2 ${
+                    isDark
+                      ? (isIncome ? "bg-white/15" : "bg-white/10")
+                      : (isIncome ? "bg-accent/10" : "bg-muted")
+                  }`}>
                     {isIncome ? (
-                      <ArrowDownRight className="h-4 w-4 text-accent" />
+                      <ArrowDownRight className={isDark ? "h-4 w-4 text-green-400" : "h-4 w-4 text-accent"} />
                     ) : (
-                      <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                      <ArrowUpRight className={isDark ? "h-4 w-4 text-white/70" : "h-4 w-4 text-muted-foreground"} />
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">{transaction.descricao}</p>
+                    <p className={isDark ? "text-sm font-medium text-white" : "text-sm font-medium text-foreground"}>{transaction.descricao}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className={isDark ? "text-xs bg-white/20 text-white border-0" : "text-xs"}>
                         {categoria?.nome || 'Sem categoria'}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">{formatDate(transaction.data)}</span>
+                      <span className={isDark ? "text-xs text-white/60" : "text-xs text-muted-foreground"}>{formatDate(transaction.data)}</span>
                     </div>
                   </div>
                 </div>
                 <span
-                  className={`text-sm font-semibold ${isIncome ? "text-accent" : "text-foreground"}`}
+                  className={`text-sm font-semibold ${
+                    isDark
+                      ? (isIncome ? "text-green-400" : "text-white")
+                      : (isIncome ? "text-accent" : "text-foreground")
+                  }`}
                 >
                   {isIncome ? "+" : ""}
                   R$ {formatCurrency(transaction.valor)}

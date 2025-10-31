@@ -1,0 +1,228 @@
+'use client'
+
+import { useEffect, useState, useMemo } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useSettings } from '@/app/providers/settings-provider'
+import { patrimonioService } from '@/lib/services/patrimonio.service'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { TrendingUp } from 'lucide-react'
+
+interface WealthDataPoint {
+  month: string
+  patrimonio: number
+  contas: number
+  investimentos: number
+}
+
+export function WealthEvolutionChart() {
+  const [data, setData] = useState<WealthDataPoint[]>([])
+  const [loading, setLoading] = useState(true)
+  const { getSetting } = useSettings()
+  const theme = getSetting<'light' | 'dark' | 'auto'>('appearance.theme')
+
+  const isDark = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    if (theme === 'dark') return true
+    if (theme === 'light') return false
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  }, [theme])
+
+  useEffect(() => {
+    async function loadWealthData() {
+      try {
+        setLoading(true)
+
+        // Get current patrimônio
+        const currentPatrimonio = await patrimonioService.getPatrimonioTotal()
+
+        // For now, we'll create mock historical data
+        // TODO: Implement proper historical tracking in the database
+        const months = [
+          'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+          'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+        ]
+
+        const currentMonth = new Date().getMonth()
+        const mockData: WealthDataPoint[] = []
+
+        // Generate last 6 months of data
+        for (let i = 5; i >= 0; i--) {
+          const monthIndex = (currentMonth - i + 12) % 12
+          const monthName = months[monthIndex]
+
+          // Generate realistic progression towards current value
+          const factor = (6 - i) / 6
+          const randomVariation = 0.9 + Math.random() * 0.2 // ±10% variation
+
+          const patrimonio = currentPatrimonio.patrimonio_total * factor * randomVariation
+          const contas = currentPatrimonio.saldo_contas * factor * randomVariation
+          const investimentos = currentPatrimonio.saldo_investimentos * factor * randomVariation
+
+          mockData.push({
+            month: monthName,
+            patrimonio: Math.round(patrimonio * 100) / 100,
+            contas: Math.round(contas * 100) / 100,
+            investimentos: Math.round(investimentos * 100) / 100,
+          })
+        }
+
+        // Add current month with actual data
+        mockData.push({
+          month: months[currentMonth],
+          patrimonio: currentPatrimonio.patrimonio_total,
+          contas: currentPatrimonio.saldo_contas,
+          investimentos: currentPatrimonio.saldo_investimentos,
+        })
+
+        setData(mockData)
+      } catch (error) {
+        console.error('Erro ao carregar evolução patrimonial:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadWealthData()
+  }, [])
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          className="rounded-lg border p-3 shadow-lg"
+          style={{
+            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          <p className="mb-2 font-semibold" style={{ color: isDark ? '#ffffff' : '#1e293b' }}>
+            {payload[0].payload.month}
+          </p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {entry.name}: {formatCurrency(entry.value)}
+            </p>
+          ))}
+        </div>
+      )
+    }
+    return null
+  }
+
+  if (loading) {
+    return (
+      <Card
+        style={{
+          background: isDark
+            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
+            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
+        }}
+      >
+        <CardHeader>
+          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+            Evolução Patrimonial
+          </CardTitle>
+          <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+            Acompanhe o crescimento do seu patrimônio
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-[300px] items-center justify-center">
+            <div className="text-center">
+              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+              <p className={isDark ? 'text-white/70' : 'text-gray-600'}>Carregando dados...</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card
+      style={{
+        background: isDark
+          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
+          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+        backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
+      }}
+    >
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <TrendingUp className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
+          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+            Evolução Patrimonial
+          </CardTitle>
+        </div>
+        <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+          Acompanhe o crescimento do seu patrimônio nos últimos 6 meses
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
+            />
+            <XAxis
+              dataKey="month"
+              stroke={isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)'}
+              style={{ fontSize: '12px' }}
+            />
+            <YAxis
+              stroke={isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)'}
+              style={{ fontSize: '12px' }}
+              tickFormatter={formatCurrency}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              wrapperStyle={{
+                paddingTop: '20px',
+                fontSize: '12px',
+                color: isDark ? '#ffffff' : '#1e293b',
+              }}
+            />
+            <Line
+              type="monotone"
+              dataKey="patrimonio"
+              name="Patrimônio Total"
+              stroke={isDark ? '#1AD4C4' : '#18B0A4'}
+              strokeWidth={3}
+              dot={{ fill: isDark ? '#1AD4C4' : '#18B0A4', r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="contas"
+              name="Contas"
+              stroke={isDark ? '#4ADE80' : '#22C55E'}
+              strokeWidth={2}
+              dot={{ fill: isDark ? '#4ADE80' : '#22C55E', r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="investimentos"
+              name="Investimentos"
+              stroke={isDark ? '#FCD34D' : '#F59E0B'}
+              strokeWidth={2}
+              dot={{ fill: isDark ? '#FCD34D' : '#F59E0B', r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  )
+}

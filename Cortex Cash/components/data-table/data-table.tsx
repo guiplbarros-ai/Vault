@@ -42,6 +42,7 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T) => void
   emptyMessage?: string
   className?: string
+  isDark?: boolean
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -54,6 +55,7 @@ export function DataTable<T extends Record<string, any>>({
   onRowClick,
   emptyMessage = 'Nenhum resultado encontrado.',
   className,
+  isDark = false,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(initialPageSize)
@@ -174,15 +176,23 @@ export function DataTable<T extends Record<string, any>>({
       )}
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded-xl overflow-hidden shadow-md border" style={{
+        background: isDark
+          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
+          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+        backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
+      }}>
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className={isDark ? "bg-zinc-800/30" : "bg-zinc-50/80"}>
               {columns.map((column) => (
                 <TableHead
                   key={column.id}
                   style={{ width: column.width }}
-                  className={cn(column.sortable && 'cursor-pointer select-none')}
+                  className={cn(
+                    column.sortable && 'cursor-pointer select-none',
+                    isDark ? 'text-white' : ''
+                  )}
                   onClick={() => column.sortable && handleSort(column.id)}
                 >
                   <div className="flex items-center">
@@ -196,7 +206,10 @@ export function DataTable<T extends Record<string, any>>({
           <TableBody>
             {paginatedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell colSpan={columns.length} className={cn(
+                  "h-24 text-center",
+                  isDark ? "text-white/70" : ""
+                )}>
                   {emptyMessage}
                 </TableCell>
               </TableRow>
@@ -205,7 +218,10 @@ export function DataTable<T extends Record<string, any>>({
                 <TableRow
                   key={rowIndex}
                   onClick={() => onRowClick?.(row)}
-                  className={cn(onRowClick && 'cursor-pointer')}
+                  className={cn(
+                    onRowClick && 'cursor-pointer',
+                    isDark ? 'hover:bg-zinc-800/40' : 'hover:bg-zinc-50/80'
+                  )}
                 >
                   {columns.map((column) => (
                     <TableCell key={column.id}>
@@ -227,7 +243,10 @@ export function DataTable<T extends Record<string, any>>({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground">
+            <p className={cn(
+              "text-sm",
+              isDark ? "text-white/70" : "text-muted-foreground"
+            )}>
               Exibindo {startIndex + 1} a {endIndex} de {sortedData.length} resultados
             </p>
             <Select
@@ -237,15 +256,95 @@ export function DataTable<T extends Record<string, any>>({
                 setCurrentPage(1)
               }}
             >
-              <SelectTrigger className="w-[100px]">
-                <SelectValue />
+              <SelectTrigger className={cn(
+                "w-[100px]",
+                isDark
+                  ? "!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700"
+                  : "!bg-white !border-gray-300 hover:!bg-gray-50"
+              )}
+              style={isDark ? {
+                backgroundColor: '#1f2937',
+                borderColor: '#4b5563',
+                color: '#ffffff'
+              } : {
+                color: '#111827'
+              }}>
+                <SelectValue
+                  className={isDark ? "!text-white" : ""}
+                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+                />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
+              <SelectContent
+                className={cn(
+                  isDark
+                    ? "!bg-gray-800 !border-gray-700"
+                    : "!bg-white !border-gray-200"
+                )}
+                style={isDark ? {
+                  backgroundColor: '#1f2937',
+                  borderColor: '#374151'
+                } : undefined}
+              >
+                <SelectItem
+                  value="5"
+                  className={cn(
+                    "text-sm font-medium cursor-pointer",
+                    isDark
+                      ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
+                      : ""
+                  )}
+                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+                >
+                  5
+                </SelectItem>
+                <SelectItem
+                  value="10"
+                  className={cn(
+                    "text-sm font-medium cursor-pointer",
+                    isDark
+                      ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
+                      : ""
+                  )}
+                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+                >
+                  10
+                </SelectItem>
+                <SelectItem
+                  value="20"
+                  className={cn(
+                    "text-sm font-medium cursor-pointer",
+                    isDark
+                      ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
+                      : ""
+                  )}
+                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+                >
+                  20
+                </SelectItem>
+                <SelectItem
+                  value="50"
+                  className={cn(
+                    "text-sm font-medium cursor-pointer",
+                    isDark
+                      ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
+                      : ""
+                  )}
+                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+                >
+                  50
+                </SelectItem>
+                <SelectItem
+                  value="100"
+                  className={cn(
+                    "text-sm font-medium cursor-pointer",
+                    isDark
+                      ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
+                      : ""
+                  )}
+                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+                >
+                  100
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -267,7 +366,10 @@ export function DataTable<T extends Record<string, any>>({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm">
+            <span className={cn(
+              "text-sm",
+              isDark ? "text-white" : ""
+            )}>
               Página {currentPage} de {totalPages}
             </span>
             <Button

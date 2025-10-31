@@ -1,13 +1,47 @@
+"use client";
+
 /**
  * Seed de dados iniciais para o banco de dados
  * Agent CORE: Owner
  */
 
-import { Categoria } from '../types';
+import { Categoria, Tag } from '../types';
+
+/**
+ * Tags padrão do sistema
+ * Tags predefinidas para classificação de transações
+ */
+export const TAGS_PADRAO: Omit<Tag, 'id' | 'created_at'>[] = [
+  {
+    nome: 'Essencial',
+    cor: '#10b981', // green-500
+    tipo: 'sistema',
+  },
+  {
+    nome: 'Importante',
+    cor: '#3b82f6', // blue-500
+    tipo: 'sistema',
+  },
+  {
+    nome: 'Supérfluo',
+    cor: '#ef4444', // red-500
+    tipo: 'sistema',
+  },
+  {
+    nome: 'Extraordinário',
+    cor: '#f59e0b', // amber-500
+    tipo: 'sistema',
+  },
+  {
+    nome: 'Recorrente',
+    cor: '#8b5cf6', // purple-500
+    tipo: 'sistema',
+  },
+];
 
 /**
  * Categorias padrão do sistema
- * 13 categorias principais conforme especificação
+ * 39 categorias (13 principais + subcategorias) conforme especificação
  */
 export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_at'>[] = [
   // ==================== DESPESAS ====================
@@ -393,22 +427,55 @@ export async function seedCategorias(db: any): Promise<void> {
   try {
     const now = new Date();
 
-    const categorias = CATEGORIAS_PADRAO.map((categoria) => ({
-      id: crypto.randomUUID(),
-      nome: categoria.nome,
-      tipo: categoria.tipo,
-      grupo: categoria.grupo,
-      icone: categoria.icone,
-      cor: categoria.cor,
-      ordem: categoria.ordem,
-      ativa: categoria.ativa,
-      created_at: now,
-      updated_at: now,
-    }));
+    // Mapear categorias principais primeiro (sem grupo)
+    const principais = CATEGORIAS_PADRAO.filter((c) => !c.grupo);
+    const mapa: Record<string, string> = {}; // nome → id
 
-    await db.categorias.bulkAdd(categorias);
+    // Inserir categorias principais
+    const categoriasParaInserir = principais.map((categoria) => {
+      const id = crypto.randomUUID();
+      mapa[categoria.nome] = id;
+      return {
+        id,
+        nome: categoria.nome,
+        tipo: categoria.tipo,
+        grupo: categoria.grupo,
+        pai_id: undefined, // Categorias principais não têm pai
+        icone: categoria.icone,
+        cor: categoria.cor,
+        ordem: categoria.ordem,
+        ativa: categoria.ativa,
+        created_at: now,
+        updated_at: now,
+      };
+    });
+
+    await db.categorias.bulkAdd(categoriasParaInserir);
+
+    // Agora inserir subcategorias com pai_id correto
+    const subcategorias = CATEGORIAS_PADRAO.filter((c) => c.grupo);
+    const subcategoriasParaInserir = subcategorias.map((categoria) => {
+      const paiId = mapa[categoria.grupo!];
+      return {
+        id: crypto.randomUUID(),
+        nome: categoria.nome,
+        tipo: categoria.tipo,
+        grupo: categoria.grupo,
+        pai_id: paiId, // Relaciona com a categoria pai
+        icone: categoria.icone,
+        cor: categoria.cor,
+        ordem: categoria.ordem,
+        ativa: categoria.ativa,
+        created_at: now,
+        updated_at: now,
+      };
+    });
+
+    await db.categorias.bulkAdd(subcategoriasParaInserir);
 
     console.log(`✅ ${CATEGORIAS_PADRAO.length} categorias padrão inseridas com sucesso!`);
+    console.log(`   - ${principais.length} categorias principais`);
+    console.log(`   - ${subcategorias.length} subcategorias`);
   } catch (error) {
     console.error('❌ Erro ao inserir categorias padrão:', error);
     throw error;
@@ -438,5 +505,796 @@ export async function initializeSeedData(db: any): Promise<void> {
     await seedCategorias(db);
   } else {
     console.log('✅ Banco já possui categorias.');
+  }
+}
+
+/**
+ * Seed completo com mock data para testes
+ * Insere instituições, contas e transações variadas
+ */
+export async function seedMockData(db: any): Promise<void> {
+  try {
+    const now = new Date();
+
+    // 1. Instituições
+    const instituicoes = [
+      {
+        id: crypto.randomUUID(),
+        nome: 'Nubank',
+        codigo: 'nubank',
+        logo_url: null,
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Bradesco',
+        codigo: 'bradesco',
+        logo_url: null,
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Inter',
+        codigo: 'inter',
+        logo_url: null,
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    await db.instituicoes.bulkAdd(instituicoes);
+    console.log(`✅ ${instituicoes.length} instituições inseridas`);
+
+    // 2. Contas
+    const contas = [
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[0].id, // Nubank
+        nome: 'Nubank - Conta Corrente',
+        tipo: 'corrente',
+        saldo_inicial: 5000.0,
+        ativa: true,
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[1].id, // Bradesco
+        nome: 'Bradesco - Poupança',
+        tipo: 'poupanca',
+        saldo_inicial: 15000.0,
+        ativa: true,
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[2].id, // Inter
+        nome: 'Inter - Investimentos',
+        tipo: 'investimento',
+        saldo_inicial: 50000.0,
+        ativa: true,
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[0].id, // Nubank
+        nome: 'Nubank - Carteira Digital',
+        tipo: 'outros',
+        saldo_inicial: 1200.0,
+        ativa: true,
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    await db.contas.bulkAdd(contas);
+    console.log(`✅ ${contas.length} contas inseridas`);
+
+    // 3. Buscar categorias já inseridas
+    const categorias = await db.categorias.toArray();
+    console.log('='.repeat(60));
+    console.log('📦 INICIANDO SEED DE TRANSAÇÕES');
+    console.log(`📦 Total de categorias disponíveis: ${categorias.length}`);
+    console.log('📦 Primeiras 5 categorias:', categorias.slice(0, 5).map((c: any) => `${c.nome} (${c.tipo})`));
+    console.log('='.repeat(60));
+    
+    const getCategoriaByNome = (nome: string, tipo?: 'receita' | 'despesa' | 'transferencia') => {
+      let categoria;
+      if (tipo) {
+        categoria = categorias.find((c: any) => c.nome === nome && c.tipo === tipo);
+      } else {
+        categoria = categorias.find((c: any) => c.nome === nome);
+      }
+      
+      if (!categoria) {
+        console.error(`❌ CATEGORIA NÃO ENCONTRADA: "${nome}" ${tipo ? `tipo: ${tipo}` : 'sem tipo'}`);
+      }
+      return categoria?.id || null;
+    };
+
+    // 4. Transações (últimos 12 meses com variedade)
+    const transacoes = [];
+    const baseDate = new Date();
+
+    // Salário mensal (últimos 12 meses)
+    for (let i = 0; i < 12; i++) {
+      const salarioDate = new Date(baseDate);
+      salarioDate.setMonth(baseDate.getMonth() - i);
+      salarioDate.setDate(5); // Dia 5 de cada mês
+
+      // Varia o salário ligeiramente (+/- 5%)
+      const salarioBase = 8500.0;
+      const variacao = (Math.random() - 0.5) * 0.1; // -5% a +5%
+      const salario = salarioBase * (1 + variacao);
+
+      transacoes.push({
+        id: crypto.randomUUID(),
+        conta_id: contas[0].id,
+        categoria_id: getCategoriaByNome('Salário', 'receita'),
+        data: salarioDate,
+        tipo: 'receita',
+        descricao: 'Salário - Empresa XYZ',
+        valor: Math.round(salario * 100) / 100,
+        observacoes: 'Pagamento mensal',
+        tags: ['salário', 'fixo'],
+        hash: null,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+
+    // Despesas recorrentes mensais (últimos 12 meses)
+    for (let mes = 0; mes < 12; mes++) {
+      const mesDate = new Date(baseDate);
+      mesDate.setMonth(baseDate.getMonth() - mes);
+
+      // Despesas fixas mensais
+      const despesasFixas = [
+        { categoria: 'Aluguel', descricao: 'Aluguel Apartamento', valor: -2500.0, dia: 1 },
+        { categoria: 'Contas', descricao: 'Conta de Luz', valor: -150 - Math.random() * 80, dia: 8 },
+        { categoria: 'Contas', descricao: 'Conta de Água', valor: -80 - Math.random() * 40, dia: 10 },
+        { categoria: 'Contas', descricao: 'Internet', valor: -129.9, dia: 5 },
+        { categoria: 'Plano de Saúde', descricao: 'Unimed', valor: -450.0, dia: 1 },
+        { categoria: 'Streaming', descricao: 'Netflix', valor: -49.9, dia: 15 },
+        { categoria: 'Streaming', descricao: 'Spotify', valor: -21.9, dia: 15 },
+        { categoria: 'Software', descricao: 'GitHub Pro', valor: -29.0, dia: 20 },
+      ];
+
+      despesasFixas.forEach((despesa) => {
+        const dataTransacao = new Date(mesDate);
+        dataTransacao.setDate(despesa.dia);
+
+        transacoes.push({
+          id: crypto.randomUUID(),
+          conta_id: contas[0].id,
+          categoria_id: getCategoriaByNome(despesa.categoria, 'despesa'),
+          data: dataTransacao,
+          tipo: 'despesa',
+          descricao: despesa.descricao,
+          valor: Math.round(despesa.valor * 100) / 100,
+          observacoes: null,
+          tags: ['fixo'],
+          hash: null,
+          created_at: now,
+          updated_at: now,
+        });
+      });
+
+      // Despesas variáveis (2-4 por mês)
+      const numDespesasVariaveis = 2 + Math.floor(Math.random() * 3);
+      const despesasVariaveis = [
+        { categoria: 'Restaurantes', descricoes: ['Restaurante Italiano', 'iFood - Jantar', 'Restaurante Japonês', 'Padaria'], valorBase: 100 },
+        { categoria: 'Supermercado', descricoes: ['Supermercado Extra', 'Hortifruti', 'Mercado Local'], valorBase: 300 },
+        { categoria: 'Combustível', descricoes: ['Posto Shell', 'Posto Ipiranga', 'Posto BR'], valorBase: 250 },
+        { categoria: 'Farmácia', descricoes: ['Drogaria São Paulo', 'Farmácia Popular'], valorBase: 50 },
+        { categoria: 'Entretenimento', descricoes: ['Cinema', 'Teatro', 'Show'], valorBase: 80 },
+        { categoria: 'Roupas', descricoes: ['Zara', 'C&A', 'Renner'], valorBase: 200 },
+      ];
+
+      for (let i = 0; i < numDespesasVariaveis; i++) {
+        const despesaTemplate = despesasVariaveis[Math.floor(Math.random() * despesasVariaveis.length)];
+        const descricao = despesaTemplate.descricoes[Math.floor(Math.random() * despesaTemplate.descricoes.length)];
+        const valor = -(despesaTemplate.valorBase * (0.5 + Math.random()));
+        const dia = 1 + Math.floor(Math.random() * 28);
+
+        const dataTransacao = new Date(mesDate);
+        dataTransacao.setDate(dia);
+
+        transacoes.push({
+          id: crypto.randomUUID(),
+          conta_id: contas[0].id,
+          categoria_id: getCategoriaByNome(despesaTemplate.categoria, 'despesa'),
+          data: dataTransacao,
+          tipo: 'despesa',
+          descricao: descricao,
+          valor: Math.round(valor * 100) / 100,
+          observacoes: null,
+          tags: [],
+          hash: null,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+    }
+
+    // Receitas extras (distribuídas ao longo de 12 meses)
+    const mesesComReceitasExtras = [0, 2, 3, 5, 7, 9, 10]; // Alguns meses aleatórios
+    mesesComReceitasExtras.forEach((mes) => {
+      const mesDate = new Date(baseDate);
+      mesDate.setMonth(baseDate.getMonth() - mes);
+
+      const tipoReceita = Math.random();
+      let categoria, descricao, valor;
+
+      if (tipoReceita < 0.4) {
+        categoria = 'Freelance';
+        descricao = 'Freelance - Projeto Web';
+        valor = 2000 + Math.random() * 3000;
+      } else if (tipoReceita < 0.7) {
+        categoria = 'Dividendos';
+        descricao = 'Dividendos - ITSA4';
+        valor = 80 + Math.random() * 150;
+      } else {
+        categoria = 'Reembolso';
+        descricao = 'Reembolso - Despesa Médica';
+        valor = 150 + Math.random() * 400;
+      }
+
+      mesDate.setDate(10 + Math.floor(Math.random() * 15));
+
+      transacoes.push({
+        id: crypto.randomUUID(),
+        conta_id: contas[1].id, // Bradesco Poupança
+        categoria_id: getCategoriaByNome(categoria, 'receita'),
+        data: mesDate,
+        tipo: 'receita',
+        descricao: descricao,
+        valor: Math.round(valor * 100) / 100,
+        observacoes: null,
+        tags: [],
+        hash: null,
+        created_at: now,
+        updated_at: now,
+      });
+    });
+
+    // Investimentos mensais (últimos 12 meses)
+    for (let i = 0; i < 12; i++) {
+      const investDate = new Date(baseDate);
+      investDate.setMonth(baseDate.getMonth() - i);
+      investDate.setDate(10);
+
+      // Varia o aporte (800 a 1200)
+      const aporteBase = 1000.0;
+      const variacao = (Math.random() - 0.5) * 0.4; // -20% a +20%
+      const aporte = aporteBase * (1 + variacao);
+
+      transacoes.push({
+        id: crypto.randomUUID(),
+        conta_id: contas[2].id, // Inter Investimentos
+        categoria_id: getCategoriaByNome('Investimentos', 'despesa'),
+        data: investDate,
+        tipo: 'despesa',
+        descricao: 'Tesouro Selic - Aporte',
+        valor: -Math.round(aporte * 100) / 100,
+        observacoes: 'Aporte mensal',
+        tags: ['investimento', 'fixo'],
+        hash: null,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+
+    // Verificar quantas transações têm categoria válida
+    const transacoesComCategoria = transacoes.filter(t => t.categoria_id !== null);
+    const transacoesSemCategoria = transacoes.filter(t => t.categoria_id === null);
+    
+    console.log('='.repeat(60));
+    console.log('📊 ESTATÍSTICAS FINAIS DAS TRANSAÇÕES');
+    console.log(`   Total criado: ${transacoes.length}`);
+    console.log(`   ✅ Com categoria: ${transacoesComCategoria.length}`);
+    console.log(`   ❌ Sem categoria: ${transacoesSemCategoria.length}`);
+    
+    if (transacoesSemCategoria.length > 0) {
+      console.error('❌ PRIMEIRAS 10 TRANSAÇÕES SEM CATEGORIA:');
+      transacoesSemCategoria.slice(0, 10).forEach(t => {
+        console.error(`   - ${t.descricao} (${t.tipo})`);
+      });
+    }
+    console.log('='.repeat(60));
+
+    await db.transacoes.bulkAdd(transacoes);
+    console.log(`✅ ${transacoes.length} transações inseridas`);
+
+    console.log('🎉 Mock data completo inserido com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao inserir mock data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Seed de investimentos de exemplo
+ */
+export async function seedInvestimentos(db: any): Promise<void> {
+  try {
+    const now = new Date();
+
+    // Buscar instituições existentes
+    const instituicoes = await db.instituicoes.toArray();
+    if (instituicoes.length === 0) {
+      console.log('⚠️  Nenhuma instituição encontrada. Execute seedMockData primeiro.');
+      return;
+    }
+
+    // Buscar contas existentes
+    const contas = await db.contas.toArray();
+    const contaInvestimento = contas.find((c: any) => c.tipo === 'investimento');
+
+    const investimentos = [
+      // Renda Fixa
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[1].id, // Bradesco
+        nome: 'CDB Bradesco 125% CDI',
+        tipo: 'renda_fixa',
+        ticker: null,
+        valor_aplicado: 10000.0,
+        valor_atual: 10650.0,
+        quantidade: null,
+        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 6)),
+        data_vencimento: new Date(new Date().setMonth(new Date().getMonth() + 18)),
+        taxa_juros: 13.75,
+        rentabilidade_contratada: 125,
+        indexador: 'CDI',
+        status: 'ativo',
+        conta_origem_id: contaInvestimento?.id || null,
+        observacoes: 'CDB com liquidez diária',
+        cor: '#10b981',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[2].id, // Inter
+        nome: 'Tesouro Selic 2027',
+        tipo: 'renda_fixa',
+        ticker: 'SELIC2027',
+        valor_aplicado: 15000.0,
+        valor_atual: 15975.0,
+        quantidade: null,
+        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 8)),
+        data_vencimento: new Date('2027-03-01'),
+        taxa_juros: 13.65,
+        rentabilidade_contratada: 100,
+        indexador: 'SELIC',
+        status: 'ativo',
+        conta_origem_id: contaInvestimento?.id || null,
+        observacoes: 'Tesouro Direto - Rentabilidade pós-fixada',
+        cor: '#059669',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[1].id, // Bradesco
+        nome: 'LCI Bradesco 95% CDI',
+        tipo: 'renda_fixa',
+        ticker: null,
+        valor_aplicado: 20000.0,
+        valor_atual: 21200.0,
+        quantidade: null,
+        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 10)),
+        data_vencimento: new Date(new Date().setMonth(new Date().getMonth() + 14)),
+        taxa_juros: 12.35,
+        rentabilidade_contratada: 95,
+        indexador: 'CDI',
+        status: 'ativo',
+        conta_origem_id: contaInvestimento?.id || null,
+        observacoes: 'LCI isenta de IR',
+        cor: '#34d399',
+        created_at: now,
+        updated_at: now,
+      },
+
+      // Renda Variável
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[2].id, // Inter
+        nome: 'Petrobras PN',
+        tipo: 'renda_variavel',
+        ticker: 'PETR4',
+        valor_aplicado: 8000.0,
+        valor_atual: 9200.0,
+        quantidade: 200,
+        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 4)),
+        data_vencimento: null,
+        taxa_juros: null,
+        rentabilidade_contratada: null,
+        indexador: null,
+        status: 'ativo',
+        conta_origem_id: contaInvestimento?.id || null,
+        observacoes: 'Ações Petrobras - 200 ações @ R$ 40,00',
+        cor: '#3b82f6',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[2].id, // Inter
+        nome: 'Itaúsa PN',
+        tipo: 'renda_variavel',
+        ticker: 'ITSA4',
+        valor_aplicado: 5000.0,
+        valor_atual: 5350.0,
+        quantidade: 500,
+        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 12)),
+        data_vencimento: null,
+        taxa_juros: null,
+        rentabilidade_contratada: null,
+        indexador: null,
+        status: 'ativo',
+        conta_origem_id: contaInvestimento?.id || null,
+        observacoes: 'Ações Itaúsa - Recebendo dividendos',
+        cor: '#60a5fa',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[2].id, // Inter
+        nome: 'FII HGLG11',
+        tipo: 'renda_variavel',
+        ticker: 'HGLG11',
+        valor_aplicado: 12000.0,
+        valor_atual: 12840.0,
+        quantidade: 100,
+        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 7)),
+        data_vencimento: null,
+        taxa_juros: null,
+        rentabilidade_contratada: null,
+        indexador: null,
+        status: 'ativo',
+        conta_origem_id: contaInvestimento?.id || null,
+        observacoes: 'Fundo Imobiliário - Dividend Yield ~0.8%/mês',
+        cor: '#93c5fd',
+        created_at: now,
+        updated_at: now,
+      },
+
+      // Fundos de Investimento
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[1].id, // Bradesco
+        nome: 'Bradesco FIC RF Referenciado DI',
+        tipo: 'fundo_investimento',
+        ticker: null,
+        valor_aplicado: 25000.0,
+        valor_atual: 26125.0,
+        quantidade: 2545.32,
+        data_aplicacao: new Date(new Date().setFullYear(new Date().getFullYear() - 1)),
+        data_vencimento: null,
+        taxa_juros: null,
+        rentabilidade_contratada: null,
+        indexador: 'CDI',
+        status: 'ativo',
+        conta_origem_id: contaInvestimento?.id || null,
+        observacoes: 'Fundo DI - Baixo risco',
+        cor: '#14b8a6',
+        created_at: now,
+        updated_at: now,
+      },
+
+      // Previdência
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[1].id, // Bradesco
+        nome: 'PGBL Bradesco Previdência',
+        tipo: 'previdencia',
+        ticker: null,
+        valor_aplicado: 18000.0,
+        valor_atual: 18900.0,
+        quantidade: null,
+        data_aplicacao: new Date(new Date().setFullYear(new Date().getFullYear() - 2)),
+        data_vencimento: null,
+        taxa_juros: null,
+        rentabilidade_contratada: null,
+        indexador: null,
+        status: 'ativo',
+        conta_origem_id: contaInvestimento?.id || null,
+        observacoes: 'Previdência privada - Aporte mensal R$ 750',
+        cor: '#8b5cf6',
+        created_at: now,
+        updated_at: now,
+      },
+
+      // Criptomoedas
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[0].id, // Nubank
+        nome: 'Bitcoin',
+        tipo: 'criptomoeda',
+        ticker: 'BTC',
+        valor_aplicado: 3000.0,
+        valor_atual: 3450.0,
+        quantidade: 0.015,
+        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 3)),
+        data_vencimento: null,
+        taxa_juros: null,
+        rentabilidade_contratada: null,
+        indexador: null,
+        status: 'ativo',
+        conta_origem_id: contaInvestimento?.id || null,
+        observacoes: '0.015 BTC via Nubank',
+        cor: '#f59e0b',
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    await db.investimentos.bulkAdd(investimentos);
+    console.log(`✅ ${investimentos.length} investimentos inseridos`);
+
+    // Criar histórico para cada investimento
+    const historicos = [];
+
+    for (const inv of investimentos) {
+      // Histórico inicial (aporte)
+      historicos.push({
+        id: crypto.randomUUID(),
+        investimento_id: inv.id,
+        data: inv.data_aplicacao,
+        valor: inv.valor_aplicado,
+        quantidade: inv.quantidade,
+        tipo_movimentacao: 'aporte',
+        observacoes: 'Aplicação inicial',
+        created_at: now,
+      });
+
+      // Adicionar alguns rendimentos mensais
+      if (inv.tipo === 'renda_fixa' || inv.tipo === 'fundo_investimento') {
+        const mesesDecorridos = Math.floor(
+          (now.getTime() - new Date(inv.data_aplicacao).getTime()) / (1000 * 60 * 60 * 24 * 30)
+        );
+
+        for (let i = 1; i <= Math.min(mesesDecorridos, 3); i++) {
+          const rendimentoDate = new Date(inv.data_aplicacao);
+          rendimentoDate.setMonth(rendimentoDate.getMonth() + i);
+
+          const valorRendimento = (inv.valor_aplicado * (inv.taxa_juros || 1)) / 100 / 12;
+
+          historicos.push({
+            id: crypto.randomUUID(),
+            investimento_id: inv.id,
+            data: rendimentoDate,
+            valor: valorRendimento,
+            quantidade: null,
+            tipo_movimentacao: 'rendimento',
+            observacoes: `Rendimento mensal ${i}`,
+            created_at: now,
+          });
+        }
+      }
+    }
+
+    await db.historico_investimentos.bulkAdd(historicos);
+    console.log(`✅ ${historicos.length} registros de histórico inseridos`);
+
+    console.log('🎉 Seed de investimentos completo!');
+  } catch (error) {
+    console.error('❌ Erro ao inserir investimentos:', error);
+    throw error;
+  }
+}
+
+/**
+ * Seed de cartões de crédito
+ */
+export async function seedCartoes(db: any) {
+  try {
+    console.log('📋 Seeding cartões de crédito...');
+
+    const instituicoes = await db.instituicoes.toArray();
+    if (instituicoes.length === 0) {
+      console.log('⚠️ Nenhuma instituição encontrada. Execute seedInstituicoes() primeiro.');
+      return;
+    }
+
+    const contas = await db.contas.toArray();
+    const contaCorrente = contas.find((c: any) => c.tipo === 'corrente');
+
+    const now = new Date();
+
+    // Criar cartões de crédito de exemplo
+    const cartoes = [
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[0].id, // Nubank
+        conta_pagamento_id: contaCorrente?.id || null,
+        nome: 'Nubank Mastercard',
+        ultimos_digitos: '4523',
+        bandeira: 'mastercard',
+        limite_total: 15000.0,
+        dia_fechamento: 15,
+        dia_vencimento: 25,
+        ativo: true,
+        cor: '#8A05BE',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[1].id, // Bradesco
+        conta_pagamento_id: contaCorrente?.id || null,
+        nome: 'Bradesco Visa Platinum',
+        ultimos_digitos: '8971',
+        bandeira: 'visa',
+        limite_total: 25000.0,
+        dia_fechamento: 10,
+        dia_vencimento: 20,
+        ativo: true,
+        cor: '#CC092F',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        instituicao_id: instituicoes[2].id, // Inter
+        conta_pagamento_id: contaCorrente?.id || null,
+        nome: 'Inter Mastercard Gold',
+        ultimos_digitos: '3456',
+        bandeira: 'mastercard',
+        limite_total: 10000.0,
+        dia_fechamento: 5,
+        dia_vencimento: 15,
+        ativo: true,
+        cor: '#FF7A00',
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    await db.cartoes_config.bulkAdd(cartoes);
+    console.log(`✅ ${cartoes.length} cartões inseridos`);
+
+    // Criar faturas de exemplo para cada cartão
+    const faturas = [];
+    const lancamentos = [];
+
+    for (const cartao of cartoes) {
+      // Fatura do mês atual
+      const hoje = new Date();
+      const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+      const dataFechamento = new Date(hoje.getFullYear(), hoje.getMonth(), cartao.dia_fechamento);
+      const dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth(), cartao.dia_vencimento);
+
+      const faturaAtual = {
+        id: crypto.randomUUID(),
+        cartao_id: cartao.id,
+        mes_referencia: mesAtual,
+        data_fechamento: dataFechamento,
+        data_vencimento: dataVencimento,
+        valor_total: 0, // Será calculado com base nos lançamentos
+        valor_minimo: 0,
+        valor_pago: 0,
+        status: 'aberta',
+        fechada_automaticamente: false,
+        data_pagamento: null,
+        transacao_pagamento_id: null,
+        created_at: now,
+        updated_at: now,
+      };
+
+      faturas.push(faturaAtual);
+
+      // Criar alguns lançamentos de exemplo
+      const lancamentosExemplo = [
+        {
+          id: crypto.randomUUID(),
+          fatura_id: faturaAtual.id,
+          transacao_id: null,
+          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 5),
+          descricao: 'Supermercado Extra',
+          valor_brl: 450.0,
+          parcela_numero: null,
+          parcela_total: null,
+          moeda_original: null,
+          valor_original: null,
+          taxa_cambio: null,
+          categoria_id: null,
+          created_at: now,
+        },
+        {
+          id: crypto.randomUUID(),
+          fatura_id: faturaAtual.id,
+          transacao_id: null,
+          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 8),
+          descricao: 'Restaurante Outback',
+          valor_brl: 280.0,
+          parcela_numero: null,
+          parcela_total: null,
+          moeda_original: null,
+          valor_original: null,
+          taxa_cambio: null,
+          categoria_id: null,
+          created_at: now,
+        },
+        {
+          id: crypto.randomUUID(),
+          fatura_id: faturaAtual.id,
+          transacao_id: null,
+          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 12),
+          descricao: 'Netflix - Assinatura',
+          valor_brl: 55.9,
+          parcela_numero: null,
+          parcela_total: null,
+          moeda_original: null,
+          valor_original: null,
+          taxa_cambio: null,
+          categoria_id: null,
+          created_at: now,
+        },
+        {
+          id: crypto.randomUUID(),
+          fatura_id: faturaAtual.id,
+          transacao_id: null,
+          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 15),
+          descricao: 'Posto Shell - Combustível',
+          valor_brl: 320.0,
+          parcela_numero: null,
+          parcela_total: null,
+          moeda_original: null,
+          valor_original: null,
+          taxa_cambio: null,
+          categoria_id: null,
+          created_at: now,
+        },
+      ];
+
+      lancamentos.push(...lancamentosExemplo);
+
+      // Atualizar valor total da fatura
+      faturaAtual.valor_total = lancamentosExemplo.reduce((sum, l) => sum + l.valor_brl, 0);
+      faturaAtual.valor_minimo = faturaAtual.valor_total * 0.15;
+
+      // Fatura do mês anterior (paga)
+      const mesAnterior = `${hoje.getFullYear()}-${String(hoje.getMonth()).padStart(2, '0')}`;
+      const dataFechamentoAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, cartao.dia_fechamento);
+      const dataVencimentoAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, cartao.dia_vencimento);
+
+      const faturaAnterior = {
+        id: crypto.randomUUID(),
+        cartao_id: cartao.id,
+        mes_referencia: mesAnterior,
+        data_fechamento: dataFechamentoAnterior,
+        data_vencimento: dataVencimentoAnterior,
+        valor_total: 1850.0,
+        valor_minimo: 277.5,
+        valor_pago: 1850.0,
+        status: 'paga',
+        fechada_automaticamente: true,
+        data_pagamento: new Date(hoje.getFullYear(), hoje.getMonth() - 1, cartao.dia_vencimento - 2),
+        transacao_pagamento_id: null,
+        created_at: now,
+        updated_at: now,
+      };
+
+      faturas.push(faturaAnterior);
+    }
+
+    await db.faturas.bulkAdd(faturas);
+    console.log(`✅ ${faturas.length} faturas inseridas`);
+
+    await db.faturas_lancamentos.bulkAdd(lancamentos);
+    console.log(`✅ ${lancamentos.length} lançamentos de fatura inseridos`);
+
+    console.log('🎉 Seed de cartões completo!');
+  } catch (error) {
+    console.error('❌ Erro ao inserir cartões:', error);
+    throw error;
   }
 }

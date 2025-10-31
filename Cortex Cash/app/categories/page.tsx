@@ -5,7 +5,6 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -14,31 +13,53 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, MoreHorizontal, Pencil, Trash2, Tag, ChevronRight, ArrowUpCircle, ArrowDownCircle } from "lucide-react"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
-import { cn } from "@/lib/utils"
-import { CategoryForm } from "@/components/forms"
-import type { CategoryFormData } from "@/lib/validations"
-import { categoriaService } from "@/lib/services/categoria.service"
-import { mapFormDataToCreateCategoria, mapDBCategoryTypeToFormType } from "@/lib/adapters"
-import type { Categoria } from "@/lib/types"
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus, Download, Search } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { CategoryTree } from "@/components/categories/category-tree"
+import { SortableCategoryTree } from "@/components/categories/sortable-category-tree"
+import { CategoryForm } from "@/components/categories/category-form"
+import { CategoryMergeDialog } from "@/components/categories/category-merge-dialog"
+import { categoriaService, CategoriaComSubcategorias } from "@/lib/services/categoria.service"
+import type { Categoria, TipoTransacao } from "@/lib/types"
 import { toast } from "sonner"
 
 export default function CategoriesPage() {
-  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [categorias, setCategorias] = useState<CategoriaComSubcategorias[]>([])
+  const [filteredCategorias, setFilteredCategorias] = useState<CategoriaComSubcategorias[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [tipoFiltro, setTipoFiltro] = useState<TipoTransacao | "todas">("todas")
+
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogMode, setDialogMode] = useState<"create" | "edit" | "subcategoria">("create")
+  const [categoriaEditando, setCategoriaEditando] = useState<Categoria | undefined>()
+  const [categoriaPai, setCategoriaPai] = useState<Categoria | undefined>()
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
-  const [formDialogOpen, setFormDialogOpen] = useState(false)
-  const [formLoading, setFormLoading] = useState(false)
+  const [categoriaParaDeletar, setCategoriaParaDeletar] = useState<Categoria | undefined>()
+
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false)
+  const [categoriaParaMesclar, setCategoriaParaMesclar] = useState<Categoria | undefined>()
+
+  const [selectedCategoriaId, setSelectedCategoriaId] = useState<string>()
 
   useEffect(() => {
     loadCategorias()
@@ -47,156 +68,151 @@ export default function CategoriesPage() {
   const loadCategorias = async () => {
     try {
       setLoading(true)
-      const data = await categoriaService.listCategorias()
-      setCategorias(data)
+      const arvore = await categoriaService.getArvoreHierarquica()
+      setCategorias(arvore)
+      setFilteredCategorias(arvore)
     } catch (error) {
       console.error('Erro ao carregar categorias:', error)
-      toast.error('Erro ao carregar categorias', {
-        description: 'Não foi possível carregar as categorias. Tente novamente.',
-      })
+      toast.error('Erro ao carregar categorias')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async () => {
-    if (!categoryToDelete) return;
+  // Aplicar filtros
+  useEffect(() => {
+    let filtered = categorias
+
+    // Filtrar por tipo
+    if (tipoFiltro !== "todas") {
+      filtered = filtered.filter((c) => c.tipo === tipoFiltro)
+    }
+
+    // Filtrar por busca
+    if (searchTerm) {
+      const termo = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (c) =>
+          c.nome.toLowerCase().includes(termo) ||
+          c.subcategorias.some((sub) => sub.nome.toLowerCase().includes(termo))
+      )
+    }
+
+    setFilteredCategorias(filtered)
+  }, [categorias, tipoFiltro, searchTerm])
+
+  const handleCreate = () => {
+    setDialogMode("create")
+    setCategoriaEditando(undefined)
+    setCategoriaPai(undefined)
+    setDialogOpen(true)
+  }
+
+  const handleEdit = (categoria: Categoria) => {
+    setDialogMode("edit")
+    setCategoriaEditando(categoria)
+    setCategoriaPai(undefined)
+    setDialogOpen(true)
+  }
+
+  const handleAddSubcategoria = (categoriaPai: Categoria) => {
+    setDialogMode("subcategoria")
+    setCategoriaEditando(undefined)
+    setCategoriaPai(categoriaPai)
+    setDialogOpen(true)
+  }
+
+  const handleDelete = (categoria: Categoria) => {
+    setCategoriaParaDeletar(categoria)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleMerge = (categoria: Categoria) => {
+    setCategoriaParaMesclar(categoria)
+    setMergeDialogOpen(true)
+  }
+
+  const handleReorder = async (reordenacao: { id: string; novaOrdem: number }[]) => {
+    try {
+      await categoriaService.reordenarCategorias(reordenacao)
+      toast.success("Ordem atualizada com sucesso")
+      // Recarrega para refletir nova ordem
+      await loadCategorias()
+    } catch (error) {
+      toast.error("Erro ao reordenar categorias")
+      console.error(error)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!categoriaParaDeletar) return
 
     try {
-      await categoriaService.deleteCategoria(categoryToDelete)
+      await categoriaService.deleteCategoria(categoriaParaDeletar.id)
+      toast.success("Categoria desativada com sucesso")
       await loadCategorias()
       setDeleteDialogOpen(false)
-      setCategoryToDelete(null)
-      toast.success('Categoria excluída', {
-        description: 'A categoria foi excluída com sucesso.',
-      })
+      setCategoriaParaDeletar(undefined)
     } catch (error) {
-      console.error('Erro ao excluir categoria:', error)
-      toast.error('Erro ao excluir categoria', {
-        description: 'Não foi possível excluir a categoria. Tente novamente.',
-      })
+      toast.error("Erro ao desativar categoria")
+      console.error(error)
     }
   }
 
-  const handleSubmit = async (data: CategoryFormData) => {
-    setFormLoading(true)
+  const handleFormSubmit = async (data: {
+    nome: string
+    tipo: TipoTransacao
+    grupo?: string
+    pai_id?: string
+    icone?: string
+    cor?: string
+  }) => {
+    if (dialogMode === "edit" && categoriaEditando) {
+      await categoriaService.updateCategoria(categoriaEditando.id, data)
+    } else {
+      await categoriaService.createCategoria(data)
+    }
+
+    await loadCategorias()
+    setDialogOpen(false)
+    setCategoriaEditando(undefined)
+    setCategoriaPai(undefined)
+  }
+
+  const handleExport = async () => {
     try {
-      const dto = mapFormDataToCreateCategoria(data)
-      await categoriaService.createCategoria(dto)
-      await loadCategorias()
-      setFormDialogOpen(false)
-      toast.success('Categoria criada', {
-        description: 'A categoria foi criada com sucesso.',
-      })
+      const csv = await categoriaService.exportarPlanoDeContas()
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+      const link = document.createElement("a")
+      link.href = URL.createObjectURL(blob)
+      link.download = `plano-de-contas-${new Date().toISOString().split("T")[0]}.csv`
+      link.click()
+      toast.success("Plano de contas exportado!")
     } catch (error) {
-      console.error('Erro ao criar categoria:', error)
-      toast.error('Erro ao criar categoria', {
-        description: 'Não foi possível criar a categoria. Verifique os dados e tente novamente.',
-      })
-    } finally {
-      setFormLoading(false)
+      toast.error("Erro ao exportar")
+      console.error(error)
     }
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value)
+  // Contar categorias e subcategorias ativas
+  const countCategories = (cats: CategoriaComSubcategorias[]) => {
+    let totalCategorias = 0
+    let totalSubcategorias = 0
+
+    cats.forEach((cat) => {
+      if (cat.ativa) {
+        totalCategorias++
+        const subsAtivas = cat.subcategorias.filter((sub) => sub.ativa).length
+        totalSubcategorias += subsAtivas
+      }
+    })
+
+    return { categorias: totalCategorias, subcategorias: totalSubcategorias, total: totalCategorias + totalSubcategorias }
   }
 
-  // Organiza categorias em hierarquia (principais e filhas)
-  const getHierarchicalCategories = (tipo: 'receita' | 'despesa') => {
-    const categoriesOfType = categorias.filter(c => c.tipo === tipo && c.ativa)
-    const mainCategories = categoriesOfType.filter(c => !c.grupo)
-
-    return mainCategories.map(main => ({
-      ...main,
-      children: categoriesOfType.filter(c => c.grupo === main.nome),
-    }))
-  }
-
-  const incomeCategories = categorias.filter(c => c.tipo === 'receita' && c.ativa)
-  const expenseCategories = categorias.filter(c => c.tipo === 'despesa' && c.ativa)
-  const hierarchicalIncome = getHierarchicalCategories('receita')
-  const hierarchicalExpense = getHierarchicalCategories('despesa')
-
-  const CategoryCard = ({ category, isSubcategory = false }: { category: Categoria & { children?: Categoria[] }; isSubcategory?: boolean }) => (
-    <Card className={cn("relative overflow-hidden", isSubcategory && "ml-8")}>
-      <div
-        className="absolute top-0 left-0 w-1 h-full"
-        style={{ backgroundColor: category.cor || '#3B82F6' }}
-      />
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-lg"
-              style={{ backgroundColor: `${category.cor || '#3B82F6'}20` }}
-            >
-              <Tag className="h-5 w-5" style={{ color: category.cor || '#3B82F6' }} />
-            </div>
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                {category.nome}
-                {category.children && category.children.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {category.children.length} subcategorias
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Categoria {category.tipo === 'receita' ? 'de receita' : 'de despesa'}
-              </CardDescription>
-            </div>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {!isSubcategory && (
-                <>
-                  <DropdownMenuItem>
-                    <ChevronRight className="mr-2 h-4 w-4" />
-                    Adicionar Subcategoria
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem>
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => {
-                  setCategoryToDelete(category.id)
-                  setDeleteDialogOpen(true)
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-baseline justify-between">
-          <Badge variant={category.tipo === 'receita' ? 'default' : 'secondary'}>
-            {category.tipo === 'receita' ? (
-              <><ArrowUpCircle className="mr-1 h-3 w-3" /> Receita</>
-            ) : (
-              <><ArrowDownCircle className="mr-1 h-3 w-3" /> Despesa</>
-            )}
-          </Badge>
-        </div>
-      </CardContent>
-    </Card>
-  )
+  const statsGeral = countCategories(categorias)
+  const statsReceitas = countCategories(categorias.filter((c) => c.tipo === "receita"))
+  const statsDespesas = countCategories(categorias.filter((c) => c.tipo === "despesa"))
 
   if (loading) {
     return (
@@ -218,113 +234,206 @@ export default function CategoriesPage() {
           title="Categorias"
           description="Organize suas transações em categorias e subcategorias"
           actions={
-            <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nova Categoria
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Nova Categoria</DialogTitle>
-                  <DialogDescription>
-                    Crie uma nova categoria para organizar suas transações.
-                  </DialogDescription>
-                </DialogHeader>
-                <CategoryForm
-                  onSubmit={handleSubmit}
-                  onCancel={() => setFormDialogOpen(false)}
-                  isLoading={formLoading}
-                  submitLabel="Criar Categoria"
-                />
-              </DialogContent>
-            </Dialog>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                className="border-0 text-white"
+                style={{
+                  backgroundColor: '#1e293b',
+                  color: '#ffffff'
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Exportar
+              </Button>
+              <Button
+                onClick={handleCreate}
+                className="text-white"
+                style={{
+                  backgroundColor: '#18B0A4',
+                  color: '#ffffff'
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Categoria
+              </Button>
+            </div>
           }
         />
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card>
+          <Card style={{
+            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+            backgroundColor: '#3B5563'
+          }}>
             <CardHeader className="pb-3">
-              <CardDescription>Total de Categorias</CardDescription>
-              <CardTitle className="text-3xl">
-                {incomeCategories.length + expenseCategories.length}
-              </CardTitle>
+              <CardDescription className="text-white/70">Total de Categorias</CardDescription>
+              <CardTitle className="text-3xl text-white">{statsGeral.total}</CardTitle>
+              <CardDescription className="text-white/60 text-sm mt-2">
+                {statsGeral.categorias} categorias • {statsGeral.subcategorias} subcategorias
+              </CardDescription>
             </CardHeader>
           </Card>
-          <Card>
+          <Card style={{
+            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+            backgroundColor: '#3B5563'
+          }}>
             <CardHeader className="pb-3">
-              <CardDescription>Categorias de Receita</CardDescription>
-              <CardTitle className="text-3xl text-green-600">
-                {incomeCategories.length}
+              <CardDescription className="text-white/70">Categorias de Receita</CardDescription>
+              <CardTitle className="text-3xl text-green-400">
+                {statsReceitas.total}
               </CardTitle>
+              <CardDescription className="text-green-300/70 text-sm mt-2">
+                {statsReceitas.categorias} categorias • {statsReceitas.subcategorias} subcategorias
+              </CardDescription>
             </CardHeader>
           </Card>
-          <Card>
+          <Card style={{
+            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+            backgroundColor: '#3B5563'
+          }}>
             <CardHeader className="pb-3">
-              <CardDescription>Categorias de Despesa</CardDescription>
-              <CardTitle className="text-3xl text-red-600">
-                {expenseCategories.length}
+              <CardDescription className="text-white/70">Categorias de Despesa</CardDescription>
+              <CardTitle className="text-3xl text-red-400">
+                {statsDespesas.total}
               </CardTitle>
+              <CardDescription className="text-red-300/70 text-sm mt-2">
+                {statsDespesas.categorias} categorias • {statsDespesas.subcategorias} subcategorias
+              </CardDescription>
             </CardHeader>
           </Card>
         </div>
 
-        {/* Categories Tabs */}
-        <Tabs defaultValue="expenses" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="expenses">Despesas</TabsTrigger>
-            <TabsTrigger value="income">Receitas</TabsTrigger>
-          </TabsList>
+        {/* Categories Tree with Search and Filters */}
+        <Card style={{
+          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+          backgroundColor: '#3B5563'
+        }}>
+          <CardHeader>
+            <CardTitle className="text-white">Plano de Contas</CardTitle>
+            <CardDescription className="text-white/70">
+              Clique em uma categoria para selecioná-la ou use o menu para ações
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Search and Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                <Input
+                  placeholder="Buscar categorias..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 border-0 text-white placeholder:text-white/50"
+                  style={{
+                    backgroundColor: '#1e293b',
+                    color: '#ffffff',
+                    height: '40px'
+                  }}
+                />
+              </div>
+              <Select
+                value={tipoFiltro}
+                onValueChange={(v) => setTipoFiltro(v as TipoTransacao | "todas")}
+              >
+                <SelectTrigger
+                  className="w-full sm:w-[180px] border-0 text-white"
+                  style={{
+                    backgroundColor: '#1e293b',
+                    color: '#ffffff',
+                    height: '40px'
+                  }}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent
+                  style={{
+                    backgroundColor: '#1f2937',
+                    borderColor: '#374151'
+                  }}
+                >
+                  <SelectItem value="todas" className="text-white hover:!bg-gray-700" style={{ color: '#ffffff' }}>Todas</SelectItem>
+                  <SelectItem value="receita" className="text-white hover:!bg-gray-700" style={{ color: '#ffffff' }}>Receitas</SelectItem>
+                  <SelectItem value="despesa" className="text-white hover:!bg-gray-700" style={{ color: '#ffffff' }}>Despesas</SelectItem>
+                  <SelectItem value="transferencia" className="text-white hover:!bg-gray-700" style={{ color: '#ffffff' }}>Transferências</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <TabsContent value="expenses" className="space-y-4 mt-6">
-            {hierarchicalExpense.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Nenhuma categoria de despesa cadastrada
-                </CardContent>
-              </Card>
-            ) : (
-              hierarchicalExpense.map((category) => (
-                <div key={category.id} className="space-y-4">
-                  <CategoryCard category={category} />
-                  {category.children && category.children.map((subcategory) => (
-                    <CategoryCard key={subcategory.id} category={subcategory} isSubcategory />
-                  ))}
-                </div>
-              ))
-            )}
-          </TabsContent>
+            {/* Category Tree */}
+            <SortableCategoryTree
+              categorias={filteredCategorias}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onMerge={handleMerge}
+              onAddSubcategoria={handleAddSubcategoria}
+              onSelect={(cat) => setSelectedCategoriaId(cat.id)}
+              selectedId={selectedCategoriaId}
+              onReorder={handleReorder}
+            />
+          </CardContent>
+        </Card>
 
-          <TabsContent value="income" className="space-y-4 mt-6">
-            {hierarchicalIncome.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Nenhuma categoria de receita cadastrada
-                </CardContent>
-              </Card>
-            ) : (
-              hierarchicalIncome.map((category) => (
-                <div key={category.id} className="space-y-4">
-                  <CategoryCard category={category} />
-                  {category.children && category.children.map((subcategory) => (
-                    <CategoryCard key={subcategory.id} category={subcategory} isSubcategory />
-                  ))}
-                </div>
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Create/Edit Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {dialogMode === "create" && "Nova Categoria"}
+                {dialogMode === "edit" && "Editar Categoria"}
+                {dialogMode === "subcategoria" && "Nova Subcategoria"}
+              </DialogTitle>
+              <DialogDescription>
+                {dialogMode === "create" &&
+                  "Crie uma nova categoria para organizar suas transações."}
+                {dialogMode === "edit" &&
+                  "Atualize as informações da categoria."}
+                {dialogMode === "subcategoria" &&
+                  `Adicione uma subcategoria em ${categoriaPai?.nome}.`}
+              </DialogDescription>
+            </DialogHeader>
+            <CategoryForm
+              categoria={categoriaEditando}
+              categoriaPai={categoriaPai}
+              onSubmit={handleFormSubmit}
+              onCancel={() => setDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
 
-        <ConfirmationDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          title="Excluir Categoria"
-          description="Tem certeza que deseja excluir esta categoria? As transações associadas não serão excluídas, mas ficarão sem categoria. Esta ação não pode ser desfeita."
-          confirmLabel="Excluir"
-          variant="destructive"
-          onConfirm={handleDelete}
+        {/* Delete Confirmation */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Desativar Categoria</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja desativar a categoria{" "}
+                <strong>{categoriaParaDeletar?.nome}</strong>? As transações
+                associadas não serão excluídas, mas ficarão sem categoria. Esta
+                ação pode ser revertida reativando a categoria.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Desativar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Merge Dialog */}
+        <CategoryMergeDialog
+          open={mergeDialogOpen}
+          onOpenChange={setMergeDialogOpen}
+          categoriaOrigem={categoriaParaMesclar}
+          todasCategorias={categorias.flatMap(c => [c, ...c.subcategorias])}
+          onSuccess={loadCategorias}
         />
       </div>
     </DashboardLayout>

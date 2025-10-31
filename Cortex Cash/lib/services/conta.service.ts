@@ -126,6 +126,47 @@ export class ContaService {
   }
 
   /**
+   * Recalcula e atualiza o saldo_atual da conta baseado nas transações
+   */
+  async recalcularESalvarSaldo(contaId: string): Promise<void> {
+    const conta = await this.getContaById(contaId);
+    if (!conta) {
+      throw new NotFoundError('Conta', contaId);
+    }
+
+    const db = getDB();
+    const transacoes = await db.transacoes
+      .where('conta_id')
+      .equals(contaId)
+      .toArray();
+
+    // Calcula saldo baseado nas transações
+    const saldoTransacoes = transacoes.reduce((saldo, t) => {
+      // Receitas adicionam ao saldo
+      if (t.tipo === 'receita') {
+        return saldo + t.valor;
+      }
+      // Despesas subtraem do saldo
+      if (t.tipo === 'despesa') {
+        return saldo - Math.abs(t.valor);
+      }
+      // Transferências: conta de origem perde, conta de destino ganha
+      if (t.tipo === 'transferencia') {
+        return saldo + t.valor; // valor já é negativo na origem e positivo no destino
+      }
+      return saldo;
+    }, 0);
+
+    const novoSaldoAtual = conta.saldo_inicial + saldoTransacoes;
+
+    // Atualiza saldo_atual no banco
+    await db.contas.update(contaId, {
+      saldo_atual: novoSaldoAtual,
+      updated_at: new Date(),
+    });
+  }
+
+  /**
    * Cria uma nova conta
    */
   async createConta(data: Omit<Conta, 'id' | 'created_at' | 'updated_at'>): Promise<Conta> {
@@ -137,6 +178,8 @@ export class ContaService {
     const conta: Conta = {
       ...data,
       id,
+      // Inicializa saldo_atual com saldo_inicial (sem transações ainda)
+      saldo_atual: data.saldo_inicial || 0,
       created_at: now,
       updated_at: now,
     };

@@ -1,0 +1,262 @@
+"use client"
+
+import { useEffect, useState, useMemo } from "react"
+import { useSetting } from '@/app/providers/settings-provider'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { TagBadge } from "@/components/ui/tag-badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { tagService } from "@/lib/services/tag.service"
+import { transacaoService } from "@/lib/services/transacao.service"
+import type { Tag } from "@/lib/types"
+import { TrendingUp } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+interface TagWithMetric {
+  tag: Tag
+  count: number
+  volume: number
+}
+
+type MetricType = 'count' | 'volume'
+
+export function PopularTagsWidget() {
+  const [popularTags, setPopularTags] = useState<TagWithMetric[]>([])
+  const [loading, setLoading] = useState(true)
+  const [metric, setMetric] = useState<MetricType>('count')
+  const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme')
+
+  // Detecta se está em dark mode
+  const isDark = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    if (theme === 'dark') return true
+    if (theme === 'light') return false
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  }, [theme])
+
+  useEffect(() => {
+    async function loadPopularTags() {
+      try {
+        setLoading(true)
+
+        // Buscar todas as tags e transações
+        const [allTags, transacoes] = await Promise.all([
+          tagService.listTags(),
+          transacaoService.listTransacoes()
+        ])
+
+        // Criar mapa de tags por nome para lookup rápido
+        const tagByName = new Map<string, Tag>()
+        allTags.forEach(tag => tagByName.set(tag.nome.toLowerCase(), tag))
+
+        // Mapear tags com contagem e volume
+        const tagMap = new Map<string, { tag: Tag, count: number, volume: number }>()
+
+        for (const transacao of transacoes) {
+          // Tags são armazenadas como array de nomes de tags
+          let tagsArray: string[] = []
+
+          if (typeof transacao.tags === 'string' && transacao.tags) {
+            try {
+              tagsArray = JSON.parse(transacao.tags)
+            } catch (e) {
+              // Ignorar erros de parse
+              continue
+            }
+          } else if (Array.isArray(transacao.tags)) {
+            tagsArray = transacao.tags
+          }
+
+          if (tagsArray && tagsArray.length > 0) {
+            for (const tagNome of tagsArray) {
+              // Buscar tag pelo nome
+              const tag = tagByName.get(tagNome.toLowerCase())
+              if (!tag) continue
+
+              const current = tagMap.get(tag.id) || { tag: tag, count: 0, volume: 0 }
+              current.count += 1
+              current.volume += Math.abs(Number(transacao.valor) || 0)
+              tagMap.set(tag.id, current)
+            }
+          }
+        }
+
+        // Converter para array e ordenar pela métrica selecionada
+        const tagsArray = Array.from(tagMap.values())
+          .sort((a, b) => {
+            if (metric === 'count') {
+              return b.count - a.count
+            } else {
+              return b.volume - a.volume
+            }
+          })
+          .slice(0, 5)
+
+        setPopularTags(tagsArray)
+      } catch (error) {
+        console.error("Erro ao carregar tags populares:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadPopularTags()
+  }, [metric])
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
+  if (loading) {
+    return (
+      <Card style={{
+        background: isDark
+          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
+          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+        backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
+      }}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2 text-white">
+            <TrendingUp className="h-4 w-4" />
+            Tags Mais Usadas
+          </CardTitle>
+          <CardDescription className="text-white/70">Carregando...</CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
+
+  if (popularTags.length === 0) {
+    return (
+      <Card style={{
+        background: isDark
+          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
+          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+        backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
+      }}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2 text-white">
+            <TrendingUp className="h-4 w-4" />
+            Tags Mais Usadas
+          </CardTitle>
+          <CardDescription className="text-white/70">
+            Nenhuma tag utilizada ainda. Adicione tags às suas transações!
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
+
+  return (
+    <Card style={{
+      background: isDark
+        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
+        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+      backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
+    }}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2 text-white">
+              <TrendingUp className="h-4 w-4" />
+              Tags Mais Usadas
+            </CardTitle>
+            <CardDescription className="text-white/70">
+              {metric === 'count' ? 'Por número de transações' : 'Por volume financeiro'}
+            </CardDescription>
+          </div>
+          <Select value={metric} onValueChange={(value) => setMetric(value as MetricType)}>
+            <SelectTrigger
+              className={cn(
+                "w-[140px] h-8 text-xs font-medium",
+                isDark
+                  ? "!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 data-[state=open]:!bg-gray-700"
+                  : "!bg-white !border-gray-300 hover:!bg-gray-50"
+              )}
+              style={isDark ? {
+                backgroundColor: '#1f2937',
+                borderColor: '#4b5563',
+                color: '#ffffff'
+              } : {
+                color: '#111827'
+              }}
+            >
+              <SelectValue
+                className={isDark ? "!text-white" : ""}
+                style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+              />
+            </SelectTrigger>
+            <SelectContent
+              className={cn(
+                isDark
+                  ? "!bg-gray-800 !border-gray-700"
+                  : "!bg-white !border-gray-200"
+              )}
+              style={isDark ? {
+                backgroundColor: '#1f2937',
+                borderColor: '#374151'
+              } : undefined}
+            >
+              <SelectItem
+                value="count"
+                className={cn(
+                  "text-sm font-medium cursor-pointer",
+                  isDark
+                    ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
+                    : ""
+                )}
+                style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+              >
+                Transações
+              </SelectItem>
+              <SelectItem
+                value="volume"
+                className={cn(
+                  "text-sm font-medium cursor-pointer",
+                  isDark
+                    ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
+                    : ""
+                )}
+                style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+              >
+                Volume (R$)
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {popularTags.map(({ tag, count, volume }, index) => (
+            <div
+              key={tag.id}
+              className="flex items-center justify-between gap-3 pb-3 border-b border-white/10 last:border-0 last:pb-0"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-white/60 w-5">
+                  #{index + 1}
+                </span>
+                <TagBadge label={tag.nome} cor={tag.cor} size="sm" />
+              </div>
+              <div className="flex items-center gap-2">
+                {metric === 'count' ? (
+                  <>
+                    <span className="text-sm font-medium text-white">{count}</span>
+                    <span className="text-xs text-white/60">
+                      {count === 1 ? "transação" : "transações"}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-medium text-white">{formatCurrency(volume)}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}

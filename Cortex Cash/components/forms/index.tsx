@@ -33,3 +33,6 @@ export type { AccountFormProps } from './account-form'
 
 export { CategoryForm } from './category-form'
 export type { CategoryFormProps } from './category-form'
+
+export { CartaoForm } from './cartao-form'
+export type { CartaoFormProps } from './cartao-form'

@@ -3,17 +3,31 @@
  * Agent CORE: Owner
  */
 
+import { getSetting } from '../services/settings.service';
+
 /**
  * Formata valor monetário em Real (R$)
  */
-export function formatCurrency(value: number, options?: { showSign?: boolean; compact?: boolean }): string {
+export function formatCurrency(value: number, options?: { showSign?: boolean; compact?: boolean; hideDecimals?: boolean }): string {
   const { showSign = false, compact = false } = options || {};
+
+  // Obtém configuração global de ocultar decimais
+  let hideDecimals = options?.hideDecimals;
+  if (hideDecimals === undefined && typeof window !== 'undefined') {
+    try {
+      hideDecimals = getSetting<boolean>('localization.hideDecimals');
+    } catch {
+      hideDecimals = false;
+    }
+  }
+
+  const fractionDigits = hideDecimals ? 0 : 2;
 
   const formatted = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
     notation: compact ? 'compact' : 'standard',
   }).format(Math.abs(value));
 
@@ -285,4 +299,40 @@ export function getBudgetStatusColor(percentual: number): string {
   if (percentual >= 100) return 'text-red-600 dark:text-red-400';
   if (percentual >= 80) return 'text-yellow-600 dark:text-yellow-400';
   return 'text-green-600 dark:text-green-400';
+}
+
+/**
+ * Formata data em formato brasileiro (DD/MM/AAAA)
+ */
+export function formatDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+
+  if (isNaN(d.getTime())) {
+    return 'Data inválida';
+  }
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(d);
+}
+
+/**
+ * Formata data com hora (DD/MM/AAAA HH:mm)
+ */
+export function formatDateTime(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+
+  if (isNaN(d.getTime())) {
+    return 'Data inválida';
+  }
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
 }

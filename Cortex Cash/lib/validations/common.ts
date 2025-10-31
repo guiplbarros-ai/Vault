@@ -17,10 +17,11 @@ export const phoneSchema = z
 
 export const currencySchema = z
   .number()
-  .or(z.string().transform((val) => parseFloat(val)))
-  .refine((val) => !isNaN(val as number) && val >= 0, {
+  .or(z.string().transform((val) => parseFloat(val.replace(/[^\d.-]/g, ''))))
+  .refine((val) => !isNaN(val as number), {
     message: 'Valor inválido',
   })
+  .transform((val) => (isNaN(val as number) ? 0 : Number(val)))
 
 export const percentageSchema = z
   .number()

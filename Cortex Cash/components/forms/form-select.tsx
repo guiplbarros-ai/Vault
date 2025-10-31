@@ -37,7 +37,7 @@ export const FormSelect = React.forwardRef<HTMLButtonElement, FormSelectProps>(
     return (
       <div className="space-y-2">
         {label && (
-          <Label htmlFor={name} className={cn(required && 'after:content-["*"] after:ml-0.5 after:text-destructive')}>
+          <Label htmlFor={name} className={cn('text-white', required && 'after:content-["*"] after:ml-0.5 after:text-red-400')}>
             {label}
           </Label>
         )}
@@ -53,18 +53,31 @@ export const FormSelect = React.forwardRef<HTMLButtonElement, FormSelectProps>(
               <SelectTrigger
                 ref={ref}
                 id={name}
-                className={cn(error && 'border-destructive', className)}
+                className={cn('!bg-[#1e293b] !text-white !border-white/20', error && 'border-destructive', className)}
+                style={{
+                  backgroundColor: '#1e293b',
+                  color: '#ffffff',
+                  borderColor: 'rgba(255, 255, 255, 0.2)'
+                }}
                 aria-invalid={error ? 'true' : 'false'}
                 aria-describedby={error ? `${name}-error` : description ? `${name}-description` : undefined}
               >
-                <SelectValue placeholder={placeholder} />
+                <SelectValue placeholder={placeholder} className="!text-white/70" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                className="!bg-gray-800 !border-gray-700"
+                style={{
+                  backgroundColor: '#1f2937',
+                  borderColor: '#374151'
+                }}
+              >
                 {options.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
                     disabled={option.disabled}
+                    className="!text-white hover:!bg-gray-700 cursor-pointer"
+                    style={{ color: '#ffffff' }}
                   >
                     {option.label}
                   </SelectItem>
@@ -74,12 +87,12 @@ export const FormSelect = React.forwardRef<HTMLButtonElement, FormSelectProps>(
           )}
         />
         {description && !error && (
-          <p id={`${name}-description`} className="text-sm text-muted-foreground">
+          <p id={`${name}-description`} className="text-sm text-white/70">
             {description}
           </p>
         )}
         {error && (
-          <p id={`${name}-error`} className="text-sm font-medium text-destructive">
+          <p id={`${name}-error`} className="text-sm font-medium text-red-400">
             {error.message as string}
           </p>
         )}

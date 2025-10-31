@@ -1,37 +1,379 @@
+"use client"
+
+import { useState, useEffect, useMemo } from "react"
+import { useSetting } from '@/app/providers/settings-provider'
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, TrendingUp, TrendingDown } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { transacaoService } from "@/lib/services/transacao.service"
+import { startOfMonth, endOfMonth, subMonths } from "date-fns"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
-const budgets = [
-  { category: "Mercado", spent: 420, limit: 500, percentage: 84 },
-  { category: "Transporte", spent: 180, limit: 200, percentage: 90 },
-  { category: "Entretenimento", spent: 95, limit: 150, percentage: 63 },
-  { category: "Serviços", spent: 240, limit: 300, percentage: 80 },
-]
+interface BudgetData {
+  categoria_id: string
+  categoria_nome: string
+  categoria_icone: string
+  spent: number
+  limit: number
+  percentage: number
+  color: string
+  darkColor: string
+  variacao_percentual?: number
+  variacao_absoluta?: number
+}
+
+type ViewMode = 'valores_absolutos' | 'variacoes'
 
 export function BudgetOverview() {
+  const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme')
+  const [budgets, setBudgets] = useState<BudgetData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<ViewMode>('valores_absolutos')
+
+  // Detecta se está em dark mode
+  const isDark = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    if (theme === 'dark') return true
+    if (theme === 'light') return false
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  }, [theme])
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadBudgetData = async () => {
+      try {
+        setLoading(true)
+
+        const now = new Date()
+        const monthStart = startOfMonth(now)
+        const monthEnd = endOfMonth(now)
+
+        if (viewMode === 'valores_absolutos') {
+          // Modo: Maiores Valores Absolutos
+          const gastos = await transacaoService.getGastosPorCategoria(monthStart, monthEnd)
+          const top4 = gastos.slice(0, 4)
+
+          const budgetData: BudgetData[] = top4.map(gasto => {
+            const limit = Math.ceil(gasto.total_gasto * 1.2 / 100) * 100
+            const percentage = limit > 0 ? Math.round((gasto.total_gasto / limit) * 100) : 0
+
+            return {
+              categoria_id: gasto.categoria_id,
+              categoria_nome: gasto.categoria_nome,
+              categoria_icone: gasto.categoria_icone,
+              spent: gasto.total_gasto,
+              limit: limit,
+              percentage: percentage,
+              color: gasto.categoria_cor,
+              darkColor: gasto.categoria_cor,
+            }
+          })
+
+          if (mounted) {
+            setBudgets(budgetData)
+          }
+        } else {
+          // Modo: Maiores Variações
+          const mesAnterior = subMonths(now, 1)
+          const prevMonthStart = startOfMonth(mesAnterior)
+          const prevMonthEnd = endOfMonth(mesAnterior)
+
+          const variacoes = await transacaoService.getVariacoesPorCategoria(
+            monthStart,
+            monthEnd,
+            prevMonthStart,
+            prevMonthEnd
+          )
+
+          const top4 = variacoes.slice(0, 4)
+
+          const budgetData: BudgetData[] = top4.map(variacao => {
+            // Para variações, usamos o gasto do mês anterior como "limite"
+            const limit = variacao.total_gasto_anterior > 0
+              ? variacao.total_gasto_anterior
+              : variacao.total_gasto_atual * 1.2 // Se não havia gasto anterior, usa estimativa
+
+            const percentage = limit > 0
+              ? Math.round((variacao.total_gasto_atual / limit) * 100)
+              : 0
+
+            return {
+              categoria_id: variacao.categoria_id,
+              categoria_nome: variacao.categoria_nome,
+              categoria_icone: variacao.categoria_icone,
+              spent: variacao.total_gasto_atual,
+              limit: limit,
+              percentage: percentage,
+              color: variacao.categoria_cor,
+              darkColor: variacao.categoria_cor,
+              variacao_percentual: variacao.variacao_percentual,
+              variacao_absoluta: variacao.variacao_absoluta,
+            }
+          })
+
+          if (mounted) {
+            setBudgets(budgetData)
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados de orçamento:', error)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadBudgetData()
+
+    return () => {
+      mounted = false
+    }
+  }, [viewMode])
+
   return (
-    <Card className="p-6">
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-foreground">Visão Geral do Orçamento</h3>
-        <p className="text-sm text-muted-foreground">Gastos do mês atual</p>
+    <Card className="p-6 shadow-md border overflow-hidden flex flex-col h-full" style={{
+      background: isDark
+        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
+        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+      backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
+      minHeight: '520px'
+    }}>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-shrink-0">
+        <div className="flex-1">
+          <h3 className={isDark ? "text-lg font-bold text-white" : "text-lg font-bold text-foreground"}>Visão Geral do Orçamento</h3>
+          <p className={isDark ? "text-sm text-white/70" : "text-sm text-muted-foreground"}>
+            {viewMode === 'valores_absolutos' ? 'Top 4 maiores gastos' : 'Top 4 maiores variações vs mês anterior'}
+          </p>
+        </div>
+        <Select value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+          <SelectTrigger
+            className={cn(
+              "w-[200px] h-9 text-xs font-medium",
+              isDark
+                ? "!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 data-[state=open]:!bg-gray-700"
+                : "!bg-white !border-gray-300 hover:!bg-gray-50"
+            )}
+            style={isDark ? {
+              backgroundColor: '#1f2937',
+              borderColor: '#4b5563',
+              color: '#ffffff'
+            } : {
+              color: '#111827'
+            }}
+          >
+            <SelectValue
+              className={isDark ? "!text-white" : ""}
+              style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+            />
+          </SelectTrigger>
+          <SelectContent
+            className={cn(
+              isDark
+                ? "!bg-gray-800 !border-gray-700"
+                : "!bg-white !border-gray-200"
+            )}
+            style={isDark ? {
+              backgroundColor: '#1f2937',
+              borderColor: '#374151'
+            } : undefined}
+          >
+            <SelectItem
+              value="valores_absolutos"
+              className={cn(
+                "text-sm font-medium cursor-pointer",
+                isDark
+                  ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
+                  : ""
+              )}
+              style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+            >
+              Maiores Valores
+            </SelectItem>
+            <SelectItem
+              value="variacoes"
+              className={cn(
+                "text-sm font-medium cursor-pointer",
+                isDark
+                  ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
+                  : ""
+              )}
+              style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
+            >
+              Maiores Variações
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-      <div className="space-y-4">
-        {budgets.map((budget) => (
-          <div key={budget.category}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">{budget.category}</span>
-                {budget.percentage >= 80 && <AlertCircle className="h-4 w-4 text-destructive" />}
+
+      {loading && (
+        <div className="space-y-6 flex-1 flex flex-col justify-center">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="animate-pulse">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-4 w-4 rounded-full bg-gray-300 dark:bg-gray-600" />
+                  <div className="h-4 w-24 bg-gray-300 dark:bg-gray-600 rounded" />
+                </div>
+                <div className="h-4 w-20 bg-gray-300 dark:bg-gray-600 rounded" />
               </div>
-              <span className="text-sm text-muted-foreground">
-                R$ {budget.spent} / R$ {budget.limit}
-              </span>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg" />
             </div>
-            <Progress value={budget.percentage} className="h-2" />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && budgets.length === 0 && (
+        <div className="text-center py-8 flex-1 flex flex-col justify-center">
+          <p className={isDark ? "text-white/60" : "text-muted-foreground"}>
+            Nenhuma despesa registrada neste mês
+          </p>
+          <p className={cn("text-xs mt-2", isDark ? "text-white/40" : "text-muted-foreground/60")}>
+            Adicione transações para visualizar o orçamento
+          </p>
+        </div>
+      )}
+
+      {!loading && budgets.length > 0 && (
+        <div className="space-y-6 flex-1 flex flex-col justify-center">
+        {budgets.map((budget) => {
+          const isNearLimit = budget.percentage >= 80
+          const isOverLimit = budget.percentage >= 100
+          const currentColor = isDark ? budget.darkColor : budget.color
+          const remaining = budget.limit - budget.spent
+          const isPositive = remaining > 0
+
+          return (
+            <div
+              key={budget.categoria_id}
+              className="group relative hover:scale-[1.01] transition-transform duration-200"
+            >
+              {/* Header com categoria e valores */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="h-8 w-8 rounded-full shadow-lg ring-2 ring-offset-2 ring-offset-background flex items-center justify-center text-base"
+                    style={{
+                      backgroundColor: `${currentColor}20`,
+                      borderColor: currentColor,
+                      boxShadow: `0 0 8px ${currentColor}40`
+                    }}
+                  >
+                    <span style={{ filter: 'grayscale(0%)' }}>{budget.categoria_icone}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className={isDark ? "text-sm font-bold text-white" : "text-sm font-bold text-foreground"}>{budget.categoria_nome}</span>
+                      {isNearLimit && (
+                        <AlertCircle
+                          className={cn(
+                            "h-4 w-4 animate-pulse",
+                            isOverLimit ? "text-destructive" : "text-orange-500"
+                          )}
+                        />
+                      )}
+                      {viewMode === 'variacoes' && budget.variacao_percentual !== undefined && (
+                        <span className={cn(
+                          "text-xs font-bold px-1.5 py-0.5 rounded",
+                          budget.variacao_absoluta && budget.variacao_absoluta > 0
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : budget.variacao_absoluta && budget.variacao_absoluta < 0
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                        )}>
+                          {budget.variacao_absoluta && budget.variacao_absoluta > 0 ? '↑' : budget.variacao_absoluta && budget.variacao_absoluta < 0 ? '↓' : '='} {Math.abs(budget.variacao_percentual).toFixed(0)}%
+                        </span>
+                      )}
+                    </div>
+                    <span className={isDark ? "text-xs text-white/60" : "text-xs text-muted-foreground"}>
+                      {viewMode === 'valores_absolutos'
+                        ? `Limite: R$ ${budget.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : `Mês anterior: R$ ${budget.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      }
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className={isDark ? "text-base font-bold text-white" : "text-base font-bold text-foreground"}>
+                    R$ {budget.spent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {isPositive ? (
+                      <TrendingDown className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <TrendingUp className="h-3 w-3 text-red-500" />
+                    )}
+                    <span className={cn(
+                      "text-xs font-semibold",
+                      isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                    )}>
+                      {isPositive ? 'Disponível' : 'Excedido'} R$ {Math.abs(remaining).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Barra de progresso com visual aprimorado */}
+              <div className="relative">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <Progress
+                      value={Math.min(budget.percentage, 100)}
+                      className={cn(
+                        "h-4 rounded-lg shadow-inner",
+                        isDark ? "bg-gray-700/50" : "bg-gray-200/80"
+                      )}
+                      indicatorColor={currentColor}
+                      backgroundColor={isDark ? "rgba(55, 65, 81, 0.5)" : "rgba(229, 231, 235, 0.8)"}
+                      showGlow={isNearLimit}
+                    />
+                  </div>
+                  <div
+                    className={cn(
+                      "min-w-[52px] text-right font-bold text-sm tabular-nums",
+                      isOverLimit ? "text-red-600 dark:text-red-400" :
+                      isNearLimit ? "text-orange-600 dark:text-orange-400" :
+                      "text-foreground"
+                    )}
+                  >
+                    {budget.percentage}%
+                  </div>
+                </div>
+
+                {/* Indicador visual quando ultrapassa */}
+                {isOverLimit && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="bg-red-500/10 dark:bg-red-500/20 backdrop-blur-sm px-3 py-1 rounded-full border border-red-500/30">
+                      <span className="text-xs font-bold text-red-600 dark:text-red-400">
+                        LIMITE EXCEDIDO
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Linha de alerta sutil abaixo */}
+              {isNearLimit && !isOverLimit && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-orange-600 dark:text-orange-400">
+                  <div className="h-1 flex-1 rounded-full bg-orange-500/20">
+                    <div className="h-full w-1/2 rounded-full bg-orange-500 animate-pulse" />
+                  </div>
+                  <span className="font-medium">Atenção ao limite</span>
+                </div>
+              )}
+            </div>
+          )
+        })}
+        </div>
+      )}
     </Card>
   )
 }

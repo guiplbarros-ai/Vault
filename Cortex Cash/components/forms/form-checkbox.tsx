@@ -42,12 +42,12 @@ export const FormCheckbox = React.forwardRef<HTMLButtonElement, FormCheckboxProp
             <div className="space-y-1 leading-none">
               <Label
                 htmlFor={name}
-                className="text-sm font-medium cursor-pointer"
+                className="text-sm font-medium cursor-pointer text-white"
               >
                 {label}
               </Label>
               {description && !error && (
-                <p id={`${name}-description`} className="text-sm text-muted-foreground">
+                <p id={`${name}-description`} className="text-sm text-white/70">
                   {description}
                 </p>
               )}
@@ -55,7 +55,7 @@ export const FormCheckbox = React.forwardRef<HTMLButtonElement, FormCheckboxProp
           )}
         </div>
         {error && (
-          <p id={`${name}-error`} className="text-sm font-medium text-destructive">
+          <p id={`${name}-error`} className="text-sm font-medium text-red-400">
             {error.message as string}
           </p>
         )}

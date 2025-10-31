@@ -6,14 +6,14 @@ export const accountSchema = z.object({
   type: z.enum(['checking', 'savings', 'credit', 'investment', 'cash'], {
     required_error: 'Tipo de conta é obrigatório',
   }),
-  balance: currencySchema,
+  balance: currencySchema.default(0),
   currency: z.string().length(3, 'Código de moeda deve ter 3 caracteres').default('BRL'),
   institution: z.string().optional(),
   accountNumber: z.string().optional(),
-  color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Cor deve estar no formato hexadecimal').optional(),
+  color: z.string().optional(),
   icon: z.string().optional(),
   notes: z.string().optional(),
-  isActive: z.boolean().optional().default(true),
+  isActive: z.boolean().default(true),
 })
 
 export const accountTransferSchema = z.object({

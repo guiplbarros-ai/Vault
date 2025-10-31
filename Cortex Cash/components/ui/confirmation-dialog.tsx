@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { cn } from '@/lib/utils'
 
 export interface ConfirmationDialogProps {
   open: boolean
@@ -22,6 +23,7 @@ export interface ConfirmationDialogProps {
   onConfirm: () => void | Promise<void>
   variant?: 'default' | 'destructive'
   loading?: boolean
+  isDark?: boolean
 }
 
 export function ConfirmationDialog({
@@ -34,6 +36,7 @@ export function ConfirmationDialog({
   onConfirm,
   variant = 'default',
   loading = false,
+  isDark = false,
 }: ConfirmationDialogProps) {
   const handleConfirm = async () => {
     await onConfirm()
@@ -42,17 +45,58 @@ export function ConfirmationDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent
+        className={cn(
+          "rounded-xl shadow-md border",
+          isDark ? "!bg-gray-800 !border-gray-700" : "!bg-white !border-gray-200"
+        )}
+        style={isDark ? {
+          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+          backgroundColor: '#3B5563',
+          borderColor: '#374151'
+        } : undefined}
+      >
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle className={isDark ? "text-white" : ""}>
+            {title}
+          </AlertDialogTitle>
+          <AlertDialogDescription className={isDark ? "text-white/70" : ""}>
+            {description}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel
+            disabled={loading}
+            className={cn(
+              isDark
+                ? "!bg-gray-700 !border-gray-600 !text-white hover:!bg-gray-600"
+                : ""
+            )}
+            style={isDark ? {
+              backgroundColor: '#374151',
+              borderColor: '#4b5563',
+              color: '#ffffff'
+            } : undefined}
+          >
+            {cancelLabel}
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={loading}
-            className={variant === 'destructive' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            className={cn(
+              variant === 'destructive'
+                ? '!bg-red-600 !text-white hover:!bg-red-700'
+                : isDark
+                ? '!bg-primary !text-white hover:!bg-primary/90'
+                : ''
+            )}
+            style={
+              variant === 'destructive'
+                ? { backgroundColor: '#dc2626', color: '#ffffff' }
+                : variant === 'default' && isDark
+                ? { backgroundColor: '#18B0A4', color: '#ffffff' }
+                : undefined
+            }
           >
             {loading ? 'Processando...' : confirmLabel}
           </AlertDialogAction>

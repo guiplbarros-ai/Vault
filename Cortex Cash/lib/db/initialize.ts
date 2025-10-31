@@ -6,8 +6,8 @@
  */
 
 import { getDB } from './client';
-import { categoriaService } from '../services/categoria.service';
-import { CATEGORIAS_PADRAO } from './seed';
+import { CATEGORIAS_PADRAO, seedCategorias, hasCategories } from './seed';
+import { seedTags, hasTags } from './seed-tags';
 
 const INIT_FLAG_KEY = 'cortex-cash-initialized';
 
@@ -27,34 +27,45 @@ function markAsInitialized(): void {
 
 /**
  * Inicializa o banco de dados com dados padrão
+ * Usa bulkAdd para performance e atomicidade
  */
 export async function initializeDatabase(): Promise<void> {
   if (isInitialized()) {
-    console.log('Banco já inicializado, pulando seed...');
+    console.log('✅ Banco já inicializado, pulando seed...');
     return;
   }
 
-  console.log('Inicializando banco de dados...');
+  console.log('🔄 Inicializando banco de dados...');
 
   try {
-    // Seed de categorias padrão
-    console.log(`Criando ${CATEGORIAS_PADRAO.length} categorias padrão...`);
+    const db = getDB();
 
-    for (const categoriaData of CATEGORIAS_PADRAO) {
-      await categoriaService.createCategoria({
-        nome: categoriaData.nome,
-        tipo: categoriaData.tipo,
-        grupo: categoriaData.grupo || undefined,
-        icone: categoriaData.icone,
-        cor: categoriaData.cor,
-        ordem: categoriaData.ordem,
-      });
+    // Verifica se já tem categorias (dupla checagem para evitar race conditions)
+    const alreadyHasCategories = await hasCategories(db);
+    const alreadyHasTags = await hasTags(db);
+
+    if (alreadyHasCategories && alreadyHasTags) {
+      console.log('✅ Categorias e Tags já existem, pulando seed...');
+      markAsInitialized();
+      return;
+    }
+
+    // Seed de categorias padrão usando bulkAdd (mais rápido e atômico)
+    if (!alreadyHasCategories) {
+      console.log(`🔄 Criando ${CATEGORIAS_PADRAO.length} categorias padrão...`);
+      await seedCategorias(db);
+    }
+
+    // Seed de tags padrão
+    if (!alreadyHasTags) {
+      console.log(`🔄 Criando tags padrão...`);
+      await seedTags(db);
     }
 
     markAsInitialized();
-    console.log('Banco inicializado com sucesso!');
+    console.log('✅ Banco inicializado com sucesso!');
   } catch (error) {
-    console.error('Erro ao inicializar banco:', error);
+    console.error('❌ Erro ao inicializar banco:', error);
     throw error;
   }
 }

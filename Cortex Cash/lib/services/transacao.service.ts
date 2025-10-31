@@ -11,8 +11,87 @@ import type { ITransacaoService } from './interfaces';
 import { generateHash } from '../utils/format';
 import { validateDTO, createTransacaoSchema } from '../validations/dtos';
 import { NotFoundError, ValidationError, DatabaseError } from '../errors';
+import { contaService } from './conta.service';
 
 export class TransacaoService implements ITransacaoService {
+  /**
+   * Cria uma transferência entre contas com duas transações vinculadas pelo mesmo transferencia_id.
+   * - Origem: valor negativo e conta_destino_id preenchido
+   * - Destino: valor positivo
+   */
+  async createTransfer(
+    contaOrigemId: string,
+    contaDestinoId: string,
+    valor: number,
+    descricao: string,
+    data?: Date | string,
+  ): Promise<{ origem: Transacao; destino: Transacao }> {
+    if (!contaOrigemId || !contaDestinoId) {
+      throw new ValidationError('Contas de origem e destino são obrigatórias');
+    }
+    if (contaOrigemId === contaDestinoId) {
+      throw new ValidationError('Conta de origem e destino não podem ser a mesma');
+    }
+    if (!(valor > 0)) {
+      throw new ValidationError('Valor da transferência deve ser positivo');
+    }
+
+    const db = getDB();
+    const transferenciaId = crypto.randomUUID();
+    const now = new Date();
+    const dataTransacao = typeof data === 'string' ? new Date(data) : (data || now);
+
+    const origem: Transacao = {
+      id: crypto.randomUUID(),
+      conta_id: contaOrigemId,
+      categoria_id: undefined,
+      data: dataTransacao,
+      descricao: descricao || 'Transferência para conta destino',
+      valor: -Math.abs(valor),
+      tipo: 'transferencia',
+      observacoes: undefined,
+      tags: undefined,
+      transferencia_id: transferenciaId,
+      conta_destino_id: contaDestinoId,
+      parcelado: false,
+      classificacao_confirmada: true,
+      classificacao_origem: 'manual',
+      hash: await generateHash(`${contaOrigemId}-${contaDestinoId}-${dataTransacao.toISOString()}-${descricao}-orig-${valor}`),
+      created_at: now,
+      updated_at: now,
+    };
+
+    const destino: Transacao = {
+      id: crypto.randomUUID(),
+      conta_id: contaDestinoId,
+      categoria_id: undefined,
+      data: dataTransacao,
+      descricao: descricao || 'Transferência recebida',
+      valor: Math.abs(valor),
+      tipo: 'transferencia',
+      observacoes: undefined,
+      tags: undefined,
+      transferencia_id: transferenciaId,
+      conta_destino_id: undefined,
+      parcelado: false,
+      classificacao_confirmada: true,
+      classificacao_origem: 'manual',
+      hash: await generateHash(`${contaOrigemId}-${contaDestinoId}-${dataTransacao.toISOString()}-${descricao}-dest-${valor}`),
+      created_at: now,
+      updated_at: now,
+    };
+
+    await db.transaction('rw', db.transacoes, async () => {
+      await db.transacoes.add(origem);
+      await db.transacoes.add(destino);
+    });
+
+    // Atualiza saldo das duas contas
+    await contaService.recalcularESalvarSaldo(contaOrigemId);
+    await contaService.recalcularESalvarSaldo(contaDestinoId);
+
+    return { origem, destino };
+  }
   async listTransacoes(filters?: {
     contaId?: string;
     categoriaId?: string;
@@ -147,6 +226,9 @@ export class TransacaoService implements ITransacaoService {
 
       await db.transacoes.add(transacao);
 
+      // Atualiza saldo da conta
+      await contaService.recalcularESalvarSaldo(validatedData.conta_id);
+
       return transacao;
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -183,6 +265,9 @@ export class TransacaoService implements ITransacaoService {
         throw new DatabaseError(`Erro ao recuperar transação atualizada ${id}`);
       }
 
+      // Atualiza saldo da conta (usa o conta_id do registro existente)
+      await contaService.recalcularESalvarSaldo(existing.conta_id);
+
       return result;
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof DatabaseError) {
@@ -194,7 +279,22 @@ export class TransacaoService implements ITransacaoService {
 
   async deleteTransacao(id: string): Promise<void> {
     const db = getDB();
+    
+    // Busca a transação antes de deletar para saber qual conta atualizar
+    const transacao = await db.transacoes.get(id);
+    if (!transacao) {
+      throw new NotFoundError('Transação', id);
+    }
+
     await db.transacoes.delete(id);
+
+    // Atualiza saldo da conta
+    await contaService.recalcularESalvarSaldo(transacao.conta_id);
+
+    // Se for transferência, atualiza também a conta destino
+    if (transacao.tipo === 'transferencia' && transacao.conta_destino_id) {
+      await contaService.recalcularESalvarSaldo(transacao.conta_destino_id);
+    }
   }
 
   async bulkUpdateCategoria(transacaoIds: string[], categoriaId: string): Promise<number> {
@@ -222,6 +322,175 @@ export class TransacaoService implements ITransacaoService {
     const db = getDB();
     await db.transacoes.bulkDelete(transacaoIds);
     return transacaoIds.length;
+  }
+
+  /**
+   * Retorna estatísticas de gastos por categoria em um período
+   * Útil para widgets de orçamento e análises
+   */
+  async getGastosPorCategoria(dataInicio: Date, dataFim: Date): Promise<{
+    categoria_id: string;
+    categoria_nome: string;
+    categoria_icone: string;
+    categoria_cor: string;
+    total_gasto: number;
+    quantidade_transacoes: number;
+  }[]> {
+    const db = getDB();
+
+    // Busca todas as despesas no período
+    const transacoes = await this.listTransacoes({
+      tipo: 'despesa',
+      dataInicio,
+      dataFim,
+    });
+
+    // Agrupa por categoria
+    const gastosPorCategoria = new Map<string, {
+      total: number;
+      quantidade: number;
+      categoria_id: string;
+    }>();
+
+    for (const t of transacoes) {
+      if (!t.categoria_id) continue; // Ignora transações sem categoria
+
+      const categoriaId = t.categoria_id;
+      const valorAbsoluto = Math.abs(t.valor);
+
+      if (gastosPorCategoria.has(categoriaId)) {
+        const dados = gastosPorCategoria.get(categoriaId)!;
+        dados.total += valorAbsoluto;
+        dados.quantidade += 1;
+      } else {
+        gastosPorCategoria.set(categoriaId, {
+          total: valorAbsoluto,
+          quantidade: 1,
+          categoria_id: categoriaId,
+        });
+      }
+    }
+
+    // Busca informações das categorias
+    const categorias = await db.categorias.toArray();
+    const categoriaMap = new Map(categorias.map(c => [c.id, c]));
+
+    // Monta resultado final
+    const resultado = Array.from(gastosPorCategoria.values())
+      .map(gasto => {
+        const categoria = categoriaMap.get(gasto.categoria_id);
+        return {
+          categoria_id: gasto.categoria_id,
+          categoria_nome: categoria?.nome || 'Sem categoria',
+          categoria_icone: categoria?.icone || '📦',
+          categoria_cor: categoria?.cor || '#6B7280',
+          total_gasto: gasto.total,
+          quantidade_transacoes: gasto.quantidade,
+        };
+      })
+      .sort((a, b) => b.total_gasto - a.total_gasto); // Ordena por valor decrescente
+
+    return resultado;
+  }
+
+  /**
+   * Retorna as categorias com maiores variações percentuais comparando dois períodos
+   * Útil para análise de mudanças de comportamento de gastos
+   */
+  async getVariacoesPorCategoria(
+    periodoAtualInicio: Date,
+    periodoAtualFim: Date,
+    periodoAnteriorInicio: Date,
+    periodoAnteriorFim: Date
+  ): Promise<{
+    categoria_id: string;
+    categoria_nome: string;
+    categoria_icone: string;
+    categoria_cor: string;
+    total_gasto_atual: number;
+    total_gasto_anterior: number;
+    variacao_absoluta: number;
+    variacao_percentual: number;
+    quantidade_transacoes: number;
+  }[]> {
+    const db = getDB();
+
+    // Busca despesas do período atual
+    const transacoesAtuais = await this.listTransacoes({
+      tipo: 'despesa',
+      dataInicio: periodoAtualInicio,
+      dataFim: periodoAtualFim,
+    });
+
+    // Busca despesas do período anterior
+    const transacoesAnteriores = await this.listTransacoes({
+      tipo: 'despesa',
+      dataInicio: periodoAnteriorInicio,
+      dataFim: periodoAnteriorFim,
+    });
+
+    // Agrupa gastos atuais por categoria
+    const gastosAtuais = new Map<string, number>();
+    for (const t of transacoesAtuais) {
+      if (!t.categoria_id) continue;
+      const valor = Math.abs(t.valor);
+      gastosAtuais.set(t.categoria_id, (gastosAtuais.get(t.categoria_id) || 0) + valor);
+    }
+
+    // Agrupa gastos anteriores por categoria
+    const gastosAnteriores = new Map<string, number>();
+    for (const t of transacoesAnteriores) {
+      if (!t.categoria_id) continue;
+      const valor = Math.abs(t.valor);
+      gastosAnteriores.set(t.categoria_id, (gastosAnteriores.get(t.categoria_id) || 0) + valor);
+    }
+
+    // Conta transações atuais por categoria
+    const quantidades = new Map<string, number>();
+    for (const t of transacoesAtuais) {
+      if (!t.categoria_id) continue;
+      quantidades.set(t.categoria_id, (quantidades.get(t.categoria_id) || 0) + 1);
+    }
+
+    // Busca informações das categorias
+    const categorias = await db.categorias.toArray();
+    const categoriaMap = new Map(categorias.map(c => [c.id, c]));
+
+    // Calcula variações para todas as categorias que aparecem em qualquer período
+    const todasCategoriasIds = new Set([...gastosAtuais.keys(), ...gastosAnteriores.keys()]);
+
+    const resultado = Array.from(todasCategoriasIds)
+      .map(categoriaId => {
+        const categoria = categoriaMap.get(categoriaId);
+        const gastoAtual = gastosAtuais.get(categoriaId) || 0;
+        const gastoAnterior = gastosAnteriores.get(categoriaId) || 0;
+
+        // Calcula variação absoluta e percentual
+        const variacaoAbsoluta = gastoAtual - gastoAnterior;
+        let variacaoPercentual = 0;
+
+        if (gastoAnterior > 0) {
+          variacaoPercentual = ((gastoAtual - gastoAnterior) / gastoAnterior) * 100;
+        } else if (gastoAtual > 0) {
+          variacaoPercentual = 100; // Nova categoria que não existia antes
+        }
+
+        return {
+          categoria_id: categoriaId,
+          categoria_nome: categoria?.nome || 'Sem categoria',
+          categoria_icone: categoria?.icone || '📦',
+          categoria_cor: categoria?.cor || '#6B7280',
+          total_gasto_atual: gastoAtual,
+          total_gasto_anterior: gastoAnterior,
+          variacao_absoluta: variacaoAbsoluta,
+          variacao_percentual: variacaoPercentual,
+          quantidade_transacoes: quantidades.get(categoriaId) || 0,
+        };
+      })
+      // Ordena por variação absoluta (maior variação primeiro, seja positiva ou negativa)
+      .sort((a, b) => Math.abs(b.variacao_absoluta) - Math.abs(a.variacao_absoluta));
+
+    return resultado;
   }
 }
 

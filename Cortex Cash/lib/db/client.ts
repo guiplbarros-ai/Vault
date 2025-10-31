@@ -12,6 +12,7 @@ import type {
   Instituicao,
   Conta,
   Categoria,
+  Tag,
   Transacao,
   TemplateImportacao,
   RegraClassificacao,
@@ -21,6 +22,14 @@ import type {
   FaturaLancamento,
   CentroCusto,
   Orcamento,
+  Investimento,
+  HistoricoInvestimento,
+  DeclaracaoIR,
+  RendimentoTributavel,
+  RendimentoIsentoNaoTributavel,
+  DespesaDedutivel,
+  BemDireito,
+  DividaOnus,
 } from '../types';
 
 // Define o banco de dados Dexie
@@ -29,6 +38,7 @@ export class CortexCashDB extends Dexie {
   instituicoes!: EntityTable<Instituicao, 'id'>;
   contas!: EntityTable<Conta, 'id'>;
   categorias!: EntityTable<Categoria, 'id'>;
+  tags!: EntityTable<Tag, 'id'>;
   transacoes!: EntityTable<Transacao, 'id'>;
   templates_importacao!: EntityTable<TemplateImportacao, 'id'>;
   regras_classificacao!: EntityTable<RegraClassificacao, 'id'>;
@@ -38,10 +48,19 @@ export class CortexCashDB extends Dexie {
   faturas_lancamentos!: EntityTable<FaturaLancamento, 'id'>;
   centros_custo!: EntityTable<CentroCusto, 'id'>;
   orcamentos!: EntityTable<Orcamento, 'id'>;
+  investimentos!: EntityTable<Investimento, 'id'>;
+  historico_investimentos!: EntityTable<HistoricoInvestimento, 'id'>;
+  declaracoes_ir!: EntityTable<DeclaracaoIR, 'id'>;
+  rendimentos_tributaveis!: EntityTable<RendimentoTributavel, 'id'>;
+  rendimentos_isentos!: EntityTable<RendimentoIsentoNaoTributavel, 'id'>;
+  despesas_dedutiveis!: EntityTable<DespesaDedutivel, 'id'>;
+  bens_direitos!: EntityTable<BemDireito, 'id'>;
+  dividas_onus!: EntityTable<DividaOnus, 'id'>;
 
   constructor() {
     super('cortex-cash');
 
+    // v1: Schema inicial
     this.version(1).stores({
       // Instituições
       instituicoes: 'id, nome, codigo',
@@ -78,6 +97,38 @@ export class CortexCashDB extends Dexie {
 
       // Orçamentos
       orcamentos: 'id, nome, tipo, categoria_id, centro_custo_id, mes_referencia',
+
+      // Investimentos
+      investimentos: 'id, instituicao_id, nome, tipo, ticker, status, data_aplicacao, conta_origem_id',
+
+      // Histórico de Investimentos
+      historico_investimentos: 'id, investimento_id, data, tipo_movimentacao',
+    });
+
+    // v2: Adiciona suporte a subcategorias (pai_id) e tags
+    this.version(2).stores({
+      // Categorias: adiciona índice pai_id para subcategorias
+      categorias: 'id, nome, tipo, grupo, pai_id, ativa, ordem',
+
+      // Tags: nova tabela
+      tags: 'id, nome, tipo',
+    }).upgrade(tx => {
+      // Migration: categorias existentes recebem pai_id = null (categorias raiz)
+      return tx.table('categorias').toCollection().modify(categoria => {
+        if (!categoria.pai_id) {
+          categoria.pai_id = null;
+        }
+      });
+    });
+
+    // v3: Adiciona tabelas para Imposto de Renda
+    this.version(3).stores({
+      declaracoes_ir: 'id, ano_calendario, ano_exercicio, status',
+      rendimentos_tributaveis: 'id, declaracao_id, tipo',
+      rendimentos_isentos: 'id, declaracao_id, tipo',
+      despesas_dedutiveis: 'id, declaracao_id, tipo, data_pagamento',
+      bens_direitos: 'id, declaracao_id, tipo',
+      dividas_onus: 'id, declaracao_id, tipo',
     });
   }
 }
@@ -86,11 +137,47 @@ export class CortexCashDB extends Dexie {
 let dbInstance: CortexCashDB | null = null;
 
 /**
+ * Verifica se o IndexedDB está disponível
+ */
+export function checkIndexedDBSupport(): { supported: boolean; error?: string } {
+  if (typeof window === 'undefined') {
+    return { supported: false, error: 'Executando no servidor (SSR)' };
+  }
+
+  if (!('indexedDB' in window)) {
+    return { supported: false, error: 'IndexedDB não está disponível neste navegador' };
+  }
+
+  // Verifica se está em modo privado (Safari)
+  try {
+    const testDB = window.indexedDB.open('test-db');
+    testDB.onerror = () => {
+      return { supported: false, error: 'IndexedDB pode estar bloqueado (modo privado ou configurações)' };
+    };
+    return { supported: true };
+  } catch (err) {
+    return { supported: false, error: 'Erro ao testar IndexedDB: ' + (err instanceof Error ? err.message : 'desconhecido') };
+  }
+}
+
+/**
  * Inicializa e retorna a instância do banco de dados
  */
 export function getDB(): CortexCashDB {
+  // Verifica suporte ao IndexedDB
+  const support = checkIndexedDBSupport();
+  if (!support.supported) {
+    throw new Error(support.error || 'IndexedDB não suportado');
+  }
+
   if (!dbInstance) {
-    dbInstance = new CortexCashDB();
+    try {
+      dbInstance = new CortexCashDB();
+      console.log('✅ Instância do banco Dexie criada com sucesso');
+    } catch (err) {
+      console.error('❌ Erro ao criar instância do Dexie:', err);
+      throw err;
+    }
   }
   return dbInstance;
 }
@@ -105,6 +192,7 @@ export async function exportDatabase(): Promise<Blob> {
     instituicoes: await db.instituicoes.toArray(),
     contas: await db.contas.toArray(),
     categorias: await db.categorias.toArray(),
+    tags: await db.tags.toArray(),
     transacoes: await db.transacoes.toArray(),
     templates_importacao: await db.templates_importacao.toArray(),
     regras_classificacao: await db.regras_classificacao.toArray(),
@@ -114,6 +202,8 @@ export async function exportDatabase(): Promise<Blob> {
     faturas_lancamentos: await db.faturas_lancamentos.toArray(),
     centros_custo: await db.centros_custo.toArray(),
     orcamentos: await db.orcamentos.toArray(),
+    investimentos: await db.investimentos.toArray(),
+    historico_investimentos: await db.historico_investimentos.toArray(),
   };
 
   const json = JSON.stringify(data, null, 2);
@@ -141,6 +231,7 @@ export async function importDatabase(file: File): Promise<void> {
     if (data.instituicoes) await db.instituicoes.bulkAdd(data.instituicoes);
     if (data.contas) await db.contas.bulkAdd(data.contas);
     if (data.categorias) await db.categorias.bulkAdd(data.categorias);
+    if (data.tags) await db.tags.bulkAdd(data.tags);
     if (data.transacoes) await db.transacoes.bulkAdd(data.transacoes);
     if (data.templates_importacao) await db.templates_importacao.bulkAdd(data.templates_importacao);
     if (data.regras_classificacao) await db.regras_classificacao.bulkAdd(data.regras_classificacao);
@@ -150,6 +241,8 @@ export async function importDatabase(file: File): Promise<void> {
     if (data.faturas_lancamentos) await db.faturas_lancamentos.bulkAdd(data.faturas_lancamentos);
     if (data.centros_custo) await db.centros_custo.bulkAdd(data.centros_custo);
     if (data.orcamentos) await db.orcamentos.bulkAdd(data.orcamentos);
+    if (data.investimentos) await db.investimentos.bulkAdd(data.investimentos);
+    if (data.historico_investimentos) await db.historico_investimentos.bulkAdd(data.historico_investimentos);
   });
 }
 

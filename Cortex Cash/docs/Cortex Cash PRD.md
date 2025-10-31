@@ -86,17 +86,39 @@
 
 ---
 
-### v0.2 - Classificação Manual (2 semanas)
+### v0.2 - Classificação Manual e Plano de Contas (3 semanas)
 
 **Novas Funcionalidades**:
-- Sistema de categorias hierárquico (Grupo > Categoria)
+- **Sistema de categorias hierárquico** (Grupo > Categoria > Subcategoria — máximo 2 níveis)
+- **Gestão completa de Plano de Contas**:
+  - CRUD de categorias e subcategorias com drag-and-drop para reordenação
+  - Ícones personalizáveis por categoria (emoji ou Lucide)
+  - Cores customizáveis por categoria
+  - Merge/fusão de categorias (mantendo histórico)
+  - Ativação/desativação de categorias (sem deletar histórico)
+  - Exportação/importação do plano de contas (CSV)
+- **Sistema de Tags para Transações**:
+  - Tags predefinidas: `essencial`, `importante`, `supérfluo`, `extraordinário`, `recorrente`
+  - Tags customizadas criadas pelo usuário
+  - Filtros avançados por tags nos dashboards
+  - Coloração visual por tipo de tag
+  - Estatísticas por tag (ex.: "% de gastos supérfluos")
+- **Relatórios por Categoria**:
+  - Linha de tendência mensal por categoria
+  - Linha de tendência por subcategoria
+  - Comparativo M/M e Y/Y por categoria
+  - Drill-down: categoria → subcategorias → transações
+  - Top 5 categorias com maior variação
+  - Gráfico de distribuição (pizza + barras empilhadas)
 - Classificação manual de transações
-- Tags livres
-- Edição em massa
+- Edição em massa (aplicar categoria/tags a múltiplas transações)
 - Dashboard por categoria (pizza, barras)
-- Filtros por categoria
+- Filtros por categoria e tags
 
-**Dados**: Adiciona tabela `categorias` e colunas em `transacoes`
+**Dados**:
+- Tabela `categorias` com campos: `id`, `nome`, `tipo`, `grupo`, `pai_id` (para subcategorias), `icone`, `cor`, `ordem`, `ativa`
+- Campo `tags` (JSON array) em `transacoes`
+- Tabela `tags_disponiveis`: `id`, `nome`, `cor`, `tipo` (sistema/customizada)
 
 ---
 
@@ -117,7 +139,42 @@
 
 ---
 
-### v0.4 - Regras e IA (3 semanas)
+### v0.4 - Calendário e Visualizações Temporais (2 semanas)
+
+**Objetivo**: Adicionar visualizações baseadas em calendário para análise de padrões de gastos ao longo do tempo.
+
+**Novas Funcionalidades**:
+- **Calendário de Gastos Mensal**:
+  - Visualização em grade de calendário (estilo heatmap)
+  - Valor total de despesas por dia
+  - Coloração por intensidade de gasto (gradiente: baixo → médio → alto)
+  - Tooltip com breakdown por categoria ao hover
+  - Destaque para dias com gastos extraordinários (outliers)
+  - Comparação com média diária do mês
+- **Relatórios Temporais**:
+  - Gráfico de linha: evolução diária de gastos
+  - Identificação de dias da semana com maior volume (ex.: "Sextas têm 30% mais gastos")
+  - Padrões mensais: início vs meio vs final do mês
+  - Alertas de "dias pesados" (quando gasto diário > 2x média)
+- **Análise de Padrões**:
+  - Gastos recorrentes por dia do mês (ex.: sempre dia 5 e 15)
+  - Sazonalidade semanal (seg-dom)
+  - Comparação de calendário M/M (mesmo dia em meses diferentes)
+- **Filtros**:
+  - Por conta, categoria, tag
+  - Apenas despesas ou incluir receitas
+  - Excluir transferências
+
+**Dashboards**:
+- Card "Calendário do Mês" na Home
+- Página dedicada "Análise Temporal" com múltiplas visualizações
+- Widget "Próximos Dias de Alto Gasto" (previsão baseada em histórico)
+
+**Dados**: Sem novas tabelas (usa `transacoes` existente com agregações)
+
+---
+
+### v0.5 - Regras e IA (3 semanas)
 
 **Novas Funcionalidades**:
 - Motor de regras (regex, contains, starts, ends)
@@ -375,10 +432,11 @@
 ## 6. Domínio de Dados e Esquema
 
 ### 6.1 Entidades e atributos essenciais
-- **instituicao**: `id`, `nome`, `tipo` (banco/cartão/corretora), `created_at`.  
-- **conta**: `id`, `instituicao_id`, `apelido`, `tipo` (corrente, poupança, cartão, corretora), `moeda='BRL'`, `ativa`.  
-- **transacao**: `id`, `conta_id`, `data`, `descricao`, `valor`, `tipo`, `id_externo`, `saldo_apos`, `hash_dedupe`, `parcela_n`, `parcelas_total`, `link_original_id`, `valor_original`, `moeda_original`.
-- **categoria**: `id`, `grupo`, `nome`, `ativa`.
+- **instituicao**: `id`, `nome`, `tipo` (banco/cartão/corretora), `created_at`.
+- **conta**: `id`, `instituicao_id`, `apelido`, `tipo` (corrente, poupança, cartão, corretora), `moeda='BRL'`, `ativa`.
+- **transacao**: `id`, `conta_id`, `data`, `descricao`, `valor`, `tipo`, `id_externo`, `saldo_apos`, `hash_dedupe`, `parcela_n`, `parcelas_total`, `link_original_id`, `valor_original`, `moeda_original`, `tags` (JSON array).
+- **categoria**: `id`, `nome`, `tipo`, `grupo`, `pai_id` (para subcategorias), `icone`, `cor`, `ordem`, `ativa`.
+- **tags_disponiveis**: `id`, `nome`, `cor`, `tipo` (sistema|customizada), `created_at`.
 - **regra_classificacao**: `id`, `ordem`, `expressao`, `tipo_regra` (`regex|contains|starts|ends`), `categoria_id`, `tags`, `confianca_min`.
 - **template_importacao**: `id`, `instituicao_id`, `mapeamento_json`, `header_idx`, `sep`, `exemplos`.
 - **recorrencia**: `id`, `descricao`, `periodicidade`, `proximo_lanc`, `valor_est`.
@@ -388,14 +446,21 @@
 - **preferencias**: `id`, `moeda`, `fuso`, `modo_tema`, `limites_alerta` (80/100 por padrão).
 
 ### 6.2 Índices e chaves
-- `transacao(hash_dedupe)`  
-- `transacao(conta_id, data)`  
-- `regra_classificacao(ordem)`  
+- `transacao(hash_dedupe)`
+- `transacao(conta_id, data)`
+- `categoria(pai_id)` — para queries de subcategorias
+- `categoria(ordem)` — para reordenação
+- `tags_disponiveis(tipo)` — filtrar tags sistema vs customizadas
+- `regra_classificacao(ordem)`
 - `template_importacao(instituicao_id)`
 
 ### 6.3 Regras e integridade
-- **Regra vence IA**: ao aplicar classificação, as regras explícitas são aplicadas **antes**; IA só entra quando não há match.  
+- **Regra vence IA**: ao aplicar classificação, as regras explícitas são aplicadas **antes**; IA só entra quando não há match.
 - **Dedupe imutável**: reprocessar importações **não** muda `hash_dedupe` de registros confirmados; duplicatas futuras terão merge.
+- **Hierarquia de categorias**: Máximo 2 níveis de profundidade (Grupo > Categoria > Subcategoria). Campo `pai_id` NULL = categoria raiz.
+- **Tags em transações**: Campo `tags` armazena JSON array de strings. Validação contra `tags_disponiveis` opcional (permite tags ad-hoc).
+- **Integridade referencial**: Ao desativar categoria, manter transações vinculadas (não deletar). Merge de categorias atualiza `categoria_id` em todas as transações.
+- **Coloração**: Cores em formato hex (#RRGGBB). Ícones podem ser emoji (Unicode) ou nome de ícone Lucide (string).
 
 ---
 
@@ -447,12 +512,100 @@
 
 ### 7.5 F5 — Custos de IA e desempenho
 **Passos**:
-1. Painel de custos mostra: **custo acumulado** no mês, custo por **tarefa** (classificação/insights/anomalias), **chamadas por dia**, **latência média** por lote e **alertas 80/100%** do teto.  
+1. Painel de custos mostra: **custo acumulado** no mês, custo por **tarefa** (classificação/insights/anomalias), **chamadas por dia**, **latência média** por lote e **alertas 80/100%** do teto.
 2. Ao atingir 100%, **hard stop** por padrão; opção de override manual.
 
 **Aceite**:
-- Precisão do custo ±5% em comparação com dashboard da OpenAI.  
+- Precisão do custo ±5% em comparação com dashboard da OpenAI.
 - Alertas funcionam; bloqueio ao atingir o teto.
+
+---
+
+### 7.6 F6 — Gestão de Categorias e Subcategorias (Plano de Contas)
+**Passos**:
+1. Usuário acessa aba **"Categorias"** no menu principal.
+2. Visualiza árvore hierárquica: Grupo > Categoria > Subcategoria (máximo 2 níveis).
+3. Pode **criar**, **editar**, **reordenar** (drag-and-drop), **ativar/desativar** e **mesclar** categorias.
+4. Atribui **ícone** (emoji ou Lucide) e **cor** customizada por categoria.
+5. Vê estatísticas inline: nº de transações vinculadas, valor total, % do total de gastos.
+6. Exporta/importa plano de contas como CSV para backup ou reutilização.
+
+**Aceite**:
+- Hierarquia respeitada (máximo 2 níveis de profundidade).
+- Reordenação visual salva e refletida em todos os dashboards.
+- Merge de categorias consolida histórico sem perda de dados.
+- Exportação CSV inclui toda a hierarquia e metadados (ícone, cor, ordem).
+
+---
+
+### 7.7 F7 — Sistema de Tags para Transações
+**Passos**:
+1. Ao classificar uma transação, usuário pode adicionar **tags**: `essencial`, `importante`, `supérfluo`, `extraordinário`, `recorrente` (predefinidas).
+2. Pode criar **tags customizadas** (ex.: "viagem", "presente", "trabalho").
+3. Filtros em dashboards incluem seleção por tags (múltipla seleção).
+4. Dashboard exibe **estatísticas por tag**: "% de gastos supérfluos", "Total em despesas essenciais".
+5. Tags têm **cores** configuráveis para visualização rápida.
+
+**Aceite**:
+- Tags predefinidas disponíveis desde o primeiro uso.
+- Criação de tags customizadas é intuitiva (input inline na interface de classificação).
+- Filtros por tags funcionam em todos os dashboards relevantes.
+- Estatísticas calculadas corretamente (agregação por tags em transações).
+
+---
+
+### 7.8 F8 — Relatórios de Tendência por Categoria
+**Passos**:
+1. Na aba **"Categorias"**, usuário seleciona uma categoria.
+2. Sistema exibe **linha de tendência mensal** dos últimos 6-12 meses.
+3. Drill-down: ao clicar em categoria pai, vê breakdown de **subcategorias**.
+4. Comparativos **M/M** e **Y/Y** visíveis em cards.
+5. Gráfico de **distribuição** (pizza + barras empilhadas) por subcategoria.
+6. **Top 5 categorias** com maior variação (positiva ou negativa) destacadas.
+
+**Aceite**:
+- Gráficos renderizam em < 1s para 12 meses de dados.
+- Drill-down funciona corretamente (categoria → subcategorias → transações).
+- Comparativos M/M e Y/Y calculados com precisão.
+- Top 5 atualiza dinamicamente conforme filtros aplicados.
+
+---
+
+### 7.9 F9 — Calendário de Gastos
+**Passos**:
+1. Usuário acessa aba **"Calendário"** no menu ou vê widget na Home.
+2. Visualiza grade de calendário mensal com **heatmap** de intensidade de gastos por dia.
+3. Coloração gradiente: **verde claro** (gastos baixos) → **vermelho escuro** (gastos altos).
+4. Ao passar o mouse sobre um dia, vê **tooltip** com:
+   - Valor total do dia
+   - Breakdown por categoria (top 3)
+   - Comparação com média diária do mês
+5. Dias com gastos > 2x média são destacados com **ícone de alerta**.
+6. Filtros: conta, categoria, tag, tipo (despesa/receita).
+
+**Aceite**:
+- Calendário carrega em < 1s para mês corrente.
+- Tooltip exibe dados corretos e atualizados.
+- Heatmap reflete intensidade de gastos com gradiente visualmente claro.
+- Filtros funcionam e recalculam heatmap em tempo real.
+
+---
+
+### 7.10 F10 — Análise Temporal e Padrões de Gastos
+**Passos**:
+1. Na página **"Análise Temporal"**, usuário vê:
+   - Gráfico de linha: **evolução diária de gastos** no mês.
+   - Gráfico de barras: **gastos por dia da semana** (seg-dom).
+   - Card: **"Dias da semana com maior volume"** (ex.: "Sextas: +30% acima da média").
+   - Lista: **"Gastos recorrentes por dia do mês"** (ex.: "Dia 5: Netflix, dia 15: Academia").
+2. Comparação de padrões **M/M**: mesmo dia em meses diferentes.
+3. **Previsão simples**: "Próximos dias de alto gasto" baseada em histórico.
+
+**Aceite**:
+- Gráficos renderizam dados de até 12 meses em < 2s.
+- Identificação de padrões semanais é precisa (baseada em estatísticas).
+- Previsão de dias de alto gasto usa média móvel ou padrões históricos.
+- Comparação M/M exibe dados alinhados por dia do mês.
 
 ---
 
@@ -706,22 +859,46 @@
 ## 12. Dashboards e Relatórios
 
 ### 12.1 Painel principal (Home)
-- **Saldo por conta** (cards)  
-- **DFC simplificado** (Entradas – Saídas por mês)  
-- **Orçado vs. Realizado** (barra/linha)  
-- **Evolução M/M** (linha)  
-- **Próximos lançamentos** (recorrências/parcelas)  
+- **Saldo por conta** (cards)
+- **DFC simplificado** (Entradas – Saídas por mês)
+- **Orçado vs. Realizado** (barra/linha)
+- **Evolução M/M** (linha)
+- **Próximos lançamentos** (recorrências/parcelas)
 - **Top 5 despesas** (lista)
+- **Widget Calendário do Mês** (mini heatmap — v0.4)
 
 ### 12.2 Saúde Financeira
-- **Poupança/Receita (%)**, **Burn**, **Runway**  
+- **Poupança/Receita (%)**, **Burn**, **Runway**
 - **Índice de dívidas** (cartões/receitas)
 
-### 12.3 Filtros
-- Mês (obrigatório), Conta, Categoria, Tag, busca por texto.
+### 12.3 Categorias e Plano de Contas (v0.2)
+- **Árvore hierárquica** de categorias e subcategorias
+- **Gráfico de distribuição** (pizza + barras empilhadas)
+- **Linha de tendência** por categoria (últimos 6-12 meses)
+- **Drill-down**: categoria → subcategorias → transações individuais
+- **Top 5 categorias** com maior variação M/M
+- **Estatísticas por tag**: % de gastos por tipo (essencial, supérfluo, etc.)
+- **Ferramentas**: criar, editar, reordenar, mesclar, ativar/desativar categorias
+- **Exportação/importação** do plano de contas (CSV)
 
-### 12.4 Exportação
-- **CSV/Excel** no v1 (relatórios padrão).  
+### 12.4 Calendário e Análise Temporal (v0.4)
+- **Calendário mensal** com heatmap de intensidade de gastos por dia
+- **Gráfico de evolução diária** (linha temporal)
+- **Análise semanal**: gastos por dia da semana (seg-dom)
+- **Identificação de padrões**: "Sextas têm +30% mais gastos"
+- **Gastos recorrentes** por dia do mês (ex.: sempre dia 5 e 15)
+- **Comparação M/M**: mesmo dia em meses diferentes
+- **Previsão de dias de alto gasto** baseada em histórico
+- **Filtros**: conta, categoria, tag, tipo (despesa/receita)
+
+### 12.5 Filtros Gerais
+- Mês (obrigatório), Conta, Categoria, Tag, busca por texto.
+- **Filtros avançados por tags** (múltipla seleção)
+- Tipo de transação (receita/despesa/transferência)
+
+### 12.6 Exportação
+- **CSV/Excel** no v1 (relatórios padrão).
+- **Exportação de plano de contas** (CSV com hierarquia completa)
 - PDF/JSON em v1.x.
 
 ---
@@ -831,8 +1008,30 @@ CREATE INDEX idx_tx_conta_data ON transacao(conta_id, data);
 
 -- classificação
 CREATE TABLE categoria (
-  id TEXT PRIMARY KEY, grupo TEXT, nome TEXT, ativa INTEGER DEFAULT 1
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL,
+  tipo TEXT NOT NULL, -- receita|despesa|transferencia
+  grupo TEXT,
+  pai_id TEXT, -- FK para categoria pai (subcategorias)
+  icone TEXT, -- emoji ou nome do ícone Lucide
+  cor TEXT, -- hex color
+  ordem INTEGER DEFAULT 0,
+  ativa INTEGER DEFAULT 1,
+  created_at TEXT,
+  updated_at TEXT,
+  FOREIGN KEY(pai_id) REFERENCES categoria(id)
 );
+CREATE INDEX idx_categoria_pai ON categoria(pai_id);
+CREATE INDEX idx_categoria_ordem ON categoria(ordem);
+
+CREATE TABLE tags_disponiveis (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL,
+  cor TEXT, -- hex color
+  tipo TEXT NOT NULL, -- sistema|customizada
+  created_at TEXT
+);
+CREATE INDEX idx_tags_tipo ON tags_disponiveis(tipo);
 CREATE TABLE regra_classificacao (
   id TEXT PRIMARY KEY,
   ordem INTEGER,
@@ -953,9 +1152,139 @@ if exists(hash):
 
 ---
 
-## 21. Conclusão
+## 21. Considerações de Implementação: Categorias, Tags e Calendário
+
+### 21.1 Gestão de Categorias e Subcategorias
+
+**Estrutura de dados**:
+- Campo `pai_id` em `categoria` permite hierarquia recursiva
+- Máximo 2 níveis enforced via lógica de aplicação (validação em create/update)
+- Query de subcategorias: `SELECT * FROM categoria WHERE pai_id = ?`
+- Query de categorias raiz: `SELECT * FROM categoria WHERE pai_id IS NULL`
+
+**Reordenação (drag-and-drop)**:
+- Campo `ordem` define posição visual
+- Ao reordenar, atualizar `ordem` em lote (transaction)
+- Ordenação padrão em queries: `ORDER BY ordem ASC, nome ASC`
+
+**Merge de categorias**:
+```sql
+-- Exemplo de merge: categoria B → categoria A
+UPDATE transacao SET categoria_id = 'A' WHERE categoria_id = 'B';
+UPDATE orcamento SET categoria_id = 'A' WHERE categoria_id = 'B';
+UPDATE regra_classificacao SET categoria_id = 'A' WHERE categoria_id = 'B';
+UPDATE categoria SET ativa = 0 WHERE id = 'B';
+```
+
+**Exportação CSV**:
+- Incluir colunas: `id`, `nome`, `tipo`, `grupo`, `pai_id`, `icone`, `cor`, `ordem`, `ativa`
+- Respeitar hierarquia (exportar pais antes de filhos)
+- Importação: validar `pai_id` existe antes de criar subcategoria
+
+### 21.2 Sistema de Tags
+
+**Tags predefinidas (seed)**:
+```sql
+INSERT INTO tags_disponiveis (id, nome, cor, tipo) VALUES
+  ('tag_essencial', 'Essencial', '#10b981', 'sistema'),
+  ('tag_importante', 'Importante', '#3b82f6', 'sistema'),
+  ('tag_superfluo', 'Supérfluo', '#ef4444', 'sistema'),
+  ('tag_extraordinario', 'Extraordinário', '#f59e0b', 'sistema'),
+  ('tag_recorrente', 'Recorrente', '#8b5cf6', 'sistema');
+```
+
+**Armazenamento em transações**:
+- Campo `tags` (TEXT) armazena JSON array: `["essencial", "recorrente"]`
+- Parse/stringify em services (Dexie.js + Zod validation)
+- Query por tag: `WHERE tags LIKE '%"essencial"%'` (basic) ou JSON functions (Dexie/IndexedDB)
+
+**Filtros avançados**:
+- Multi-select de tags: `tags.some(t => selectedTags.includes(t))`
+- Estatísticas: agregação client-side (Dexie queries + reduce)
+
+### 21.3 Calendário de Gastos
+
+**Cálculo de heatmap**:
+```typescript
+// Pseudocódigo
+const transacoesMes = await db.transacoes
+  .where('data')
+  .between(startOfMonth, endOfMonth)
+  .toArray();
+
+const gastosPorDia = transacoesMes.reduce((acc, tx) => {
+  const dia = format(tx.data, 'yyyy-MM-dd');
+  acc[dia] = (acc[dia] || 0) + Math.abs(tx.valor);
+  return acc;
+}, {});
+
+// Calcular gradiente (percentis ou min-max)
+const valores = Object.values(gastosPorDia);
+const max = Math.max(...valores);
+const min = Math.min(...valores);
+// Coloração: interpolate entre verde (#10b981) e vermelho (#ef4444)
+```
+
+**Performance**:
+- Índice composto: `transacao(data, tipo)` para filtros rápidos
+- Cache de agregações diárias (opcional v1.x)
+- Lazy loading: carregar apenas mês visível
+
+**Padrões semanais**:
+```typescript
+// Agrupar por dia da semana
+const gastosPorDiaSemana = transacoesMes.reduce((acc, tx) => {
+  const diaSemana = format(tx.data, 'EEEE', { locale: ptBR });
+  acc[diaSemana] = (acc[diaSemana] || []).concat(tx.valor);
+  return acc;
+}, {});
+
+// Calcular média e identificar outliers
+const mediaSemanal = Object.entries(gastosPorDiaSemana).map(([dia, valores]) => ({
+  dia,
+  media: valores.reduce((a, b) => a + b, 0) / valores.length,
+  total: valores.reduce((a, b) => a + b, 0),
+}));
+```
+
+### 21.4 Integração com Banco de Dados Atual
+
+**Migrações necessárias**:
+1. Adicionar campos à tabela `categoria`: `pai_id`, `icone`, `cor`
+2. Criar tabela `tags_disponiveis`
+3. Seed de tags predefinidas
+4. Atualizar `transacoes.tags` (já existe, mas garantir formato JSON array)
+
+**Compatibilidade retroativa**:
+- Categorias existentes: `pai_id = NULL` (categorias raiz)
+- Transações sem tags: `tags = '[]'` ou NULL
+- Ordem padrão: categorias sem `ordem` recebem valor incremental na migração
+
+### 21.5 Componentes UI Sugeridos
+
+**Categorias**:
+- `CategoryTree` (recursive component com drag-and-drop)
+- `CategoryForm` (CRUD com color picker e icon selector)
+- `CategoryMergeDialog` (seleção de categoria destino + confirmação)
+- `CategoryTrendChart` (Recharts line chart com drill-down)
+
+**Tags**:
+- `TagInput` (multi-select com autocomplete)
+- `TagBadge` (pill component colorido)
+- `TagStatsCard` (agregação por tag com percentual)
+
+**Calendário**:
+- `CalendarHeatmap` (grid 7x5 com células coloridas)
+- `DailyTrendChart` (line chart diário)
+- `WeeklyPatternChart` (bar chart seg-dom)
+
+---
+
+## 22. Conclusão
 
 **Cortex Cash** nasce para ser **rápido**, **confiável** e **prático** no que importa: importar, classificar, orçar e decidir. O v1 entrega o essencial com qualidade: importação tolerante e reutilizável, classificação transparente (regras + IA sob controle e custo limitado), dashboards que fazem sentido para o fechamento mensal e um foco real em disciplina orçamentária. O terreno fica preparado para evoluir sem refazer fundamentos: adicionar mobile, patrimônio total e Open Finance quando o núcleo estiver sólido.
 
-> Este documento é auto-suficiente para o desenvolvimento: não depende de qualquer “código de alternativa” (como 67B). Todas as decisões estão explicitadas em texto claro e operacional.
+**Novas funcionalidades v0.2-0.4**: O sistema de categorias hierárquico, tags para transações e calendário de gastos fortalecem a capacidade analítica do usuário, permitindo maior granularidade na classificação e identificação de padrões temporais sem comprometer a simplicidade do produto.
+
+> Este documento é auto-suficiente para o desenvolvimento: não depende de qualquer "código de alternativa" (como 67B). Todas as decisões estão explicitadas em texto claro e operacional.
 

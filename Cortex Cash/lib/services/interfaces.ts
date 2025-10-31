@@ -28,6 +28,16 @@ import type {
   CreateContaDTO,
   CreateInstituicaoDTO,
   CreateCategoriaDTO,
+  Investimento,
+  HistoricoInvestimento,
+  CreateInvestimentoDTO,
+  CreateHistoricoInvestimentoDTO,
+  InvestimentoComRelacoes,
+  TipoInvestimento,
+  PatrimonioTotal,
+  PatrimonioPorTipo,
+  PatrimonioPorInstituicao,
+  RentabilidadeHistorico,
 } from '../types';
 
 // ============================================================================
@@ -131,12 +141,22 @@ export interface IInstituicaoService {
   /**
    * Lista todas as instituições
    */
-  listInstituicoes(): Promise<Instituicao[]>;
+  listInstituicoes(options?: {
+    limit?: number;
+    offset?: number;
+    sortBy?: 'nome' | 'codigo' | 'created_at';
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<Instituicao[]>;
 
   /**
    * Busca instituição por ID
    */
   getInstituicaoById(id: string): Promise<Instituicao | null>;
+
+  /**
+   * Busca instituição por código
+   */
+  getInstituicaoByCodigo(codigo: string): Promise<Instituicao | null>;
 
   /**
    * Cria nova instituição
@@ -152,6 +172,26 @@ export interface IInstituicaoService {
    * Deleta instituição
    */
   deleteInstituicao(id: string): Promise<void>;
+
+  /**
+   * Busca instituições por termo de busca (nome ou código)
+   */
+  searchInstituicoes(termo: string): Promise<Instituicao[]>;
+
+  /**
+   * Retorna uma instituição com suas contas associadas
+   */
+  getInstituicaoComContas(id: string): Promise<{ instituicao: Instituicao; contas: Conta[] }>;
+
+  /**
+   * Conta quantas contas uma instituição possui
+   */
+  countContas(id: string): Promise<number>;
+
+  /**
+   * Verifica se uma instituição possui contas ativas
+   */
+  hasContasAtivas(id: string): Promise<boolean>;
 }
 
 /**
@@ -463,6 +503,150 @@ export interface ICategoriaService {
 }
 
 // ============================================================================
+// Agent PATRIMONIO - Serviços de Investimentos e Patrimônio
+// ============================================================================
+
+/**
+ * Serviço de Investimentos
+ * Agent CORE: Implementador
+ */
+export interface IInvestimentoService {
+  /**
+   * Lista todos os investimentos
+   */
+  listInvestimentos(options?: {
+    status?: string;
+    tipo?: TipoInvestimento;
+    instituicao_id?: string;
+    limit?: number;
+    offset?: number;
+    sortBy?: 'nome' | 'valor_atual' | 'data_aplicacao' | 'rentabilidade';
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<Investimento[]>;
+
+  /**
+   * Busca investimento por ID
+   */
+  getInvestimentoById(id: string): Promise<Investimento | null>;
+
+  /**
+   * Busca investimento por ID com relações
+   */
+  getInvestimentoComRelacoes(id: string): Promise<InvestimentoComRelacoes | null>;
+
+  /**
+   * Cria novo investimento
+   */
+  createInvestimento(data: CreateInvestimentoDTO): Promise<Investimento>;
+
+  /**
+   * Atualiza investimento
+   */
+  updateInvestimento(id: string, data: Partial<CreateInvestimentoDTO>): Promise<Investimento>;
+
+  /**
+   * Deleta investimento (soft delete - marca como resgatado)
+   */
+  deleteInvestimento(id: string): Promise<void>;
+
+  /**
+   * Deleta permanentemente um investimento
+   */
+  hardDeleteInvestimento(id: string): Promise<void>;
+
+  /**
+   * Cria registro de histórico de investimento
+   */
+  createHistoricoInvestimento(data: CreateHistoricoInvestimentoDTO): Promise<HistoricoInvestimento>;
+
+  /**
+   * Lista histórico de um investimento
+   */
+  getHistoricoInvestimento(investimento_id: string): Promise<HistoricoInvestimento[]>;
+
+  /**
+   * Calcula rentabilidade de um investimento
+   */
+  calcularRentabilidade(id: string): Promise<{
+    rentabilidade: number;
+    rentabilidade_percentual: number;
+  }>;
+
+  /**
+   * Busca investimentos por tipo
+   */
+  getInvestimentosPorTipo(tipo: TipoInvestimento): Promise<Investimento[]>;
+
+  /**
+   * Busca investimentos ativos
+   */
+  getInvestimentosAtivos(): Promise<Investimento[]>;
+
+  /**
+   * Calcula valor total investido (apenas ativos)
+   */
+  getValorTotalInvestido(): Promise<number>;
+
+  /**
+   * Calcula valor total atual dos investimentos (apenas ativos)
+   */
+  getValorTotalAtual(): Promise<number>;
+}
+
+/**
+ * Serviço de Patrimônio
+ * Agent CORE: Implementador
+ */
+export interface IPatrimonioService {
+  /**
+   * Calcula o patrimônio total (contas + investimentos)
+   */
+  getPatrimonioTotal(): Promise<PatrimonioTotal>;
+
+  /**
+   * Agrupa investimentos por tipo
+   */
+  getPatrimonioPorTipo(): Promise<PatrimonioPorTipo[]>;
+
+  /**
+   * Agrupa patrimônio por instituição (contas + investimentos)
+   */
+  getPatrimonioPorInstituicao(): Promise<PatrimonioPorInstituicao[]>;
+
+  /**
+   * Retorna histórico de rentabilidade dos investimentos
+   */
+  getRentabilidadeHistorico(): Promise<RentabilidadeHistorico[]>;
+
+  /**
+   * Calcula diversificação do patrimônio
+   */
+  getDiversificacao(): Promise<{
+    por_tipo_conta: Array<{ tipo: string; valor: number; percentual: number }>;
+    por_tipo_investimento: Array<{ tipo: string; valor: number; percentual: number }>;
+    contas_vs_investimentos: {
+      contas: number;
+      investimentos: number;
+      percentual_contas: number;
+      percentual_investimentos: number;
+    };
+  }>;
+
+  /**
+   * Retorna resumo do patrimônio para dashboard
+   */
+  getResumoPatrimonio(): Promise<{
+    patrimonio_total: number;
+    contas: number;
+    investimentos: number;
+    rentabilidade_total: number;
+    rentabilidade_percentual: number;
+    maior_investimento: { nome: string; valor: number } | null;
+    maior_conta: { nome: string; valor: number } | null;
+  }>;
+}
+
+// ============================================================================
 // Exportação consolidada
 // ============================================================================
 
@@ -482,4 +666,6 @@ export interface IServices {
   // Agent CORE (compartilhado)
   transacao: ITransacaoService;
   categoria: ICategoriaService;
+  investimento: IInvestimentoService;
+  patrimonio: IPatrimonioService;
 }

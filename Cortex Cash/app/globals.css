@@ -1,81 +1,143 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Habilita variante dark baseada em classe (.dark) no Tailwind v4 */
 @custom-variant dark (&:is(.dark *));
 
+/* ==========================================================================
+   CORTEX PIXEL TEAL THEME
+   Design System baseado no logo pixel art com navy/teal e acentos gold/orange
+   ========================================================================== */
+
+/* ==========================================================================
+   LIGHT MODE (Padrão para :root sem classe)
+   ========================================================================== */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Background Hierarchy */
+  --background: 165 30% 97%;         /* #F5FAFA - Verde acqua muito claro */
+  --foreground: 200 61% 11%;         /* #0B2230 - Navy escuro */
+
+  /* Card e Surface */
+  --card: 0 0% 100%;                 /* #FFFFFF - Branco puro */
+  --card-foreground: 200 61% 11%;    /* #0B2230 - Navy escuro */
+
+  /* Popover e Dropdown */
+  --popover: 0 0% 100%;              /* #FFFFFF - Branco */
+  --popover-foreground: 200 61% 11%; /* #0B2230 - Navy escuro */
+
+  /* Primary (Teal) */
+  --primary: 175 73% 39%;            /* #18B0A4 - Teal 500 */
+  --primary-foreground: 0 0% 100%;   /* #FFFFFF - Branco */
+
+  /* Secondary */
+  --secondary: 165 25% 95%;          /* #EFF6F5 - Verde acqua 50 */
+  --secondary-foreground: 200 61% 11%; /* #0B2230 - Navy escuro */
+
+  /* Muted (Backgrounds sutis) */
+  --muted: 165 25% 95%;              /* #EFF6F5 - Verde acqua 50 */
+  --muted-foreground: 200 20% 40%;   /* #5A7B87 - Navy médio */
+
+  /* Accent (Hover states) */
+  --accent: 165 30% 92%;             /* #E5F2F1 - Verde acqua 100 */
+  --accent-foreground: 200 61% 11%;  /* #0B2230 - Navy escuro */
+
+  /* Destructive (Erros) */
+  --destructive: 0 84% 60%;          /* #EF4444 - Vermelho */
+  --destructive-foreground: 0 0% 100%; /* #FFFFFF - Branco */
+
+  /* Border */
+  --border: 165 20% 88%;             /* #D8E8E6 - Verde acqua 200 */
+  --input: 165 20% 88%;              /* #D8E8E6 - Verde acqua 200 */
+
+  /* Ring (Focus) */
+  --ring: 175 73% 39%;               /* #18B0A4 - Teal 500 */
+
+  /* Charts */
+  --chart-1: 175 73% 39%;            /* #18B0A4 - Teal */
+  --chart-2: 42 89% 50%;             /* #E7A93D - Gold mais escuro */
+  --chart-3: 171 69% 50%;            /* Teal médio */
+  --chart-4: 32 99% 45%;             /* #E57E00 - Orange mais escuro */
+  --chart-5: 175 78% 27%;            /* #0D7E75 - Teal escuro */
+  --chart-6: 38 74% 45%;             /* Gold escuro */
+  --chart-7: 175 78% 21%;            /* #0A625B - Teal muito escuro */
+  --chart-8: 142 71% 40%;            /* Success green mais escuro */
+
+  /* Radius */
+  --radius: 0.5rem;                  /* 8px - Border radius padrão */
+
+  /* App background (light) */
+  --app-bg-image: url('/assets/backgrounds/background - claro.jpg');
+  --app-bg-size: cover;
+  --app-bg-position: center center;
+  --app-bg-attachment: fixed;
+  --app-bg-repeat: no-repeat;
 }
 
+/* ==========================================================================
+   DARK MODE (quando .dark está presente)
+   ========================================================================== */
+
+html.dark,
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  /* Background Hierarchy - Mais escuro */
+  --background: 200 30% 12% !important;         /* #1A2A33 - Navy muito escuro */
+  --foreground: 165 70% 95% !important;         /* #F0FAF8 - Verde acqua quase branco */
+
+  /* App background image only in dark mode */
+  --app-bg-image: url('/assets/backgrounds/background - escuro.jpg');
+
+  /* Card e Surface - mais claras */
+  --card: 200 28% 20% !important;               /* #293D47 - Navy escuro */
+  --card-foreground: 165 70% 95% !important;    /* #F0FAF8 - Verde acqua quase branco */
+
+  /* Popover e Dropdown */
+  --popover: 200 28% 18%;            /* #232E36 - Navy escuro */
+  --popover-foreground: 165 70% 95%; /* #F0FAF8 - Verde acqua quase branco */
+
+  /* Primary (Teal) - mais brilhante */
+  --primary: 175 80% 50%;            /* #1AD4C4 - Teal brilhante */
+  --primary-foreground: 200 40% 10%; /* #0D1F29 - Navy muito escuro */
+
+  /* Secondary - ajustado */
+  --secondary: 200 25% 25%;          /* #33525E - Navy médio escuro */
+  --secondary-foreground: 165 70% 95%; /* #F0FAF8 - Verde acqua quase branco */
+
+  /* Muted (Backgrounds sutis) - ajustado */
+  --muted: 200 22% 22%;              /* #2E4550 - Navy médio */
+  --muted-foreground: 165 35% 75%;   /* #AEDBD3 - Verde acqua claro */
+
+  /* Accent (Hover states) - mais claro */
+  --accent: 200 25% 40%;             /* #558399 - Navy médio claro */
+  --accent-foreground: 165 70% 95%;  /* #F0FAF8 - Verde acqua quase branco */
+
+  /* Destructive (Erros) - mais brilhante */
+  --destructive: 0 90% 65%;          /* #FA6B6B - Vermelho claro */
+  --destructive-foreground: 0 0% 100%; /* #FFFFFF - Branco */
+
+  /* Border - mais visível */
+  --border: 195 40% 28%;             /* #2F5362 - Navy borda */
+  --input: 195 40% 28%;              /* #2F5362 - Navy borda */
+
+  /* Ring (Focus) - brilhante */
+  --ring: 175 80% 50%;               /* #1AD4C4 - Teal brilhante */
+
+  /* Charts - mais brilhantes para dark mode */
+  --chart-1: 175 80% 50%;            /* #1AD4C4 - Teal brilhante */
+  --chart-2: 42 95% 70%;             /* #F9D574 - Gold claro */
+  --chart-3: 171 75% 65%;            /* #7DE8D8 - Teal muito claro */
+  --chart-4: 32 100% 60%;            /* #FFA340 - Orange brilhante */
+  --chart-5: 175 70% 40%;            /* #18A89A - Teal médio */
+  --chart-6: 38 80% 65%;             /* #F0C068 - Gold médio */
+  --chart-7: 175 60% 35%;            /* #248F83 - Teal escuro mas visível */
+  --chart-8: 142 75% 55%;            /* #4ADE80 - Success green brilhante */
 }
+
+/* ==========================================================================
+   TAILWIND THEME MAPPING
+   ========================================================================== */
 
 @theme inline {
-  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -100,101 +162,115 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius: 0.25rem; /* User defined radius, preserved from existing code*/
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+
+  /* Font families */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Radius scale */
+  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) - 0.125rem);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 0.125rem);
+  --radius-xl: calc(var(--radius) + 0.25rem);
 }
+
+/* ==========================================================================
+   BASE STYLES
+   ========================================================================== */
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    /* Dark-only background image via CSS variables */
+    background-image: var(--app-bg-image);
+    background-size: var(--app-bg-size);
+    background-position: var(--app-bg-position);
+    background-attachment: var(--app-bg-attachment);
+    background-repeat: var(--app-bg-repeat);
+    /* Previne layout shift quando scrollbar aparece/desaparece */
+    scrollbar-gutter: stable;
+  }
+
+  /* Smooth transitions for theme changes */
+  * {
+    transition: background-color 0.2s ease-in-out,
+                border-color 0.2s ease-in-out,
+                color 0.2s ease-in-out;
   }
 }
 
-@theme inline {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+/* ==========================================================================
+   CUSTOM SCROLLBAR
+   ========================================================================== */
 
-  /* Cortex Pixel Teal Theme - Dark finance app with pixel art aesthetic */
-
-  /* Base colors */
-  --color-background: #0a1f2e;
-  --color-foreground: #e8dcc4;
-
-  /* Card and surface colors */
-  --color-card: #132d3f;
-  --color-card-foreground: #e8dcc4;
-
-  /* Muted backgrounds for secondary elements */
-  --color-muted: #1a3a4f;
-  --color-muted-foreground: #9fb8c7;
-
-  /* Accent colors - Teal primary */
-  --color-accent: #2d9b9b;
-  --color-accent-foreground: #0a1f2e;
-
-  /* Primary brand color - Gold/Beige */
-  --color-primary: #d4af37;
-  --color-primary-foreground: #0a1f2e;
-
-  /* Secondary - Darker teal */
-  --color-secondary: #1a5f6f;
-  --color-secondary-foreground: #e8dcc4;
-
-  /* Destructive/Error - Coral red */
-  --color-destructive: #e74c3c;
-  --color-destructive-foreground: #ffffff;
-
-  /* Border colors */
-  --color-border: #2d4a5c;
-  --color-input: #2d4a5c;
-  --color-ring: #2d9b9b;
-
-  /* Chart colors for financial data */
-  --color-chart-1: #2d9b9b;
-  --color-chart-2: #d4af37;
-  --color-chart-3: #e67e22;
-  --color-chart-4: #3498db;
-  --color-chart-5: #9b59b6;
-
-  /* Radius */
-  --radius: 0.25rem;
-}
-
-/* Custom scrollbar for dark theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-background);
+  background: hsl(var(--background));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-muted);
+  background: hsl(var(--muted));
   border-radius: var(--radius);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-accent);
+  background: hsl(var(--muted-foreground) / 0.5);
 }
 
-/* Pixel art aesthetic helpers */
-.pixel-corners {
+/* ==========================================================================
+   PIXEL ART MODE (Optional)
+   ========================================================================== */
+
+.pixel-art-mode {
+  /* Font estilo pixel art */
+  --font-sans: 'Press Start 2P', 'Courier New', monospace;
+
+  /* Rendering pixelado para imagens */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.pixel-art-mode * {
+  /* Aplica font pixel art em todos os elementos */
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
+
+  /* Rendering pixelado */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+
+  /* Transições mais rápidas e discretas */
+  transition: all 0.1s steps(2) !important;
+}
+
+/* Bordas pixeladas para cards e containers */
+.pixel-art-mode .card,
+.pixel-art-mode [data-slot="card"],
+.pixel-art-mode button,
+.pixel-art-mode input,
+.pixel-art-mode select,
+.pixel-art-mode textarea {
+  border-radius: 0 !important;
+  box-shadow:
+    2px 2px 0 0 rgba(0, 0, 0, 0.3),
+    4px 4px 0 0 rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Cantos pixelados (estilo NES) */
+.pixel-art-mode .pixel-corners {
   clip-path: polygon(
     0 4px,
     4px 4px,
@@ -211,7 +287,344 @@
   );
 }
 
-/* Smooth transitions */
-* {
-  @apply transition-colors duration-200;
+/* Botões pixel art */
+.pixel-art-mode button:hover {
+  transform: translate(-1px, -1px) !important;
+  box-shadow:
+    3px 3px 0 0 rgba(0, 0, 0, 0.4),
+    5px 5px 0 0 rgba(0, 0, 0, 0.15) !important;
+}
+
+.pixel-art-mode button:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow:
+    1px 1px 0 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Ícones pixelados com mais cor e contraste */
+.pixel-art-mode svg {
+  filter: contrast(1.4) saturate(1.5) brightness(1.1);
+  shape-rendering: crispEdges;
+}
+
+.pixel-art-mode img {
+  filter: contrast(1.3) saturate(1.4);
+}
+
+/* Ícones na sidebar com cores mais vibrantes */
+.pixel-art-mode aside svg,
+.pixel-art-mode nav svg {
+  filter: contrast(1.5) saturate(1.8) brightness(1.2) drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.5));
+}
+
+/* Ícones em cards e headers */
+.pixel-art-mode .card svg,
+.pixel-art-mode [data-slot="card"] svg {
+  filter: contrast(1.4) saturate(1.6) brightness(1.15);
+}
+
+/* Scrollbar pixel art */
+.pixel-art-mode ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.pixel-art-mode ::-webkit-scrollbar-track {
+  background: repeating-linear-gradient(
+    45deg,
+    hsl(var(--background)),
+    hsl(var(--background)) 2px,
+    hsl(var(--muted)) 2px,
+    hsl(var(--muted)) 4px
+  );
+}
+
+.pixel-art-mode ::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
+  border: 2px solid hsl(var(--background));
+  border-radius: 0;
+}
+
+/* Ajustes de tamanho de fonte para legibilidade */
+.pixel-art-mode {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pixel-art-mode h1 {
+  font-size: 1.6em !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.05em;
+}
+
+.pixel-art-mode h2 {
+  font-size: 1.3em !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.05em;
+}
+
+.pixel-art-mode h3 {
+  font-size: 1.1em !important;
+  line-height: 1.4 !important;
+}
+
+.pixel-art-mode h4 {
+  font-size: 1em !important;
+  line-height: 1.4 !important;
+}
+
+.pixel-art-mode p {
+  font-size: 0.85em !important;
+  line-height: 1.6 !important;
+}
+
+.pixel-art-mode span {
+  font-size: inherit !important;
+}
+
+.pixel-art-mode div {
+  font-size: inherit;
+}
+
+.pixel-art-mode button {
+  font-size: 0.8em !important;
+  padding: 10px 16px !important;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+.pixel-art-mode input,
+.pixel-art-mode select,
+.pixel-art-mode textarea {
+  font-size: 0.8em !important;
+  padding: 8px 12px !important;
+}
+
+.pixel-art-mode label {
+  font-size: 0.85em !important;
+  font-weight: bold;
+}
+
+/* Desativa animações suaves */
+.pixel-art-mode * {
+  animation-timing-function: steps(2) !important;
+}
+
+/* Sombras de texto pixeladas */
+.pixel-art-mode .text-shadow-pixel {
+  text-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.5),
+    3px 3px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Cores mais vibrantes para textos importantes */
+.pixel-art-mode h1,
+.pixel-art-mode h2,
+.pixel-art-mode h3 {
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+  font-weight: normal !important;
+}
+
+/* Links e elementos interativos */
+.pixel-art-mode a {
+  text-decoration: none;
+  position: relative;
+}
+
+.pixel-art-mode a:hover {
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* Badges e tags com visual pixel art */
+.pixel-art-mode [data-slot="badge"],
+.pixel-art-mode .badge {
+  border-radius: 0 !important;
+  padding: 4px 8px !important;
+  font-weight: bold !important;
+  border: 2px solid currentColor !important;
+  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Aumenta contraste de cores primárias */
+.pixel-art-mode {
+  --primary: 175 90% 55%;  /* Teal mais saturado */
+  --chart-1: 175 90% 55%;
+}
+
+/* Tabelas com bordas pixeladas */
+.pixel-art-mode table {
+  border-collapse: separate !important;
+  border-spacing: 2px !important;
+}
+
+.pixel-art-mode td,
+.pixel-art-mode th {
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  padding: 8px 12px !important;
+}
+
+/* Melhor contraste para texto em fundos escuros */
+.pixel-art-mode .dark {
+  --foreground: 165 80% 98%;  /* Texto mais brilhante */
+}
+
+/* ==========================================================================
+   SETTINGS PAGE FIXES - Garantir texto branco em modo escuro
+   ========================================================================== */
+
+/* Força texto branco em todos os elementos dentro de SettingsCard */
+[data-slot="card"] p,
+[data-slot="card"] span,
+[data-slot="card"] label,
+[data-slot="card"] div {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Força texto branco em botões outline no modo escuro */
+.dark [data-slot="button"][class*="outline"] {
+  color: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark [data-slot="button"][class*="outline"]:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ==========================================================================
+   UTILITY CLASSES
+   ========================================================================== */
+
+/* Accent Gold para highlights monetários */
+.text-gold {
+  color: hsl(42 89% 63%);
+}
+
+.bg-gold {
+  background-color: hsl(42 89% 63%);
+}
+
+/* Accent Orange */
+.text-orange {
+  color: hsl(32 99% 48%);
+}
+
+.bg-orange {
+  background-color: hsl(32 99% 48%);
+}
+
+/* Success */
+.text-success {
+  color: hsl(142 71% 45%);
+}
+
+.bg-success {
+  background-color: hsl(142 71% 45%);
+}
+
+/* Warning */
+.text-warning {
+  color: hsl(38 92% 50%);
+}
+
+.bg-warning {
+  background-color: hsl(38 92% 50%);
+}
+
+/* ==========================================================================
+   3D CARD EFFECTS - Cortex Pixel Teal Theme
+   ========================================================================== */
+
+/* Card 3D: Navy/Teal (Neutral - Saldo Total) */
+.card-3d-neutral {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F0FAF8 100%) !important;
+  border: 2px solid #18B0A4 !important;
+  box-shadow:
+    0 4px 6px -1px rgba(24, 176, 164, 0.15),
+    0 2px 4px -2px rgba(24, 176, 164, 0.1),
+    inset 0 -2px 8px rgba(24, 176, 164, 0.08) !important;
+}
+
+.dark .card-3d-neutral {
+  background: linear-gradient(135deg, #4A7080 0%, #42636F 100%) !important;
+  border: 2px solid #1AD4C4 !important;
+  box-shadow:
+    0 8px 16px -4px rgba(26, 212, 196, 0.3),
+    0 4px 8px -2px rgba(26, 212, 196, 0.2),
+    inset 0 -2px 12px rgba(26, 212, 196, 0.15) !important;
+}
+
+/* Card 3D: Success Green (Receitas) */
+.card-3d-success {
+  background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%) !important;
+  border: 2px solid #22C55E !important;
+  box-shadow:
+    0 4px 6px -1px rgba(34, 197, 94, 0.2),
+    0 2px 4px -2px rgba(34, 197, 94, 0.15),
+    inset 0 -2px 8px rgba(34, 197, 94, 0.1) !important;
+}
+
+.dark .card-3d-success {
+  background: linear-gradient(135deg, #4A7080 0%, #2D5A4D 100%) !important;
+  border: 2px solid #4ADE80 !important;
+  box-shadow:
+    0 8px 16px -4px rgba(74, 222, 128, 0.35),
+    0 4px 8px -2px rgba(74, 222, 128, 0.25),
+    inset 0 -2px 12px rgba(74, 222, 128, 0.18) !important;
+}
+
+/* Card 3D: Destructive Red (Despesas) */
+.card-3d-danger {
+  background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%) !important;
+  border: 2px solid #EF4444 !important;
+  box-shadow:
+    0 4px 6px -1px rgba(239, 68, 68, 0.2),
+    0 2px 4px -2px rgba(239, 68, 68, 0.15),
+    inset 0 -2px 8px rgba(239, 68, 68, 0.1) !important;
+}
+
+.dark .card-3d-danger {
+  background: linear-gradient(135deg, #4A7080 0%, #5A3A3A 100%) !important;
+  border: 2px solid #FA6B6B !important;
+  box-shadow:
+    0 8px 16px -4px rgba(250, 107, 107, 0.35),
+    0 4px 8px -2px rgba(250, 107, 107, 0.25),
+    inset 0 -2px 12px rgba(250, 107, 107, 0.18) !important;
+}
+
+/* Card 3D: Gold/Orange (Cartões de Crédito) */
+.card-3d-warning {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%) !important;
+  border: 2px solid #F59E0B !important;
+  box-shadow:
+    0 4px 6px -1px rgba(245, 158, 11, 0.2),
+    0 2px 4px -2px rgba(245, 158, 11, 0.15),
+    inset 0 -2px 8px rgba(245, 158, 11, 0.1) !important;
+}
+
+.dark .card-3d-warning {
+  background: linear-gradient(135deg, #4A7080 0%, #6B5A3A 100%) !important;
+  border: 2px solid #FFA340 !important;
+  box-shadow:
+    0 8px 16px -4px rgba(255, 163, 64, 0.35),
+    0 4px 8px -2px rgba(255, 163, 64, 0.25),
+    inset 0 -2px 12px rgba(255, 163, 64, 0.18) !important;
+}
+
+/* Hover effects for all 3D cards */
+.card-3d-neutral:hover,
+.card-3d-success:hover,
+.card-3d-danger:hover,
+.card-3d-warning:hover {
+  transform: translateY(-2px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .card-3d-neutral:hover,
+.dark .card-3d-success:hover,
+.dark .card-3d-danger:hover,
+.dark .card-3d-warning:hover {
+  box-shadow:
+    0 12px 24px -6px currentColor,
+    0 6px 12px -3px currentColor,
+    inset 0 -2px 16px currentColor;
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import { useForm, FormProvider } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { accountSchema, AccountFormData } from '@/lib/validations'
@@ -41,6 +42,7 @@ export function AccountForm({
   const methods = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
     defaultValues: {
+      name: '',
       type: 'checking',
       currency: 'BRL',
       balance: 0,
@@ -50,61 +52,96 @@ export function AccountForm({
     },
   })
 
-  const handleSubmit = methods.handleSubmit(async (data: AccountFormData) => {
-    await onSubmit(data)
-  })
+  const handleSubmit = methods.handleSubmit(
+    async (data: AccountFormData) => {
+      console.log('[AccountForm] Validação passou! Dados:', data)
+      await onSubmit(data)
+    },
+    (errors) => {
+      console.error('[AccountForm] Erros de validação:', JSON.stringify(errors, null, 2))
+      console.error('[AccountForm] Errors object:', errors)
+
+      // Log cada campo com erro
+      Object.keys(errors).forEach(key => {
+        console.error(`Campo "${key}":`, errors[key])
+      })
+    }
+  )
 
   const watchType = methods.watch('type')
 
+  // Debug: Log form values on change
+  React.useEffect(() => {
+    const subscription = methods.watch((value, { name, type }) => {
+      console.log('[AccountForm] Campo alterado:', name, '=', value[name as keyof typeof value])
+    })
+    return () => subscription.unsubscribe()
+  }, [methods])
+
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6" style={{
+        // Force white labels and descriptions
+        // @ts-ignore
+        '--label-color': '#ffffff',
+        '--description-color': 'rgba(255, 255, 255, 0.7)'
+      } as React.CSSProperties}>
         {/* Basic Information */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Informações Básicas</h3>
-            <Separator />
+            <h3 className="text-sm font-medium text-white">Informações Básicas</h3>
+            <Separator className="bg-white/20" />
           </div>
 
-          <FormInput
-            name="name"
-            label="Nome da Conta"
-            placeholder="Ex: Conta Corrente Nubank, Cartão XP..."
-            required
-          />
+          <div className="form-dark-input">
+            <FormInput
+              name="name"
+              label="Nome da Conta"
+              placeholder="Ex: Conta Corrente Nubank, Cartão XP..."
+              required
+              className="!bg-[#1e293b] !text-white !border-white/20 placeholder:!text-white/50"
+            />
+          </div>
 
-          <FormSelect
-            name="type"
-            label="Tipo de Conta"
-            placeholder="Selecione o tipo"
-            options={ACCOUNT_TYPE_OPTIONS}
-            required
-          />
+          <div className="form-dark-select">
+            <FormSelect
+              name="type"
+              label="Tipo de Conta"
+              placeholder="Selecione o tipo"
+              options={ACCOUNT_TYPE_OPTIONS}
+              required
+            />
+          </div>
 
-          <FormSelect
-            name="institution"
-            label="Instituição"
-            placeholder="Selecione a instituição"
-            options={mockInstitutionOptions}
-          />
+          <div className="form-dark-select">
+            <FormSelect
+              name="institution"
+              label="Instituição"
+              placeholder="Selecione a instituição"
+              options={mockInstitutionOptions}
+            />
+          </div>
         </div>
 
         {/* Balance and Currency */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Saldo e Moeda</h3>
-            <Separator />
+            <h3 className="text-sm font-medium text-white">Saldo e Moeda</h3>
+            <Separator className="bg-white/20" />
           </div>
 
-          <FormCurrencyInput
-            name="balance"
-            label="Saldo Inicial"
-            currency="BRL"
-            required
-            allowNegative={watchType === 'credit'}
-          />
+          <div className="form-dark-input">
+            <FormCurrencyInput
+              name="balance"
+              label="Saldo Inicial"
+              currency="BRL"
+              required
+              allowNegative={watchType === 'credit'}
+              className="!bg-[#1e293b] !text-white !border-white/20"
+            />
+          </div>
 
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-white/70">
             {watchType === 'credit'
               ? 'Para cartões de crédito, use valores negativos para representar dívidas'
               : 'Informe o saldo atual da conta'}
@@ -114,8 +151,8 @@ export function AccountForm({
         {/* Appearance */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Aparência</h3>
-            <Separator />
+            <h3 className="text-sm font-medium text-white">Aparência</h3>
+            <Separator className="bg-white/20" />
           </div>
 
           <FormColorPicker
@@ -128,8 +165,8 @@ export function AccountForm({
         {/* Settings */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Configurações</h3>
-            <Separator />
+            <h3 className="text-sm font-medium text-white">Configurações</h3>
+            <Separator className="bg-white/20" />
           </div>
 
           <FormCheckbox
@@ -147,11 +184,20 @@ export function AccountForm({
               variant="outline"
               onClick={onCancel}
               disabled={isLoading}
+              className="border-white/20 text-white hover:bg-white/10"
             >
               Cancelar
             </Button>
           )}
-          <Button type="submit" disabled={isLoading}>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="text-white"
+            style={{
+              backgroundColor: '#18B0A4',
+              color: '#ffffff'
+            }}
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitLabel}
           </Button>
