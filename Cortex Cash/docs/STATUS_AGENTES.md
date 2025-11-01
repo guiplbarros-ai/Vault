@@ -1,7 +1,8 @@
 # Status de Desenvolvimento - Cortex Cash
 
-**Última atualização**: 28 de Outubro de 2025
-**Versão atual**: v0.1 ✅ COMPLETA!
+**Última atualização**: 01 de Novembro de 2025
+**Versão atual**: v0.3 🔄 EM PROGRESSO
+**Última versão completa**: v0.1 ✅
 
 ---
 
@@ -106,24 +107,48 @@
 
 ## Agent FINANCE - Status
 
-### ⏳ Aguardando
+### ✅ Tarefas Concluídas
 
-**Bloqueado por**: Versão 0.2 (Categorias)
+#### v0.3 (Orçamentos e Cartões) - PARCIALMENTE COMPLETO
+- [x] **Sistema de Orçamentos Mensais**
+  - [x] OrcamentoService completo (CRUD + tracking + alertas)
+  - [x] BudgetForm com validação Zod
+  - [x] Cálculo automático de valor realizado
+  - [x] Sistema de alertas 80%/100%
+  - [x] Resumo mensal e cópia entre meses
+  - [x] Suporte a orçamento por categoria e centro de custo
 
-**Pode começar quando**:
-- v0.2 estiver em desenvolvimento
-- Schema de `categorias` e `regras_classificacao` estiver pronto ✅
+- [x] **Lançamentos de Fatura de Cartão**
+  - [x] FaturaLancamentoForm completo
+  - [x] Suporte a parcelamento
+  - [x] Suporte a compras no exterior (múltiplas moedas)
+  - [x] Cálculo automático de valor BRL com câmbio
+  - [x] Hook de alertas de limite (use-cartao-limit-alerts)
+  - [x] Monitoramento automático com thresholds configuráveis
 
-### 📋 Tarefas Planejadas (v0.2+)
+- [x] **Melhorias em Categorias**
+  - [x] Dashboard de analytics aprimorado
+  - [x] Classificação em massa otimizada
+  - [x] Página de categorias com layout melhorado
 
-#### v0.2 (Semana 1-2)
-- [ ] CRUD de categorias
-- [ ] Seed de categorias padrão ✅ (já criado pelo CORE)
-- [ ] Atualização de transação com categoria_id
-- [ ] Edição em massa de transações
-- [ ] Busca e filtros por categoria
+### 🔄 Em Andamento (v0.3)
 
-**Status**: 🔴 **AGUARDANDO v0.2**
+- [ ] Integração completa da página de orçamentos (/budgets)
+- [ ] Dashboard visual de orçamentos com gráficos
+- [ ] Página de faturas e lançamentos (/credit-cards)
+- [ ] Integração do hook de alertas no layout principal
+- [ ] Testes do sistema de orçamentos
+
+### 📋 Próximos Passos (v0.3)
+
+1. [ ] Criar página /budgets com lista de orçamentos
+2. [ ] Implementar dashboard de orçamentos (realizado vs planejado)
+3. [ ] Criar página de gestão de faturas
+4. [ ] Integrar alertas de limite no DashboardLayout
+5. [ ] Adicionar gráficos de progresso de orçamento
+6. [ ] Implementar filtros e busca em orçamentos
+
+**Status**: 🟡 **v0.3 EM PROGRESSO** - Backend completo, falta integração UI
 
 ---
 
@@ -295,22 +320,24 @@ const total = await db.categorias.count();
 
 ---
 
-## Métricas v0.1
+## Métricas v0.3
 
-- **Merge conflicts**: 0 (nenhum PR ainda)
+- **Merge conflicts**: 0
 - **Build status**: ✅ Funcionando (Next.js 16 + Turbopack + Dexie)
-- **Database**: ✅ Inicializado e testado (39 categorias seed com emojis 🎨)
-- **Services**: ✅ 3 services implementados (transacao, conta, categoria)
-- **Documentation**: ✅ DEXIE_EXAMPLES.md criado (14 seções)
-- **Dashboard**: ✅ Funcionando com DBTest component
-- **Tests**: ⏳ Não implementados ainda (v0.2)
+- **Database**: ✅ Inicializado e testado (39 categorias seed + orçamentos)
+- **Services**: ✅ 4 services implementados (transacao, conta, categoria, orcamento)
+- **Forms**: ✅ 6 formulários (transaction, account, category, cartao, budget, fatura-lancamento)
+- **Hooks**: ✅ 1 hook custom (use-cartao-limit-alerts)
+- **Dashboard**: ✅ Funcionando com dados reais
+- **Tests**: ⏳ Não implementados ainda (v0.4+)
 - **Coverage**: 0%
+- **Commits desde v0.1**: 4
 
 ---
 
-## 🎯 Resumo v0.1 - Agent CORE
+## 🎯 Resumo de Progresso
 
-### ✅ Entregas Completas
+### ✅ v0.1 - COMPLETA (Agent CORE)
 1. **Migração sql.js → Dexie.js**: Resolvido problema de compatibilidade com Next.js 16
 2. **Schema IndexedDB**: 12 tabelas com índices otimizados
 3. **Seed System**: 39 categorias padrão com emojis
@@ -318,15 +345,23 @@ const total = await db.categorias.count();
 5. **Documentation**: Guia completo de exemplos Dexie para outros agents
 6. **Test Component**: DBTest mostrando dados reais do banco
 
-### 🚀 Próxima Fase: v0.2
-**Agent IMPORT** pode começar imediatamente:
-- Schema pronto ✅
-- Interfaces definidas ✅
-- Exemplos de CRUD disponíveis ✅
-- Documentação completa ✅
+### 🔄 v0.3 - EM PROGRESSO (Agent FINANCE)
+1. **Sistema de Orçamentos**: Service + Form + Validações ✅
+2. **Lançamentos de Fatura**: Form completo + Validações ✅
+3. **Hook de Alertas**: Monitoramento de limites ✅
+4. **Melhorias em Categorias**: Analytics + Bulk assign ✅
+5. **Páginas UI**: 🔄 Falta integração completa
+6. **Dashboards**: 🔄 Falta implementar visualizações
+
+### 🚀 Próxima Fase: Completar v0.3 UI
+**Tarefas Prioritárias**:
+1. Criar página /budgets com CRUD visual
+2. Implementar dashboard de orçamentos com gráficos
+3. Criar página /credit-cards com gestão de faturas
+4. Integrar hook de alertas no layout
+5. Adicionar visualizações de progresso
 
 ---
 
-**Agent CORE v0.1**: ✅ CONCLUÍDO!
-**Próxima versão**: v0.2 - Parser de CSV/OFX (Agent IMPORT)
-**Última atualização**: 28 de Outubro de 2025 - v0.1 finalizada
+**Última atualização**: 01 de Novembro de 2025 - v0.3 backend completo
+**Próximos commits**: Integração UI de orçamentos e faturas
