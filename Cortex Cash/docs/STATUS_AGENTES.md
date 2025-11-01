@@ -131,27 +131,39 @@
   - [x] Classificação em massa otimizada
   - [x] Página de categorias com layout melhorado
 
+### ✅ Tarefas Concluídas (v0.3 Continuação)
+
+- [x] **Página de Orçamentos** (/budgets) ✅
+  - [x] CRUD completo de orçamentos
+  - [x] Navegação por mês com controles
+  - [x] Cards de resumo com métricas
+  - [x] Lista visual com cards de progresso
+  - [x] Dropdown menu para ações (editar/excluir)
+  - [x] Cópia de orçamentos entre meses
+  - [x] Recálculo automático de valores
+  - [x] Padrão visual 100% consistente
+
+- [x] **Página de Detalhes de Fatura** ✅
+- [x] **Gestão completa de lançamentos (CRUD)** ✅
+
 ### 🔄 Em Andamento (v0.3)
 
-- [ ] Integração completa da página de orçamentos (/budgets) - **Agent UI trabalhando**
-- [ ] Dashboard visual de orçamentos com gráficos
-- [x] Página de detalhes de fatura e lançamentos ✅
-- [x] Gestão completa de lançamentos (CRUD) ✅
+- [ ] Dashboard visual de orçamentos com gráficos (Recharts)
 - [ ] Integração do hook de alertas no layout principal
 - [ ] Testes do sistema de orçamentos
 
 ### 📋 Próximos Passos (v0.3)
 
-1. [ ] Aguardar Agent UI finalizar página /budgets (em progresso)
-2. [ ] Implementar dashboard de orçamentos (realizado vs planejado)
+1. [x] ~~Aguardar Agent UI finalizar página /budgets~~ ✅ **COMPLETO**
+2. [ ] Implementar dashboard visual com gráficos Recharts
 3. [x] ~~Criar página de gestão de faturas~~ ✅ **COMPLETO**
 4. [x] ~~Gestão de lançamentos com CRUD~~ ✅ **COMPLETO**
 5. [ ] Integrar alertas de limite e orçamento no DashboardLayout
-6. [ ] Adicionar gráficos de progresso de orçamento
+6. [ ] Adicionar gráfico de evolução de orçamentos (linha/área)
 7. [ ] Implementar função de pagamento de fatura
 8. [ ] Adicionar filtros e busca em lançamentos
 
-**Status**: 🟡 **v0.3 EM PROGRESSO** - Backend completo, falta integração UI
+**Status**: 🟢 **v0.3 QUASE COMPLETO** - Backend 100%, Frontend 95%, faltam gráficos
 
 ---
 
@@ -334,8 +346,9 @@ const total = await db.categorias.count();
 - **Dashboard**: ✅ Funcionando com dados reais
 - **Tests**: ⏳ Não implementados ainda (v0.4+)
 - **Coverage**: 0%
-- **Commits desde v0.1**: 6
+- **Commits desde v0.1**: 8
 - **Páginas dinâmicas**: 1 (faturas/[faturaId])
+- **Páginas refatoradas**: 1 (/budgets - padrão visual 100%)
 
 ---
 
@@ -349,15 +362,16 @@ const total = await db.categorias.count();
 5. **Documentation**: Guia completo de exemplos Dexie para outros agents
 6. **Test Component**: DBTest mostrando dados reais do banco
 
-### 🔄 v0.3 - EM PROGRESSO (Agent FINANCE)
+### 🔄 v0.3 - EM PROGRESSO (Agent FINANCE + Agent UI)
 1. **Sistema de Orçamentos**: Service + Form + Validações ✅
 2. **Lançamentos de Fatura**: Form completo + Validações ✅
 3. **Página de Detalhes de Fatura**: CRUD completo de lançamentos ✅
 4. **Estatísticas de Fatura**: Gastos por categoria + visualizações ✅
 5. **Hook de Alertas**: Monitoramento de limites + orçamentos ✅
 6. **Melhorias em Categorias**: Analytics + Bulk assign ✅
-7. **Páginas UI**: 🔄 /budgets em desenvolvimento (Agent UI)
-8. **Dashboards**: 🔄 Falta implementar visualizações
+7. **Página de Orçamentos** (/budgets): CRUD completo + navegação mês ✅
+8. **Padrão Visual**: 100% consistente em toda aplicação ✅
+9. **Dashboards**: 🔄 Falta adicionar gráficos Recharts
 
 ### 🚀 Próxima Fase: Completar v0.3 UI
 **Tarefas Prioritárias**:
