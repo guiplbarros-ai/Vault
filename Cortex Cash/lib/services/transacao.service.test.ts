@@ -20,6 +20,67 @@ describe('TransacaoService', () => {
     await db.transacoes.clear();
     await db.categorias.clear();
     await db.contas.clear();
+    await db.instituicoes.clear();
+
+    // Criar instituição e conta de teste
+    const instituicaoId = crypto.randomUUID();
+    await db.instituicoes.add({
+      id: instituicaoId,
+      nome: 'Instituição Teste',
+      tipo: 'banco',
+      ativa: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    await db.contas.add({
+      id: 'conta-1',
+      instituicao_id: instituicaoId,
+      nome: 'Conta Teste 1',
+      tipo: 'corrente',
+      saldo_inicial: 1000,
+      saldo_atual: 1000,
+      ativa: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    await db.contas.add({
+      id: 'conta-2',
+      instituicao_id: instituicaoId,
+      nome: 'Conta Teste 2',
+      tipo: 'poupanca',
+      saldo_inicial: 2000,
+      saldo_atual: 2000,
+      ativa: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    // Criar categorias de teste
+    await db.categorias.add({
+      id: 'cat-1',
+      nome: 'Categoria Teste 1',
+      tipo: 'despesa',
+      icone: '🛒',
+      cor: '#ff0000',
+      ativa: true,
+      ordem: 1,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    await db.categorias.add({
+      id: 'cat-2',
+      nome: 'Categoria Teste 2',
+      tipo: 'receita',
+      icone: '💰',
+      cor: '#00ff00',
+      ativa: true,
+      ordem: 2,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
   });
 
   describe('createTransacao', () => {
