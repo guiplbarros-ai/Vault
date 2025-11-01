@@ -37,6 +37,7 @@ import { CategoryTree } from "@/components/categories/category-tree"
 import { SortableCategoryTree } from "@/components/categories/sortable-category-tree"
 import { CategoryForm } from "@/components/categories/category-form"
 import { CategoryMergeDialog } from "@/components/categories/category-merge-dialog"
+import { CategoryAnalyticsDashboard } from "@/components/categories/category-analytics-dashboard"
 import { categoriaService, CategoriaComSubcategorias } from "@/lib/services/categoria.service"
 import type { Categoria, TipoTransacao } from "@/lib/types"
 import { toast } from "sonner"
@@ -306,18 +307,42 @@ export default function CategoriesPage() {
           </Card>
         </div>
 
-        {/* Categories Tree with Search and Filters */}
-        <Card style={{
-          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-          backgroundColor: '#3B5563'
-        }}>
-          <CardHeader>
-            <CardTitle className="text-white">Plano de Contas</CardTitle>
-            <CardDescription className="text-white/70">
-              Clique em uma categoria para selecioná-la ou use o menu para ações
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Tabs para Plano de Contas e Análise de Gastos */}
+        <Tabs defaultValue="plan" className="space-y-4">
+          <TabsList
+            className="grid w-full grid-cols-2"
+            style={{
+              backgroundColor: 'rgb(30, 41, 59)',
+              borderColor: 'rgb(51, 65, 85)',
+            }}
+          >
+            <TabsTrigger
+              value="plan"
+              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-300"
+            >
+              Plano de Contas
+            </TabsTrigger>
+            <TabsTrigger
+              value="analytics"
+              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-300"
+            >
+              Análise de Gastos
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tab: Plano de Contas */}
+          <TabsContent value="plan" className="space-y-4">
+            <Card style={{
+              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+              backgroundColor: '#3B5563'
+            }}>
+              <CardHeader>
+                <CardTitle className="text-white">Plano de Contas</CardTitle>
+                <CardDescription className="text-white/70">
+                  Clique em uma categoria para selecioná-la ou use o menu para ações
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
             {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
@@ -375,6 +400,13 @@ export default function CategoriesPage() {
             />
           </CardContent>
         </Card>
+          </TabsContent>
+
+          {/* Tab: Análise de Gastos */}
+          <TabsContent value="analytics" className="space-y-4">
+            <CategoryAnalyticsDashboard />
+          </TabsContent>
+        </Tabs>
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

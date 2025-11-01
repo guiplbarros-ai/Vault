@@ -36,3 +36,9 @@ export type { CategoryFormProps } from './category-form'
 
 export { CartaoForm } from './cartao-form'
 export type { CartaoFormProps } from './cartao-form'
+
+export { FaturaLancamentoForm } from './fatura-lancamento-form'
+export type { FaturaLancamentoFormProps } from './fatura-lancamento-form'
+
+export { BudgetForm } from './budget-form'
+export type { BudgetFormProps } from './budget-form'

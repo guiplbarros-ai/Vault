@@ -20,9 +20,9 @@ import {
 } from '@/components/ui/select';
 import { categoriaService } from '@/lib/services/categoria.service';
 import { transacaoService } from '@/lib/services/transacao.service';
-import type { Categoria } from '@/lib/types';
+import type { Categoria, Transacao } from '@/lib/types';
 import { toast } from 'sonner';
-import { Tag, Loader2 } from 'lucide-react';
+import { Tag, Loader2, AlertTriangle } from 'lucide-react';
 
 interface BulkCategoryAssignProps {
   selectedTransactionIds: string[];
@@ -39,14 +39,46 @@ export function BulkCategoryAssign({
   const [categoriaId, setCategoriaId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [loadingCategorias, setLoadingCategorias] = useState(true);
+  const [transacoes, setTransacoes] = useState<Transacao[]>([]);
+  const [tiposMistos, setTiposMistos] = useState(false);
+  const [tipoCompativel, setTipoCompativel] = useState<'receita' | 'despesa' | null>(null);
 
   useEffect(() => {
-    loadCategorias();
-  }, []);
+    loadData();
+  }, [selectedTransactionIds]);
 
-  const loadCategorias = async () => {
+  const loadData = async () => {
     try {
       setLoadingCategorias(true);
+
+      // Carregar transações selecionadas
+      const todasTransacoes = await transacaoService.listTransacoes();
+      const transacoesSelecionadas = todasTransacoes.filter(t =>
+        selectedTransactionIds.includes(t.id)
+      );
+      setTransacoes(transacoesSelecionadas);
+
+      // Detectar tipos de transações
+      const tipos = new Set(
+        transacoesSelecionadas
+          .filter(t => t.tipo !== 'transferencia') // Ignorar transferências
+          .map(t => t.tipo)
+      );
+
+      // Verificar se há tipos mistos
+      if (tipos.size > 1) {
+        setTiposMistos(true);
+        setTipoCompativel(null);
+        toast.warning('Transações de tipos diferentes selecionadas', {
+          description: 'Não é recomendado classificar receitas e despesas juntas',
+        });
+      } else if (tipos.size === 1) {
+        setTiposMistos(false);
+        const tipo = Array.from(tipos)[0] as 'receita' | 'despesa';
+        setTipoCompativel(tipo);
+      }
+
+      // Carregar categorias
       const data = await categoriaService.listCategorias({
         ativas: true,
         sortBy: 'nome',
@@ -54,8 +86,8 @@ export function BulkCategoryAssign({
       });
       setCategorias(data);
     } catch (error) {
-      console.error('Erro ao carregar categorias:', error);
-      toast.error('Erro ao carregar categorias');
+      console.error('Erro ao carregar dados:', error);
+      toast.error('Erro ao carregar dados');
     } finally {
       setLoadingCategorias(false);
     }
@@ -90,8 +122,12 @@ export function BulkCategoryAssign({
     }
   };
 
-  // Agrupa categorias por tipo
-  const categoriasPorTipo = categorias.reduce((acc, categoria) => {
+  // Filtra e agrupa categorias por tipo
+  const categoriasFiltradas = tipoCompativel
+    ? categorias.filter(c => c.tipo === tipoCompativel)
+    : categorias;
+
+  const categoriasPorTipo = categoriasFiltradas.reduce((acc, categoria) => {
     const tipo = categoria.tipo;
     if (!acc[tipo]) {
       acc[tipo] = [];
@@ -121,13 +157,36 @@ export function BulkCategoryAssign({
         borderColor: 'rgb(30, 41, 59)',
       }}
     >
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Tag className="w-5 h-5 text-blue-500" />
-          <span className="text-white font-medium">
-            {selectedTransactionIds.length} {selectedTransactionIds.length === 1 ? 'transação selecionada' : 'transações selecionadas'}
-          </span>
-        </div>
+      <div className="flex flex-col gap-3">
+        {/* Warning para tipos mistos */}
+        {tiposMistos && (
+          <div
+            className="flex items-center gap-2 p-2 rounded"
+            style={{
+              backgroundColor: 'rgb(127, 29, 29, 0.2)',
+              borderLeft: '3px solid rgb(239, 68, 68)',
+            }}
+          >
+            <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+            <span className="text-sm text-yellow-200">
+              Atenção: As transações selecionadas contêm tipos diferentes (receitas e despesas).
+              Recomendamos classificá-las separadamente.
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Tag className="w-5 h-5 text-blue-500" />
+            <span className="text-white font-medium">
+              {selectedTransactionIds.length} {selectedTransactionIds.length === 1 ? 'transação selecionada' : 'transações selecionadas'}
+              {tipoCompativel && (
+                <span className="text-gray-400 ml-2">
+                  ({tipoCompativel === 'receita' ? 'Receitas' : 'Despesas'})
+                </span>
+              )}
+            </span>
+          </div>
 
         <div className="flex-1">
           <Select
@@ -219,6 +278,7 @@ export function BulkCategoryAssign({
               Cancelar
             </Button>
           )}
+          </div>
         </div>
       </div>
     </div>

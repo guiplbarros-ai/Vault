@@ -9,11 +9,13 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { transacaoService } from '@/lib/services/transacao.service';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Minus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MonthPicker } from '@/components/ui/month-picker';
 
 interface CategoryData {
   categoria_id: string;
@@ -40,20 +42,20 @@ export function CategoryAnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [gastosPorCategoria, setGastosPorCategoria] = useState<CategoryData[]>([]);
   const [variacoes, setVariacoes] = useState<CategoryVariation[]>([]);
+  const [mesReferencia, setMesReferencia] = useState<Date>(new Date());
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [mesReferencia]);
 
   const loadData = async () => {
     try {
       setLoading(true);
 
-      const now = new Date();
-      const mesAtualInicio = startOfMonth(now);
-      const mesAtualFim = endOfMonth(now);
+      const mesAtualInicio = startOfMonth(mesReferencia);
+      const mesAtualFim = endOfMonth(mesReferencia);
 
-      const mesAnterior = subMonths(now, 1);
+      const mesAnterior = subMonths(mesReferencia, 1);
       const mesAnteriorInicio = startOfMonth(mesAnterior);
       const mesAnteriorFim = endOfMonth(mesAnterior);
 
@@ -74,6 +76,25 @@ export function CategoryAnalyticsDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMesAnterior = () => {
+    setMesReferencia(prev => subMonths(prev, 1));
+  };
+
+  const handleProximoMes = () => {
+    const proximoMes = new Date(mesReferencia);
+    proximoMes.setMonth(proximoMes.getMonth() + 1);
+
+    // Não permitir ir além do mês atual
+    const hoje = new Date();
+    if (proximoMes <= hoje) {
+      setMesReferencia(proximoMes);
+    }
+  };
+
+  const handleMesAtual = () => {
+    setMesReferencia(new Date());
   };
 
   const formatCurrency = (value: number) => {
@@ -145,7 +166,7 @@ export function CategoryAnalyticsDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Card de Resumo */}
+      {/* Card de Resumo com Seletor de Período */}
       <Card
         style={{
           backgroundColor: 'rgb(15, 23, 42)',
@@ -153,12 +174,58 @@ export function CategoryAnalyticsDashboard() {
         }}
       >
         <CardHeader>
-          <CardTitle className="text-white">
-            Gastos por Categoria - {format(new Date(), 'MMMM yyyy', { locale: ptBR })}
-          </CardTitle>
-          <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>
-            Total: {formatCurrency(totalGastos)}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-white">
+                Gastos por Categoria
+              </CardTitle>
+              <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>
+                Total: {formatCurrency(totalGastos)}
+              </CardDescription>
+            </div>
+
+            {/* Controles de Período */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMesAnterior}
+                style={{
+                  borderColor: 'rgb(51, 65, 85)',
+                  color: 'white',
+                }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMesAtual}
+                style={{
+                  borderColor: 'rgb(51, 65, 85)',
+                  color: 'white',
+                  minWidth: '150px',
+                }}
+              >
+                {format(mesReferencia, 'MMMM yyyy', { locale: ptBR })}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleProximoMes}
+                disabled={mesReferencia.getMonth() === new Date().getMonth() &&
+                          mesReferencia.getFullYear() === new Date().getFullYear()}
+                style={{
+                  borderColor: 'rgb(51, 65, 85)',
+                  color: 'white',
+                }}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
       </Card>
 
