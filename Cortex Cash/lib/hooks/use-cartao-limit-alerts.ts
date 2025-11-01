@@ -145,13 +145,16 @@ export function useCartaoLimitAlerts(options: UseCartaoLimitAlertsOptions = {}) 
       }
     }
 
-    // Verificar imediatamente
-    checkLimits()
+    // Aguardar 3 segundos antes da primeira verificação para garantir que tudo esteja inicializado
+    const timeoutId = setTimeout(() => {
+      checkLimits()
+    }, 3000)
 
     // Configurar intervalo de verificação
     const intervalId = setInterval(checkLimits, checkInterval)
 
     return () => {
+      clearTimeout(timeoutId)
       clearInterval(intervalId)
     }
   }, [enabled, warningThreshold, dangerThreshold, checkInterval, alertCooldown])

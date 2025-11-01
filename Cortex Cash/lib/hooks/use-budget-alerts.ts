@@ -155,13 +155,16 @@ export function useBudgetAlerts(options: UseBudgetAlertsOptions = {}) {
       }
     }
 
-    // Verificar imediatamente
-    checkBudgets()
+    // Aguardar 2 segundos antes da primeira verificação para garantir que tudo esteja inicializado
+    const timeoutId = setTimeout(() => {
+      checkBudgets()
+    }, 2000)
 
     // Configurar intervalo de verificação
     const intervalId = setInterval(checkBudgets, checkInterval)
 
     return () => {
+      clearTimeout(timeoutId)
       clearInterval(intervalId)
     }
   }, [enabled, warningThreshold, dangerThreshold, checkInterval, alertCooldown, mesReferencia])
