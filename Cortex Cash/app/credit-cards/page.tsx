@@ -527,9 +527,8 @@ export default function CreditCardsPage() {
                             valor_pago={fatura.valor_pago}
                             status={fatura.status}
                             cartao_nome={cartao.nome}
-                            onViewDetails={(id) => {
-                              // TODO: Implementar visualização de detalhes da fatura
-                              console.log('Ver detalhes da fatura:', id)
+                            onViewDetails={(faturaId) => {
+                              router.push(`/credit-cards/${cartao.id}/faturas/${faturaId}`)
                             }}
                             onPay={(id) => {
                               // TODO: Implementar pagamento de fatura
