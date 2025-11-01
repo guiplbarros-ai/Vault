@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { BudgetForm } from "@/components/forms/budget-form"
+import { BudgetProgressChart, BudgetDistributionChart } from "@/components/budgets"
 import {
   Plus,
   Calendar,
@@ -463,6 +464,14 @@ export default function BudgetsPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Gráficos de Análise */}
+        {orcamentos.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <BudgetProgressChart orcamentos={orcamentos} />
+            <BudgetDistributionChart orcamentos={orcamentos} />
           </div>
         )}
 
