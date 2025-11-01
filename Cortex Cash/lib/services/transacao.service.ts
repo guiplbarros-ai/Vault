@@ -12,8 +12,42 @@ import { generateHash } from '../utils/format';
 import { validateDTO, createTransacaoSchema } from '../validations/dtos';
 import { NotFoundError, ValidationError, DatabaseError } from '../errors';
 import { contaService } from './conta.service';
+import { orcamentoService } from './orcamento.service';
+import { format } from 'date-fns';
 
 export class TransacaoService implements ITransacaoService {
+  /**
+   * Helper: Recalcula orçamentos relacionados a uma transação
+   * Atualiza orçamentos se a transação tiver categoria_id ou centro_custo_id
+   */
+  private async recalcularOrcamentosRelacionados(transacao: Transacao): Promise<void> {
+    try {
+      // Só recalcula para despesas (orçamentos não se aplicam a receitas/transferências)
+      if (transacao.tipo !== 'despesa') return;
+
+      const dataTransacao = transacao.data instanceof Date ? transacao.data : new Date(transacao.data);
+      const mesReferencia = format(dataTransacao, 'yyyy-MM');
+
+      // Buscar orçamentos do mês
+      const orcamentos = await orcamentoService.listOrcamentos({ mesReferencia });
+
+      // Recalcular orçamentos relacionados
+      for (const orcamento of orcamentos) {
+        // Verifica se o orçamento está relacionado à transação
+        const isRelacionado =
+          (orcamento.tipo === 'categoria' && orcamento.categoria_id === transacao.categoria_id) ||
+          (orcamento.tipo === 'centro_custo' && orcamento.centro_custo_id === transacao.centro_custo_id);
+
+        if (isRelacionado) {
+          await orcamentoService.recalcularValorRealizado(orcamento.id);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao recalcular orçamentos:', error);
+      // Não propaga o erro para não bloquear a transação
+    }
+  }
+
   /**
    * Cria uma transferência entre contas com duas transações vinculadas pelo mesmo transferencia_id.
    * - Origem: valor negativo e conta_destino_id preenchido
@@ -229,6 +263,9 @@ export class TransacaoService implements ITransacaoService {
       // Atualiza saldo da conta
       await contaService.recalcularESalvarSaldo(validatedData.conta_id);
 
+      // Recalcula orçamentos relacionados
+      await this.recalcularOrcamentosRelacionados(transacao);
+
       return transacao;
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -284,6 +321,12 @@ export class TransacaoService implements ITransacaoService {
       if (data.conta_id && data.conta_id !== existing.conta_id) {
         await contaService.recalcularESalvarSaldo(data.conta_id);
       }
+
+      // Recalcula orçamentos da transação antiga (caso tenha mudado categoria/centro de custo)
+      await this.recalcularOrcamentosRelacionados(existing);
+
+      // Recalcula orçamentos da transação atualizada
+      await this.recalcularOrcamentosRelacionados(result);
 
       return result;
     } catch (error) {

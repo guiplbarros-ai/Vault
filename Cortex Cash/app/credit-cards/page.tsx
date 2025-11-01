@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
@@ -34,6 +35,7 @@ import { toast } from "sonner"
 import { BANDEIRAS, BANDEIRA_COLORS } from "@/lib/constants"
 
 export default function CreditCardsPage() {
+  const router = useRouter()
   const [cartoes, setCartoes] = useState<CartaoConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)

@@ -83,6 +83,7 @@ export interface Transacao {
   id: string;
   conta_id: string;
   categoria_id?: string;
+  centro_custo_id?: string; // Relacionamento com orçamentos
   data: Date;
   descricao: string;
   valor: number;
