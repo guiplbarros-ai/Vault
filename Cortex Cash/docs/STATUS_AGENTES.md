@@ -133,20 +133,23 @@
 
 ### 🔄 Em Andamento (v0.3)
 
-- [ ] Integração completa da página de orçamentos (/budgets)
+- [ ] Integração completa da página de orçamentos (/budgets) - **Agent UI trabalhando**
 - [ ] Dashboard visual de orçamentos com gráficos
-- [ ] Página de faturas e lançamentos (/credit-cards)
+- [x] Página de detalhes de fatura e lançamentos ✅
+- [x] Gestão completa de lançamentos (CRUD) ✅
 - [ ] Integração do hook de alertas no layout principal
 - [ ] Testes do sistema de orçamentos
 
 ### 📋 Próximos Passos (v0.3)
 
-1. [ ] Criar página /budgets com lista de orçamentos
+1. [ ] Aguardar Agent UI finalizar página /budgets (em progresso)
 2. [ ] Implementar dashboard de orçamentos (realizado vs planejado)
-3. [ ] Criar página de gestão de faturas
-4. [ ] Integrar alertas de limite no DashboardLayout
-5. [ ] Adicionar gráficos de progresso de orçamento
-6. [ ] Implementar filtros e busca em orçamentos
+3. [x] ~~Criar página de gestão de faturas~~ ✅ **COMPLETO**
+4. [x] ~~Gestão de lançamentos com CRUD~~ ✅ **COMPLETO**
+5. [ ] Integrar alertas de limite e orçamento no DashboardLayout
+6. [ ] Adicionar gráficos de progresso de orçamento
+7. [ ] Implementar função de pagamento de fatura
+8. [ ] Adicionar filtros e busca em lançamentos
 
 **Status**: 🟡 **v0.3 EM PROGRESSO** - Backend completo, falta integração UI
 
@@ -331,7 +334,8 @@ const total = await db.categorias.count();
 - **Dashboard**: ✅ Funcionando com dados reais
 - **Tests**: ⏳ Não implementados ainda (v0.4+)
 - **Coverage**: 0%
-- **Commits desde v0.1**: 4
+- **Commits desde v0.1**: 6
+- **Páginas dinâmicas**: 1 (faturas/[faturaId])
 
 ---
 
@@ -348,10 +352,12 @@ const total = await db.categorias.count();
 ### 🔄 v0.3 - EM PROGRESSO (Agent FINANCE)
 1. **Sistema de Orçamentos**: Service + Form + Validações ✅
 2. **Lançamentos de Fatura**: Form completo + Validações ✅
-3. **Hook de Alertas**: Monitoramento de limites ✅
-4. **Melhorias em Categorias**: Analytics + Bulk assign ✅
-5. **Páginas UI**: 🔄 Falta integração completa
-6. **Dashboards**: 🔄 Falta implementar visualizações
+3. **Página de Detalhes de Fatura**: CRUD completo de lançamentos ✅
+4. **Estatísticas de Fatura**: Gastos por categoria + visualizações ✅
+5. **Hook de Alertas**: Monitoramento de limites + orçamentos ✅
+6. **Melhorias em Categorias**: Analytics + Bulk assign ✅
+7. **Páginas UI**: 🔄 /budgets em desenvolvimento (Agent UI)
+8. **Dashboards**: 🔄 Falta implementar visualizações
 
 ### 🚀 Próxima Fase: Completar v0.3 UI
 **Tarefas Prioritárias**:
