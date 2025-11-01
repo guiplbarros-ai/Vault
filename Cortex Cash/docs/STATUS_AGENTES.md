@@ -3,8 +3,8 @@
 ---
 
 **Última atualização**: 01 de Novembro de 2025
-**Versão atual**: v0.3 ✅ COMPLETA!
-**Próxima versão**: v0.4 - Testes e Alertas
+**Versão atual**: v0.4 🔄 EM PROGRESSO (Agent CORE)
+**Última versão completa**: v0.3 ✅ COMPLETA!
 
 ---
 
@@ -58,9 +58,21 @@
   - `/categories` - Categorias
   - `/settings` - Configurações
 
+### ✅ Tarefas Concluídas (Continuação)
+
+#### v0.4: Error Handling & Infrastructure
+- [x] **ErrorBoundary Component** - Captura erros React
+- [x] **GlobalErrorHandler** - Captura erros JavaScript globais
+- [x] **Error Logging System** - localStorage com últimos 30 erros
+- [x] **Error Recovery UI** - Botões de retry e go home
+- [x] **Toast Integration** - Notificações automáticas
+- [x] **Integração no DashboardLayout** - Proteção global
+
 ### 🔄 Em Andamento
 
-- ✅ NENHUMA - v0.1 COMPLETA!
+- [ ] Health Check Monitoring
+- [ ] Performance Monitoring
+- [ ] Service Worker (PWA)
 
 ### 📋 Próximos Passos (v0.1 CONCLUÍDA!)
 
@@ -358,10 +370,11 @@ const total = await db.categorias.count();
 - **Dashboard**: ✅ Funcionando com dados reais
 - **Tests**: ⏳ Não implementados ainda (v0.4+)
 - **Coverage**: 0%
-- **Commits desde v0.1**: 10
+- **Commits desde v0.1**: 12
 - **Páginas dinâmicas**: 1 (faturas/[faturaId])
 - **Páginas refatoradas**: 1 (/budgets - padrão visual 100%)
 - **Componentes de gráfico**: 2 (BudgetProgressChart, BudgetDistributionChart)
+- **Infraestrutura de erro**: 2 componentes (ErrorBoundary, GlobalErrorHandler)
 
 ---
 
@@ -386,9 +399,18 @@ const total = await db.categorias.count();
 8. **Padrão Visual**: 100% consistente em toda aplicação ✅
 9. **Dashboards Visuais**: Gráficos Recharts (barras + pizza) ✅
 
-### 🚀 Próxima Fase: v0.4 - Testes e Integração
-**Tarefas Prioritárias**:
-1. Implementar testes E2E para fluxos críticos
+### ✅ v0.4 - EM PROGRESSO (Agent CORE)
+1. **Error Handling Global**: ErrorBoundary + GlobalErrorHandler ✅
+2. **Error Logging**: Sistema estruturado em localStorage ✅
+3. **Error Recovery**: UI elegante com opções de retry ✅
+
+### 🚀 Próxima Fase: v0.4 Continuação
+**Tarefas Prioritárias (Agent CORE)**:
+1. Health Check Monitoring (verificar integridade do sistema)
+2. Performance Monitoring (identificar gargalos)
+3. Service Worker setup (offline-first PWA)
+4. Backup/Export system (IndexedDB → JSON)
+5. Implementar testes E2E para fluxos críticos
 2. Implementar dashboard de orçamentos com gráficos
 3. Criar página /credit-cards com gestão de faturas
 4. Integrar hook de alertas no layout
