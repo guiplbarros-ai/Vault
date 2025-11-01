@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, ArrowUpCircle, ArrowDownCircle, MoreHorizontal, Pencil, Trash2, Calendar, Eye } from "lucide-react"
+import { Plus, ArrowUpCircle, ArrowDownCircle, MoreHorizontal, Pencil, Trash2, Calendar, Eye, Check } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { TransactionForm, TransactionFormProps } from "@/components/forms"
+import { BulkCategoryAssign } from "@/components/categories/bulk-category-assign"
 import { MonthPicker } from "@/components/ui/month-picker"
 import { startOfMonth, endOfMonth } from 'date-fns'
 import { TagBadge } from "@/components/ui/tag-badge"
@@ -69,6 +70,7 @@ export default function TransactionsPage() {
   const [editMode, setEditMode] = useState(false)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [transactionToView, setTransactionToView] = useState<Transacao | null>(null)
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([])
 
   // Detecta se está em dark mode
   const isDark = useMemo(() => {
@@ -167,7 +169,47 @@ export default function TransactionsPage() {
     setSelectedCategory('all')
   }
 
+  const handleSelectTransaction = (id: string) => {
+    setSelectedTransactionIds(prev =>
+      prev.includes(id)
+        ? prev.filter(tid => tid !== id)
+        : [...prev, id]
+    )
+  }
+
+  const handleSelectAll = () => {
+    if (selectedTransactionIds.length === filteredTransactions.length) {
+      setSelectedTransactionIds([])
+    } else {
+      setSelectedTransactionIds(filteredTransactions.map(t => t.id))
+    }
+  }
+
+  const handleBulkSuccess = () => {
+    setSelectedTransactionIds([])
+    loadTransactions()
+  }
+
   const columns: DataTableColumn<Transacao>[] = [
+    {
+      id: 'select',
+      header: '', // Empty header for select column
+      cell: (row) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleSelectTransaction(row.id)}
+          className="h-8 w-8 p-0"
+        >
+          {selectedTransactionIds.includes(row.id) ? (
+            <Check className="h-4 w-4 text-white" />
+          ) : (
+            <div className="h-4 w-4 border border-gray-400 rounded" />
+          )}
+        </Button>
+      ),
+      width: '50px',
+    },
     {
       id: 'date',
       header: 'Data',
@@ -690,9 +732,9 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            {/* Botão Limpar Filtros (se houver filtros ativos) */}
-            {(selectedCategory !== 'all' || selectedTag !== 'all') && (
-              <div className="mt-4">
+            {/* Botão Limpar Filtros e Seleção em Massa */}
+            <div className="mt-4 flex gap-2">
+              {(selectedCategory !== 'all' || selectedTag !== 'all') && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -702,8 +744,29 @@ export default function TransactionsPage() {
                   <X className="mr-2 h-3 w-3" />
                   Limpar Filtros
                 </Button>
-              </div>
-            )}
+              )}
+
+              {filteredTransactions.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAll}
+                  className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+                >
+                  {selectedTransactionIds.length === filteredTransactions.length ? (
+                    <>
+                      <X className="mr-2 h-3 w-3" />
+                      Desmarcar Todas
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-3 w-3" />
+                      Selecionar Todas
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
 
             {/* Indicador de resultados */}
             {(selectedCategory !== 'all' || selectedTag !== 'all') && (
@@ -715,6 +778,15 @@ export default function TransactionsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Bulk Category Assignment */}
+        {selectedTransactionIds.length > 0 && (
+          <BulkCategoryAssign
+            selectedTransactionIds={selectedTransactionIds}
+            onSuccess={handleBulkSuccess}
+            onCancel={() => setSelectedTransactionIds([])}
+          />
+        )}
 
         <DataTable
           data={filteredTransactions}
