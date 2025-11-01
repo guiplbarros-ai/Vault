@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils"
 import { Toaster } from "sonner"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { FinancialAlertsProvider } from "@/components/financial-alerts-provider"
+import { ErrorBoundary } from "@/components/error-boundary"
+import { GlobalErrorHandler } from "@/components/global-error-handler"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -57,8 +59,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <FinancialAlertsProvider enabled={isInitialized}>
-      <div className="min-h-screen">
+    <ErrorBoundary>
+      <GlobalErrorHandler />
+      <FinancialAlertsProvider enabled={isInitialized}>
+        <div className="min-h-screen">
         {/* Mobile sidebar backdrop */}
         {sidebarOpen && (
           <div
@@ -157,6 +161,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           closeButton
         />
       </div>
-    </FinancialAlertsProvider>
+      </FinancialAlertsProvider>
+    </ErrorBoundary>
   )
 }
