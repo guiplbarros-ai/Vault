@@ -92,8 +92,8 @@ export function TemplateSelector({
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{
             paddingLeft: '2.5rem',
-            backgroundColor: 'rgb(15, 23, 42)',
-            borderColor: 'rgb(30, 41, 59)',
+            backgroundColor: '#1e293b',
+            borderColor: 'rgba(255, 255, 255, 0.2)',
             color: 'white',
           }}
         />
@@ -175,10 +175,10 @@ function TemplateCard({
   return (
     <button
       onClick={() => onSelect(template)}
-      className="relative text-left p-4 rounded-lg border transition-all"
+      className="relative text-left p-4 rounded-lg border transition-all hover:border-[#18B0A4]/50"
       style={{
-        backgroundColor: isSelected ? 'rgb(30, 58, 138)' : 'rgb(15, 23, 42)',
-        borderColor: isSelected ? 'rgb(59, 130, 246)' : 'rgb(30, 41, 59)',
+        backgroundColor: isSelected ? 'rgba(24, 176, 164, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+        borderColor: isSelected ? '#18B0A4' : 'rgba(255, 255, 255, 0.2)',
         borderWidth: isSelected ? '2px' : '1px',
       }}
     >
@@ -195,8 +195,8 @@ function TemplateCard({
           <span
             className="px-2 py-1 rounded"
             style={{
-              backgroundColor: 'rgb(30, 41, 59)',
-              color: 'rgb(148, 163, 184)',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              color: 'rgba(255, 255, 255, 0.7)',
             }}
           >
             {template.tipo_arquivo.toUpperCase()}
@@ -205,8 +205,8 @@ function TemplateCard({
             <span
               className="px-2 py-1 rounded"
               style={{
-                backgroundColor: 'rgb(30, 41, 59)',
-                color: 'rgb(148, 163, 184)',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'rgba(255, 255, 255, 0.7)',
               }}
             >
               Sep: {template.separador === '\t' ? 'TAB' : template.separador}
@@ -216,8 +216,8 @@ function TemplateCard({
             <span
               className="px-2 py-1 rounded"
               style={{
-                backgroundColor: 'rgb(30, 41, 59)',
-                color: 'rgb(148, 163, 184)',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'rgba(255, 255, 255, 0.7)',
               }}
             >
               {template.formato_data}

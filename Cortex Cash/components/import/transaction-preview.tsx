@@ -68,7 +68,13 @@ export function TransactionPreview({
   return (
     <div className="space-y-6">
       {/* Resumo */}
-      <Card className="p-6">
+      <Card
+        className="p-6"
+        style={{
+          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+          backgroundColor: '#3B5563',
+        }}
+      >
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Resumo da Importação</h3>
@@ -126,7 +132,13 @@ export function TransactionPreview({
       </Card>
 
       {/* Lista de Transações */}
-      <Card className="p-6">
+      <Card
+        className="p-6"
+        style={{
+          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+          backgroundColor: '#3B5563',
+        }}
+      >
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -182,7 +194,13 @@ export function TransactionPreview({
 
       {/* Duplicadas (se solicitado) */}
       {showDuplicates && duplicadas.length > 0 && (
-        <Card className="p-6">
+        <Card
+          className="p-6"
+          style={{
+            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+            backgroundColor: '#3B5563',
+          }}
+        >
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-yellow-600" />

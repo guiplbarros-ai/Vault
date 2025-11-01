@@ -544,8 +544,8 @@ export default function ImportPage() {
           <Card
             className="p-6"
             style={{
-              backgroundColor: 'rgb(15, 23, 42)',
-              borderColor: 'rgb(30, 41, 59)',
+              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+              backgroundColor: '#3B5563',
             }}
           >
             <div className="space-y-4">
