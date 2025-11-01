@@ -454,9 +454,58 @@ export interface ITransacaoService {
   bulkUpdateCategoria(transacaoIds: string[], categoriaId: string): Promise<number>;
 
   /**
+   * Atualiza tags em massa
+   */
+  bulkUpdateTags(transacaoIds: string[], tags: string[]): Promise<number>;
+
+  /**
    * Deleta em massa
    */
   bulkDelete(transacaoIds: string[]): Promise<number>;
+
+  /**
+   * Retorna transações sem categoria (não classificadas)
+   */
+  getTransacoesNaoClassificadas(filters?: {
+    contaId?: string;
+    dataInicio?: Date;
+    dataFim?: Date;
+    tipo?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Transacao[]>;
+
+  /**
+   * Retorna estatísticas de gastos por categoria em um período
+   */
+  getGastosPorCategoria(dataInicio: Date, dataFim: Date): Promise<{
+    categoria_id: string;
+    categoria_nome: string;
+    categoria_icone: string;
+    categoria_cor: string;
+    total_gasto: number;
+    quantidade_transacoes: number;
+  }[]>;
+
+  /**
+   * Retorna variações por categoria comparando dois períodos
+   */
+  getVariacoesPorCategoria(
+    periodoAtualInicio: Date,
+    periodoAtualFim: Date,
+    periodoAnteriorInicio: Date,
+    periodoAnteriorFim: Date
+  ): Promise<{
+    categoria_id: string;
+    categoria_nome: string;
+    categoria_icone: string;
+    categoria_cor: string;
+    total_gasto_atual: number;
+    total_gasto_anterior: number;
+    variacao_absoluta: number;
+    variacao_percentual: number;
+    quantidade_transacoes: number;
+  }[]>;
 }
 
 /**

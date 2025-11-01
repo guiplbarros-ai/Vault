@@ -435,6 +435,52 @@ export class TransacaoService implements ITransacaoService {
   }
 
   /**
+   * Retorna transações sem categoria (não classificadas)
+   * Útil para workflows de classificação em massa
+   */
+  async getTransacoesNaoClassificadas(filters?: {
+    contaId?: string;
+    dataInicio?: Date;
+    dataFim?: Date;
+    tipo?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Transacao[]> {
+    const transacoes = await this.listTransacoes({
+      ...filters,
+      sortBy: 'data',
+      sortOrder: 'desc',
+    });
+
+    return transacoes.filter(t => !t.categoria_id);
+  }
+
+  /**
+   * Atualiza tags de múltiplas transações de uma vez
+   * @returns Número de transações atualizadas
+   */
+  async bulkUpdateTags(transacaoIds: string[], tags: string[]): Promise<number> {
+    const db = getDB();
+
+    let count = 0;
+    const tagsJson = JSON.stringify(tags);
+
+    for (const id of transacaoIds) {
+      try {
+        await db.transacoes.update(id, {
+          tags: tagsJson,
+          updated_at: new Date(),
+        });
+        count++;
+      } catch (error) {
+        console.error(`Erro ao atualizar tags da transação ${id}:`, error);
+      }
+    }
+
+    return count;
+  }
+
+  /**
    * Retorna as categorias com maiores variações percentuais comparando dois períodos
    * Útil para análise de mudanças de comportamento de gastos
    */

@@ -12,6 +12,7 @@ import { FileUpload } from "@/components/import/file-upload";
 import { ColumnMapper } from "@/components/import/column-mapper";
 import { TransactionPreview } from "@/components/import/transaction-preview";
 import { ClassificationRules } from "@/components/import/classification-rules";
+import { TemplateSelector } from "@/components/import/template-selector";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,7 +24,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, Settings, CheckCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { FileText, Upload, Settings, CheckCircle, Sparkles, Loader2 } from "lucide-react";
 import { importService } from "@/lib/services/import.service";
 import { contaService } from "@/lib/services/conta.service";
 import { toast } from "sonner";
@@ -33,15 +35,20 @@ import type {
   ParsedTransacao,
   FileFormat,
   Conta,
+  TemplateImportacao,
 } from "@/lib/types";
 
-type ImportStep = "upload" | "format" | "map" | "preview" | "complete";
+type ImportStep = "template" | "upload" | "format" | "map" | "preview" | "complete";
+type ProcessingStage = "parsing" | "deduplicating" | "importing" | null;
 
 export default function ImportPage() {
   const router = useRouter();
-  const [step, setStep] = useState<ImportStep>("upload");
+  const [step, setStep] = useState<ImportStep>("template");
   const [contas, setContas] = useState<Conta[]>([]);
   const [contaSelecionada, setContaSelecionada] = useState<string>("");
+
+  // Estado do template
+  const [templateSelecionado, setTemplateSelecionado] = useState<TemplateImportacao | null>(null);
 
   // Estado do arquivo
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -56,6 +63,8 @@ export default function ImportPage() {
   const [transacoesParsed, setTransacoesParsed] = useState<ParsedTransacao[]>([]);
   const [transacoesDuplicadas, setTransacoesDuplicadas] = useState<ParsedTransacao[]>([]);
   const [loading, setLoading] = useState(false);
+  const [processingStage, setProcessingStage] = useState<ProcessingStage>(null);
+  const [progress, setProgress] = useState(0);
 
   const carregarContas = async () => {
     try {
@@ -75,17 +84,86 @@ export default function ImportPage() {
     carregarContas();
   }, []);
 
+  const handleTemplateSelect = (template: TemplateImportacao) => {
+    setTemplateSelecionado(template);
+    setStep("upload");
+    toast.success(`Template "${template.nome}" selecionado`);
+  };
+
+  const handleSkipTemplate = () => {
+    setTemplateSelecionado(null);
+    setStep("upload");
+  };
+
   const handleFileSelect = async (file: File, content: string) => {
     setArquivo(file);
     setConteudoArquivo(content);
+    setLoading(true);
+    setProcessingStage("parsing");
+    setProgress(20);
 
     try {
       // Detectar formato
       const formato = await importService.detectFormat(content);
       setFormatoDetectado(formato);
+      setProgress(40);
 
-      // Se for CSV, preparar mapeamento
-      if (formato.tipo === "csv" && formato.detectado.headers) {
+      // Se tem template, usar configuração do template
+      if (templateSelecionado && formato.tipo === "csv") {
+        const lines = content.split("\n");
+        const separador = templateSelecionado.separador || ",";
+        const mapeamento = JSON.parse(templateSelecionado.mapeamento_colunas);
+
+        setProgress(60);
+
+        // Parse direto com template
+        const result = await importService.parseCSV(content, mapeamento, {
+          separador,
+          pular_linhas: templateSelecionado.pular_linhas,
+          formato_data: templateSelecionado.formato_data,
+          separador_decimal: templateSelecionado.separador_decimal as ',' | '.' | undefined,
+        });
+
+        setProgress(80);
+
+        if (result.erros.length > 0) {
+          toast.warning(
+            `${result.erros.length} erros encontrados`,
+            { description: result.erros[0].mensagem }
+          );
+        }
+
+        if (result.transacoes.length === 0) {
+          toast.error("Nenhuma transação válida encontrada");
+          setLoading(false);
+          setProcessingStage(null);
+          return;
+        }
+
+        // Deduplica
+        if (contaSelecionada) {
+          setProcessingStage("deduplicating");
+          const dedupeResult = await importService.deduplicateTransactions(
+            contaSelecionada,
+            result.transacoes
+          );
+
+          setTransacoesParsed(dedupeResult.transacoes_unicas);
+          setTransacoesDuplicadas(dedupeResult.transacoes_duplicadas);
+
+          if (dedupeResult.duplicatas > 0) {
+            toast.info(`${dedupeResult.duplicatas} duplicadas removidas`);
+          }
+        } else {
+          setTransacoesParsed(result.transacoes);
+        }
+
+        setProgress(100);
+        setStep("preview");
+        toast.success(`${result.transacoes.length} transações processadas!`);
+      }
+      // Se for CSV sem template, preparar mapeamento manual
+      else if (formato.tipo === "csv" && formato.detectado.headers) {
         const lines = content.split("\n");
         const separador = formato.detectado.separador || ",";
 
@@ -100,9 +178,12 @@ export default function ImportPage() {
           .map((line) => line.split(separador).map((c) => c.trim()));
         setSampleData(data);
 
+        setProgress(100);
         setStep("map");
+        toast.info("Configure o mapeamento de colunas");
       } else if (formato.tipo === "ofx") {
         // OFX não precisa mapeamento
+        setProgress(60);
         await parseOFX(content);
       } else {
         toast.error("Formato de arquivo não suportado ainda");
@@ -110,6 +191,10 @@ export default function ImportPage() {
     } catch (error) {
       console.error("Erro ao processar arquivo:", error);
       toast.error("Erro ao processar arquivo");
+    } finally {
+      setLoading(false);
+      setProcessingStage(null);
+      setProgress(0);
     }
   };
 
@@ -223,22 +308,41 @@ export default function ImportPage() {
     }
 
     setLoading(true);
+    setProcessingStage("importing");
+    setProgress(0);
 
     try {
+      const totalTransacoes = transacoes.length;
+      let importadas = 0;
+
+      // Simular progresso durante a importação
+      const progressInterval = setInterval(() => {
+        importadas += Math.ceil(totalTransacoes / 10);
+        const currentProgress = Math.min((importadas / totalTransacoes) * 100, 90);
+        setProgress(currentProgress);
+      }, 200);
+
       const result = await importService.importTransactions(
         contaSelecionada,
         transacoes
       );
+
+      clearInterval(progressInterval);
+      setProgress(100);
 
       if (result.erros.length > 0) {
         toast.warning(
           `${result.importadas} transações importadas com ${result.erros.length} erros`,
           {
             description: result.erros[0].mensagem,
+            duration: 5000,
           }
         );
       } else {
-        toast.success(`${result.importadas} transações importadas com sucesso!`);
+        toast.success(`${result.importadas} transações importadas com sucesso! 🎉`, {
+          description: "Redirecionando para a página de transações...",
+          duration: 3000,
+        });
       }
 
       setStep("complete");
@@ -249,14 +353,22 @@ export default function ImportPage() {
       }, 2000);
     } catch (error) {
       console.error("Erro ao importar transações:", error);
-      toast.error("Erro ao importar transações");
+      toast.error("Erro ao importar transações", {
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+      });
     } finally {
       setLoading(false);
+      setProcessingStage(null);
+      setProgress(0);
     }
   };
 
   const handleCancel = () => {
-    setStep("upload");
+    if (templateSelecionado) {
+      setStep("upload");
+    } else {
+      setStep("template");
+    }
     setArquivo(null);
     setConteudoArquivo("");
     setFormatoDetectado(null);
@@ -356,59 +468,71 @@ export default function ImportPage() {
                 </Select>
               </div>
 
-              {/* Templates Rápidos */}
-              {step === "upload" && (
-                <div className="space-y-3">
-                  <Label className="text-white">Templates Rápidos</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <Button
-                      variant="outline"
-                      className="border-white/20 text-white hover:bg-white/10 h-auto py-3 flex flex-col gap-1"
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = '/examples/template.csv';
-                        link.download = 'template_cortex_cash.csv';
-                        link.click();
-                      }}
-                    >
-                      <FileText className="h-5 w-5" />
-                      <span className="text-xs">CSV Template</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="border-white/20 text-white hover:bg-white/10 h-auto py-3 flex flex-col gap-1"
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = '/examples/template.xlsx';
-                        link.download = 'template_cortex_cash.xlsx';
-                        link.click();
-                      }}
-                    >
-                      <FileText className="h-5 w-5" />
-                      <span className="text-xs">XLSX Template</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="border-white/20 text-white hover:bg-white/10 h-auto py-3 flex flex-col gap-1"
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = '/examples/template.txt';
-                        link.download = 'template_cortex_cash.txt';
-                        link.click();
-                      }}
-                    >
-                      <FileText className="h-5 w-5" />
-                      <span className="text-xs">TXT Template</span>
-                    </Button>
+              {/* Indicador de Template Selecionado */}
+              {step === "upload" && templateSelecionado && (
+                <div
+                  className="p-4 rounded-lg flex items-center justify-between"
+                  style={{
+                    backgroundColor: 'rgb(30, 58, 138, 0.3)',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: 'rgb(59, 130, 246)',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 text-blue-400" />
+                    <div>
+                      <p className="text-white font-medium">{templateSelecionado.nome}</p>
+                      <p className="text-sm text-gray-300">
+                        Template configurado - Upload automático habilitado
+                      </p>
+                    </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setTemplateSelecionado(null);
+                      setStep("template");
+                    }}
+                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-950/20"
+                  >
+                    Trocar
+                  </Button>
+                </div>
+              )}
+
+              {/* Progress Indicator */}
+              {loading && processingStage && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-white">
+                      {processingStage === "parsing" && "Processando arquivo..."}
+                      {processingStage === "deduplicating" && "Removendo duplicatas..."}
+                      {processingStage === "importing" && "Importando transações..."}
+                    </span>
+                    <span className="text-gray-400">{progress}%</span>
+                  </div>
+                  <Progress value={progress} className="h-2" />
                 </div>
               )}
 
               {/* Área de Upload Compacta */}
-              {step === "upload" && (
+              {step === "upload" && !loading && (
                 <div>
                   <Label className="text-white mb-2 block">Upload de Arquivo</Label>
                   <FileUpload onFileSelect={handleFileSelect} compact />
+
+                  {!templateSelecionado && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => setStep("template")}
+                      className="mt-2 text-blue-400 hover:text-blue-300"
+                    >
+                      ← Voltar para seleção de template
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -416,6 +540,44 @@ export default function ImportPage() {
         )}
 
         {/* Conteúdo por Step */}
+        {step === "template" && (
+          <Card
+            className="p-6"
+            style={{
+              backgroundColor: 'rgb(15, 23, 42)',
+              borderColor: 'rgb(30, 41, 59)',
+            }}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">
+                    Selecione um template de banco
+                  </h2>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Use um template pré-configurado para importação automática
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleSkipTemplate}
+                  style={{
+                    borderColor: 'rgb(71, 85, 105)',
+                    color: 'white',
+                  }}
+                >
+                  Pular e configurar manualmente
+                </Button>
+              </div>
+
+              <TemplateSelector
+                onSelectTemplate={handleTemplateSelect}
+                selectedTemplateId={templateSelecionado?.id}
+              />
+            </div>
+          </Card>
+        )}
+
         {step === "map" && (
           <ColumnMapper
             headers={headers}

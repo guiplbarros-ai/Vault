@@ -400,18 +400,57 @@ export class ImportService {
 
   /**
    * Lista templates de importação
+   * Ordenados por contador de uso (mais usados primeiro)
    */
   async listTemplates(instituicaoId?: string): Promise<TemplateImportacao[]> {
     const db = getDB();
 
     if (instituicaoId) {
-      return db.templates_importacao
+      const templates = await db.templates_importacao
         .where('instituicao_id')
         .equals(instituicaoId)
         .toArray();
+
+      // Ordenar por contador de uso (decrescente)
+      return templates.sort((a, b) => b.contador_uso - a.contador_uso);
     }
 
-    return db.templates_importacao.toArray();
+    const allTemplates = await db.templates_importacao.toArray();
+    // Ordenar por contador de uso (decrescente)
+    return allTemplates.sort((a, b) => b.contador_uso - a.contador_uso);
+  }
+
+  /**
+   * Busca template por ID
+   */
+  async getTemplateById(templateId: string): Promise<TemplateImportacao | undefined> {
+    const db = getDB();
+    return db.templates_importacao.get(templateId);
+  }
+
+  /**
+   * Busca templates por nome (busca parcial)
+   */
+  async searchTemplates(query: string): Promise<TemplateImportacao[]> {
+    const db = getDB();
+    const allTemplates = await db.templates_importacao.toArray();
+
+    const lowerQuery = query.toLowerCase();
+    return allTemplates
+      .filter(t => t.nome.toLowerCase().includes(lowerQuery))
+      .sort((a, b) => b.contador_uso - a.contador_uso);
+  }
+
+  /**
+   * Busca templates populares (top 5 mais usados)
+   */
+  async getPopularTemplates(limit = 5): Promise<TemplateImportacao[]> {
+    const db = getDB();
+    const allTemplates = await db.templates_importacao.toArray();
+
+    return allTemplates
+      .sort((a, b) => b.contador_uso - a.contador_uso)
+      .slice(0, limit);
   }
 
   /**
