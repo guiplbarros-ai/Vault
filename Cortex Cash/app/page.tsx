@@ -14,6 +14,7 @@ import { IncomeTrendsChart } from "@/components/income-trends-chart"
 import { PopularTagsWidget } from "@/components/popular-tags-widget"
 import { PopularCategoriesWidget } from "@/components/popular-categories-widget"
 import { WealthEvolutionChart } from "@/components/wealth-evolution-chart"
+import { FinancialSummary } from "@/components/financial-summary"
 import { MonthPicker } from "@/components/ui/month-picker"
 import { transacaoService } from '@/lib/services/transacao.service'
 import { contaService } from '@/lib/services/conta.service'
@@ -199,16 +200,19 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <PageHeader
             title="Dashboard"
-            description="Visão geral das suas finanças"
+            description="Visão geral consolidada das suas finanças"
           />
-          <MonthPicker 
-            value={selectedMonth} 
+          <MonthPicker
+            value={selectedMonth}
             onChange={setSelectedMonth}
             className="sm:ml-auto"
           />
         </div>
 
-        {/* Stats Overview */}
+        {/* Resumo Financeiro Consolidado */}
+        <FinancialSummary />
+
+        {/* Stats Overview Detalhado */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {statsCards.map((stat) => (
             <StatCard key={stat.title} {...stat} />

@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Toaster } from "sonner"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { FinancialAlertsProvider } from "@/components/financial-alerts-provider"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -56,14 +57,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <FinancialAlertsProvider enabled={isInitialized}>
+      <div className="min-h-screen">
+        {/* Mobile sidebar backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
       {/* Sidebar */}
       <aside
@@ -148,12 +150,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <main className="p-6">{children}</main>
       </div>
 
-      {/* Toast notifications */}
-      <Toaster
-        position="top-right"
-        expand={false}
-        closeButton
-      />
-    </div>
+        {/* Toast notifications */}
+        <Toaster
+          position="top-right"
+          expand={false}
+          closeButton
+        />
+      </div>
+    </FinancialAlertsProvider>
   )
 }
