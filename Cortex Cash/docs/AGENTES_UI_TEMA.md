@@ -1,5 +1,6 @@
 # Agentes de UI - Correção de Tema Claro/Escuro
-
+> ATENÇÃO: Este documento foi substituído por `docs/AGENTES_IA_3_AGENTS.md`. Use o novo documento como fonte única de verdade.
+---
 **Status**: 🟡 EM ANDAMENTO (AGENTE UI 2 COMPLETO)
 **Data**: 2025-10-29
 **Objetivo**: Corrigir todos os componentes para usarem CSS variables do tema ao invés de cores hardcoded

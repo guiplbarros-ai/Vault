@@ -1,4 +1,6 @@
 # Status de Desenvolvimento - Cortex Cash
+> ATENÇÃO: Este documento foi substituído pela arquitetura de 3 agentes em `docs/AGENTES_IA_3_AGENTS.md`. Mantenha o status no novo modelo.
+---
 
 **Última atualização**: 01 de Novembro de 2025
 **Versão atual**: v0.3 ✅ COMPLETA!

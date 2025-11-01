@@ -1,5 +1,6 @@
 # Getting Started - Guia para Agentes
-
+> ATENÇÃO: Este documento foi substituído por `docs/AGENTES_IA_3_AGENTS.md`. Use o novo documento como fonte única de verdade.
+---
 Este guia ajuda os outros agentes (IMPORT, FINANCE, UI) a começarem o trabalho no Cortex Cash.
 
 ---

@@ -1,4 +1,6 @@
 # Função e Coordenação de Agentes IA - Cortex Cash
+> ATENÇÃO: Este documento foi substituído por `docs/AGENTES_IA_3_AGENTS.md`. Use o novo documento como fonte única de verdade.
+---
 
 ## Visão Geral
 

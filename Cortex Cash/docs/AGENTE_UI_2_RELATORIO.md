@@ -1,5 +1,6 @@
 # Relatório do AGENTE UI 2 - Componentes de Formulário e Interação
-
+> ATENÇÃO: Este documento foi substituído por `docs/AGENTES_IA_3_AGENTS.md`. Use o novo documento como fonte única de verdade.
+---
 **Data**: 2025-10-29
 **Status**: ✅ COMPLETO
 **Responsável**: AGENTE UI 2

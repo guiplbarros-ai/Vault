@@ -41,6 +41,7 @@ npm run dev
 - **Quick Start:** `docs/AI_QUICK_START.md`
 - **Setup Detalhado:** `OPENAI_SETUP.md`
 - **Integração Técnica:** `docs/AI_INTEGRATION_V2.md`
+- **Arquitetura de Agentes (3 agentes):** `docs/AGENTES_IA_3_AGENTS.md`
 
 ---
 
