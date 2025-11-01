@@ -59,18 +59,24 @@ export function useLocalStorage<T>(
   // Listen for changes to localStorage from other tabs/windows
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === key && e.newValue) {
-        try {
-          setStoredValue(JSON.parse(e.newValue))
-        } catch (error) {
-          console.warn(`Error parsing localStorage event for key "${key}":`, error)
+      if (e.key === key) {
+        if (e.newValue === null) {
+          // Chave foi removida, reseta para initialValue
+          setStoredValue(initialValue)
+        } else {
+          // Chave foi atualizada, parseia novo valor
+          try {
+            setStoredValue(JSON.parse(e.newValue))
+          } catch (error) {
+            console.warn(`Error parsing localStorage event for key "${key}":`, error)
+          }
         }
       }
     }
 
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
-  }, [key])
+  }, [key, initialValue])
 
   return [storedValue, setValue, removeValue]
 }

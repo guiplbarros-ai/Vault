@@ -139,8 +139,8 @@ export function TransactionForm({
         {/* Basic Information */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Informações Básicas</h3>
-            <Separator />
+            <h3 className="text-sm font-medium text-white">Informações Básicas</h3>
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <FormSelect
@@ -177,8 +177,8 @@ export function TransactionForm({
         {/* Account and Category */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Classificação</h3>
-            <Separator />
+            <h3 className="text-sm font-medium text-white">Classificação</h3>
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <FormSelect
@@ -245,8 +245,8 @@ export function TransactionForm({
         {/* Additional Information */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Informações Adicionais</h3>
-            <Separator />
+            <h3 className="text-sm font-medium text-white">Informações Adicionais</h3>
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <FormTextarea
@@ -258,7 +258,7 @@ export function TransactionForm({
           />
 
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags (opcional)</Label>
+            <Label htmlFor="tags" className="text-white">Tags (opcional)</Label>
             <TagInput
               tags={methods.watch('tags') || []}
               availableTags={tags}
@@ -266,7 +266,7 @@ export function TransactionForm({
               placeholder="Adicione tags para organizar..."
               maxTags={5}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-white/70">
               Use tags para classificar e filtrar suas transações
             </p>
           </div>

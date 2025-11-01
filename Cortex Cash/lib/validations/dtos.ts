@@ -113,6 +113,48 @@ export const createHistoricoInvestimentoSchema = z.object({
 });
 
 // ============================================================================
+// Agent IMPORT - Validation Schemas
+// ============================================================================
+
+/**
+ * Schema for ParseConfig
+ */
+export const parseConfigSchema = z.object({
+  separador: z.string().length(1, 'Separador deve ter 1 caractere').optional(),
+  encoding: z.string().max(20, 'Encoding muito longo').optional(),
+  pular_linhas: z.number().int('Pular linhas deve ser um número inteiro').nonnegative('Pular linhas não pode ser negativo').optional(),
+  formato_data: z.string().max(20, 'Formato de data muito longo').optional(),
+  separador_decimal: z.enum([',', '.'], { errorMap: () => ({ message: 'Separador decimal deve ser "," ou "."' }) }).optional(),
+});
+
+/**
+ * Schema for MapeamentoColunas
+ */
+export const mapeamentoColunasSchema = z.object({
+  data: z.number().int('Índice da coluna data deve ser um número inteiro').nonnegative('Índice da coluna data não pode ser negativo'),
+  descricao: z.number().int('Índice da coluna descrição deve ser um número inteiro').nonnegative('Índice da coluna descrição não pode ser negativo'),
+  valor: z.number().int('Índice da coluna valor deve ser um número inteiro').nonnegative('Índice da coluna valor não pode ser negativo'),
+  tipo: z.number().int('Índice da coluna tipo deve ser um número inteiro').nonnegative('Índice da coluna tipo não pode ser negativo').optional(),
+  categoria: z.number().int('Índice da coluna categoria deve ser um número inteiro').nonnegative('Índice da coluna categoria não pode ser negativo').optional(),
+  observacoes: z.number().int('Índice da coluna observações deve ser um número inteiro').nonnegative('Índice da coluna observações não pode ser negativo').optional(),
+});
+
+/**
+ * Schema for CreateTemplateImportacaoDTO
+ */
+export const createTemplateImportacaoSchema = z.object({
+  instituicao_id: z.string().min(1, 'ID de instituição é obrigatório').optional(),
+  nome: z.string().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
+  tipo_arquivo: z.enum(['csv', 'ofx', 'excel'], { errorMap: () => ({ message: 'Tipo de arquivo deve ser "csv", "ofx" ou "excel"' }) }),
+  separador: z.string().length(1, 'Separador deve ter 1 caractere').optional(),
+  encoding: z.string().max(20, 'Encoding muito longo').optional(),
+  pular_linhas: z.number().int('Pular linhas deve ser um número inteiro').nonnegative('Pular linhas não pode ser negativo').optional(),
+  mapeamento_colunas: z.string().min(1, 'Mapeamento de colunas é obrigatório'), // JSON string
+  formato_data: z.string().max(20, 'Formato de data muito longo').optional(),
+  separador_decimal: z.enum([',', '.'], { errorMap: () => ({ message: 'Separador decimal deve ser "," ou "."' }) }).optional(),
+});
+
+// ============================================================================
 // Type exports (inferred from schemas)
 // ============================================================================
 
@@ -122,6 +164,9 @@ export type CreateTransacaoDTOValidated = z.infer<typeof createTransacaoSchema>;
 export type CreateCategoriaDTOValidated = z.infer<typeof createCategoriaSchema>;
 export type CreateInvestimentoDTOValidated = z.infer<typeof createInvestimentoSchema>;
 export type CreateHistoricoInvestimentoDTOValidated = z.infer<typeof createHistoricoInvestimentoSchema>;
+export type ParseConfigValidated = z.infer<typeof parseConfigSchema>;
+export type MapeamentoColunasValidated = z.infer<typeof mapeamentoColunasSchema>;
+export type CreateTemplateImportacaoValidated = z.infer<typeof createTemplateImportacaoSchema>;
 
 // ============================================================================
 // Validation helpers

@@ -14,6 +14,7 @@ interface ChartData {
   value: number
   color: string
   percentage: number
+  [key: string]: any  // index signature for recharts compatibility
 }
 
 // Get chart colors from CSS variables to support light/dark mode

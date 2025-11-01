@@ -79,6 +79,7 @@ export function ExpenseTrendsChart() {
       // Agrupa por categoria para encontrar as top 3
       const categoryTotals = new Map<string, number>()
       recentExpenses.forEach(t => {
+        if (!t.categoria_id) return; // Ignora transações sem categoria
         const current = categoryTotals.get(t.categoria_id) || 0
         const valor = Number(t.valor) || 0
         categoryTotals.set(t.categoria_id, current + Math.abs(valor))

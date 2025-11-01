@@ -45,7 +45,7 @@ export const FormCurrencyInput = React.forwardRef<HTMLInputElement, FormCurrency
     return (
       <div className="space-y-2">
         {label && (
-          <Label htmlFor={name} className={cn(required && 'after:content-["*"] after:ml-0.5 after:text-destructive')}>
+          <Label htmlFor={name} className={cn('text-white', required && 'after:content-["*"] after:ml-0.5 after:text-red-400')}>
             {label}
           </Label>
         )}
@@ -65,19 +65,24 @@ export const FormCurrencyInput = React.forwardRef<HTMLInputElement, FormCurrency
               minValue={minValue}
               decimalScale={decimalScale}
               disabled={disabled}
-              className={cn(error && 'border-destructive', className)}
+              className={cn('!bg-[#1e293b] !text-white !border-white/20', error && 'border-destructive', className)}
+              style={{
+                backgroundColor: '#1e293b',
+                color: '#ffffff',
+                borderColor: 'rgba(255, 255, 255, 0.2)'
+              }}
               aria-invalid={error ? 'true' : 'false'}
               aria-describedby={error ? `${name}-error` : description ? `${name}-description` : undefined}
             />
           )}
         />
         {description && !error && (
-          <p id={`${name}-description`} className="text-sm text-muted-foreground">
+          <p id={`${name}-description`} className="text-sm text-white/70">
             {description}
           </p>
         )}
         {error && (
-          <p id={`${name}-error`} className="text-sm font-medium text-destructive">
+          <p id={`${name}-error`} className="text-sm font-medium text-red-400">
             {error.message as string}
           </p>
         )}

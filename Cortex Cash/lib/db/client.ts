@@ -137,7 +137,9 @@ export class CortexCashDB extends Dexie {
 let dbInstance: CortexCashDB | null = null;
 
 /**
- * Verifica se o IndexedDB está disponível
+ * Verifica se o IndexedDB está disponível (verificação síncrona básica)
+ * NOTA: Esta função não detecta bloqueios assíncronos (ex: Safari modo privado).
+ * Para detecção completa, use checkIndexedDBSupportAsync().
  */
 export function checkIndexedDBSupport(): { supported: boolean; error?: string } {
   if (typeof window === 'undefined') {
@@ -148,15 +150,61 @@ export function checkIndexedDBSupport(): { supported: boolean; error?: string } 
     return { supported: false, error: 'IndexedDB não está disponível neste navegador' };
   }
 
-  // Verifica se está em modo privado (Safari)
+  // Verificação básica de disponibilidade da API
   try {
-    const testDB = window.indexedDB.open('test-db');
-    testDB.onerror = () => {
-      return { supported: false, error: 'IndexedDB pode estar bloqueado (modo privado ou configurações)' };
-    };
+    // Tenta acessar a API para garantir que não está undefined
+    if (!window.indexedDB.open) {
+      return { supported: false, error: 'API IndexedDB incompleta' };
+    }
     return { supported: true };
   } catch (err) {
-    return { supported: false, error: 'Erro ao testar IndexedDB: ' + (err instanceof Error ? err.message : 'desconhecido') };
+    return { supported: false, error: 'Erro ao acessar IndexedDB: ' + (err instanceof Error ? err.message : 'desconhecido') };
+  }
+}
+
+/**
+ * Verifica se o IndexedDB está disponível e funcional (verificação assíncrona completa)
+ * Detecta bloqueios em modo privado (Safari) e outras restrições
+ */
+export async function checkIndexedDBSupportAsync(): Promise<{ supported: boolean; error?: string }> {
+  // Primeiro faz as verificações síncronas
+  const basicCheck = checkIndexedDBSupport();
+  if (!basicCheck.supported) {
+    return basicCheck;
+  }
+
+  // Verifica se está em modo privado ou bloqueado (teste assíncrono)
+  try {
+    return await new Promise<{ supported: boolean; error?: string }>((resolve) => {
+      const testDB = window.indexedDB.open('cortex-cash-test-db');
+
+      testDB.onerror = () => {
+        resolve({
+          supported: false,
+          error: 'IndexedDB pode estar bloqueado (modo privado ou configurações)'
+        });
+      };
+
+      testDB.onsuccess = () => {
+        // Fecha e deleta o DB de teste
+        testDB.result.close();
+        window.indexedDB.deleteDatabase('cortex-cash-test-db');
+        resolve({ supported: true });
+      };
+
+      // Timeout de segurança (2 segundos)
+      setTimeout(() => {
+        resolve({
+          supported: false,
+          error: 'Timeout ao verificar IndexedDB - pode estar bloqueado'
+        });
+      }, 2000);
+    });
+  } catch (err) {
+    return {
+      supported: false,
+      error: 'Erro ao testar IndexedDB: ' + (err instanceof Error ? err.message : 'desconhecido')
+    };
   }
 }
 

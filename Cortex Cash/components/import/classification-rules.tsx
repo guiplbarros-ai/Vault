@@ -87,7 +87,7 @@ export function ClassificationRules() {
   const loadCategorias = async () => {
     try {
       const data = await categoriaService.listCategorias({
-        incluirInativas: false,
+        ativas: true,
       });
       setCategorias(data);
     } catch (error) {
@@ -307,7 +307,7 @@ export function ClassificationRules() {
           style={{
             background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
             backgroundColor: '#3B5563',
-            borderColor: '#374151'
+            borderColor: 'rgba(255, 255, 255, 0.2)'
           }}
         >
           <DialogHeader>

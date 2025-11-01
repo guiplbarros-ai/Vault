@@ -4,9 +4,7 @@
  * Gerencia tracking de uso da API OpenAI e limites de gastos
  */
 
-import { db } from '@/lib/db/client';
-import { logs_ia } from '@/lib/db/schema';
-import { sql, and, gte, lte } from 'drizzle-orm';
+import { getDB } from '@/lib/db/client';
 import { DatabaseError, ValidationError } from '@/lib/errors';
 
 // Preços OpenAI (USD por 1M tokens) - atualizado em Jan 2025
@@ -93,6 +91,7 @@ export function calculateCost(
  */
 export async function logAIUsage(data: CreateAIUsageLogDTO): Promise<AIUsageLog> {
   try {
+    const db = getDB();
     const custo_usd = calculateCost(
       data.modelo,
       data.tokens_prompt,
@@ -101,8 +100,9 @@ export async function logAIUsage(data: CreateAIUsageLogDTO): Promise<AIUsageLog>
 
     const tokens_total = data.tokens_prompt + data.tokens_resposta;
 
-    const [log] = await db.insert(logs_ia).values({
-      transacao_id: data.transacao_id ?? null,
+    const log: any = {
+      id: crypto.randomUUID(),
+      transacao_id: data.transacao_id ?? undefined,
       prompt: data.prompt,
       resposta: data.resposta,
       modelo: data.modelo,
@@ -110,14 +110,16 @@ export async function logAIUsage(data: CreateAIUsageLogDTO): Promise<AIUsageLog>
       tokens_resposta: data.tokens_resposta,
       tokens_total,
       custo_usd,
-      categoria_sugerida_id: data.categoria_sugerida_id ?? null,
-      confianca: data.confianca ?? null,
+      categoria_sugerida_id: data.categoria_sugerida_id ?? undefined,
+      confianca: data.confianca ?? undefined,
       confirmada: false,
-    }).returning();
+      created_at: new Date(),
+    };
 
-    return log as AIUsageLog;
+    await db.logs_ia.add(log);
+    return log;
   } catch (error) {
-    throw new DatabaseError('Erro ao registrar uso de IA', { cause: error });
+    throw new DatabaseError('Erro ao registrar uso de IA', error as Error);
   }
 }
 
@@ -126,11 +128,10 @@ export async function logAIUsage(data: CreateAIUsageLogDTO): Promise<AIUsageLog>
  */
 export async function confirmAISuggestion(logId: string): Promise<void> {
   try {
-    await db.update(logs_ia)
-      .set({ confirmada: true })
-      .where(sql`${logs_ia.id} = ${logId}`);
+    const db = getDB();
+    await db.logs_ia.update(logId, { confirmada: true });
   } catch (error) {
-    throw new DatabaseError('Erro ao confirmar sugestão de IA', { cause: error });
+    throw new DatabaseError('Erro ao confirmar sugestão de IA', error as Error);
   }
 }
 
@@ -143,17 +144,16 @@ export async function getAIUsageSummary(
   usdToBrl: number = 6.0
 ): Promise<AIUsageSummary> {
   try {
+    const db = getDB();
     const start = startDate ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = endDate ?? new Date();
 
-    const logs = await db.select()
-      .from(logs_ia)
-      .where(
-        and(
-          gte(logs_ia.created_at, start),
-          lte(logs_ia.created_at, end)
-        )
-      );
+    // Get all logs and filter by date range
+    const allLogs = await db.logs_ia.toArray();
+    const logs = allLogs.filter(log => {
+      const logDate = log.created_at instanceof Date ? log.created_at : new Date(log.created_at);
+      return logDate >= start && logDate <= end;
+    });
 
     const total_requests = logs.length;
     const total_tokens = logs.reduce((sum, log) => sum + log.tokens_total, 0);
@@ -182,7 +182,7 @@ export async function getAIUsageSummary(
       average_confidence,
     };
   } catch (error) {
-    throw new DatabaseError('Erro ao obter resumo de uso de IA', { cause: error });
+    throw new DatabaseError('Erro ao obter resumo de uso de IA', error as Error);
   }
 }
 
@@ -195,20 +195,18 @@ export async function getAIUsageByPeriod(
   groupBy: 'day' | 'month' = 'day'
 ): Promise<AIUsageByPeriod[]> {
   try {
-    const logs = await db.select()
-      .from(logs_ia)
-      .where(
-        and(
-          gte(logs_ia.created_at, startDate),
-          lte(logs_ia.created_at, endDate)
-        )
-      );
+    const db = getDB();
+    const allLogs = await db.logs_ia.toArray();
+    const logs = allLogs.filter(log => {
+      const logDate = log.created_at instanceof Date ? log.created_at : new Date(log.created_at);
+      return logDate >= startDate && logDate <= endDate;
+    });
 
     // Agrupar manualmente por período
     const grouped = new Map<string, { requests: number; tokens: number; cost_usd: number }>();
 
     logs.forEach(log => {
-      const date = new Date(log.created_at);
+      const date = log.created_at instanceof Date ? log.created_at : new Date(log.created_at);
       let period: string;
 
       if (groupBy === 'day') {
@@ -229,7 +227,7 @@ export async function getAIUsageByPeriod(
       .map(([period, data]) => ({ period, ...data }))
       .sort((a, b) => a.period.localeCompare(b.period));
   } catch (error) {
-    throw new DatabaseError('Erro ao obter uso de IA por período', { cause: error });
+    throw new DatabaseError('Erro ao obter uso de IA por período', error as Error);
   }
 }
 

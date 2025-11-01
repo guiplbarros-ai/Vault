@@ -324,7 +324,13 @@ export default function TagsPage() {
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="bg-slate-800 border-white/20">
+          <DialogContent
+            style={{
+              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+              backgroundColor: '#3B5563',
+              borderColor: 'rgba(255, 255, 255, 0.2)'
+            }}
+          >
             <DialogHeader>
               <DialogTitle className="text-white">
                 {dialogMode === "create" ? "Nova Tag" : "Editar Tag"}
@@ -345,7 +351,13 @@ export default function TagsPage() {
 
         {/* Delete Confirmation */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent className="bg-slate-800 border-white/20">
+          <AlertDialogContent
+            style={{
+              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+              backgroundColor: '#3B5563',
+              borderColor: 'rgba(255, 255, 255, 0.2)'
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle className="text-white">Deletar Tag</AlertDialogTitle>
               <AlertDialogDescription className="text-white/70">

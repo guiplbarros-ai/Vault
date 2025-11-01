@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Busca categorias disponíveis
     const categorias = await categoriaService.listCategorias({
       tipo,
-      ativa: true,
+      ativas: true,
     });
 
     if (categorias.length === 0) {
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     // Monta o prompt para a IA
     const categoriasTexto = categorias
-      .map(c => `- ID: ${c.id}, Nome: ${c.nome}, Emoji: ${c.emoji}`)
+      .map(c => `- ID: ${c.id}, Nome: ${c.nome}, Emoji: ${c.icone}`)
       .join('\n');
 
     const prompt = `Você é um assistente financeiro especializado em classificar transações.
@@ -193,7 +193,7 @@ Responda APENAS com o JSON, sem texto adicional.`;
       modelo: modelo as 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo',
       tokens_prompt: usage.prompt_tokens,
       tokens_resposta: usage.completion_tokens,
-      categoria_sugerida_id,
+      categoria_sugerida_id: categoria_sugerida_id ?? undefined,
       confianca: resultado.confianca,
     });
 

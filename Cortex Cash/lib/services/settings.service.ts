@@ -110,6 +110,9 @@ export class SettingsService {
       throw new Error(validation.errors?.[0]?.message || 'Categoria inválida');
     }
 
+    // Captura oldValue ANTES do merge
+    const oldValue = { ...this.settings[category] };
+
     // Merge com valores atuais
     this.settings[category] = {
       ...this.settings[category],
@@ -122,7 +125,7 @@ export class SettingsService {
     // Notifica
     const event: SettingsChangeEvent = {
       path: category,
-      oldValue: this.settings[category],
+      oldValue,
       newValue: value,
       timestamp: new Date(),
     };
@@ -136,7 +139,7 @@ export class SettingsService {
   async resetToDefaults(category?: SettingsCategory): Promise<void> {
     if (category) {
       const oldValue = this.settings[category];
-      this.settings[category] = { ...DEFAULT_SETTINGS[category] };
+      this.settings[category] = { ...DEFAULT_SETTINGS[category] } as any;
 
       await this.saveSettings();
 

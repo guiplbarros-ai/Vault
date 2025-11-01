@@ -41,10 +41,15 @@ export function DatePicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            'w-full justify-start text-left font-normal',
-            !value && 'text-muted-foreground',
+            'w-full justify-start text-left font-normal !bg-[#1e293b] !text-white !border-white/20',
+            !value && 'text-white/70',
             className
           )}
+          style={{
+            backgroundColor: '#1e293b',
+            color: '#ffffff',
+            borderColor: 'rgba(255, 255, 255, 0.2)'
+          }}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {value ? format(value, 'dd/MM/yyyy', { locale: ptBR }) : placeholder}

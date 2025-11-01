@@ -302,18 +302,25 @@ export function useLocalizationSettings() {
   const formatDate = useCallback(
     (date: Date | string): string => {
       const d = typeof date === 'string' ? new Date(date) : date;
-      const locale = localization.language;
 
-      // Map format to Intl.DateTimeFormat options
-      const options: Intl.DateTimeFormatOptions = {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      };
+      // Formata componentes da data
+      const day = d.getDate().toString().padStart(2, '0');
+      const month = (d.getMonth() + 1).toString().padStart(2, '0');
+      const year = d.getFullYear();
 
-      return new Intl.DateTimeFormat(locale, options).format(d);
+      // Aplica o formato configurado
+      switch (localization.dateFormat) {
+        case 'DD/MM/YYYY':
+          return `${day}/${month}/${year}`;
+        case 'MM/DD/YYYY':
+          return `${month}/${day}/${year}`;
+        case 'YYYY-MM-DD':
+          return `${year}-${month}-${day}`;
+        default:
+          return `${day}/${month}/${year}`;
+      }
     },
-    [localization.language, localization.dateFormat]
+    [localization.dateFormat]
   );
 
   const formatTime = useCallback(

@@ -204,6 +204,8 @@ export class InvestimentoService {
             nome: `${instituicao?.nome ?? 'Investimentos'} - Carteira`,
             tipo: 'investimento',
             saldo_inicial: 0,
+            saldo_atual: 0,
+            ativa: true,
             cor: undefined,
             icone: undefined,
             observacoes: undefined,
@@ -241,23 +243,17 @@ export class InvestimentoService {
         throw new NotFoundError('Investimento', id);
       }
 
-      const updateData: Partial<Investimento> = {
+      const updateData = {
         ...data,
+        // Convert string dates to Date objects
+        data_aplicacao: data.data_aplicacao
+          ? (typeof data.data_aplicacao === 'string' ? new Date(data.data_aplicacao) : data.data_aplicacao)
+          : undefined,
+        data_vencimento: data.data_vencimento
+          ? (typeof data.data_vencimento === 'string' ? new Date(data.data_vencimento) : data.data_vencimento)
+          : undefined,
         updated_at: new Date(),
-      };
-
-      // Converter datas se fornecidas como string
-      if (data.data_aplicacao) {
-        updateData.data_aplicacao = typeof data.data_aplicacao === 'string'
-          ? new Date(data.data_aplicacao)
-          : data.data_aplicacao;
-      }
-
-      if (data.data_vencimento) {
-        updateData.data_vencimento = typeof data.data_vencimento === 'string'
-          ? new Date(data.data_vencimento)
-          : data.data_vencimento;
-      }
+      } as Partial<Investimento>;
 
       await db.investimentos.update(id, updateData);
 

@@ -38,16 +38,21 @@ export function AssetAllocationChart() {
 
   const chartData = useMemo(() => {
     if (!data) return []
+
+    const total = data.contas + data.investimentos
+    const percentualContas = total > 0 ? (data.contas / total) * 100 : 0
+    const percentualInvestimentos = total > 0 ? (data.investimentos / total) * 100 : 0
+
     return [
       {
         name: 'Contas',
         value: data.contas,
-        percentual: data.percentual_contas,
+        percentual: percentualContas,
       },
       {
         name: 'Investimentos',
         value: data.investimentos,
-        percentual: data.percentual_investimentos,
+        percentual: percentualInvestimentos,
       },
     ]
   }, [data])

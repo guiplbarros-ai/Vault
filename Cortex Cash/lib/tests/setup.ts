@@ -43,15 +43,15 @@ if (!globalThis.crypto) {
 
 if (!globalThis.crypto.randomUUID) {
   let counter = 0;
-  globalThis.crypto.randomUUID = () => {
+  globalThis.crypto.randomUUID = (() => {
     counter++;
     return `test-uuid-${counter.toString().padStart(8, '0')}`;
-  };
+  }) as any;
 }
 
 // Mock SubtleCrypto for hash generation
 if (!globalThis.crypto.subtle) {
-  globalThis.crypto.subtle = {
+  (globalThis.crypto as any).subtle = {
     digest: async (algorithm: string, data: BufferSource) => {
       // Simple mock hash - returns consistent values for testing
       const textData = new TextDecoder().decode(data);

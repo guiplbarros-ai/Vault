@@ -378,7 +378,14 @@ export default function CategoriesPage() {
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#3B5563]">
+          <DialogContent
+            className="max-w-2xl max-h-[90vh] overflow-y-auto"
+            style={{
+              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+              backgroundColor: '#3B5563',
+              borderColor: 'rgba(255, 255, 255, 0.2)'
+            }}
+          >
             <DialogHeader>
               <DialogTitle className="text-white">
                 {dialogMode === "create" && "Nova Categoria"}
@@ -405,10 +412,16 @@ export default function CategoriesPage() {
 
         {/* Delete Confirmation */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent
+            style={{
+              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
+              backgroundColor: '#3B5563',
+              borderColor: 'rgba(255, 255, 255, 0.2)'
+            }}
+          >
             <AlertDialogHeader>
-              <AlertDialogTitle>Desativar Categoria</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogTitle className="text-white">Desativar Categoria</AlertDialogTitle>
+              <AlertDialogDescription className="text-white/70">
                 Tem certeza que deseja desativar a categoria{" "}
                 <strong>{categoriaParaDeletar?.nome}</strong>? As transações
                 associadas não serão excluídas, mas ficarão sem categoria. Esta

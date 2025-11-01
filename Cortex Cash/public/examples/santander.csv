@@ -1,0 +1,16 @@
+Data,Hora,Descrição,Valor (R$),Saldo,Tipo
+01/10/2025,09:15,Compra Cartão Débito - Supermercado Carrefour,-189.45,2810.55,Débito
+02/10/2025,14:30,Depósito em Cheque,1500.00,4310.55,Crédito
+04/10/2025,10:20,PIX Enviado - Ana Paula Oliveira,-300.00,4010.55,Débito
+06/10/2025,16:45,Pagamento Boleto - Água e Esgoto SABESP,-95.80,3914.75,Débito
+08/10/2025,11:00,Salário Empresa ABC S.A.,4200.00,8114.75,Crédito
+10/10/2025,08:30,Compra Cartão Crédito - Lojas Renner,-250.00,7864.75,Débito
+12/10/2025,15:20,PIX Recebido - Carlos Eduardo,-50.00,7914.75,Crédito
+14/10/2025,09:00,Débito Automático - Netflix,-55.90,7858.85,Débito
+16/10/2025,13:45,Transferência TED - Conta Poupança,-1000.00,6858.85,Débito
+18/10/2025,10:15,Rendimento Investimento CDB,45.20,6904.05,Crédito
+20/10/2025,16:30,Compra Online - iFood,-78.50,6825.55,Débito
+22/10/2025,09:45,Pagamento Fatura Cartão,-1850.00,4975.55,Débito
+24/10/2025,14:00,PIX Recebido - Freelance Design,950.00,5925.55,Crédito
+26/10/2025,11:30,Compra Posto - Shell Combustíveis,-310.00,5615.55,Débito
+28/10/2025,08:00,Tarifa Pacote Serviços,-29.90,5585.65,Débito

@@ -357,7 +357,7 @@ export class ImportService {
             data: transacao.data,
             descricao: transacao.descricao,
             valor: transacao.tipo === 'despesa' ? -transacao.valor : transacao.valor,
-            tipo: transacao.tipo,
+            tipo: transacao.tipo || 'despesa', // Default to 'despesa' if undefined
             observacoes: transacao.observacoes,
           });
           importadas++;

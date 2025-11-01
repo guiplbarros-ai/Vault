@@ -96,10 +96,14 @@ export function TagInput({
     <div className={cn("relative", className)}>
       <div
         className={cn(
-          "flex flex-wrap gap-2 p-2 border rounded-md bg-background",
+          "flex flex-wrap gap-2 p-2 border rounded-md !bg-[#1e293b] !border-white/20",
           "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
           "min-h-[42px]"
         )}
+        style={{
+          backgroundColor: '#1e293b',
+          borderColor: 'rgba(255, 255, 255, 0.2)'
+        }}
         onClick={() => inputRef.current?.focus()}
       >
         {tags.map((tag) => (
@@ -127,7 +131,11 @@ export function TagInput({
             setTimeout(() => setShowSuggestions(false), 200);
           }}
           placeholder={tags.length === 0 ? placeholder : ""}
-          className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-6 min-w-[120px]"
+          className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-6 min-w-[120px] !bg-transparent !text-white placeholder:!text-white/50"
+          style={{
+            backgroundColor: 'transparent',
+            color: '#ffffff'
+          }}
         />
       </div>
 
@@ -135,7 +143,11 @@ export function TagInput({
       {showSuggestions && suggestions.length > 0 && (
         <div
           ref={suggestionsRef}
-          className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-auto"
+          className="absolute z-50 w-full mt-1 !bg-gray-800 !border-gray-700 border rounded-md shadow-md max-h-60 overflow-auto"
+          style={{
+            backgroundColor: '#1f2937',
+            borderColor: '#374151'
+          }}
         >
           {suggestions.map((suggestion, index) => (
             <button
@@ -143,10 +155,11 @@ export function TagInput({
               type="button"
               onClick={() => addTag(suggestion.nome)}
               className={cn(
-                "w-full text-left px-3 py-2 hover:bg-accent transition-colors",
+                "w-full text-left px-3 py-2 !text-white hover:!bg-gray-700 transition-colors",
                 "flex items-center gap-2",
-                selectedIndex === index && "bg-accent"
+                selectedIndex === index && "!bg-gray-700"
               )}
+              style={{ color: '#ffffff' }}
             >
               <div
                 className="w-3 h-3 rounded-full"
@@ -154,7 +167,7 @@ export function TagInput({
               />
               <span className="flex-1">{suggestion.nome}</span>
               {suggestion.tipo === "sistema" && (
-                <span className="text-xs text-muted-foreground">Sistema</span>
+                <span className="text-xs text-white/70">Sistema</span>
               )}
             </button>
           ))}
@@ -162,7 +175,7 @@ export function TagInput({
       )}
 
       {maxTags && (
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-white/70 mt-1">
           {tags.length}/{maxTags} tags
         </p>
       )}

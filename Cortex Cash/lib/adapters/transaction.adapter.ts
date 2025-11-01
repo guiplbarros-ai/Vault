@@ -42,13 +42,16 @@ export function mapFormDataToDTO(formData: TransactionFormData): CreateTransacao
  * Converte dados do banco para dados do formulário
  */
 export function mapDTOToFormData(dto: CreateTransacaoDTO): Partial<TransactionFormData> {
+  const formType = mapDBTypeToFormType(dto.tipo);
+
   return {
     accountId: dto.conta_id,
     categoryId: dto.categoria_id,
     date: typeof dto.data === 'string' ? new Date(dto.data) : dto.data,
     description: dto.descricao,
     amount: dto.valor,
-    type: mapDBTypeToFormType(dto.tipo),
+    // Transferências não são suportadas no formulário, mapear para expense
+    type: formType === 'transfer' ? 'expense' : formType,
     notes: dto.observacoes,
     tags: dto.tags,
   };

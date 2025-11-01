@@ -33,15 +33,15 @@ export async function seedMockTransactions(): Promise<void> {
   let contaPrincipal: Conta;
   if (contas.length === 0) {
     const contaId = crypto.randomUUID();
+    const instituicaoId = crypto.randomUUID(); // ID fictício de instituição
     contaPrincipal = {
       id: contaId,
+      instituicao_id: instituicaoId,
       nome: 'Conta Corrente',
       tipo: 'corrente',
       saldo_inicial: 5000,
       saldo_atual: 5000,
-      moeda: 'BRL',
       ativa: true,
-      incluir_total: true,
       created_at: new Date(),
       updated_at: new Date(),
     };
@@ -67,7 +67,7 @@ export async function seedMockTransactions(): Promise<void> {
   const inicioMes = startOfMonth(hoje);
 
   // Transações mock realistas
-  const transacoesMock: Omit<Transacao, 'id' | 'created_at' | 'updated_at'>[] = [
+  const transacoesMock: (Omit<Transacao, 'id' | 'created_at' | 'updated_at' | 'tags' | 'parcelado' | 'classificacao_confirmada' | 'classificacao_origem' | 'hash'> & { tags?: string[] })[] = [
     // === ALIMENTAÇÃO ===
     {
       descricao: 'Almoço no restaurante',
@@ -336,11 +336,20 @@ export async function seedMockTransactions(): Promise<void> {
 
   // Inserir transações
   const now = new Date();
-  const transacoesParaInserir = transacoesMock.map(t => ({
-    id: crypto.randomUUID(),
-    ...t,
-    created_at: now,
-    updated_at: now,
+  const { generateHash } = await import('../utils/format');
+  const transacoesParaInserir = await Promise.all(transacoesMock.map(async (t) => {
+    const hashInput = `${t.conta_id}-${t.data.toISOString()}-${t.descricao}-${t.valor}`;
+    return {
+      id: crypto.randomUUID(),
+      ...t,
+      tags: t.tags ? JSON.stringify(t.tags) : undefined, // Convert tags array to JSON string
+      parcelado: false,
+      classificacao_confirmada: true,
+      classificacao_origem: 'manual' as const,
+      hash: await generateHash(hashInput),
+      created_at: now,
+      updated_at: now,
+    };
   }));
 
   await db.transacoes.bulkAdd(transacoesParaInserir);

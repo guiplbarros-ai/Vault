@@ -247,15 +247,27 @@ export class TransacaoService implements ITransacaoService {
         throw new NotFoundError('Transação', id);
       }
 
+    // Build update object without undefined fields (Dexie treats undefined as "clear column")
     const updated: Partial<Transacao> = {
-      ...data,
       updated_at: new Date(),
     };
 
-    // Se categoria foi alterada, atualizar confirmação
+    // Only include fields that are actually present in the input DTO
+    if (data.conta_id !== undefined) updated.conta_id = data.conta_id;
     if (data.categoria_id !== undefined) {
+      updated.categoria_id = data.categoria_id;
       updated.classificacao_confirmada = true;
       updated.classificacao_origem = 'manual';
+    }
+    if (data.descricao !== undefined) updated.descricao = data.descricao;
+    if (data.valor !== undefined) updated.valor = data.valor;
+    if (data.tipo !== undefined) updated.tipo = data.tipo;
+    if (data.observacoes !== undefined) updated.observacoes = data.observacoes;
+    if (data.tags !== undefined) updated.tags = JSON.stringify(data.tags);
+
+    // Convert date string to Date object if present
+    if (data.data !== undefined) {
+      updated.data = typeof data.data === 'string' ? new Date(data.data) : data.data;
     }
 
       await db.transacoes.update(id, updated);
@@ -265,8 +277,13 @@ export class TransacaoService implements ITransacaoService {
         throw new DatabaseError(`Erro ao recuperar transação atualizada ${id}`);
       }
 
-      // Atualiza saldo da conta (usa o conta_id do registro existente)
+      // Atualiza saldo da conta antiga
       await contaService.recalcularESalvarSaldo(existing.conta_id);
+
+      // Se a transação mudou de conta, atualiza também o saldo da nova conta
+      if (data.conta_id && data.conta_id !== existing.conta_id) {
+        await contaService.recalcularESalvarSaldo(data.conta_id);
+      }
 
       return result;
     } catch (error) {
@@ -320,7 +337,31 @@ export class TransacaoService implements ITransacaoService {
 
   async bulkDelete(transacaoIds: string[]): Promise<number> {
     const db = getDB();
+
+    // Busca todas as transações que serão deletadas para capturar as contas afetadas
+    const transacoes = await db.transacoes.bulkGet(transacaoIds);
+
+    // Coleta IDs únicos de todas as contas afetadas
+    const contasAfetadas = new Set<string>();
+    for (const transacao of transacoes) {
+      if (transacao) {
+        contasAfetadas.add(transacao.conta_id);
+
+        // Se for transferência, adiciona também a conta destino
+        if (transacao.tipo === 'transferencia' && transacao.conta_destino_id) {
+          contasAfetadas.add(transacao.conta_destino_id);
+        }
+      }
+    }
+
+    // Executa a deleção em massa
     await db.transacoes.bulkDelete(transacaoIds);
+
+    // Recalcula saldo de todas as contas afetadas
+    for (const contaId of contasAfetadas) {
+      await contaService.recalcularESalvarSaldo(contaId);
+    }
+
     return transacaoIds.length;
   }
 

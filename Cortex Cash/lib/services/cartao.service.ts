@@ -227,7 +227,8 @@ export class CartaoService {
    * Deleta um cartão (soft delete - apenas desativa)
    */
   async deleteCartao(id: string): Promise<void> {
-    await this.updateCartao(id, { ativo: false });
+    const db = getDB();
+    await db.cartoes_config.update(id, { ativo: false });
   }
 
   /**

@@ -68,7 +68,15 @@ export function DBProvider({ children }: DBProviderProps) {
           setIsLoading(false);
         }, 10000);
 
-        // Inicializa Dexie (IndexedDB) - isso é síncrono e rápido
+        // Check IndexedDB support (async - detects Safari private mode blocks)
+        const { checkIndexedDBSupportAsync } = await import('@/lib/db/client');
+        const support = await checkIndexedDBSupportAsync();
+
+        if (!support.supported) {
+          throw new Error(support.error || 'IndexedDB não está disponível neste navegador');
+        }
+
+        // Inicializa Dexie (IndexedDB)
         const dbInstance = getDB();
 
         console.log('✅ Banco de dados Dexie inicializado');

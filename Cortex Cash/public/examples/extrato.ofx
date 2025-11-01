@@ -1,0 +1,132 @@
+OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+    <SIGNONMSGSRSV1>
+        <SONRS>
+            <STATUS>
+                <CODE>0
+                <SEVERITY>INFO
+            </STATUS>
+            <DTSERVER>20251101120000
+            <LANGUAGE>POR
+        </SONRS>
+    </SIGNONMSGSRSV1>
+    <BANKMSGSRSV1>
+        <STMTTRNRS>
+            <TRNUID>1
+            <STATUS>
+                <CODE>0
+                <SEVERITY>INFO
+            </STATUS>
+            <STMTRS>
+                <CURDEF>BRL
+                <BANKACCTFROM>
+                    <BANKID>237
+                    <ACCTID>12345-6
+                    <ACCTTYPE>CHECKING
+                </BANKACCTFROM>
+                <BANKTRANLIST>
+                    <DTSTART>20251001000000
+                    <DTEND>20251031235959
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251001
+                        <TRNAMT>-125.50
+                        <FITID>202510010001
+                        <CHECKNUM>0001
+                        <MEMO>Compra Supermercado Extra
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251005
+                        <TRNAMT>5000.00
+                        <FITID>202510050001
+                        <MEMO>Salário Empresa XYZ Ltda
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251007
+                        <TRNAMT>-89.90
+                        <FITID>202510070001
+                        <MEMO>Farmacia Drogaria Sao Paulo
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251010
+                        <TRNAMT>-45.00
+                        <FITID>202510100001
+                        <MEMO>Uber - Corrida
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251012
+                        <TRNAMT>350.00
+                        <FITID>202510120001
+                        <MEMO>PIX Recebido - Maria Santos
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251015
+                        <TRNAMT>-230.80
+                        <FITID>202510150001
+                        <MEMO>Conta de Luz - CPFL Energia
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251018
+                        <TRNAMT>-199.00
+                        <FITID>202510180001
+                        <MEMO>Compra Amazon - Livro
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251020
+                        <TRNAMT>1500.00
+                        <FITID>202510200001
+                        <MEMO>Freelance - Design Projeto
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251022
+                        <TRNAMT>-320.00
+                        <FITID>202510220001
+                        <MEMO>Gasolina Posto Shell
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251025
+                        <TRNAMT>-99.90
+                        <FITID>202510250001
+                        <MEMO>Academia SmartFit Mensalidade
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251028
+                        <TRNAMT>-1800.00
+                        <FITID>202510280001
+                        <MEMO>Aluguel Apartamento
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251030
+                        <TRNAMT>-55.90
+                        <FITID>202510300001
+                        <MEMO>Netflix Assinatura Premium
+                    </STMTTRN>
+                </BANKTRANLIST>
+                <LEDGERBAL>
+                    <BALAMT>7884.90
+                    <DTASOF>20251031120000
+                </LEDGERBAL>
+            </STMTRS>
+        </STMTTRNRS>
+    </BANKMSGSRSV1>
+</OFX>

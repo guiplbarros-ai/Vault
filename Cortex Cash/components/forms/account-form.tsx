@@ -63,7 +63,7 @@ export function AccountForm({
 
       // Log cada campo com erro
       Object.keys(errors).forEach(key => {
-        console.error(`Campo "${key}":`, errors[key])
+        console.error(`Campo "${key}":`, (errors as any)[key])
       })
     }
   )
@@ -90,7 +90,7 @@ export function AccountForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-white">Informações Básicas</h3>
-            <Separator className="bg-white/20" />
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <div className="form-dark-input">
@@ -127,7 +127,7 @@ export function AccountForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-white">Saldo e Moeda</h3>
-            <Separator className="bg-white/20" />
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <div className="form-dark-input">
@@ -152,7 +152,7 @@ export function AccountForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-white">Aparência</h3>
-            <Separator className="bg-white/20" />
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <FormColorPicker
@@ -166,7 +166,7 @@ export function AccountForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-white">Configurações</h3>
-            <Separator className="bg-white/20" />
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <FormCheckbox

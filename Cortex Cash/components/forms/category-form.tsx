@@ -80,8 +80,8 @@ export function CategoryForm({
         {/* Basic Information */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Informações Básicas</h3>
-            <Separator />
+            <h3 className="text-sm font-medium text-white">Informações Básicas</h3>
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <FormInput
@@ -120,8 +120,8 @@ export function CategoryForm({
         {/* Appearance */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Aparência</h3>
-            <Separator />
+            <h3 className="text-sm font-medium text-white">Aparência</h3>
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <FormColorPicker

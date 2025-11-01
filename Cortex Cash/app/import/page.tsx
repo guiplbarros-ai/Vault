@@ -309,13 +309,13 @@ export default function ImportPage() {
                   icon={<FileText className="h-5 w-5" />}
                   label="Preview"
                   active={step === "preview"}
-                  completed={step === "complete"}
+                  completed={false}
                 />
                 <div className="flex-1 h-px bg-white/20 mx-4" />
                 <StepIndicator
                   icon={<CheckCircle className="h-5 w-5" />}
                   label="Concluído"
-                  active={step === "complete"}
+                  active={false}
                   completed={false}
                 />
               </div>

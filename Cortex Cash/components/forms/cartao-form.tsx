@@ -75,7 +75,7 @@ export function CartaoForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-white">Informações Básicas</h3>
-            <Separator className="bg-white/20" />
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <div className="form-dark-input">
@@ -103,7 +103,7 @@ export function CartaoForm({
               name="bandeira"
               label="Bandeira"
               placeholder="Selecione a bandeira"
-              options={BANDEIRA_OPTIONS}
+              options={BANDEIRA_OPTIONS as any}
             />
           </div>
         </div>
@@ -112,7 +112,7 @@ export function CartaoForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-white">Limite</h3>
-            <Separator className="bg-white/20" />
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <div className="form-dark-input">
@@ -130,7 +130,7 @@ export function CartaoForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-white">Ciclo de Faturamento</h3>
-            <Separator className="bg-white/20" />
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -174,7 +174,7 @@ export function CartaoForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-white">Aparência</h3>
-            <Separator className="bg-white/20" />
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <FormColorPicker
@@ -188,7 +188,7 @@ export function CartaoForm({
         <div className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-white">Configurações</h3>
-            <Separator className="bg-white/20" />
+            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           </div>
 
           <FormCheckbox

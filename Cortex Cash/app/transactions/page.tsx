@@ -268,10 +268,15 @@ export default function TransactionsPage() {
       header: 'Tags',
       accessorKey: 'tags',
       cell: (row) => {
-        if (!row.tags || row.tags.length === 0) return <span className="text-white">-</span>
+        if (!row.tags) return <span className="text-white">-</span>
+
+        // Parse tags (stored as JSON string in DB)
+        const tagArray = typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags
+        if (!Array.isArray(tagArray) || tagArray.length === 0) return <span className="text-white">-</span>
+
         return (
           <div className="flex flex-wrap gap-1">
-            {row.tags.map((tagName) => {
+            {tagArray.map((tagName) => {
               const tag = getTagByName(tagName)
               return (
                 <TagBadge
@@ -640,10 +645,21 @@ export default function TransactionsPage() {
                       Nova Transação
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogContent
+                    className="max-w-2xl max-h-[90vh] overflow-y-auto"
+                    style={{
+                      background: isDark
+                        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
+                        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+                      backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                    }}
+                  >
                     <DialogHeader>
-                      <DialogTitle>{editMode ? 'Editar Transação' : 'Nova Transação'}</DialogTitle>
-                      <DialogDescription>
+                      <DialogTitle className={isDark ? "text-white" : "text-gray-900"}>
+                        {editMode ? 'Editar Transação' : 'Nova Transação'}
+                      </DialogTitle>
+                      <DialogDescription className={isDark ? "text-white/70" : "text-gray-600"}>
                         {editMode
                           ? 'Edite os dados da transação selecionada.'
                           : 'Adicione uma nova transação ao seu histórico financeiro.'}
@@ -658,14 +674,14 @@ export default function TransactionsPage() {
                       }}
                       isLoading={formLoading}
                       submitLabel={editMode ? 'Salvar Alterações' : 'Criar Transação'}
-                      initialData={transactionToEdit ? {
-                        type: mapDBTypeToFormType(transactionToEdit.tipo),
+                      defaultValues={transactionToEdit ? {
+                        type: transactionToEdit.tipo === 'transferencia' ? 'expense' : mapDBTypeToFormType(transactionToEdit.tipo) as 'income' | 'expense',
                         description: transactionToEdit.descricao,
-                        amount: transactionToEdit.valor,
+                        amount: Math.abs(transactionToEdit.valor),
                         date: transactionToEdit.data instanceof Date ? transactionToEdit.data : new Date(transactionToEdit.data),
-                        category: transactionToEdit.categoria_id || '',
-                        account: transactionToEdit.conta_id || '',
-                        tags: transactionToEdit.tags || [],
+                        categoryId: transactionToEdit.categoria_id || '',
+                        accountId: transactionToEdit.conta_id || '',
+                        tags: transactionToEdit.tags ? (typeof transactionToEdit.tags === 'string' ? JSON.parse(transactionToEdit.tags) : transactionToEdit.tags) : [],
                         notes: transactionToEdit.observacoes || '',
                       } : undefined}
                     />
@@ -720,9 +736,20 @@ export default function TransactionsPage() {
 
         {/* Dialog de Visualização */}
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent
+            className="max-w-lg"
+            style={{
+              background: isDark
+                ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
+                : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+              backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+            }}
+          >
             <DialogHeader>
-              <DialogTitle>Detalhes da Transação</DialogTitle>
+              <DialogTitle className={isDark ? "text-white" : "text-gray-900"}>
+                Detalhes da Transação
+              </DialogTitle>
             </DialogHeader>
             {transactionToView && (
               <div className="space-y-4">
@@ -815,24 +842,30 @@ export default function TransactionsPage() {
                 </div>
 
                 {/* Tags */}
-                {transactionToView.tags && transactionToView.tags.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
-                    <span className="text-sm font-medium text-muted-foreground">Tags:</span>
-                    <div className="col-span-2 flex flex-wrap gap-1">
-                      {transactionToView.tags.map((tagName) => {
-                        const tag = getTagByName(tagName)
-                        return (
-                          <TagBadge
-                            key={tagName}
-                            label={tagName}
-                            cor={tag?.cor}
-                            size="sm"
-                          />
-                        )
-                      })}
+                {(() => {
+                  if (!transactionToView.tags) return null;
+                  const tagArray = typeof transactionToView.tags === 'string' ? JSON.parse(transactionToView.tags) : transactionToView.tags;
+                  if (!Array.isArray(tagArray) || tagArray.length === 0) return null;
+
+                  return (
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">Tags:</span>
+                      <div className="col-span-2 flex flex-wrap gap-1">
+                        {tagArray.map((tagName) => {
+                          const tag = getTagByName(tagName)
+                          return (
+                            <TagBadge
+                              key={tagName}
+                              label={tagName}
+                              cor={tag?.cor}
+                              size="sm"
+                            />
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Observações */}
                 {transactionToView.observacoes && (

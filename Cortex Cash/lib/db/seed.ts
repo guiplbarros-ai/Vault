@@ -48,7 +48,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Alimentação',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '🍽️',
     cor: '#ef4444',
     ordem: 1,
@@ -76,7 +76,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Transporte',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '🚗',
     cor: '#f59e0b',
     ordem: 4,
@@ -104,7 +104,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Moradia',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '🏠',
     cor: '#8b5cf6',
     ordem: 7,
@@ -132,7 +132,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Saúde',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '❤️',
     cor: '#ec4899',
     ordem: 10,
@@ -160,7 +160,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Educação',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '🎓',
     cor: '#3b82f6',
     ordem: 13,
@@ -188,7 +188,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Lazer',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '🎮',
     cor: '#14b8a6',
     ordem: 16,
@@ -216,7 +216,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Vestuário',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '👕',
     cor: '#a855f7',
     ordem: 19,
@@ -244,7 +244,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Assinaturas',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '💳',
     cor: '#06b6d4',
     ordem: 22,
@@ -272,7 +272,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Impostos',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '🧾',
     cor: '#64748b',
     ordem: 25,
@@ -282,7 +282,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Investimentos',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '📈',
     cor: '#10b981',
     ordem: 26,
@@ -292,7 +292,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Empréstimos',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '💰',
     cor: '#dc2626',
     ordem: 27,
@@ -302,7 +302,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Pet',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '🐶',
     cor: '#f97316',
     ordem: 28,
@@ -312,7 +312,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Outros',
     tipo: 'despesa',
-    grupo: null,
+    grupo: undefined,
     icone: '📦',
     cor: '#6b7280',
     ordem: 29,
@@ -323,7 +323,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Salário',
     tipo: 'receita',
-    grupo: null,
+    grupo: undefined,
     icone: '💵',
     cor: '#10b981',
     ordem: 30,
@@ -333,7 +333,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Freelance',
     tipo: 'receita',
-    grupo: null,
+    grupo: undefined,
     icone: '💼',
     cor: '#059669',
     ordem: 31,
@@ -343,7 +343,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Investimentos',
     tipo: 'receita',
-    grupo: null,
+    grupo: undefined,
     icone: '📊',
     cor: '#34d399',
     ordem: 32,
@@ -371,7 +371,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Reembolso',
     tipo: 'receita',
-    grupo: null,
+    grupo: undefined,
     icone: '🔄',
     cor: '#22c55e',
     ordem: 35,
@@ -381,7 +381,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Prêmio',
     tipo: 'receita',
-    grupo: null,
+    grupo: undefined,
     icone: '🏆',
     cor: '#4ade80',
     ordem: 36,
@@ -391,7 +391,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Vendas',
     tipo: 'receita',
-    grupo: null,
+    grupo: undefined,
     icone: '🛍️',
     cor: '#86efac',
     ordem: 37,
@@ -401,7 +401,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Outros',
     tipo: 'receita',
-    grupo: null,
+    grupo: undefined,
     icone: '💚',
     cor: '#bbf7d0',
     ordem: 38,
@@ -412,7 +412,7 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
   {
     nome: 'Transferência',
     tipo: 'transferencia',
-    grupo: null,
+    grupo: undefined,
     icone: '↔️',
     cor: '#6366f1',
     ordem: 39,

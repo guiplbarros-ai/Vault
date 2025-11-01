@@ -14,7 +14,7 @@ import { z } from 'zod';
 export const appearanceSettingsSchema = z.object({
   theme: z.enum(['auto', 'dark', 'light']),
   density: z.enum(['compact', 'comfortable', 'spacious']),
-  fontSize: z.enum([90, 100, 110, 120]),
+  fontSize: z.union([z.literal(90), z.literal(100), z.literal(110), z.literal(120)]),
   pixelArtMode: z.boolean(),
 });
 
@@ -68,14 +68,14 @@ export const aiCostsSettingsSchema = z.object({
   strategy: z.enum(['aggressive', 'balanced', 'quality']),
   cachePrompts: z.boolean(),
   batchProcessing: z.boolean(),
-  batchSize: z.enum([10, 25, 50, 100]),
+  batchSize: z.union([z.literal(10), z.literal(25), z.literal(50), z.literal(100)]),
 });
 
 export const performanceSettingsSchema = z.object({
   cache: z.boolean(),
   cacheTTL: z.number().int().min(1).max(60),
   lazyLoading: z.boolean(),
-  pagination: z.enum([25, 50, 100, 200]),
+  pagination: z.union([z.literal(25), z.literal(50), z.literal(100), z.literal(200)]),
   chartAnimations: z.boolean(),
   preloadDashboards: z.boolean(),
   autoClearCache: z.boolean(),
@@ -187,7 +187,7 @@ export function validateSettingValue(
   const [category, ...keyParts] = path.split('.');
   const key = keyParts.join('.');
 
-  const schemas: Record<string, z.ZodSchema> = {
+  const schemas: Record<string, z.ZodObject<any>> = {
     appearance: appearanceSettingsSchema,
     localization: localizationSettingsSchema,
     dataPrivacy: dataPrivacySettingsSchema,
@@ -214,7 +214,7 @@ export function validateSettingValue(
   }
   current[keys[keys.length - 1]] = value;
 
-  const result = categorySchema.partial().safeParse(testObject);
+  const result = (categorySchema as any).partial().safeParse(testObject);
 
   if (result.success) {
     return { success: true, data: value };
