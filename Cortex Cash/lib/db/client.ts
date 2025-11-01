@@ -72,7 +72,7 @@ export class CortexCashDB extends Dexie {
       categorias: 'id, nome, tipo, grupo, ativa, ordem',
 
       // Transações
-      transacoes: 'id, conta_id, categoria_id, data, tipo, hash, transferencia_id, conta_destino_id, grupo_parcelamento_id',
+      transacoes: 'id, conta_id, categoria_id, centro_custo_id, data, tipo, hash, transferencia_id, conta_destino_id, grupo_parcelamento_id',
 
       // Templates de Importação
       templates_importacao: 'id, instituicao_id, nome, tipo_arquivo',
