@@ -63,22 +63,26 @@ export async function classifyTransaction(
     // Encontrou uma regra que casa
     try {
       const categoria = await categoriaService.getCategoriaById(regraResultado);
-      const regra = await regraClassificacaoService.listRegras({
-        categoria_id: regraResultado,
-        ativa: true,
-      });
 
-      const regraAplicada = regra[0]; // Pega a primeira (maior prioridade)
+      // Verifica se categoria existe e não foi deletada
+      if (categoria) {
+        const regra = await regraClassificacaoService.listRegras({
+          categoria_id: regraResultado,
+          ativa: true,
+        });
 
-      return {
-        categoria_id: regraResultado,
-        categoria_nome: categoria.nome,
-        origem: 'regra',
-        confianca: 1.0, // Regras têm 100% de confiança
-        reasoning: `Classificado por regra: ${regraAplicada?.nome || 'Desconhecida'}`,
-        regra_aplicada_id: regraAplicada?.id,
-        regra_aplicada_nome: regraAplicada?.nome,
-      };
+        const regraAplicada = regra[0]; // Pega a primeira (maior prioridade)
+
+        return {
+          categoria_id: regraResultado,
+          categoria_nome: categoria.nome,
+          origem: 'regra',
+          confianca: 1.0, // Regras têm 100% de confiança
+          reasoning: `Classificado por regra: ${regraAplicada?.nome || 'Desconhecida'}`,
+          regra_aplicada_id: regraAplicada?.id,
+          regra_aplicada_nome: regraAplicada?.nome,
+        };
+      }
     } catch (error) {
       // Se categoria não existe mais, ignora e tenta IA
       console.error('Erro ao buscar categoria da regra:', error);

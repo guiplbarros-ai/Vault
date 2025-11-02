@@ -49,8 +49,8 @@ function calculateSimilarity(str1: string, str2: string): number {
   const words1 = new Set(s1.split(' '));
   const words2 = new Set(s2.split(' '));
 
-  const intersection = new Set([...words1].filter(w => words2.has(w)));
-  const union = new Set([...words1, ...words2]);
+  const intersection = new Set(Array.from(words1).filter(w => words2.has(w)));
+  const union = new Set(Array.from(words1).concat(Array.from(words2)));
 
   // Índice de Jaccard (palavras em comum / total de palavras únicas)
   return intersection.size / union.size;
@@ -81,7 +81,7 @@ export function getCachedClassification(
   // Busca por similaridade (fuzzy matching)
   let bestMatch: { entry: CachedClassification; similarity: number } | null = null;
 
-  for (const [cachedKey, entry] of cache.entries()) {
+  for (const [cachedKey, entry] of Array.from(cache.entries())) {
     // Verifica tipo
     if (!cachedKey.startsWith(`${tipo}:`)) continue;
 
@@ -142,7 +142,7 @@ export function cleanExpiredCache(): number {
   let removed = 0;
   const now = Date.now();
 
-  for (const [key, entry] of cache.entries()) {
+  for (const [key, entry] of Array.from(cache.entries())) {
     const age = now - entry.timestamp.getTime();
     if (age >= CACHE_TTL_MS) {
       cache.delete(key);
