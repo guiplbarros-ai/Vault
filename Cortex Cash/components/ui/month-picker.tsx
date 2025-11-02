@@ -96,7 +96,7 @@ export function MonthPicker({
         <PopoverTrigger asChild>
           <Button
             className={cn(
-              "h-10 flex-1 justify-center font-medium capitalize",
+              "h-10 w-[160px] justify-center font-medium capitalize",
               "rounded-lg border-0 text-white",
               "transition-all",
               "text-sm"

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { logAIUsage, checkAIBudgetLimit } from '@/lib/services/ai-usage.service';
 import { categoriaService } from '@/lib/services/categoria.service';
+import { generateClassificationPrompt, SYSTEM_PROMPT } from '@/lib/finance/classification/prompts';
+import { getCachedClassification, setCachedClassification } from '@/lib/finance/classification/prompt-cache';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -29,6 +31,7 @@ interface ClassifyResponse {
   categoria_nome: string | null;
   confianca: number;
   reasoning: string;
+  cached?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -50,7 +53,20 @@ export async function POST(request: NextRequest) {
     const allowOverride = config?.allowOverride ?? false;
     const strategy = config?.strategy || 'balanced';
 
-    // Verifica limite de gastos antes de fazer a chamada
+    // ETAPA 1: Verifica cache primeiro (para economizar custos)
+    const cached = getCachedClassification(descricao, tipo);
+    if (cached && cached.categoria_id) {
+      console.log('✅ Cache hit para:', descricao.substring(0, 30));
+      return NextResponse.json({
+        categoria_sugerida_id: cached.categoria_id,
+        categoria_nome: cached.categoria_nome,
+        confianca: cached.confianca,
+        reasoning: `${cached.reasoning} (cache)`,
+        cached: true,
+      });
+    }
+
+    // ETAPA 2: Verifica limite de gastos antes de fazer a chamada
     const budgetCheck = await checkAIBudgetLimit(new Date(), monthlyCostLimit, 0.8);
     if (budgetCheck.isOverLimit && !allowOverride) {
       return NextResponse.json(
@@ -85,38 +101,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Monta o prompt para a IA
-    const categoriasTexto = categorias
-      .map(c => `- ID: ${c.id}, Nome: ${c.nome}, Emoji: ${c.icone}`)
-      .join('\n');
-
-    const prompt = `Você é um assistente financeiro especializado em classificar transações.
-
-Analise a seguinte transação e sugira a categoria mais apropriada:
-
-**Transação:**
-- Descrição: ${descricao}
-- Valor: R$ ${valor.toFixed(2)}
-- Tipo: ${tipo}
-
-**Categorias disponíveis:**
-${categoriasTexto}
-
-**Instruções:**
-1. Escolha a categoria que melhor se encaixa na descrição
-2. Retorne APENAS um JSON válido no seguinte formato:
-{
-  "categoria_id": "id-da-categoria",
-  "confianca": 0.95,
-  "reasoning": "Breve explicação da escolha"
-}
-
-**Regras:**
-- confianca deve ser entre 0 e 1 (0 = nenhuma confiança, 1 = certeza absoluta)
-- Se nenhuma categoria for adequada, retorne categoria_id como null e confianca baixa
-- reasoning deve ser conciso (máximo 50 caracteres)
-
-Responda APENAS com o JSON, sem texto adicional.`;
+    // ETAPA 3: Monta o prompt otimizado para a IA
+    const prompt = generateClassificationPrompt(descricao, valor, tipo, categorias);
 
     // Define parâmetros baseados na estratégia
     const strategyParams = {
@@ -127,13 +113,13 @@ Responda APENAS com o JSON, sem texto adicional.`;
 
     const params = strategyParams[strategy];
 
-    // Faz chamada à OpenAI
+    // ETAPA 4: Faz chamada à OpenAI com prompt melhorado
     const completion = await openai.chat.completions.create({
       model: modelo,
       messages: [
         {
           role: 'system',
-          content: 'Você é um assistente financeiro que classifica transações. Responda APENAS com JSON válido.',
+          content: SYSTEM_PROMPT,
         },
         {
           role: 'user',
@@ -197,11 +183,25 @@ Responda APENAS com o JSON, sem texto adicional.`;
       confianca: resultado.confianca,
     });
 
+    // ETAPA 5: Adiciona ao cache (se categoria foi encontrada e confiança >= 0.7)
+    if (categoria_sugerida_id && categoria_nome && resultado.confianca >= 0.7) {
+      setCachedClassification(
+        descricao,
+        tipo,
+        categoria_sugerida_id,
+        categoria_nome,
+        resultado.confianca,
+        resultado.reasoning
+      );
+      console.log('✅ Adicionado ao cache:', descricao.substring(0, 30));
+    }
+
     const response: ClassifyResponse = {
       categoria_sugerida_id,
       categoria_nome,
       confianca: resultado.confianca,
       reasoning: resultado.reasoning,
+      cached: false,
     };
 
     return NextResponse.json(response);

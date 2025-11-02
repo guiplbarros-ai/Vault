@@ -5,6 +5,7 @@ import "./globals.css"
 import { DBProvider } from "./providers/db-provider"
 import { SettingsProvider } from "./providers/settings-provider"
 import { ThemeInitializer } from "@/components/theme-initializer"
+import { ServiceWorkerUpdatePrompt } from "@/components/service-worker-update-prompt"
 
 const inter = Inter({ subsets: ["latin"] })
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] })
@@ -23,6 +24,19 @@ export const metadata: Metadata = {
     shortcut: '/logo.png',
     apple: '/logo.png',
   },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Cortex Cash',
+  },
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#18B0A4',
 }
 
 export default function RootLayout({
@@ -40,6 +54,7 @@ export default function RootLayout({
           <ThemeInitializer />
           <DBProvider>
             {children}
+            <ServiceWorkerUpdatePrompt />
           </DBProvider>
         </SettingsProvider>
       </body>

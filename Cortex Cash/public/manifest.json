@@ -1,31 +1,39 @@
 {
-  "name": "Cortex Cash - Gestão Financeira",
-  "short_name": "Cortex Cash",
-  "description": "Aplicativo de finanças pessoais local-first com classificação inteligente",
+  "name": "Cortex Cash",
+  "short_name": "Cortex",
+  "description": "Sistema de gestão financeira pessoal com inteligência artificial",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a1f2e",
-  "theme_color": "#d4af37",
-  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#18B0A4",
+  "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
-      "src": "/logo.png",
-      "sizes": "512x512",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo.png",
-      "sizes": "192x192",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
   ],
-  "categories": [
-    "finance",
-    "productivity",
-    "business"
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Add Transaction",
+      "url": "/transactions?action=add",
+      "description": "Quickly add a new transaction"
+    },
+    {
+      "name": "View Dashboard",
+      "url": "/",
+      "description": "View your financial dashboard"
+    }
   ],
-  "lang": "pt-BR",
-  "dir": "ltr"
+  "screenshots": []
 }
