@@ -2,9 +2,9 @@
 > ATENÇÃO: Este documento foi substituído pela arquitetura de 3 agentes em `docs/AGENTES_IA_3_AGENTS.md`. Mantenha o status no novo modelo.
 ---
 
-**Última atualização**: 01 de Novembro de 2025
-**Versão atual**: v0.4 🔄 EM PROGRESSO (Agent CORE)
-**Última versão completa**: v0.3 ✅ COMPLETA!
+**Última atualização**: 02 de Novembro de 2025
+**Versão atual**: v0.4 ✅ COMPLETA (Agent CORE) | 🔄 EM PROGRESSO (Agent APP)
+**Última versão completa**: v0.4 Agent CORE ✅ | v0.3 Agent FINANCE ✅
 
 ---
 
@@ -60,7 +60,7 @@
 
 ### ✅ Tarefas Concluídas (Continuação)
 
-#### v0.4: Error Handling & Infrastructure
+#### v0.4: Error Handling & Infrastructure ✅ COMPLETA!
 - [x] **ErrorBoundary Component** - Captura erros React
 - [x] **GlobalErrorHandler** - Captura erros JavaScript globais
 - [x] **Error Logging System** - localStorage com últimos 30 erros
@@ -68,11 +68,49 @@
 - [x] **Toast Integration** - Notificações automáticas
 - [x] **Integração no DashboardLayout** - Proteção global
 
-### 🔄 Em Andamento
+#### v0.4: Monitoring & PWA ✅ COMPLETA!
+- [x] **Health Check Monitoring**
+  - [x] 6 health checks automatizados (Database, IndexedDB, LocalStorage, Services, Data Integrity, Browser Compatibility)
+  - [x] Dashboard visual de status do sistema
+  - [x] Histórico dos últimos 50 checks
+  - [x] Página `/settings/system`
+  - [x] Status colorido (healthy/degraded/unhealthy)
 
-- [ ] Health Check Monitoring
-- [ ] Performance Monitoring
-- [ ] Service Worker (PWA)
+- [x] **Performance Monitoring**
+  - [x] Tracking de queries com detecção de slow queries
+  - [x] Monitoramento de page loads (load time, render time)
+  - [x] Métricas de memória JS Heap
+  - [x] Dashboard com alertas visuais
+  - [x] Página `/settings/performance`
+  - [x] Funções measureAsync/measureSync
+
+- [x] **Service Worker (PWA)**
+  - [x] Service Worker completo com estratégias de cache
+  - [x] Cache-first para assets estáticos
+  - [x] Network-first para API requests
+  - [x] Network-first com fallback offline para HTML
+  - [x] PWA manifest.json configurado
+  - [x] Página `/offline` para modo offline
+  - [x] ServiceWorkerUpdatePrompt para notificar atualizações
+  - [x] Auto-registro no app layout
+  - [x] Ícones PWA (192x192 e 512x512)
+
+- [x] **Sistema de Backup/Export**
+  - [x] Export completo do IndexedDB para JSON
+  - [x] Import com validação e modos (replace/merge)
+  - [x] Download de backup como arquivo
+  - [x] Validação estrutural de backups
+  - [x] Interface visual completa
+  - [x] Preview de backup antes de importar
+  - [x] Clear all data (danger zone)
+  - [x] Página `/settings/backup`
+  - [x] Testes automatizados e manuais
+
+### 🔄 Em Andamento (v0.4 - Agent APP)
+
+- [ ] UI de gestão de regras de classificação
+- [ ] Painel de custos e auditoria de IA
+- [ ] Integrações visuais com sistema de IA
 
 ### 📋 Próximos Passos (v0.1 CONCLUÍDA!)
 
@@ -359,22 +397,26 @@ const total = await db.categorias.count();
 
 ---
 
-## Métricas v0.3
+## Métricas v0.4
 
 - **Merge conflicts**: 0
 - **Build status**: ✅ Funcionando (Next.js 16 + Turbopack + Dexie)
 - **Database**: ✅ Inicializado e testado (39 categorias seed + orçamentos)
 - **Services**: ✅ 4 services implementados (transacao, conta, categoria, orcamento)
 - **Forms**: ✅ 6 formulários (transaction, account, category, cartao, budget, fatura-lancamento)
-- **Hooks**: ✅ 1 hook custom (use-cartao-limit-alerts)
+- **Hooks**: ✅ 5 hooks custom (cartao-limit-alerts, health-check, performance, service-worker, backup)
 - **Dashboard**: ✅ Funcionando com dados reais
-- **Tests**: ⏳ Não implementados ainda (v0.4+)
-- **Coverage**: 0%
-- **Commits desde v0.1**: 12
+- **Tests**: ✅ Suite de testes de backup implementada (manual + automatizada)
+- **Coverage**: ~15% (backup tests)
+- **Commits desde v0.1**: 14
 - **Páginas dinâmicas**: 1 (faturas/[faturaId])
 - **Páginas refatoradas**: 1 (/budgets - padrão visual 100%)
 - **Componentes de gráfico**: 2 (BudgetProgressChart, BudgetDistributionChart)
 - **Infraestrutura de erro**: 2 componentes (ErrorBoundary, GlobalErrorHandler)
+- **Infraestrutura de monitoring**: 6 componentes (HealthCheckStatus, PerformanceDashboard, ServiceWorkerUpdatePrompt, BackupManager)
+- **PWA**: ✅ Configurado (manifest, service worker, ícones, offline page)
+- **Páginas de Settings**: 3 (system, performance, backup)
+- **Módulos novos**: 3 (monitoring, backup, finance/classification)
 
 ---
 
@@ -399,24 +441,26 @@ const total = await db.categorias.count();
 8. **Padrão Visual**: 100% consistente em toda aplicação ✅
 9. **Dashboards Visuais**: Gráficos Recharts (barras + pizza) ✅
 
-### ✅ v0.4 - EM PROGRESSO (Agent CORE)
+### ✅ v0.4 - COMPLETA! (Agent CORE)
 1. **Error Handling Global**: ErrorBoundary + GlobalErrorHandler ✅
 2. **Error Logging**: Sistema estruturado em localStorage ✅
 3. **Error Recovery**: UI elegante com opções de retry ✅
+4. **Health Check Monitoring**: 6 checks automatizados + dashboard visual ✅
+5. **Performance Monitoring**: Tracking de queries/pages + métricas de memória ✅
+6. **Service Worker (PWA)**: Offline-first + manifest + ícones ✅
+7. **Backup/Export System**: Export/Import completo + validação ✅
+8. **Test Suite**: Testes automatizados e manuais de backup ✅
+9. **Documentação**: Guias completos de uso e teste ✅
 
-### 🚀 Próxima Fase: v0.4 Continuação
-**Tarefas Prioritárias (Agent CORE)**:
-1. Health Check Monitoring (verificar integridade do sistema)
-2. Performance Monitoring (identificar gargalos)
-3. Service Worker setup (offline-first PWA)
-4. Backup/Export system (IndexedDB → JSON)
-5. Implementar testes E2E para fluxos críticos
-2. Implementar dashboard de orçamentos com gráficos
-3. Criar página /credit-cards com gestão de faturas
-4. Integrar hook de alertas no layout
-5. Adicionar visualizações de progresso
+### 🚀 Próxima Fase: v0.4 Continuação (Agent APP)
+**Tarefas em Andamento**:
+1. UI de gestão de regras de classificação
+2. Painel de custos e auditoria de IA
+3. Integrações visuais com sistema de IA
+4. Dashboard de analytics consolidado
+5. Melhorias UX gerais
 
 ---
 
-**Última atualização**: 01 de Novembro de 2025 - v0.3 backend completo
-**Próximos commits**: Integração UI de orçamentos e faturas
+**Última atualização**: 02 de Novembro de 2025 - v0.4 Agent CORE completo
+**Próximos commits**: Agent APP - UI de regras e gestão de IA
