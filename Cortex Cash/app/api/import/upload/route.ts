@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseCSV } from '@/lib/import/parsers/csv';
 import { detectSeparator } from '@/lib/import/detectors/separator';
+import { getTemplate } from '@/lib/import/templates';
 
 /**
  * POST /api/import/upload
@@ -88,11 +89,12 @@ export async function POST(request: NextRequest) {
     const separator = detectSeparator(decodedContent);
 
     // Aplica template se fornecido
-    const columnMapping = templateId ? getTemplateMapping(templateId) : undefined;
+    const template = templateId ? getTemplate(templateId) : null;
+    const columnMapping = template?.columnMapping;
 
     const result = await parseCSV(decodedContent, {
-      separator,
-      hasHeader: true,
+      separator: template?.separador || separator,
+      hasHeader: template?.hasHeader ?? true,
       columnMapping,
     });
 
@@ -126,35 +128,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-/**
- * Retorna mapeamento de colunas baseado no template
- */
-function getTemplateMapping(templateId: string) {
-  const templates: Record<string, any> = {
-    'bradesco': {
-      date: 0,        // Primeira coluna: Data
-      description: 1, // Segunda coluna: Descrição
-      value: 3,       // Quarta coluna: Valor
-      type: 2,        // Terceira coluna: Tipo (D/C)
-    },
-    'inter': {
-      date: 0,
-      description: 1,
-      value: 2,
-    },
-    'nubank': {
-      date: 0,
-      description: 2,
-      value: 1,
-    },
-    'generic': {
-      date: 0,
-      description: 1,
-      value: 2,
-    },
-  };
-
-  return templates[templateId] || templates['generic'];
 }

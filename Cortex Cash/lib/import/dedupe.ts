@@ -8,28 +8,31 @@ import { getDB } from '@/lib/db/client';
 import { normalizeDate } from './normalizers/date';
 
 /**
- * Gera hash SHA-256 de uma transação
- * Hash baseado em: data + descricao + valor
+ * Gera hash SHA-256 de uma transação para deduplicação
+ * Hash baseado em: conta_id + data + descricao + valor
  *
  * @param transacao Transação a hashear
+ * @param conta_id ID da conta (opcional, mas recomendado para evitar conflitos entre contas)
  * @returns String hexadecimal do hash
  *
  * @example
- * const hash = await generateHash({
+ * const hash = await generateTransactionHash({
  *   data: new Date('2024-01-15'),
  *   descricao: 'NETFLIX',
  *   valor: 39.90
- * })
+ * }, 'conta-123')
  * // '3a5f7c...'
  */
-export async function generateHash(
-  transacao: Pick<ParsedTransacao, 'data' | 'descricao' | 'valor'>
+export async function generateTransactionHash(
+  transacao: Pick<ParsedTransacao, 'data' | 'descricao' | 'valor'>,
+  conta_id?: string
 ): Promise<string> {
   // Criar string canônica para hash
   const dataISO = transacao.data instanceof Date
     ? transacao.data.toISOString().split('T')[0]
     : transacao.data;
   const canonical = [
+    conta_id || '', // Inclui conta_id para evitar duplicatas entre contas
     dataISO,
     transacao.descricao.trim().toUpperCase(),
     transacao.valor.toFixed(2),
@@ -51,15 +54,17 @@ export async function generateHash(
  * Adiciona hashes a um array de transações parsed
  *
  * @param transacoes Array de transações sem hash
+ * @param conta_id ID da conta (opcional)
  * @returns Array de transações com hash
  */
 export async function addHashes(
-  transacoes: ParsedTransacao[]
+  transacoes: ParsedTransacao[],
+  conta_id?: string
 ): Promise<ParsedTransacao[]> {
   const withHashes = await Promise.all(
     transacoes.map(async (t) => ({
       ...t,
-      hash: await generateHash(t),
+      hash: await generateTransactionHash(t, conta_id),
     }))
   );
 
@@ -107,8 +112,8 @@ export async function deduplicateTransactions(
   contaId: string,
   transacoes: ParsedTransacao[]
 ): Promise<DedupeResult> {
-  // Adicionar hashes se ainda não tiverem
-  const withHashes = await addHashes(transacoes);
+  // Adicionar hashes se ainda não tiverem (inclui conta_id no hash)
+  const withHashes = await addHashes(transacoes, contaId);
 
   // Remover duplicatas dentro do próprio array primeiro
   const uniqueInArray = removeDuplicatesInArray(withHashes);
@@ -162,7 +167,7 @@ export async function isDuplicate(
   contaId: string,
   transacao: Pick<ParsedTransacao, 'data' | 'descricao' | 'valor'>
 ): Promise<boolean> {
-  const hash = await generateHash(transacao);
+  const hash = await generateTransactionHash(transacao, contaId);
 
   const db = getDB();
   const count = await db.transacoes

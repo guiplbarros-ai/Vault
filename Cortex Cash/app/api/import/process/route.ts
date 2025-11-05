@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseCSV } from '@/lib/import/parsers/csv';
 import { transacaoService } from '@/lib/services/transacao.service';
-import { generateHash } from '@/lib/import/dedupe';
+import { generateTransactionHash } from '@/lib/import/dedupe';
+import { getTemplate } from '@/lib/import/templates';
 
 /**
  * POST /api/import/process
@@ -37,12 +38,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse arquivo
-    const columnMapping = options.templateId
-      ? getTemplateMapping(options.templateId)
-      : undefined;
+    const template = options.templateId ? getTemplate(options.templateId) : null;
+    const columnMapping = template?.columnMapping;
 
     const parseResult = await parseCSV(file.content, {
-      hasHeader: true,
+      separator: template?.separador,
+      hasHeader: template?.hasHeader ?? true,
       columnMapping,
     });
 
@@ -55,12 +56,12 @@ export async function POST(request: NextRequest) {
       const transaction = parseResult.transactions[i];
 
       try {
-        // Gera hash para dedupe
-        const hash = await generateHash({
+        // Gera hash para dedupe (inclui conta_id para evitar conflitos entre contas)
+        const hash = await generateTransactionHash({
           data: typeof transaction.data === 'string' ? new Date(transaction.data) : transaction.data,
           descricao: transaction.descricao,
           valor: transaction.valor,
-        });
+        }, options.conta_id);
 
         // Verifica duplicata
         if (options.skipDuplicates) {
@@ -166,14 +167,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-function getTemplateMapping(templateId: string) {
-  const templates: Record<string, any> = {
-    'bradesco': { date: 0, description: 1, value: 3, type: 2 },
-    'inter': { date: 0, description: 1, value: 2 },
-    'nubank': { date: 0, description: 2, value: 1 },
-    'generic': { date: 0, description: 1, value: 2 },
-  };
-  return templates[templateId] || templates['generic'];
 }

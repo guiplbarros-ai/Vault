@@ -41,6 +41,33 @@ export interface CSVParseResult {
   errors: Array<{ row: number; message: string }>;
 }
 
+/**
+ * Parse de linha CSV respeitando aspas
+ */
+function parseCSVLine(line: string, separator: string): string[] {
+  const columns: string[] = [];
+  let currentColumn = '';
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === separator && !insideQuotes) {
+      columns.push(currentColumn.trim());
+      currentColumn = '';
+    } else {
+      currentColumn += char;
+    }
+  }
+
+  // Adiciona última coluna
+  columns.push(currentColumn.trim());
+
+  return columns;
+}
+
 export async function parseCSV(
   file: File | string,
   options: CSVParseOptions = {}
@@ -69,7 +96,8 @@ export async function parseCSV(
     const rowNumber = startRow + i + 1;
 
     try {
-      const columns = line.split(separator).map(col => col.trim().replace(/^"|"$/g, ''));
+      // Parse CSV respeitando aspas
+      const columns = parseCSVLine(line, separator);
 
       // Aplica mapeamento de colunas (se fornecido)
       let dateStr: string = '';
