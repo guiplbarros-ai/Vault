@@ -50,6 +50,9 @@ export async function generateTransactionHash(
   return hashHex;
 }
 
+// Alias para compatibilidade com testes
+export const generateHash = generateTransactionHash;
+
 /**
  * Adiciona hashes a um array de transações parsed
  *
