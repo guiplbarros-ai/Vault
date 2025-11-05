@@ -3,7 +3,7 @@
 ---
 
 **Última atualização**: 05 de Novembro de 2025
-**Versão atual**: v0.4 ✅ **COMPLETA!** (Agent CORE + Agent APP + Agent DATA)
+**Versão atual**: v0.5 🚧 **EM DESENVOLVIMENTO** (Agent CORE iniciando)
 **Última versão completa**: v0.4 FULL STACK ✅
 
 ---
@@ -496,13 +496,35 @@ const total = await db.categorias.count();
 6. Gráficos de custos e requisições (Recharts) ✅
 7. Feedback visual completo (toasts, badges) ✅
 
-### 🚀 Próxima Fase: v0.5 (Planejamento)
-**Sugestões para próximas features**:
-1. Drag-and-drop para priorização de regras (dnd-kit)
-2. Importação CSV/OFX (Agent DATA)
-3. Sistema de Open Finance
-4. Melhorias em orçamentos (previsões)
-5. Dashboard analytics avançado
+### 🚧 v0.5 - EM DESENVOLVIMENTO (Incremental + Testes)
+
+**Data de início:** 05 de Novembro de 2025
+**Duração estimada:** 2-3 semanas
+**Status:** Agent CORE iniciando setup de testes
+
+**Escopo:**
+1. **Sistema de Importação Avançado** (Agent DATA)
+   - [ ] Parser OFX (5+ bancos brasileiros)
+   - [ ] Parser PDF com OCR (opcional)
+   - [ ] Wizard de importação multi-step
+   - [ ] Histórico de importações
+
+2. **Testes Automatizados** (Agent CORE) ⏳ **EM ANDAMENTO**
+   - [ ] Setup Vitest + fixtures
+   - [ ] Testes unitários (services)
+   - [ ] Testes de integração (API routes)
+   - [ ] CI/CD com GitHub Actions
+
+3. **UX Improvements** (Agent APP)
+   - [ ] Drag-and-drop para priorização de regras
+   - [ ] Página de Analytics (`/analytics`)
+   - [ ] Melhorias em orçamentos (projeções)
+
+**Documentação:**
+- ✅ `docs/V0.5_PLANNING.md` - Planejamento completo
+- ✅ `docs/V0.5_TASKS.md` - Tasks por agente
+
+**Princípio:** Zero breaking changes. Features incrementais que preparam v1.0.
 
 ---
 

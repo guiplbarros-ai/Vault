@@ -226,6 +226,12 @@ export class TransacaoService implements ITransacaoService {
     return transacao || null;
   }
 
+  async getTransacaoByHash(hash: string): Promise<Transacao | null> {
+    const db = getDB();
+    const transacao = await db.transacoes.where('hash').equals(hash).first();
+    return transacao || null;
+  }
+
   async createTransacao(data: CreateTransacaoDTO): Promise<Transacao> {
     try {
       // Validate input

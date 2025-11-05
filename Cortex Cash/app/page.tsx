@@ -14,6 +14,7 @@ import { IncomeTrendsChart } from "@/components/income-trends-chart"
 import { PopularTagsWidget } from "@/components/popular-tags-widget"
 import { PopularCategoriesWidget } from "@/components/popular-categories-widget"
 import { AccuracyWidget } from "@/components/classification/accuracy-widget"
+import { AIUsageCard } from "@/components/ai-usage-card"
 import { WealthEvolutionChart } from "@/components/wealth-evolution-chart"
 import { FinancialSummary } from "@/components/financial-summary"
 import { MonthPicker } from "@/components/ui/month-picker"
@@ -218,6 +219,11 @@ export default function DashboardPage() {
           {statsCards.map((stat) => (
             <StatCard key={stat.title} {...stat} />
           ))}
+        </div>
+
+        {/* AI Usage Card */}
+        <div className="max-w-md">
+          <AIUsageCard />
         </div>
 
         {/* Charts and Recent Data */}
