@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useDatabase } from "@/hooks/use-database"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, ArrowLeftRight, Wallet, PieChart, CreditCard, Settings, Upload, Menu, X, FolderTree, Hash, TrendingUp, FileText } from "lucide-react"
+import { LayoutDashboard, ArrowLeftRight, Wallet, PieChart, CreditCard, Settings, Upload, Menu, X, FolderTree, Hash, TrendingUp, FileText, Brain } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -24,6 +24,7 @@ const navigation = [
   { name: "Cartões de Crédito", href: "/credit-cards", icon: CreditCard },
   { name: "Orçamentos", href: "/budgets", icon: PieChart },
   { name: "Evolução Patrimonial", href: "/wealth", icon: TrendingUp },
+  { name: "Analytics de IA", href: "/analytics", icon: Brain },
   { name: "Imposto de Renda", href: "/tax", icon: FileText },
   { name: "Importar", href: "/import", icon: Upload },
   { name: "Configurações", href: "/settings", icon: Settings },
