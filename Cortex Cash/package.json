@@ -7,12 +7,14 @@
     "dev": "NODE_OPTIONS='--no-warnings' next dev",
     "lint": "eslint .",
     "start": "next start",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
+    "test": "OPENAI_API_KEY=test vitest",
+    "test:ui": "OPENAI_API_KEY=test vitest --ui",
+    "test:coverage": "OPENAI_API_KEY=test vitest --coverage",
+    "test:import": "vitest tests/import",
     "ai:setup": "bash scripts/setup-openai.sh",
     "ai:test": "node scripts/test-openai.js",
-    "ai:smoke": "node scripts/test-ai-smoke.js"
+    "ai:smoke": "node scripts/test-ai-smoke.js",
+    "import:smoke": "node scripts/test-import-smoke.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

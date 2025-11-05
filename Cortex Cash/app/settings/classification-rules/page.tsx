@@ -45,6 +45,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { RuleForm } from '@/components/classification/rule-form';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 export default function ClassificationRulesPage() {
   const [regras, setRegras] = useState<RegraClassificacao[]>([]);
@@ -63,6 +80,18 @@ export default function ClassificationRulesPage() {
   const [editingRule, setEditingRule] = useState<RegraClassificacao | null>(null);
   const [deletingRule, setDeletingRule] = useState<RegraClassificacao | null>(null);
   const [previewRule, setPreviewRule] = useState<RegraClassificacao | null>(null);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Evita conflito com cliques
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Carrega regras e estatísticas
   const loadData = async () => {
@@ -126,6 +155,46 @@ export default function ClassificationRulesPage() {
     } catch (error) {
       console.error('Erro ao deletar regra:', error);
       toast.error('Erro ao excluir regra');
+    }
+  };
+
+  // Drag and drop handler
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = filteredRegras.findIndex((r) => r.id === active.id);
+    const newIndex = filteredRegras.findIndex((r) => r.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Reordena localmente (otimistic update)
+    const reordered = arrayMove(filteredRegras, oldIndex, newIndex);
+
+    // Atualiza prioridades (maior prioridade = aparece primeiro)
+    // Prioridade máxima para o primeiro item, decrescendo
+    const maxPriority = Math.max(...reordered.map(r => r.prioridade));
+
+    try {
+      // Atualiza todas as prioridades afetadas
+      const updatePromises = reordered.map((regra, index) => {
+        const newPriority = maxPriority - index; // Decrescente
+        if (regra.prioridade !== newPriority) {
+          return regraClassificacaoService.updateRegra(regra.id, {
+            prioridade: newPriority,
+          });
+        }
+        return Promise.resolve();
+      });
+
+      await Promise.all(updatePromises);
+      await loadData(); // Recarrega para garantir consistência
+      toast.success('Prioridade das regras atualizada');
+    } catch (error) {
+      console.error('Erro ao reordenar regras:', error);
+      toast.error('Erro ao atualizar prioridade das regras');
+      await loadData(); // Reverte em caso de erro
     }
   };
 
@@ -283,99 +352,34 @@ export default function ClassificationRulesPage() {
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-white/10">
-              {filteredRegras.map((regra) => (
-                <div
-                  key={regra.id}
-                  className="p-4 flex items-center gap-4 hover:bg-white/5 transition-colors"
-                >
-                  {/* Drag Handle */}
-                  <div className="text-white/30 cursor-move">
-                    <GripVertical className="w-5 h-5" />
-                  </div>
-
-                  {/* Priority Badge */}
-                  <div
-                    className="flex items-center justify-center w-10 h-10 rounded-lg font-bold text-white"
-                    style={{
-                      background: 'linear-gradient(135deg, #18B0A4 0%, #16a89d 100%)',
-                    }}
-                  >
-                    {regra.prioridade}
-                  </div>
-
-                  {/* Rule Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-white font-semibold truncate">{regra.nome}</h3>
-                      <Badge className={cn('border', getTipoRegraColor(regra.tipo_regra))}>
-                        {getTipoRegraLabel(regra.tipo_regra)}
-                      </Badge>
-                      {!regra.ativa && (
-                        <Badge variant="outline" className="border-white/30 text-white/50">
-                          Inativa
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="text-white/60">
-                        Padrão: <span className="text-white/80 font-mono">{regra.padrao}</span>
-                      </span>
-                      {regra.total_aplicacoes > 0 && (
-                        <span className="text-white/40">
-                          {regra.total_aplicacoes} {regra.total_aplicacoes === 1 ? 'aplicação' : 'aplicações'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPreviewRule(regra)}
-                      className="text-white/60 hover:text-white hover:bg-white/10"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleRegra(regra.id)}
-                      className={cn(
-                        'hover:bg-white/10',
-                        regra.ativa ? 'text-green-400' : 'text-white/40'
-                      )}
-                    >
-                      <Power className="w-4 h-4" />
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setEditingRule(regra);
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={filteredRegras.map((r) => r.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="divide-y divide-white/10">
+                  {filteredRegras.map((regra) => (
+                    <SortableRuleItem
+                      key={regra.id}
+                      regra={regra}
+                      getTipoRegraLabel={getTipoRegraLabel}
+                      getTipoRegraColor={getTipoRegraColor}
+                      onToggle={handleToggleRegra}
+                      onEdit={(r) => {
+                        setEditingRule(r);
                         setShowRuleForm(true);
                       }}
-                      className="text-white/60 hover:text-white hover:bg-white/10"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeletingRule(regra)}
-                      className="text-red-400/60 hover:text-red-400 hover:bg-red-500/10"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                      onDelete={setDeletingRule}
+                      onPreview={setPreviewRule}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
 
@@ -407,5 +411,135 @@ export default function ClassificationRulesPage() {
         />
       </div>
     </DashboardLayout>
+  );
+}
+
+// Sortable Rule Item Component
+interface SortableRuleItemProps {
+  regra: RegraClassificacao;
+  getTipoRegraLabel: (tipo: TipoRegra) => string;
+  getTipoRegraColor: (tipo: TipoRegra) => string;
+  onToggle: (id: string) => void;
+  onEdit: (regra: RegraClassificacao) => void;
+  onDelete: (regra: RegraClassificacao) => void;
+  onPreview: (regra: RegraClassificacao) => void;
+}
+
+function SortableRuleItem({
+  regra,
+  getTipoRegraLabel,
+  getTipoRegraColor,
+  onToggle,
+  onEdit,
+  onDelete,
+  onPreview,
+}: SortableRuleItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: regra.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="p-4 flex items-center gap-4 hover:bg-white/5 transition-colors"
+    >
+      {/* Drag Handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="text-white/30 cursor-move hover:text-white/60 transition-colors"
+      >
+        <GripVertical className="w-5 h-5" />
+      </div>
+
+      {/* Priority Badge */}
+      <div
+        className="flex items-center justify-center w-10 h-10 rounded-lg font-bold text-white"
+        style={{
+          background: 'linear-gradient(135deg, #18B0A4 0%, #16a89d 100%)',
+        }}
+      >
+        {regra.prioridade}
+      </div>
+
+      {/* Rule Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <h3 className="text-white font-semibold truncate">{regra.nome}</h3>
+          <Badge className={cn('border', getTipoRegraColor(regra.tipo_regra))}>
+            {getTipoRegraLabel(regra.tipo_regra)}
+          </Badge>
+          {!regra.ativa && (
+            <Badge variant="outline" className="border-white/30 text-white/50">
+              Inativa
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-white/60">
+            Padrão: <span className="text-white/80 font-mono">{regra.padrao}</span>
+          </span>
+          {regra.total_aplicacoes > 0 && (
+            <span className="text-white/40">
+              {regra.total_aplicacoes} {regra.total_aplicacoes === 1 ? 'aplicação' : 'aplicações'}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onPreview(regra)}
+          className="text-white/60 hover:text-white hover:bg-white/10"
+        >
+          <Eye className="w-4 h-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onToggle(regra.id)}
+          className={cn(
+            'hover:bg-white/10',
+            regra.ativa ? 'text-green-400' : 'text-white/40'
+          )}
+        >
+          <Power className="w-4 h-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onEdit(regra)}
+          className="text-white/60 hover:text-white hover:bg-white/10"
+        >
+          <Edit className="w-4 h-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onDelete(regra)}
+          className="text-red-400/60 hover:text-red-400 hover:bg-red-500/10"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
