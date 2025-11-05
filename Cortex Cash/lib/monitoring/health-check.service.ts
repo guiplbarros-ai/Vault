@@ -399,7 +399,7 @@ export async function runHealthChecks(
   // Run all checks in parallel with timeout
   const checks = await Promise.all(
     checkFunctions.map(fn =>
-      runWithTimeout(fn(), finalConfig.timeout).catch(
+      runWithTimeout(fn, finalConfig.timeout).catch(
         (error): HealthCheckResult => ({
           name: fn.name.replace('check', '').toLowerCase(),
           status: 'unhealthy',

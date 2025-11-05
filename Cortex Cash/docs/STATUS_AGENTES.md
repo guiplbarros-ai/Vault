@@ -2,9 +2,9 @@
 > ATENÇÃO: Este documento foi substituído pela arquitetura de 3 agentes em `docs/AGENTES_IA_3_AGENTS.md`. Mantenha o status no novo modelo.
 ---
 
-**Última atualização**: 02 de Novembro de 2025
-**Versão atual**: v0.4 ✅ COMPLETA (Agent CORE) | 🔄 EM PROGRESSO (Agent APP)
-**Última versão completa**: v0.4 Agent CORE ✅ | v0.3 Agent FINANCE ✅
+**Última atualização**: 05 de Novembro de 2025
+**Versão atual**: v0.4 ✅ **COMPLETA!** (Agent CORE + Agent APP + Agent DATA)
+**Última versão completa**: v0.4 FULL STACK ✅
 
 ---
 
@@ -106,11 +106,34 @@
   - [x] Página `/settings/backup`
   - [x] Testes automatizados e manuais
 
-### 🔄 Em Andamento (v0.4 - Agent APP)
+### ✅ v0.4 COMPLETA - Interface de Classificação Automática (Agent APP)
 
-- [ ] UI de gestão de regras de classificação
-- [ ] Painel de custos e auditoria de IA
-- [ ] Integrações visuais com sistema de IA
+- [x] **Página de Gestão de Regras** (`/settings/classification-rules`)
+  - [x] Lista de regras com filtros (ativa/inativa) e busca
+  - [x] Formulário de criar/editar regras completo
+  - [x] Preview de regras antes de salvar
+  - [x] Toggle ativa/inativa por regra
+  - [x] 4 tipos de regras (contains, starts_with, ends_with, regex)
+  - [x] Estatísticas de uso (total, ativas, inativas, aplicações)
+
+- [x] **Página de Auditoria de IA** (`/settings/ai-usage`)
+  - [x] Gráficos de custos por dia (Recharts)
+  - [x] Gráfico de requisições por dia
+  - [x] Stats cards (requisições, custos, taxa de aceitação, confiança média)
+  - [x] Tabela de logs recentes (últimos 50)
+  - [x] Badges de status (confirmada/pendente/sem sugestão)
+
+- [x] **Botões de Classificação na Página de Transações**
+  - [x] Botão "Classificar com IA" no dropdown de ações de cada transação
+  - [x] Componente BulkAIClassify para classificação em massa
+  - [x] Feedback visual de sucesso/erro por transação
+  - [x] Indicador de cache hit
+
+- [x] **Widget de Acurácia no Dashboard**
+  - [x] AccuracyWidget exibindo taxa de acurácia geral
+  - [x] Breakdown por origem (regras/IA/manual)
+  - [x] Badges de qualidade (excelente/boa/melhorável)
+  - [x] Indicador de sugestões pendentes
 
 ### 📋 Próximos Passos (v0.1 CONCLUÍDA!)
 
@@ -397,26 +420,29 @@ const total = await db.categorias.count();
 
 ---
 
-## Métricas v0.4
+## Métricas v0.4 FINAL
 
 - **Merge conflicts**: 0
 - **Build status**: ✅ Funcionando (Next.js 16 + Turbopack + Dexie)
 - **Database**: ✅ Inicializado e testado (39 categorias seed + orçamentos)
-- **Services**: ✅ 4 services implementados (transacao, conta, categoria, orcamento)
-- **Forms**: ✅ 6 formulários (transaction, account, category, cartao, budget, fatura-lancamento)
+- **Services**: ✅ 6 services implementados (transacao, conta, categoria, orcamento, regra-classificacao, ai-usage)
+- **Forms**: ✅ 7 formulários (transaction, account, category, cartao, budget, fatura-lancamento, rule-form)
 - **Hooks**: ✅ 5 hooks custom (cartao-limit-alerts, health-check, performance, service-worker, backup)
-- **Dashboard**: ✅ Funcionando com dados reais
+- **Dashboard**: ✅ Funcionando com dados reais + AccuracyWidget
 - **Tests**: ✅ Suite de testes de backup implementada (manual + automatizada)
 - **Coverage**: ~15% (backup tests)
-- **Commits desde v0.1**: 14
+- **Commits desde v0.1**: 14+
 - **Páginas dinâmicas**: 1 (faturas/[faturaId])
 - **Páginas refatoradas**: 1 (/budgets - padrão visual 100%)
-- **Componentes de gráfico**: 2 (BudgetProgressChart, BudgetDistributionChart)
+- **Páginas de UI de IA**: 2 (/settings/classification-rules, /settings/ai-usage)
+- **Componentes de gráfico**: 4 (BudgetProgressChart, BudgetDistributionChart, AI Usage Charts)
+- **Componentes de classificação**: 4 (RuleForm, AccuracyWidget, ClassifyButton, BulkAIClassify)
 - **Infraestrutura de erro**: 2 componentes (ErrorBoundary, GlobalErrorHandler)
 - **Infraestrutura de monitoring**: 6 componentes (HealthCheckStatus, PerformanceDashboard, ServiceWorkerUpdatePrompt, BackupManager)
 - **PWA**: ✅ Configurado (manifest, service worker, ícones, offline page)
-- **Páginas de Settings**: 3 (system, performance, backup)
-- **Módulos novos**: 3 (monitoring, backup, finance/classification)
+- **Páginas de Settings**: 5 (system, performance, backup, classification-rules, ai-usage)
+- **Módulos novos**: 4 (monitoring, backup, finance/classification, components/classification)
+- **Sistema de IA**: ✅ Backend 100% + Frontend 100%
 
 ---
 
@@ -441,26 +467,44 @@ const total = await db.categorias.count();
 8. **Padrão Visual**: 100% consistente em toda aplicação ✅
 9. **Dashboards Visuais**: Gráficos Recharts (barras + pizza) ✅
 
-### ✅ v0.4 - COMPLETA! (Agent CORE)
-1. **Error Handling Global**: ErrorBoundary + GlobalErrorHandler ✅
-2. **Error Logging**: Sistema estruturado em localStorage ✅
-3. **Error Recovery**: UI elegante com opções de retry ✅
-4. **Health Check Monitoring**: 6 checks automatizados + dashboard visual ✅
-5. **Performance Monitoring**: Tracking de queries/pages + métricas de memória ✅
-6. **Service Worker (PWA)**: Offline-first + manifest + ícones ✅
-7. **Backup/Export System**: Export/Import completo + validação ✅
-8. **Test Suite**: Testes automatizados e manuais de backup ✅
-9. **Documentação**: Guias completos de uso e teste ✅
+### ✅ v0.4 - COMPLETA! 🎉 (Agent CORE + Agent APP + Agent DATA)
 
-### 🚀 Próxima Fase: v0.4 Continuação (Agent APP)
-**Tarefas em Andamento**:
-1. UI de gestão de regras de classificação
-2. Painel de custos e auditoria de IA
-3. Integrações visuais com sistema de IA
-4. Dashboard de analytics consolidado
-5. Melhorias UX gerais
+**Backend (Agent DATA)**:
+1. Sistema de Classificação Automática (regras + IA) ✅
+2. CRUD completo de regras de classificação ✅
+3. Motor híbrido (cache → regras → OpenAI) ✅
+4. Cache de prompts (economia 30-50%) ✅
+5. Batch processing ✅
+6. Endpoint `/api/ai/classify` funcional ✅
+7. Serviços de AI usage e custos ✅
+
+**Infraestrutura (Agent CORE)**:
+1. Error Handling Global (ErrorBoundary + GlobalErrorHandler) ✅
+2. Error Logging (sistema estruturado em localStorage) ✅
+3. Health Check Monitoring (6 checks automatizados) ✅
+4. Performance Monitoring (queries/pages + métricas) ✅
+5. Service Worker PWA (offline-first + manifest) ✅
+6. Backup/Export System (completo + validação) ✅
+7. Test Suite (testes de backup) ✅
+
+**Frontend (Agent APP)**:
+1. Página de Gestão de Regras (/settings/classification-rules) ✅
+2. Página de Auditoria de IA (/settings/ai-usage) ✅
+3. Botões de Classificação na página de Transações ✅
+4. Componente BulkAIClassify para classificação em massa ✅
+5. AccuracyWidget no Dashboard ✅
+6. Gráficos de custos e requisições (Recharts) ✅
+7. Feedback visual completo (toasts, badges) ✅
+
+### 🚀 Próxima Fase: v0.5 (Planejamento)
+**Sugestões para próximas features**:
+1. Drag-and-drop para priorização de regras (dnd-kit)
+2. Importação CSV/OFX (Agent DATA)
+3. Sistema de Open Finance
+4. Melhorias em orçamentos (previsões)
+5. Dashboard analytics avançado
 
 ---
 
-**Última atualização**: 02 de Novembro de 2025 - v0.4 Agent CORE completo
-**Próximos commits**: Agent APP - UI de regras e gestão de IA
+**Última atualização**: 05 de Novembro de 2025 - v0.4 COMPLETA! 🎉
+**Próximos commits**: v0.5 - Importação, Open Finance, Analytics Avançado

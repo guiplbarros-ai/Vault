@@ -13,6 +13,7 @@ import { ExpenseTrendsChart } from "@/components/expense-trends-chart"
 import { IncomeTrendsChart } from "@/components/income-trends-chart"
 import { PopularTagsWidget } from "@/components/popular-tags-widget"
 import { PopularCategoriesWidget } from "@/components/popular-categories-widget"
+import { AccuracyWidget } from "@/components/classification/accuracy-widget"
 import { WealthEvolutionChart } from "@/components/wealth-evolution-chart"
 import { FinancialSummary } from "@/components/financial-summary"
 import { MonthPicker } from "@/components/ui/month-picker"
@@ -235,10 +236,11 @@ export default function DashboardPage() {
               <ExpenseDistributionChart />
             </div>
 
-            {/* Tags e Categorias mais usadas (lado a lado) */}
-            <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
+            {/* Tags, Categorias e Acurácia de IA (3 colunas) */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 md:items-stretch">
               <PopularTagsWidget />
               <PopularCategoriesWidget />
+              <AccuracyWidget />
             </div>
 
             {/* Evolução Patrimonial (full width) */}

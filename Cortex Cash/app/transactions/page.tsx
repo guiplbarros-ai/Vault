@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, ArrowUpCircle, ArrowDownCircle, MoreHorizontal, Pencil, Trash2, Calendar, Eye, Check } from "lucide-react"
+import { Plus, ArrowUpCircle, ArrowDownCircle, MoreHorizontal, Pencil, Trash2, Calendar, Eye, Check, Brain } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +33,8 @@ import {
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { TransactionForm, TransactionFormProps } from "@/components/forms"
 import { BulkCategoryAssign } from "@/components/categories/bulk-category-assign"
+import { BulkAIClassify } from "@/components/classification/bulk-ai-classify"
+import { ClassifyButton } from "@/components/classification/classify-button"
 import { MonthPicker } from "@/components/ui/month-picker"
 import { startOfMonth, endOfMonth } from 'date-fns'
 import { TagBadge } from "@/components/ui/tag-badge"
@@ -388,6 +390,55 @@ export default function TransactionsPage() {
             >
               <Pencil className="mr-2 h-4 w-4" />
               Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className={cn(
+                "cursor-pointer",
+                isDark
+                  ? "!text-purple-400 hover:!bg-gray-700 focus:!bg-gray-700"
+                  : "!text-purple-600"
+              )}
+              style={isDark ? { color: '#c084fc' } : undefined}
+              onClick={async (e) => {
+                e.preventDefault();
+                try {
+                  const response = await fetch('/api/ai/classify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      descricao: row.descricao,
+                      valor: Math.abs(row.valor),
+                      tipo: row.tipo,
+                      transacao_id: row.id,
+                    }),
+                  });
+
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Erro ao classificar');
+                  }
+
+                  const data = await response.json();
+
+                  if (data.categoria_sugerida_id) {
+                    await transacaoService.updateTransacao(row.id, {
+                      categoria_id: data.categoria_sugerida_id,
+                    });
+                    await loadTransactions();
+                    toast.success(`Classificada como: ${data.categoria_nome}`, {
+                      description: `Confiança: ${(data.confianca * 100).toFixed(0)}%${data.cached ? ' (cache)' : ''}`,
+                    });
+                  } else {
+                    toast.warning('IA não conseguiu sugerir uma categoria');
+                  }
+                } catch (error: any) {
+                  console.error('Erro ao classificar:', error);
+                  toast.error(error.message || 'Erro ao classificar transação');
+                }
+              }}
+            >
+              <Brain className="mr-2 h-4 w-4" />
+              Classificar com IA
             </DropdownMenuItem>
             <DropdownMenuItem
               className={cn(
@@ -779,13 +830,23 @@ export default function TransactionsPage() {
           </CardContent>
         </Card>
 
-        {/* Bulk Category Assignment */}
+        {/* Bulk Actions */}
         {selectedTransactionIds.length > 0 && (
-          <BulkCategoryAssign
-            selectedTransactionIds={selectedTransactionIds}
-            onSuccess={handleBulkSuccess}
-            onCancel={() => setSelectedTransactionIds([])}
-          />
+          <div className="space-y-4">
+            {/* Bulk Category Assignment */}
+            <BulkCategoryAssign
+              selectedTransactionIds={selectedTransactionIds}
+              onSuccess={handleBulkSuccess}
+              onCancel={() => setSelectedTransactionIds([])}
+            />
+
+            {/* Bulk AI Classification */}
+            <BulkAIClassify
+              selectedTransactionIds={selectedTransactionIds}
+              onSuccess={handleBulkSuccess}
+              onCancel={() => setSelectedTransactionIds([])}
+            />
+          </div>
         )}
 
         <DataTable
