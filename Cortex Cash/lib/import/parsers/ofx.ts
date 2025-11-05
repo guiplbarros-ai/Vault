@@ -253,9 +253,9 @@ function parseDateOFX(dateStr: string): Date | null {
 
   // Criar data ISO
   const isoDate = `${year}-${month}-${day}`;
-  const date = normalizeDate(isoDate);
+  const normalizedDate = normalizeDate(isoDate);
 
-  return date;
+  return normalizedDate ? new Date(normalizedDate) : null;
 }
 
 /**

@@ -16,6 +16,10 @@ interface CachedClassification {
 // Cache em memória (reset ao reiniciar servidor)
 const cache = new Map<string, CachedClassification>();
 
+// Contadores de métricas
+let cacheHits = 0;
+let cacheMisses = 0;
+
 // Configuração
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 dias
 const SIMILARITY_THRESHOLD = 0.85; // 85% de similaridade para considerar hit
@@ -71,6 +75,7 @@ export function getCachedClassification(
     // Verifica se não expirou
     const age = Date.now() - exactMatch.timestamp.getTime();
     if (age < CACHE_TTL_MS) {
+      cacheHits++;
       return exactMatch;
     } else {
       // Remove entrada expirada
@@ -102,7 +107,13 @@ export function getCachedClassification(
     }
   }
 
-  return bestMatch ? bestMatch.entry : null;
+  if (bestMatch) {
+    cacheHits++;
+    return bestMatch.entry;
+  } else {
+    cacheMisses++;
+    return null;
+  }
 }
 
 /**
@@ -161,12 +172,21 @@ export function getCacheStats(): {
   max_size: number;
   hit_rate: number;
   ttl_ms: number;
+  total_hits: number;
+  total_misses: number;
+  total_requests: number;
 } {
+  const totalRequests = cacheHits + cacheMisses;
+  const hitRate = totalRequests > 0 ? cacheHits / totalRequests : 0;
+
   return {
     size: cache.size,
     max_size: MAX_CACHE_SIZE,
-    hit_rate: 0, // TODO: implementar contadores de hit/miss
+    hit_rate: hitRate,
     ttl_ms: CACHE_TTL_MS,
+    total_hits: cacheHits,
+    total_misses: cacheMisses,
+    total_requests: totalRequests,
   };
 }
 
@@ -175,4 +195,6 @@ export function getCacheStats(): {
  */
 export function clearCache(): void {
   cache.clear();
+  cacheHits = 0;
+  cacheMisses = 0;
 }

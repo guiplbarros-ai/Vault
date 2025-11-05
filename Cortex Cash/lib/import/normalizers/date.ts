@@ -1,144 +1,44 @@
 /**
  * Normalizador de Datas
- * Agent IMPORT: Converte strings de data em vários formatos para Date objects
+ * Agent DATA: Owner
  */
 
-import { parseISO, parse, isValid, format } from 'date-fns';
-
-/**
- * Formatos de data suportados (Brasil)
- */
-const DATE_FORMATS = [
-  'dd/MM/yyyy',       // 25/12/2024
-  'dd-MM-yyyy',       // 25-12-2024
-  'yyyy-MM-dd',       // 2024-12-25 (ISO)
-  'dd/MM/yy',         // 25/12/24
-  'dd-MM-yy',         // 25-12-24
-  'yyyy/MM/dd',       // 2024/12/25
-  'dd.MM.yyyy',       // 25.12.2024
-  'dd.MM.yy',         // 25.12.24
+const DATE_PATTERNS = [
+  /^(\d{2})[\/-](\d{2})[\/-](\d{4})$/,
+  /^(\d{2})[\/-](\d{2})[\/-](\d{2})$/,
+  /^(\d{4})-(\d{2})-(\d{2})$/,
+  /^(\d{4})\/(\d{2})\/(\d{2})$/,
+  /^(\d{2})\.(\d{2})\.(\d{4})$/,
 ];
 
-/**
- * Normaliza uma string de data para Date object
- *
- * @param dateStr String de data em vários formatos possíveis
- * @param formatHint Formato esperado (opcional, acelera parse)
- * @returns Date object ou null se não puder fazer parse
- *
- * @example
- * normalizeDate('25/12/2024') // Date object
- * normalizeDate('2024-12-25') // Date object
- * normalizeDate('invalid') // null
- */
-export function normalizeDate(
-  dateStr: string,
-  formatHint?: string
-): Date | null {
-  if (!dateStr || typeof dateStr !== 'string') {
-    return null;
-  }
+export function normalizeDate(dateStr: string): string | null {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const trimmed = dateStr.trim();
 
-  // Limpar espaços
-  const cleaned = dateStr.trim();
-
-  // Tentar formato ISO primeiro (mais rápido)
-  try {
-    const isoDate = parseISO(cleaned);
-    if (isValid(isoDate)) {
-      return isoDate;
-    }
-  } catch {
-    // Continuar para outros formatos
-  }
-
-  // Se há um hint de formato, tentar ele primeiro
-  if (formatHint) {
-    try {
-      const hintDate = parse(cleaned, formatHint, new Date());
-      if (isValid(hintDate)) {
-        return hintDate;
+  for (const pattern of DATE_PATTERNS) {
+    const match = trimmed.match(pattern);
+    if (match) {
+      if (pattern.source.startsWith('^(\\d{2})')) {
+        let [, day, month, year] = match;
+        if (year.length === 2) {
+          year = parseInt(year, 10) < 50 ? `20${year}` : `19${year}`;
+        }
+        const isoDate = `${year}-${month}-${day}`;
+        if (isValidDate(isoDate)) return isoDate;
       }
-    } catch {
-      // Continuar para outros formatos
-    }
-  }
-
-  // Tentar todos os formatos conhecidos
-  for (const fmt of DATE_FORMATS) {
-    try {
-      const parsed = parse(cleaned, fmt, new Date());
-      if (isValid(parsed)) {
-        return parsed;
+      if (pattern.source.startsWith('^(\\d{4})')) {
+        const [, year, month, day] = match;
+        const isoDate = `${year}-${month}-${day}`;
+        if (isValidDate(isoDate)) return isoDate;
       }
-    } catch {
-      // Tentar próximo formato
-      continue;
     }
   }
-
-  // Não conseguiu fazer parse
   return null;
 }
 
-/**
- * Detecta qual formato de data está sendo usado
- * Útil para otimizar parse de múltiplas linhas
- *
- * @param dateStr String de data de exemplo
- * @returns Formato detectado ou null
- *
- * @example
- * detectDateFormat('25/12/2024') // 'dd/MM/yyyy'
- * detectDateFormat('2024-12-25') // 'yyyy-MM-dd'
- */
-export function detectDateFormat(dateStr: string): string | null {
-  if (!dateStr || typeof dateStr !== 'string') {
-    return null;
-  }
-
-  const cleaned = dateStr.trim();
-
-  for (const fmt of DATE_FORMATS) {
-    try {
-      const parsed = parse(cleaned, fmt, new Date());
-      if (isValid(parsed)) {
-        return fmt;
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  // Formato ISO
-  try {
-    const isoDate = parseISO(cleaned);
-    if (isValid(isoDate)) {
-      return 'ISO';
-    }
-  } catch {
-    // Não conseguiu detectar
-  }
-
-  return null;
-}
-
-/**
- * Converte Date para string no formato padrão brasileiro
- *
- * @param date Date object
- * @returns String no formato DD/MM/YYYY
- */
-export function formatDateBR(date: Date): string {
-  return format(date, 'dd/MM/yyyy');
-}
-
-/**
- * Converte Date para string ISO (para salvar no DB)
- *
- * @param date Date object
- * @returns String no formato ISO YYYY-MM-DD
- */
-export function formatDateISO(date: Date): string {
-  return format(date, 'yyyy-MM-dd');
+function isValidDate(isoDate: string): boolean {
+  const date = new Date(isoDate + 'T00:00:00');
+  if (isNaN(date.getTime())) return false;
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }

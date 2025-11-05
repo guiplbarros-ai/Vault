@@ -11,7 +11,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "ai:setup": "bash scripts/setup-openai.sh",
-    "ai:test": "node scripts/test-openai.js"
+    "ai:test": "node scripts/test-openai.js",
+    "ai:smoke": "node scripts/test-ai-smoke.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

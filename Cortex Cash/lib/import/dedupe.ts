@@ -5,7 +5,7 @@
 
 import type { ParsedTransacao, DedupeResult } from '@/lib/types';
 import { getDB } from '@/lib/db/client';
-import { formatDateISO } from './normalizers/date';
+import { normalizeDate } from './normalizers/date';
 
 /**
  * Gera hash SHA-256 de uma transação
@@ -26,8 +26,11 @@ export async function generateHash(
   transacao: Pick<ParsedTransacao, 'data' | 'descricao' | 'valor'>
 ): Promise<string> {
   // Criar string canônica para hash
+  const dataISO = transacao.data instanceof Date
+    ? transacao.data.toISOString().split('T')[0]
+    : transacao.data;
   const canonical = [
-    formatDateISO(transacao.data),
+    dataISO,
     transacao.descricao.trim().toUpperCase(),
     transacao.valor.toFixed(2),
   ].join('|');

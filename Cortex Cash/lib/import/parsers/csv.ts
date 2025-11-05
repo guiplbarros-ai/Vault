@@ -1,325 +1,152 @@
 /**
- * Parser CSV
- * Agent IMPORT: Parse arquivos CSV tolerante a variações
+ * Parser CSV Genérico
+ * Agent DATA: Owner
  */
 
-import type {
-  ParseConfig,
-  ParseResult,
-  ParsedTransacao,
-  ParseError,
-  MapeamentoColunas,
-  TipoTransacao,
-} from '@/lib/types';
+import { detectSeparator } from '../detectors/separator';
 import { normalizeDate } from '../normalizers/date';
 import { normalizeValue } from '../normalizers/value';
-import { normalizeDescription } from '../normalizers/description';
 
-/**
- * Faz parse de um arquivo CSV
- *
- * @param content Conteúdo do arquivo CSV
- * @param mapeamento Mapeamento de colunas (índices)
- * @param config Configurações de parse
- * @returns Resultado do parse com transações e erros
- *
- * @example
- * const result = await parseCSV(csvContent, {
- *   data: 0,
- *   descricao: 1,
- *   valor: 2
- * }, {
- *   separador: ';',
- *   pular_linhas: 1
- * })
- */
+export interface CSVParseOptions {
+  separator?: ',' | ';' | '\t' | '|';
+  hasHeader?: boolean;
+  encoding?: 'UTF-8' | 'ISO-8859-1';
+  skipRows?: number;
+  columnMapping?: {
+    date: number | string;
+    description: number | string;
+    value: number | string;
+    type?: number | string;
+  };
+}
+
+export interface ParsedTransaction {
+  data: string;
+  descricao: string;
+  valor: number;
+  tipo?: 'receita' | 'despesa';
+  rawData?: Record<string, string>;
+}
+
+export interface CSVParseResult {
+  transactions: ParsedTransaction[];
+  metadata: {
+    totalRows: number;
+    validRows: number;
+    invalidRows: number;
+    separator: string;
+    format: string;
+    hasHeader: boolean;
+  };
+  errors: Array<{ row: number; message: string }>;
+}
+
 export async function parseCSV(
-  content: string,
-  mapeamento: MapeamentoColunas,
-  config: ParseConfig = {}
-): Promise<ParseResult> {
-  const {
-    separador = ',',
-    pular_linhas = 0,
-    formato_data,
-    separador_decimal = ',',
-  } = config;
+  file: File | string,
+  options: CSVParseOptions = {}
+): Promise<CSVParseResult> {
+  const content = typeof file === 'string' ? file : await file.text();
+  const lines = content.split('\n').filter(line => line.trim().length > 0);
 
-  const transacoes: ParsedTransacao[] = [];
-  const erros: ParseError[] = [];
+  if (lines.length === 0) {
+    throw new Error('Arquivo vazio');
+  }
 
-  // Split em linhas e remover vazias
-  const lines = content.split('\n').filter((l) => l.trim());
+  const separator = options.separator || detectSeparator(content);
+  const hasHeader = options.hasHeader ?? true;
+  const skipRows = options.skipRows ?? 0;
 
-  // Pular linhas iniciais (geralmente cabeçalho)
-  const dataLines = lines.slice(pular_linhas);
+  const startRow = skipRows + (hasHeader ? 1 : 0);
+  const dataLines = lines.slice(startRow);
 
-  let totalLinhas = dataLines.length;
-  let linhasValidas = 0;
+  const transactions: ParsedTransaction[] = [];
+  const errors: Array<{ row: number; message: string }> = [];
+  let validRows = 0;
+  let invalidRows = 0;
 
   for (let i = 0; i < dataLines.length; i++) {
-    const lineNumber = i + pular_linhas + 1; // +1 para numerar a partir de 1
-    const line = dataLines[i].trim();
-
-    if (!line) continue;
+    const line = dataLines[i];
+    const rowNumber = startRow + i + 1;
 
     try {
-      const cells = splitCSVLine(line, separador);
+      const columns = line.split(separator).map(col => col.trim().replace(/^"|"$/g, ''));
 
-      // Extrair campos usando mapeamento
-      const dataStr = cells[mapeamento.data]?.trim();
-      const descricao = cells[mapeamento.descricao]?.trim();
-      const valorStr = cells[mapeamento.valor]?.trim();
+      // Aplica mapeamento de colunas (se fornecido)
+      let dateStr: string = '';
+      let description: string = '';
+      let valueStr: string = '';
+      let typeStr: string = '';
 
-      // Validar campos obrigatórios
-      if (!dataStr || !descricao || !valorStr) {
-        erros.push({
-          linha: lineNumber,
-          mensagem: 'Campos obrigatórios faltando (data, descrição ou valor)',
-        });
-        continue;
-      }
-
-      // Parse data
-      const data = normalizeDate(dataStr, formato_data);
-      if (!data) {
-        erros.push({
-          linha: lineNumber,
-          campo: 'data',
-          mensagem: `Não foi possível fazer parse da data: "${dataStr}"`,
-          valor_original: dataStr,
-        });
-        continue;
-      }
-
-      // Parse valor
-      const valor = normalizeValue(
-        valorStr,
-        separador_decimal === ',' || separador_decimal === '.' ? separador_decimal : ','
-      );
-      if (valor === null) {
-        erros.push({
-          linha: lineNumber,
-          campo: 'valor',
-          mensagem: `Não foi possível fazer parse do valor: "${valorStr}"`,
-          valor_original: valorStr,
-        });
-        continue;
-      }
-
-      // Detectar tipo da transação (receita/despesa)
-      let tipo: TipoTransacao | undefined;
-      if (mapeamento.tipo !== undefined && cells[mapeamento.tipo]) {
-        tipo = detectTipo(cells[mapeamento.tipo].trim(), valor);
+      if (options.columnMapping) {
+        const { date, description: desc, value, type } = options.columnMapping;
+        dateStr = columns[typeof date === 'number' ? date : columns.indexOf(date)] || '';
+        description = columns[typeof desc === 'number' ? desc : columns.indexOf(desc)] || '';
+        valueStr = columns[typeof value === 'number' ? value : columns.indexOf(value)] || '';
+        if (type !== undefined) {
+          typeStr = columns[typeof type === 'number' ? type : columns.indexOf(type)] || '';
+        }
       } else {
-        // Inferir do valor: negativo = despesa, positivo = receita
-        tipo = valor < 0 ? 'despesa' : 'receita';
+        // Tenta inferir (assume primeira coluna = data, segunda = descrição, terceira = valor)
+        dateStr = columns[0] || '';
+        description = columns[1] || '';
+        valueStr = columns[2] || '';
       }
 
-      // Campos opcionais
-      const categoria = mapeamento.categoria !== undefined
-        ? cells[mapeamento.categoria]?.trim()
-        : undefined;
+      // Normaliza dados
+      const data = normalizeDate(dateStr);
+      const valor = normalizeValue(valueStr);
 
-      const observacoes = mapeamento.observacoes !== undefined
-        ? cells[mapeamento.observacoes]?.trim()
-        : undefined;
+      if (!data) {
+        throw new Error(`Data inválida: "${dateStr}"`);
+      }
+      if (valor === null) {
+        throw new Error(`Valor inválido: "${valueStr}"`);
+      }
+      if (!description) {
+        throw new Error('Descrição vazia');
+      }
 
-      // Criar transação parsed
-      const transacao: ParsedTransacao = {
+      // Detecta tipo (receita/despesa)
+      let tipo: 'receita' | 'despesa' | undefined;
+      if (typeStr) {
+        const lower = typeStr.toLowerCase();
+        if (lower.includes('receita') || lower.includes('credit')) tipo = 'receita';
+        else if (lower.includes('despesa') || lower.includes('debit')) tipo = 'despesa';
+      } else {
+        tipo = valor >= 0 ? 'receita' : 'despesa';
+      }
+
+      transactions.push({
         data,
-        descricao: normalizeDescription(descricao),
-        valor: Math.abs(valor), // Sempre positivo
+        descricao: description,
+        valor: Math.abs(valor),
         tipo,
-        categoria,
-        observacoes,
-        linha_original: lineNumber,
-      };
+        rawData: columns.reduce((acc, col, idx) => {
+          acc[`col_${idx}`] = col;
+          return acc;
+        }, {} as Record<string, string>),
+      });
 
-      transacoes.push(transacao);
-      linhasValidas++;
+      validRows++;
     } catch (error) {
-      erros.push({
-        linha: lineNumber,
-        mensagem: error instanceof Error ? error.message : 'Erro desconhecido ao processar linha',
+      invalidRows++;
+      errors.push({
+        row: rowNumber,
+        message: error instanceof Error ? error.message : 'Erro desconhecido',
       });
     }
   }
 
   return {
-    success: erros.length < totalLinhas / 2, // Sucesso se menos de 50% de erros
-    transacoes,
-    erros,
-    resumo: {
-      total_linhas: totalLinhas,
-      linhas_validas: linhasValidas,
-      linhas_invalidas: erros.length,
-      duplicatas: 0, // Será calculado depois no dedupe
+    transactions,
+    metadata: {
+      totalRows: dataLines.length,
+      validRows,
+      invalidRows,
+      separator,
+      format: 'CSV',
+      hasHeader,
     },
+    errors,
   };
-}
-
-/**
- * Split de linha CSV respeitando aspas
- * Exemplo: "Empresa, Inc.",123,456 → ["Empresa, Inc.", "123", "456"]
- */
-function splitCSVLine(line: string, separator: string): string[] {
-  const cells: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-
-    if (char === '"') {
-      // Toggle quotes
-      inQuotes = !inQuotes;
-    } else if (char === separator && !inQuotes) {
-      // Separador fora de aspas = fim da célula
-      cells.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-
-  // Adicionar última célula
-  cells.push(current.trim());
-
-  // Remover aspas das células
-  return cells.map((cell) => cell.replace(/^"|"$/g, ''));
-}
-
-/**
- * Detecta o tipo de transação (receita/despesa/transferência)
- * baseado em uma coluna do CSV ou no valor
- */
-function detectTipo(
-  tipoStr: string,
-  valor: number
-): TipoTransacao {
-  const lower = tipoStr.toLowerCase();
-
-  // Palavras-chave para receita
-  if (lower.includes('receita') || lower.includes('credito') || lower.includes('entrada')) {
-    return 'receita';
-  }
-
-  // Palavras-chave para despesa
-  if (lower.includes('despesa') || lower.includes('debito') || lower.includes('saida')) {
-    return 'despesa';
-  }
-
-  // Palavras-chave para transferência
-  if (lower.includes('transferencia') || lower.includes('transf')) {
-    return 'transferencia';
-  }
-
-  // Fallback: inferir do valor
-  return valor < 0 ? 'despesa' : 'receita';
-}
-
-/**
- * Sugere mapeamento automático baseado nos headers do CSV
- * Retorna índices sugeridos para cada campo
- *
- * @param headers Array com nomes das colunas
- * @returns Mapeamento sugerido
- *
- * @example
- * suggestMapping(['Data', 'Descrição', 'Valor'])
- * // { data: 0, descricao: 1, valor: 2 }
- */
-export function suggestMapping(headers: string[]): Partial<MapeamentoColunas> {
-  const mapping: Partial<MapeamentoColunas> = {};
-
-  const lowerHeaders = headers.map((h) => h.toLowerCase());
-
-  // Detectar coluna de data
-  const dataKeywords = ['data', 'date', 'dia'];
-  mapping.data = lowerHeaders.findIndex((h) =>
-    dataKeywords.some((k) => h.includes(k))
-  );
-
-  // Detectar coluna de descrição
-  const descKeywords = ['descricao', 'descrição', 'historico', 'description', 'desc'];
-  mapping.descricao = lowerHeaders.findIndex((h) =>
-    descKeywords.some((k) => h.includes(k))
-  );
-
-  // Detectar coluna de valor
-  const valorKeywords = ['valor', 'value', 'amount', 'montante'];
-  mapping.valor = lowerHeaders.findIndex((h) =>
-    valorKeywords.some((k) => h.includes(k))
-  );
-
-  // Detectar coluna de tipo (opcional)
-  const tipoKeywords = ['tipo', 'type', 'natureza'];
-  const tipoIdx = lowerHeaders.findIndex((h) =>
-    tipoKeywords.some((k) => h.includes(k))
-  );
-  if (tipoIdx !== -1) {
-    mapping.tipo = tipoIdx;
-  }
-
-  // Detectar coluna de categoria (opcional)
-  const catKeywords = ['categoria', 'category', 'cat'];
-  const catIdx = lowerHeaders.findIndex((h) =>
-    catKeywords.some((k) => h.includes(k))
-  );
-  if (catIdx !== -1) {
-    mapping.categoria = catIdx;
-  }
-
-  // Detectar coluna de observações (opcional)
-  const obsKeywords = ['observacoes', 'observações', 'obs', 'notes', 'memo'];
-  const obsIdx = lowerHeaders.findIndex((h) =>
-    obsKeywords.some((k) => h.includes(k))
-  );
-  if (obsIdx !== -1) {
-    mapping.observacoes = obsIdx;
-  }
-
-  return mapping;
-}
-
-/**
- * Valida se o mapeamento tem os campos obrigatórios
- */
-export function validateMapping(mapping: Partial<MapeamentoColunas>): {
-  valid: boolean;
-  missing?: string[];
-} {
-  const required: (keyof MapeamentoColunas)[] = ['data', 'descricao', 'valor'];
-  const missing: string[] = [];
-
-  for (const field of required) {
-    if (mapping[field] === undefined || mapping[field] === -1) {
-      missing.push(field);
-    }
-  }
-
-  return {
-    valid: missing.length === 0,
-    missing: missing.length > 0 ? missing : undefined,
-  };
-}
-
-/**
- * Gera amostra de dados do CSV para preview
- *
- * @param content Conteúdo do CSV
- * @param separator Separador
- * @param maxLines Número máximo de linhas (padrão: 5)
- * @returns Array de arrays com as células
- */
-export function generateSample(
-  content: string,
-  separator: string,
-  maxLines = 5
-): string[][] {
-  const lines = content.split('\n').filter((l) => l.trim());
-  const sample = lines.slice(0, maxLines);
-
-  return sample.map((line) => splitCSVLine(line, separator));
 }
