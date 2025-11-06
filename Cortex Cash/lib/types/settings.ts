@@ -21,7 +21,7 @@ export type FirstDayOfWeek = 0 | 1; // 0=Sunday, 1=Monday
 export type BackupFrequency = 'daily' | 'weekly' | 'monthly';
 export type CalculationMethod = 'cash' | 'accrual';
 export type ProjectionMethod = 'avg3months' | 'avg6months' | 'lastMonth' | 'manual';
-export type AIModel = 'gpt-4o-mini' | 'gpt-4o' | 'gpt-3.5-turbo';
+export type AIModel = 'gpt-4o-mini' | 'gpt-4o';
 export type AIStrategy = 'aggressive' | 'balanced' | 'quality';
 export type ImportMode = 'always' | 'errors_only' | 'never';
 export type ToastPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
@@ -107,6 +107,8 @@ export interface AICostsSettings {
   cachePrompts: boolean;
   batchProcessing: boolean;
   batchSize: BatchSize;
+  confidenceThreshold: number; // 0-1, default 0.7
+  autoApplyOnImport: boolean;
 }
 
 export interface PerformanceSettings {
@@ -325,6 +327,8 @@ export const DEFAULT_SETTINGS: Settings = {
     cachePrompts: true,
     batchProcessing: true,
     batchSize: 25,
+    confidenceThreshold: 0.7, // 70%
+    autoApplyOnImport: false,
   },
   performance: {
     cache: true,

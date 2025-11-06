@@ -6,6 +6,7 @@
     "build": "next build",
     "dev": "NODE_OPTIONS='--no-warnings' next dev",
     "lint": "eslint .",
+    "type-check": "tsc --noEmit",
     "start": "next start",
     "test": "OPENAI_API_KEY=test vitest",
     "test:ui": "OPENAI_API_KEY=test vitest --ui",

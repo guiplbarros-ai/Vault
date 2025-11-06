@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { categoriaService } from '@/lib/services/categoria.service';
+import { logAIUsage } from '@/lib/services/ai-usage.service';
 
 interface ClassifyRequest {
   descricao: string;
@@ -15,6 +17,17 @@ interface ClassifyResponse {
   categoria_nome: string | null;
   confianca: number;
   reasoning: string;
+  cached?: boolean;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  metadata?: {
+    modelo: string;
+    prompt: string;
+    resposta: string;
+  };
 }
 
 // Get AI settings from localStorage
@@ -52,6 +65,9 @@ export function useAIClassification() {
         return null;
       }
 
+      // Carrega categorias do tipo no cliente (Dexie) para evitar acesso no servidor
+      const categorias = await categoriaService.listCategorias({ tipo: data.tipo, ativas: true });
+
       const response = await fetch('/api/ai/classify', {
         method: 'POST',
         headers: {
@@ -59,6 +75,7 @@ export function useAIClassification() {
         },
         body: JSON.stringify({
           ...data,
+          categorias: categorias.map(c => ({ id: c.id, nome: c.nome })),
           config: aiSettings ? {
             defaultModel: aiSettings.defaultModel,
             monthlyCostLimit: aiSettings.monthlyCostLimit,
@@ -83,6 +100,26 @@ export function useAIClassification() {
 
       const result: ClassifyResponse = await response.json();
       setSuggestion(result);
+
+      // Registra uso de IA no cliente (apenas se não veio do cache)
+      if (result.usage && result.metadata && !result.cached) {
+        try {
+          await logAIUsage({
+            transacao_id: data.transacao_id,
+            prompt: result.metadata.prompt,
+            resposta: result.metadata.resposta,
+            modelo: result.metadata.modelo as 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo',
+            tokens_prompt: result.usage.prompt_tokens,
+            tokens_resposta: result.usage.completion_tokens,
+            categoria_sugerida_id: result.categoria_sugerida_id ?? undefined,
+            confianca: result.confianca,
+          });
+          console.log('✅ Uso de IA registrado');
+        } catch (logError) {
+          console.error('Erro ao registrar uso de IA:', logError);
+          // Não bloqueia o fluxo principal
+        }
+      }
 
       if (result.categoria_sugerida_id) {
         toast.success('Categoria sugerida!', {

@@ -17,7 +17,7 @@ import type {
   TemplateImportacao,
   Transacao,
 } from '../types';
-import { generateHash } from '../utils/format';
+import { generateTransactionHash } from '../import/dedupe';
 import { transacaoService } from './transacao.service';
 import { DatabaseError, ValidationError } from '../errors';
 
@@ -317,9 +317,12 @@ export class ImportService {
     const duplicadas: ParsedTransacao[] = [];
 
     for (const transacao of transacoesParsed) {
-      // Gerar hash
-      const hashInput = `${contaId}-${transacao.data.toISOString()}-${transacao.descricao}-${transacao.valor}`;
-      const hash = await generateHash(hashInput);
+      // Gerar hash canônico alinhado com createTransacao
+      const hash = await generateTransactionHash({
+        data: transacao.data,
+        descricao: transacao.descricao,
+        valor: transacao.valor,
+      }, contaId);
       transacao.hash = hash;
 
       // Verificar se já existe

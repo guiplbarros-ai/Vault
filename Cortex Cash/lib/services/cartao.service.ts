@@ -740,6 +740,54 @@ export class CartaoService {
   }
 
   /**
+   * Fecha uma fatura manualmente
+   *
+   * @param faturaId ID da fatura a ser fechada
+   * @throws NotFoundError se fatura não existe
+   * @throws ValidationError se fatura não está aberta
+   *
+   * @example
+   * await cartaoService.fecharFatura('fatura-123');
+   */
+  async fecharFatura(faturaId: string): Promise<Fatura> {
+    const db = getDB();
+
+    const fatura = await db.faturas.get(faturaId);
+    if (!fatura) {
+      throw new NotFoundError('Fatura', faturaId);
+    }
+
+    if (fatura.status !== 'aberta') {
+      throw new ValidationError(`Fatura já está ${fatura.status}. Apenas faturas abertas podem ser fechadas.`);
+    }
+
+    // Recalcula valor total baseado nos lançamentos
+    const lancamentos = await db.faturas_lancamentos
+      .where('fatura_id')
+      .equals(faturaId)
+      .toArray();
+
+    const valorTotal = lancamentos.reduce((sum, l) => sum + l.valor_brl, 0);
+    const valorMinimo = valorTotal * 0.15; // 15% do total como valor mínimo
+
+    // Atualiza fatura para fechada
+    await db.faturas.update(faturaId, {
+      status: 'fechada',
+      fechada_automaticamente: false,
+      valor_total: valorTotal,
+      valor_minimo: valorMinimo,
+      updated_at: new Date(),
+    });
+
+    const faturaAtualizada = await db.faturas.get(faturaId);
+    if (!faturaAtualizada) {
+      throw new NotFoundError('Fatura não encontrada após fechamento');
+    }
+
+    return faturaAtualizada;
+  }
+
+  /**
    * Fecha automaticamente faturas vencidas
    */
   async fecharFaturasVencidas(): Promise<number> {
@@ -755,12 +803,12 @@ export class CartaoService {
         fatura.data_fechamento instanceof Date ? fatura.data_fechamento : new Date(fatura.data_fechamento);
 
       if (dataFechamento < hoje) {
-        await db.faturas.update(fatura.id, {
-          status: 'fechada',
-          fechada_automaticamente: true,
-          updated_at: new Date(),
-        });
-        contadorFechadas++;
+        try {
+          await this.fecharFatura(fatura.id);
+          contadorFechadas++;
+        } catch (error) {
+          console.error(`Erro ao fechar fatura ${fatura.id}:`, error);
+        }
       }
     }
 

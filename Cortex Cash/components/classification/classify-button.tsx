@@ -13,13 +13,16 @@ import { Brain, Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { categoriaService } from '@/lib/services/categoria.service';
+import { transacaoService } from '@/lib/services/transacao.service';
 
 interface ClassifyButtonProps {
   transactionId: string;
   descricao: string;
   valor: number;
   tipo: 'receita' | 'despesa';
-  onClassified?: (categoriaId: string, categoriaNome: string) => void;
+  onClassified?: (categoriaId: string, categoriaNome: string, confianca: number) => void;
+  autoApply?: boolean; // Se true, atualiza a transação automaticamente
   variant?: 'button' | 'icon';
   size?: 'sm' | 'default' | 'lg';
 }
@@ -30,6 +33,7 @@ export function ClassifyButton({
   valor,
   tipo,
   onClassified,
+  autoApply = false,
   variant = 'button',
   size = 'sm',
 }: ClassifyButtonProps) {
@@ -46,6 +50,9 @@ export function ClassifyButton({
       setLoading(true);
       setResult(null);
 
+      // Carrega categorias do tipo no cliente
+      const categorias = await categoriaService.listCategorias({ tipo, ativas: true });
+
       const response = await fetch('/api/ai/classify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,6 +61,7 @@ export function ClassifyButton({
           valor,
           tipo,
           transacao_id: transactionId,
+          categorias: categorias.map(c => ({ id: c.id, nome: c.nome })),
         }),
       });
 
@@ -72,19 +80,45 @@ export function ClassifyButton({
           cached: data.cached,
         });
 
-        toast.success(
-          <div className="space-y-1">
-            <div className="font-semibold">
-              Classificada como: {data.categoria_nome}
-            </div>
-            <div className="text-xs text-white/60">
-              Confiança: {(data.confianca * 100).toFixed(0)}%
-              {data.cached && ' (cache)'}
-            </div>
-          </div>
-        );
+        // Atualiza automaticamente se autoApply=true
+        if (autoApply) {
+          try {
+            await transacaoService.updateTransacao(transactionId, {
+              categoria_id: data.categoria_sugerida_id,
+              classificacao_origem: 'ia' as const,
+              classificacao_confianca: data.confianca,
+            });
 
-        onClassified?.(data.categoria_sugerida_id, data.categoria_nome);
+            toast.success(
+              <div className="space-y-1">
+                <div className="font-semibold">
+                  Aplicada: {data.categoria_nome}
+                </div>
+                <div className="text-xs text-white/60">
+                  Confiança: {(data.confianca * 100).toFixed(0)}%
+                  {data.cached && ' (cache)'}
+                </div>
+              </div>
+            );
+          } catch (updateError) {
+            console.error('Erro ao aplicar categoria:', updateError);
+            toast.error('Erro ao aplicar categoria automaticamente');
+          }
+        } else {
+          toast.success(
+            <div className="space-y-1">
+              <div className="font-semibold">
+                Classificada como: {data.categoria_nome}
+              </div>
+              <div className="text-xs text-white/60">
+                Confiança: {(data.confianca * 100).toFixed(0)}%
+                {data.cached && ' (cache)'}
+              </div>
+            </div>
+          );
+        }
+
+        onClassified?.(data.categoria_sugerida_id, data.categoria_nome, data.confianca);
       } else {
         toast.warning('IA não conseguiu sugerir uma categoria');
       }

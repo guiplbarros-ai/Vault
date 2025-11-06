@@ -1,0 +1,6 @@
+# Issues & Bugfixes
+
+- Arquitetura/IA: [../ARCHITECTURE_ISSUES_AI_USAGE.md](../ARCHITECTURE_ISSUES_AI_USAGE.md)
+- Import System: [../IMPORT_ISSUES_REPORT.md](../IMPORT_ISSUES_REPORT.md)
+- Bugfixes (IA Usage): [../BUGFIX_SUMMARY_AI_USAGE.md](../BUGFIX_SUMMARY_AI_USAGE.md)
+

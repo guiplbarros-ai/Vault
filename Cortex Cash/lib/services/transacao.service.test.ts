@@ -27,8 +27,6 @@ describe('TransacaoService', () => {
     await db.instituicoes.add({
       id: instituicaoId,
       nome: 'Instituição Teste',
-      tipo: 'banco',
-      ativa: true,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -167,7 +165,7 @@ describe('TransacaoService', () => {
         descricao: 'Teste',
         valor: 100,
         tipo: 'invalido',
-      } as CreateTransacaoDTO;
+      } as unknown as CreateTransacaoDTO;
 
       await expect(
         service.createTransacao(transacaoInvalida)

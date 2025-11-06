@@ -52,6 +52,24 @@ vi.mock('@/lib/services/ai-usage.service', () => ({
     currentCost: 0,
     limit: 10,
   }),
+  calculateCost: vi.fn((model: string, prompt: number, completion: number) => {
+    // Mock simples: $0.001 por 1000 tokens
+    return ((prompt + completion) / 1000) * 0.001;
+  }),
+}));
+
+// Mock AI Usage Store
+vi.mock('@/lib/services/ai-usage.store', () => ({
+  getServerStore: vi.fn(() => ({
+    logUsage: vi.fn().mockResolvedValue(undefined),
+  })),
+  checkAIBudgetLimitSafe: vi.fn().mockResolvedValue({
+    isOverLimit: false,
+    isNearLimit: false,
+    usedUsd: 0,
+    remainingUsd: 10,
+    percentageUsed: 0,
+  }),
 }));
 
 // Mock Prompt Cache (sempre retorna cache miss por padrão)
@@ -179,16 +197,14 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve retornar erro 429 quando budget limit é excedido', async () => {
-      // Mock checkAIBudgetLimit para retornar over limit
-      const { checkAIBudgetLimit } = await import('@/lib/services/ai-usage.service');
-      vi.mocked(checkAIBudgetLimit).mockResolvedValueOnce({
+      // Mock checkAIBudgetLimitSafe para retornar over limit
+      const { checkAIBudgetLimitSafe } = await import('@/lib/services/ai-usage.store');
+      vi.mocked(checkAIBudgetLimitSafe).mockResolvedValueOnce({
         isOverLimit: true,
         isNearLimit: true,
         usedUsd: 15,
         remainingUsd: -5,
         percentageUsed: 150,
-        currentCost: 15,
-        limit: 10,
       });
 
       const request = new NextRequest('http://localhost:3000/api/ai/classify', {
@@ -197,6 +213,7 @@ describe('API /api/ai/classify', () => {
           descricao: 'TESTE',
           valor: 45.50,
           tipo: 'despesa',
+          categorias: categoriasDespesa,
         }),
       });
 
@@ -208,16 +225,14 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve permitir override quando allowOverride é true', async () => {
-      // Mock checkAIBudgetLimit para retornar over limit
-      const { checkAIBudgetLimit } = await import('@/lib/services/ai-usage.service');
-      vi.mocked(checkAIBudgetLimit).mockResolvedValueOnce({
+      // Mock checkAIBudgetLimitSafe para retornar over limit
+      const { checkAIBudgetLimitSafe } = await import('@/lib/services/ai-usage.store');
+      vi.mocked(checkAIBudgetLimitSafe).mockResolvedValueOnce({
         isOverLimit: true,
         isNearLimit: true,
         usedUsd: 15,
         remainingUsd: -5,
         percentageUsed: 150,
-        currentCost: 15,
-        limit: 10,
       });
 
       const request = new NextRequest('http://localhost:3000/api/ai/classify', {
@@ -408,15 +423,13 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve retornar erro 429 quando budget limit é excedido', async () => {
-      const { checkAIBudgetLimit } = await import('@/lib/services/ai-usage.service');
-      vi.mocked(checkAIBudgetLimit).mockResolvedValueOnce({
+      const { checkAIBudgetLimitSafe } = await import('@/lib/services/ai-usage.store');
+      vi.mocked(checkAIBudgetLimitSafe).mockResolvedValueOnce({
         isOverLimit: true,
         isNearLimit: true,
         usedUsd: 15,
         remainingUsd: -5,
         percentageUsed: 150,
-        currentCost: 15,
-        limit: 10,
       });
 
       const request = new NextRequest('http://localhost:3000/api/ai/classify/batch', {

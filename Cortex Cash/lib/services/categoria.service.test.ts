@@ -78,7 +78,7 @@ describe('CategoriaService', () => {
         tipo: 'invalido',
         icone: '🍔',
         cor: '#FF5733',
-      } as CreateCategoriaDTO;
+      } as unknown as CreateCategoriaDTO;
 
       await expect(
         service.createCategoria(categoriInvalida)

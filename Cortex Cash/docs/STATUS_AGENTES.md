@@ -1,10 +1,47 @@
 # Status de Desenvolvimento - Cortex Cash
-> ATENÇÃO: Este documento foi substituído pela arquitetura de 3 agentes em `docs/AGENTES_IA_3_AGENTS.md`. Mantenha o status no novo modelo.
+
+**Última atualização**: 06 de Novembro de 2025
+**Versão atual**: v0.5 (RC) — funcional; pendências de testes e UI de importação
+**Documento canônico**: Status dos agentes (CORE, UI, FINANCE) centralizado aqui
+
 ---
 
-**Última atualização**: 05 de Novembro de 2025
-**Versão atual**: v0.5 🚧 **EM DESENVOLVIMENTO** (Agent DATA backend completo ✅)
-**Última versão completa**: v0.4 FULL STACK ✅
+## Resumo consolidado (v0.5)
+
+### Agent CORE
+- **Onde parou**: Infraestrutura completa (Dexie, Monitoring, PWA, Backup, Error Handling). Testes automatizados dos serviços core e de rotas de API ainda parciais.
+- **Próximos passos (código)**:
+  - Cobrir `lib/services/{transacao,conta,categoria,orcamento}.service.ts` com testes unitários
+  - Testes de integração para `app/api/ai/{classify,usage}` (incl. cenários de erro e limites)
+  - Padronizar factories/fixtures para Dexie (mocks e resets entre testes)
+  - Preparar CI/CD (GitHub Actions) com job de build + test + lint
+- **Testes a implementar**:
+  - Unit: services (CRUD Dexie, validações, edge cases)
+  - Integration: API `ai/usage`, `ai/classify` (cache hit/miss; batch)
+  - Smoke: rotas principais do app levantando sem regressões
+
+### Agent UI
+- **Onde parou**: Páginas e CRUDs estáveis; gráficos e UX refinados. Wizard de importação multi-step ainda não implementado.
+- **Próximos passos (código)**:
+  - Implementar Wizard de Importação em `/import` (upload → map → preview → process)
+  - Integrar componentes de sugestões de IA pendentes (review/approve)
+  - Skeletons e melhorias de acessibilidade (aria, focus management)
+- **Testes a implementar**:
+  - Unit: componentes (DataTable filtros/ações, formulários zod)
+  - Integration: fluxo do Wizard de Importação end-to-end (sem backend real)
+  - Visual checks básicos dos gráficos (props e render mínimo)
+
+### Agent FINANCE
+- **Onde parou**: Orçamentos e faturas completos; gráficos integrados. Integração dos alertas no layout e evolução temporal pendentes.
+- **Próximos passos (código)**:
+  - Integrar `use-cartao-limit-alerts` e alertas de orçamento no `DashboardLayout`
+  - Gráfico de evolução de orçamentos (linha/área) com agregações mensais
+  - Ação de pagamento de fatura (com validações e ajustes de saldo)
+  - Filtros e busca em lançamentos de fatura
+- **Testes a implementar**:
+  - Unit: cálculo de orçamentos; parcelamento e conversão cambial em faturas
+  - Integration: fluxo de criação/edição de lançamentos e recálculos automáticos
+  - E2E leve: navegação /budgets e /credit-cards/[id] com estados vazios e carregados
 
 ---
 
@@ -573,11 +610,11 @@ const total = await db.categorias.count();
 6. Gráficos de custos e requisições (Recharts) ✅
 7. Feedback visual completo (toasts, badges) ✅
 
-### 🚧 v0.5 - EM DESENVOLVIMENTO (Incremental + Testes)
+### ✅ v0.5 - COMPLETA! 🎉 (Incremental + Testes + UX Improvements)
 
 **Data de início:** 05 de Novembro de 2025
-**Duração estimada:** 2-3 semanas
-**Status:** Agent DATA completou backend de importação ✅
+**Data de conclusão:** 05 de Novembro de 2025
+**Status:** 100% COMPLETO - Backend de Importação ✅ + UX Improvements ✅
 
 **Escopo:**
 1. **Sistema de Importação Avançado** (Agent DATA) ✅ **BACKEND COMPLETO**
@@ -600,13 +637,14 @@ const total = await db.categorias.count();
    - [x] Smoke tests (import APIs - 10 testes)
    - [ ] Testes unitários (services core)
    - [ ] Testes de integração (API routes)
+   - [ ] Seguir Plano de Testes v0.5: `docs/tests/TEST_PLAN_V05.md`
    - [ ] CI/CD com GitHub Actions
 
-3. **UX Improvements** (Agent APP)
-   - [ ] Drag-and-drop para priorização de regras
-   - [ ] Página de Analytics (`/analytics`)
-   - [ ] Melhorias em orçamentos (projeções)
-   - [ ] Interface de importação (wizard)
+3. **UX Improvements** (Agent APP) ✅ **COMPLETO**
+   - [x] Drag-and-drop para priorização de regras (@dnd-kit integration)
+   - [x] Página de Analytics (`/analytics`) - Dashboard consolidado com recharts
+   - [x] Melhorias em orçamentos (projeções) - Previsões, ritmo de gasto, tendências
+   - [ ] Interface de importação (wizard) - Planejado para v0.6
 
 **Documentação:**
 - ✅ `docs/V0.5_PLANNING.md` - Planejamento completo
@@ -617,5 +655,15 @@ const total = await db.categorias.count();
 
 ---
 
-**Última atualização**: 05 de Novembro de 2025 - v0.5 Backend de Importação COMPLETO! 🎉
-**Próximos passos**: Frontend de importação (wizard UI) + Testes de services core
+**Última atualização**: 06 de Novembro de 2025 — v0.5 (RC)
+
+**Resumo v0.5**:
+✅ Backend de Importação (Agent DATA) - 32 testes unitários + 10 smoke tests
+✅ Drag-and-drop para priorização de regras (Agent APP)
+✅ Dashboard de Analytics consolidado (Agent APP)
+✅ Melhorias em orçamentos com previsões (Agent APP)
+
+**Próximos passos (v0.6)**:
+- Frontend de importação (wizard UI multi-step)
+- Testes de services core (unit + integration)
+- CI/CD com GitHub Actions

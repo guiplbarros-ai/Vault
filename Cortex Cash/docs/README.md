@@ -1,3 +1,57 @@
+# Documentação — Cortex Cash
+
+Este índice consolida e organiza a documentação por categorias. Use-o como ponto de partida.
+
+## Status
+- Status dos agentes (CORE, UI, FINANCE): [STATUS_AGENTES.md](./STATUS_AGENTES.md)
+- Índice de status: [status/](./status/README.md)
+
+## Changelogs
+- Changelog em `docs`: [CHANGELOG.md](./CHANGELOG.md)
+- Changelog na raiz do repo: [../../CHANGELOG.md](../../CHANGELOG.md)
+- Índice de changelogs: [changelogs/](./changelogs/README.md)
+
+## Issues e Bugfixes
+- Arquitetura/IA (issues): [ARCHITECTURE_ISSUES_AI_USAGE.md](./ARCHITECTURE_ISSUES_AI_USAGE.md)
+- Import (issues): [IMPORT_ISSUES_REPORT.md](./IMPORT_ISSUES_REPORT.md)
+- Bugfix summary (IA Usage): [BUGFIX_SUMMARY_AI_USAGE.md](./BUGFIX_SUMMARY_AI_USAGE.md)
+- Índice de issues: [issues/](./issues/README.md)
+
+## Testes
+- Plano de Testes v0.5: [tests/TEST_PLAN_V05.md](./tests/TEST_PLAN_V05.md)
+- Resultados v0.4: [TEST_RESULTS_V04.md](./TEST_RESULTS_V04.md)
+- Checklist v0.4: [TESTING_CHECKLIST_V04.md](./TESTING_CHECKLIST_V04.md)
+- Pasta de testes (código): [../../tests](../../tests)
+- Índice de testes: [tests/](./tests/README.md)
+
+## Planejamento
+- Planejamento v0.5: [V0.5_PLANNING.md](./V0.5_PLANNING.md)
+- Tasks v0.5: [V0.5_TASKS.md](./V0.5_TASKS.md)
+- Roadmap: [ROADMAP_SUMMARY.md](./ROADMAP_SUMMARY.md)
+- PRD: [Cortex Cash PRD.md](./Cortex Cash PRD.md)
+- Índice de planejamento: [planning/](./planning/README.md)
+
+## Arquitetura e Guias
+- Arquitetura: [architecture/](./architecture)
+- Data Architecture: [data-architecture/](./data-architecture)
+- Guias: [guides/](./guides)
+- AI Docs: [ai/](./ai)
+
+## Traduções
+- Lista de arquivos: [TRANSLATION_FILES_LIST.md](./TRANSLATION_FILES_LIST.md)
+- Inventário: [TRANSLATION_INVENTORY.md](./TRANSLATION_INVENTORY.md)
+- Índice de traduções: [translations/](./translations/README.md)
+
+## Relatórios
+- Relatórios de finanças e budgets (v0.5): [FINANCE_REPORTS_BUDGETS_V0.5.md](./FINANCE_REPORTS_BUDGETS_V0.5.md)
+- Índice de relatórios: [reports/](./reports/README.md)
+
+## Arquivo
+- Arquivos históricos/legados: [archives/](./archives)
+
+---
+
+Dica: Ao adicionar novos documentos, vincule-os no índice da categoria correspondente para manter a organização.
 # Documentação - Cortex Cash
 **v0.4 | Última atualização: 05 de Novembro de 2025**
 

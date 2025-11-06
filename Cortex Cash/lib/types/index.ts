@@ -147,7 +147,7 @@ export interface LogIA {
   transacao_id?: string;
   prompt: string;
   resposta: string;
-  modelo: 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo'; // Modelos válidos para cálculo de custo
+  modelo: 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo';
   tokens_prompt: number;
   tokens_resposta: number;
   tokens_total: number;
@@ -302,6 +302,21 @@ export interface CreateTransacaoDTO {
   tags?: string[];
 }
 
+export interface UpdateTransacaoDTO {
+  conta_id?: string;
+  categoria_id?: string;
+  data?: Date | string;
+  descricao?: string;
+  valor?: number;
+  tipo?: TipoTransacao;
+  observacoes?: string;
+  tags?: string[];
+  // Metadados de classificação (preservados quando fornecidos)
+  classificacao_origem?: OrigemClassificacao;
+  classificacao_confianca?: number;
+  classificacao_confirmada?: boolean;
+}
+
 export interface CreateCategoriaDTO {
   nome: string;
   tipo: TipoTransacao;
@@ -318,6 +333,8 @@ export interface UpdateTransacaoDTO {
   data?: Date | string;
   observacoes?: string;
   tags?: string[];
+  classificacao_origem?: OrigemClassificacao;
+  classificacao_confianca?: number;
 }
 
 export interface CreateInvestimentoDTO {

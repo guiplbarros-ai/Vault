@@ -5,6 +5,8 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { categoriaService } from '@/lib/services/categoria.service';
+import { logAIUsage } from '@/lib/services/ai-usage.service';
 
 interface BatchClassifyItem {
   id: string;
@@ -22,6 +24,16 @@ interface BatchClassifyResult {
   reasoning: string;
   cached: boolean;
   error?: string;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  metadata?: {
+    modelo: string;
+    prompt: string;
+    resposta: string;
+  };
 }
 
 interface BatchClassifyResponse {
@@ -75,6 +87,27 @@ export function useBatchClassification(): UseBatchClassificationReturn {
         return null;
       }
 
+      // Pré-carrega categorias por tipo no cliente (uma vez por chamada)
+      const tiposUnicos = Array.from(new Set(items.map(i => i.tipo)));
+      const categoriasMap: { receita?: { id: string; nome: string }[]; despesa?: { id: string; nome: string }[] } = {};
+      if (tiposUnicos.includes('receita')) {
+        const cat = await categoriaService.listCategorias({ tipo: 'receita', ativas: true });
+        categoriasMap.receita = cat.map(c => ({ id: c.id, nome: c.nome }));
+      }
+      if (tiposUnicos.includes('despesa')) {
+        const cat = await categoriaService.listCategorias({ tipo: 'despesa', ativas: true });
+        categoriasMap.despesa = cat.map(c => ({ id: c.id, nome: c.nome }));
+      }
+
+      // Verifica se há categorias disponíveis
+      const totalCategorias = (categoriasMap.receita?.length || 0) + (categoriasMap.despesa?.length || 0);
+      if (totalCategorias === 0) {
+        toast.error('Nenhuma categoria encontrada', {
+          description: 'Crie categorias antes de usar a classificação automática',
+        });
+        return null;
+      }
+
       const response = await fetch('/api/ai/classify/batch', {
         method: 'POST',
         headers: {
@@ -82,6 +115,7 @@ export function useBatchClassification(): UseBatchClassificationReturn {
         },
         body: JSON.stringify({
           items,
+          categorias: categoriasMap,
           config: {
             defaultModel: aiCosts?.defaultModel || 'gpt-4o-mini',
             monthlyCostLimit: aiCosts?.monthlyCostLimit || 10.0,
@@ -100,11 +134,41 @@ export function useBatchClassification(): UseBatchClassificationReturn {
           return null;
         }
 
+        if (response.status === 501) {
+          toast.error('Funcionalidade não disponível', {
+            description: 'O endpoint de classificação não está implementado no servidor',
+          });
+          return null;
+        }
+
         const error = await response.json();
         throw new Error(error.message || 'Erro ao classificar transações');
       }
 
       const data: BatchClassifyResponse = await response.json();
+
+      // Registra uso de IA no cliente (apenas resultados não-cached)
+      for (const result of data.results) {
+        if (result.usage && result.metadata && !result.cached && !result.error) {
+          try {
+            const item = items.find(i => i.id === result.id);
+            await logAIUsage({
+              transacao_id: item?.transacao_id,
+              prompt: result.metadata.prompt,
+              resposta: result.metadata.resposta,
+              modelo: result.metadata.modelo as 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo',
+              tokens_prompt: result.usage.prompt_tokens,
+              tokens_resposta: result.usage.completion_tokens,
+              categoria_sugerida_id: result.categoria_sugerida_id ?? undefined,
+              confianca: result.confianca,
+            });
+          } catch (logError) {
+            console.error('Erro ao registrar uso de IA:', logError);
+            // Não bloqueia o fluxo principal
+          }
+        }
+      }
+      console.log(`✅ ${data.summary.api_calls} usos de IA registrados (batch)`);
 
       // Atualiza progresso
       setProgress({

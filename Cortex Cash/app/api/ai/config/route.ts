@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export interface AIConfig {
   enabled: boolean;
-  defaultModel: 'gpt-4o-mini' | 'gpt-4o' | 'gpt-3.5-turbo';
+  defaultModel: 'gpt-4o-mini' | 'gpt-4o';
   monthlyCostLimit: number;
   allowOverride: boolean;
   strategy: 'aggressive' | 'balanced' | 'quality';
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const config: AIConfig = await request.json();
 
     // Valida configuração
-    if (!config.defaultModel || !['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'].includes(config.defaultModel)) {
+    if (!config.defaultModel || !['gpt-4o-mini', 'gpt-4o'].includes(config.defaultModel)) {
       return NextResponse.json(
         { error: 'Invalid model specified' },
         { status: 400 }

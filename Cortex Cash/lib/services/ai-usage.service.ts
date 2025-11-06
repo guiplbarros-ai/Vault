@@ -6,6 +6,7 @@
 
 import { getDB } from '@/lib/db/client';
 import { DatabaseError, ValidationError } from '@/lib/errors';
+import { USD_TO_BRL } from '@/lib/config/currency';
 
 // Preços OpenAI (USD por 1M tokens) - atualizado em Jan 2025
 const PRICING = {
@@ -100,9 +101,9 @@ export async function logAIUsage(data: CreateAIUsageLogDTO): Promise<AIUsageLog>
 
     const tokens_total = data.tokens_prompt + data.tokens_resposta;
 
-    const log: any = {
+    const log: AIUsageLog = {
       id: crypto.randomUUID(),
-      transacao_id: data.transacao_id ?? undefined,
+      transacao_id: data.transacao_id ?? null,
       prompt: data.prompt,
       resposta: data.resposta,
       modelo: data.modelo,
@@ -110,13 +111,30 @@ export async function logAIUsage(data: CreateAIUsageLogDTO): Promise<AIUsageLog>
       tokens_resposta: data.tokens_resposta,
       tokens_total,
       custo_usd,
-      categoria_sugerida_id: data.categoria_sugerida_id ?? undefined,
-      confianca: data.confianca ?? undefined,
+      categoria_sugerida_id: data.categoria_sugerida_id ?? null,
+      confianca: data.confianca ?? null,
       confirmada: false,
       created_at: new Date(),
     };
 
-    await db.logs_ia.add(log);
+    // Converter null para undefined para compatibilidade com Dexie
+    const dexieLog: Omit<import('@/lib/types').LogIA, 'id'> & { id: string } = {
+      id: log.id,
+      transacao_id: log.transacao_id ?? undefined,
+      prompt: log.prompt,
+      resposta: log.resposta,
+      modelo: log.modelo as 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo',
+      tokens_prompt: log.tokens_prompt,
+      tokens_resposta: log.tokens_resposta,
+      tokens_total: log.tokens_total,
+      custo_usd: log.custo_usd,
+      categoria_sugerida_id: log.categoria_sugerida_id ?? undefined,
+      confianca: log.confianca ?? undefined,
+      confirmada: log.confirmada,
+      created_at: log.created_at,
+    };
+
+    await db.logs_ia.add(dexieLog);
     return log;
   } catch (error) {
     throw new DatabaseError('Erro ao registrar uso de IA', error as Error);
@@ -141,19 +159,18 @@ export async function confirmAISuggestion(logId: string): Promise<void> {
 export async function getAIUsageSummary(
   startDate?: Date,
   endDate?: Date,
-  usdToBrl: number = 6.0
+  usdToBrl: number = USD_TO_BRL
 ): Promise<AIUsageSummary> {
   try {
     const db = getDB();
     const start = startDate ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = endDate ?? new Date();
 
-    // Get all logs and filter by date range
-    const allLogs = await db.logs_ia.toArray();
-    const logs = allLogs.filter(log => {
-      const logDate = log.created_at instanceof Date ? log.created_at : new Date(log.created_at);
-      return logDate >= start && logDate <= end;
-    });
+    // Usar índice created_at para filtrar eficientemente
+    const logs = await db.logs_ia
+      .where('created_at')
+      .between(start, end, true, true) // inclusive em ambos os lados
+      .toArray();
 
     const total_requests = logs.length;
     const total_tokens = logs.reduce((sum, log) => sum + log.tokens_total, 0);
@@ -165,7 +182,7 @@ export async function getAIUsageSummary(
     const rejected_suggestions = suggestions.filter(log => !log.confirmada).length;
 
     const confidenceValues = suggestions
-      .filter(log => log.confianca !== null)
+      .filter(log => log.confianca !== null && log.confianca !== undefined)
       .map(log => log.confianca!);
 
     const average_confidence = confidenceValues.length > 0
@@ -196,17 +213,18 @@ export async function getAIUsageByPeriod(
 ): Promise<AIUsageByPeriod[]> {
   try {
     const db = getDB();
-    const allLogs = await db.logs_ia.toArray();
-    const logs = allLogs.filter(log => {
-      const logDate = log.created_at instanceof Date ? log.created_at : new Date(log.created_at);
-      return logDate >= startDate && logDate <= endDate;
-    });
+
+    // Usar índice created_at para filtrar eficientemente
+    const logs = await db.logs_ia
+      .where('created_at')
+      .between(startDate, endDate, true, true)
+      .toArray();
 
     // Agrupar manualmente por período
     const grouped = new Map<string, { requests: number; tokens: number; cost_usd: number }>();
 
     logs.forEach(log => {
-      const date = log.created_at instanceof Date ? log.created_at : new Date(log.created_at);
+      const date = log.created_at;
       let period: string;
 
       if (groupBy === 'day') {
@@ -237,17 +255,26 @@ export async function getAIUsageByPeriod(
 export async function checkAIBudgetLimit(
   currentMonth: Date = new Date(),
   limitUsd: number,
-  warningThreshold: number = 0.8
+  warningThreshold: number = 0.8,
+  usdToBrl: number = USD_TO_BRL
 ): Promise<{
   isNearLimit: boolean;
   isOverLimit: boolean;
   usedUsd: number;
   remainingUsd: number;
   percentageUsed: number;
+  currentCost?: number; // Adicionado para compatibilidade com código existente
+  limit?: number; // Adicionado para compatibilidade com código existente
 }> {
+  // Validação: limitUsd deve ser >= 0
+  if (limitUsd < 0) {
+    throw new ValidationError('Limite de gastos deve ser maior ou igual a zero');
+  }
+
   const summary = await getAIUsageSummary(
     new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1),
-    new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
+    new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0),
+    usdToBrl
   );
 
   const usedUsd = summary.total_cost_usd;
@@ -260,5 +287,7 @@ export async function checkAIBudgetLimit(
     usedUsd,
     remainingUsd,
     percentageUsed,
+    currentCost: usedUsd, // Para compatibilidade
+    limit: limitUsd, // Para compatibilidade
   };
 }

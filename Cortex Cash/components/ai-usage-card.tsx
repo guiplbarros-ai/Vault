@@ -7,6 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { formatCurrency } from '@/lib/utils/format';
 import { Sparkles, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getAIUsageSummary, checkAIBudgetLimit } from '@/lib/services/ai-usage.service';
+import { USD_TO_BRL } from '@/lib/config/currency';
 
 interface AIUsageCardProps {
   className?: string;
@@ -53,29 +55,28 @@ export function AIUsageCard({ className }: AIUsageCardProps) {
         const aiSettings = getAISettings();
         const limit = aiSettings?.monthlyCostLimit ?? 10.0;
 
-        const response = await fetch(`/api/ai/usage?limit=${limit}`);
-        if (!response.ok) {
-          // Silently fail - show 0 usage instead of error
-          setData({
-            usedBrl: 0,
-            limitBrl: limit * 6.0, // USD_TO_BRL = 6.0
-            percentage: 0,
-            isNearLimit: false,
-            isOverLimit: false,
-          });
-          setIsLoading(false);
-          return;
-        }
+        // Compute client-side from Dexie logs
+        const currentMonth = new Date();
+        const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+        const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
 
-        const result = await response.json();
-        setData(result);
+        const summary = await getAIUsageSummary(startOfMonth, endOfMonth, USD_TO_BRL);
+        const budget = await checkAIBudgetLimit(currentMonth, limit, 0.8, USD_TO_BRL);
+
+        setData({
+          usedBrl: summary.total_cost_brl,
+          limitBrl: limit * USD_TO_BRL,
+          percentage: budget.percentageUsed,
+          isNearLimit: budget.isNearLimit,
+          isOverLimit: budget.isOverLimit,
+        });
       } catch (error) {
         // Silently fail - show 0 usage instead of error
         const aiSettings = getAISettings();
         const limit = aiSettings?.monthlyCostLimit ?? 10.0;
         setData({
           usedBrl: 0,
-          limitBrl: limit * 6.0,
+          limitBrl: limit * USD_TO_BRL,
           percentage: 0,
           isNearLimit: false,
           isOverLimit: false,

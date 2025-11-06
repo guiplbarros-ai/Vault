@@ -7,12 +7,15 @@
  * Classifica múltiplas transações automaticamente usando IA
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { transacaoService } from '@/lib/services/transacao.service';
+import { categoriaService } from '@/lib/services/categoria.service';
+import { useSetting } from '@/app/providers/settings-provider';
 import { toast } from 'sonner';
-import { Brain, Loader2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Brain, Loader2, CheckCircle, XCircle, AlertTriangle, FolderX, Power } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
 interface BulkAIClassifyProps {
@@ -39,6 +42,28 @@ export function BulkAIClassify({
       error?: string;
     }>;
   } | null>(null);
+
+  // Settings & validações
+  const [aiEnabled] = useSetting<boolean>('aiCosts.enabled');
+  const [hasCategories, setHasCategories] = useState<boolean | null>(null);
+  const [checkingCategories, setCheckingCategories] = useState(true);
+
+  // Verifica se existem categorias
+  useEffect(() => {
+    const checkCategories = async () => {
+      try {
+        const receitas = await categoriaService.listCategorias({ tipo: 'receita', ativas: true });
+        const despesas = await categoriaService.listCategorias({ tipo: 'despesa', ativas: true });
+        setHasCategories(receitas.length > 0 || despesas.length > 0);
+      } catch (error) {
+        console.error('Erro ao verificar categorias:', error);
+        setHasCategories(false);
+      } finally {
+        setCheckingCategories(false);
+      }
+    };
+    checkCategories();
+  }, []);
 
   const handleClassify = async () => {
     try {
@@ -70,6 +95,11 @@ export function BulkAIClassify({
           });
 
           if (!response.ok) {
+            // Tratamento especial para 501 (Not Implemented)
+            if (response.status === 501) {
+              throw new Error('Endpoint de classificação não está disponível no servidor');
+            }
+
             const error = await response.json();
             throw new Error(error.message || 'Erro ao classificar');
           }
@@ -79,6 +109,8 @@ export function BulkAIClassify({
           if (data.categoria_sugerida_id) {
             await transacaoService.updateTransacao(transaction.id, {
               categoria_id: data.categoria_sugerida_id,
+              classificacao_origem: 'ia' as const,
+              classificacao_confianca: data.confianca,
             });
 
             details.push({
@@ -138,6 +170,50 @@ export function BulkAIClassify({
 
   if (selectedTransactionIds.length === 0) {
     return null;
+  }
+
+  // Empty state: Sem categorias
+  if (hasCategories === false) {
+    return (
+      <Alert className="border-yellow-500/30 bg-yellow-500/10">
+        <FolderX className="h-4 w-4 text-yellow-500" />
+        <AlertDescription className="text-yellow-200">
+          <strong>Nenhuma categoria encontrada.</strong>
+          <br />
+          Crie categorias de receita ou despesa antes de usar a classificação automática.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Empty state: IA desativada
+  if (!aiEnabled) {
+    return (
+      <Alert className="border-orange-500/30 bg-orange-500/10">
+        <Power className="h-4 w-4 text-orange-500" />
+        <AlertDescription className="text-orange-200">
+          <strong>IA está desativada.</strong>
+          <br />
+          Ative a IA nas Configurações → IA e Custos para usar a classificação automática.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Loading state: Verificando categorias
+  if (checkingCategories) {
+    return (
+      <div
+        className="rounded-lg border p-4 flex items-center justify-center gap-2"
+        style={{
+          backgroundColor: 'rgb(15, 23, 42)',
+          borderColor: 'rgb(30, 41, 59)',
+        }}
+      >
+        <Loader2 className="w-4 h-4 animate-spin text-white/60" />
+        <span className="text-white/60">Verificando configurações...</span>
+      </div>
+    );
   }
 
   return (

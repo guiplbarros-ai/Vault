@@ -237,6 +237,9 @@ function extractTag(content: string, tagName: string): string | undefined {
 
 /**
  * Parse data no formato OFX (YYYYMMDD ou YYYYMMDDHHMMSS)
+ *
+ * IMPORTANTE: Cria a data no timezone local para evitar problemas de "voltar um dia"
+ * quando convertido de UTC para timezones negativos (ex: UTC-3 Brasília)
  */
 function parseDateOFX(dateStr: string): Date | null {
   if (!dateStr) return null;
@@ -245,17 +248,30 @@ function parseDateOFX(dateStr: string): Date | null {
   const cleaned = dateStr.split('[')[0].trim();
 
   // Extrair componentes YYYYMMDD
-  const year = cleaned.substring(0, 4);
-  const month = cleaned.substring(4, 6);
-  const day = cleaned.substring(6, 8);
+  const year = parseInt(cleaned.substring(0, 4), 10);
+  const month = parseInt(cleaned.substring(4, 6), 10);
+  const day = parseInt(cleaned.substring(6, 8), 10);
 
   if (!year || !month || !day) return null;
 
-  // Criar data ISO
-  const isoDate = `${year}-${month}-${day}`;
-  const normalizedDate = normalizeDate(isoDate);
+  // Validar ranges
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
 
-  return normalizedDate ? new Date(normalizedDate) : null;
+  // Criar data no timezone local (não UTC) usando new Date(year, month, day)
+  // Isso evita o problema de "voltar um dia" em timezones negativos
+  const date = new Date(year, month - 1, day, 12, 0, 0); // meio-dia para evitar DST issues
+
+  // Validar que a data foi criada corretamente
+  if (
+    isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
 }
 
 /**

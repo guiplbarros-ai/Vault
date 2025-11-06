@@ -285,7 +285,7 @@ export class TransacaoService implements ITransacaoService {
     }
   }
 
-  async updateTransacao(id: string, data: Partial<CreateTransacaoDTO>): Promise<Transacao> {
+  async updateTransacao(id: string, data: import('../types').UpdateTransacaoDTO): Promise<Transacao> {
     try {
       const db = getDB();
 
@@ -301,11 +301,19 @@ export class TransacaoService implements ITransacaoService {
 
     // Only include fields that are actually present in the input DTO
     if (data.conta_id !== undefined) updated.conta_id = data.conta_id;
+
+    // Handle categoria_id with classification metadata
     if (data.categoria_id !== undefined) {
       updated.categoria_id = data.categoria_id;
-      updated.classificacao_confirmada = true;
-      updated.classificacao_origem = 'manual';
+
+      // Preserve classification metadata if provided, otherwise default to manual
+      updated.classificacao_confirmada = data.classificacao_confirmada ?? true;
+      updated.classificacao_origem = data.classificacao_origem ?? 'manual';
+      if (data.classificacao_confianca !== undefined) {
+        updated.classificacao_confianca = data.classificacao_confianca;
+      }
     }
+
     if (data.descricao !== undefined) updated.descricao = data.descricao;
     if (data.valor !== undefined) updated.valor = data.valor;
     if (data.tipo !== undefined) updated.tipo = data.tipo;

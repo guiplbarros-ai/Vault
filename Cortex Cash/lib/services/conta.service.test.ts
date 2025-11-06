@@ -28,6 +28,7 @@ describe('ContaService', () => {
         tipo: 'corrente' as const,
         instituicao_id: 'inst-1',
         saldo_inicial: 1000,
+      saldo_atual: 1000,
         ativa: true,
       };
 
@@ -48,7 +49,9 @@ describe('ContaService', () => {
         nome: 'Conta Sem Saldo',
         tipo: 'corrente' as const,
         instituicao_id: 'inst-1',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       };
 
       const result = await service.createConta(novaConta);
@@ -65,6 +68,7 @@ describe('ContaService', () => {
         tipo: 'corrente',
         instituicao_id: 'inst-1',
         saldo_inicial: 100,
+      saldo_atual: 100,
         ativa: true,
       });
       await service.createConta({
@@ -72,6 +76,7 @@ describe('ContaService', () => {
         tipo: 'poupanca',
         instituicao_id: 'inst-1',
         saldo_inicial: 200,
+      saldo_atual: 200,
         ativa: true,
       });
       await service.createConta({
@@ -79,6 +84,7 @@ describe('ContaService', () => {
         tipo: 'corrente',
         instituicao_id: 'inst-2',
         saldo_inicial: 300,
+      saldo_atual: 300,
         ativa: false,
       });
     });
@@ -123,7 +129,9 @@ describe('ContaService', () => {
         nome: 'Conta Teste',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       });
 
       const result = await service.getContaById(created.id);
@@ -146,7 +154,9 @@ describe('ContaService', () => {
         nome: 'Conta Original',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       });
 
       const result = await service.updateConta(created.id, {
@@ -172,7 +182,9 @@ describe('ContaService', () => {
         nome: 'Conta Ativa',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       });
 
       const result = await service.toggleAtiva(created.id);
@@ -185,7 +197,9 @@ describe('ContaService', () => {
         nome: 'Conta Inativa',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        ativa: false,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: false,
       });
 
       const result = await service.toggleAtiva(created.id);
@@ -206,7 +220,9 @@ describe('ContaService', () => {
         nome: 'Conta Vazia',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       });
 
       const saldo = await service.getSaldoConta(conta.id);
@@ -220,7 +236,9 @@ describe('ContaService', () => {
         nome: 'Conta Teste',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       });
 
       // Adicionar transações manualmente
@@ -266,6 +284,7 @@ describe('ContaService', () => {
         tipo: 'corrente',
         instituicao_id: 'inst-1',
         saldo_inicial: 500,
+      saldo_atual: 500,
         ativa: true,
       });
 
@@ -301,7 +320,9 @@ describe('ContaService', () => {
         nome: 'Conta para Deletar',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       });
 
       await service.deleteConta(conta.id);
@@ -318,7 +339,9 @@ describe('ContaService', () => {
         nome: 'Conta para Hard Delete',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       });
 
       await service.hardDeleteConta(conta.id);
@@ -334,19 +357,25 @@ describe('ContaService', () => {
         nome: 'Conta Inst 1 - A',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       });
       await service.createConta({
         nome: 'Conta Inst 1 - B',
         tipo: 'poupanca',
         instituicao_id: 'inst-1',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       });
       await service.createConta({
         nome: 'Conta Inst 2',
         tipo: 'corrente',
         instituicao_id: 'inst-2',
-        ativa: true,
+        saldo_inicial: 0,
+      saldo_atual: 0,
+      ativa: true,
       });
     });
 

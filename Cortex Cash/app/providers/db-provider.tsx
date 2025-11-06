@@ -26,12 +26,7 @@ interface DBContextType {
   error: string | null;
 }
 
-const DBContext = createContext<DBContextType>({
-  db: null,
-  isInitialized: false,
-  isLoading: true,
-  error: null,
-});
+const DBContext = createContext<DBContextType | undefined>(undefined);
 
 export function useDB() {
   const context = useContext(DBContext);
@@ -55,7 +50,7 @@ export function DBProvider({ children }: DBProviderProps) {
     // Só executa no cliente
     if (typeof window === 'undefined') return;
 
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout>;
 
     async function initialize() {
       try {

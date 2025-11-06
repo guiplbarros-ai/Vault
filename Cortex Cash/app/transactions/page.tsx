@@ -402,6 +402,8 @@ export default function TransactionsPage() {
               onClick={async (e) => {
                 e.preventDefault();
                 try {
+                  // Carrega categorias do tipo no cliente e envia ao endpoint
+                  const categorias = await import('@/lib/services/categoria.service').then(m => m.categoriaService.listCategorias({ tipo: row.tipo, ativas: true }));
                   const response = await fetch('/api/ai/classify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -410,6 +412,7 @@ export default function TransactionsPage() {
                       valor: Math.abs(row.valor),
                       tipo: row.tipo,
                       transacao_id: row.id,
+                      categorias: (await categorias).map(c => ({ id: c.id, nome: c.nome })),
                     }),
                   });
 

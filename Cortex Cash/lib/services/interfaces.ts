@@ -25,6 +25,7 @@ import type {
   CicloFatura,
   ProjecaoFatura,
   CreateTransacaoDTO,
+  UpdateTransacaoDTO,
   CreateContaDTO,
   CreateInstituicaoDTO,
   CreateCategoriaDTO,
@@ -441,7 +442,7 @@ export interface ITransacaoService {
   /**
    * Atualiza transação
    */
-  updateTransacao(id: string, data: Partial<CreateTransacaoDTO>): Promise<Transacao>;
+  updateTransacao(id: string, data: UpdateTransacaoDTO): Promise<Transacao>;
 
   /**
    * Deleta transação

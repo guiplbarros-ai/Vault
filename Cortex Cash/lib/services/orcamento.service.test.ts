@@ -369,7 +369,10 @@ describe('OrcamentoService', () => {
         valor: -200,
         data: new Date('2025-11-10'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(transacao1);
@@ -381,7 +384,10 @@ describe('OrcamentoService', () => {
         valor: -150,
         data: new Date('2025-11-15'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(transacao2);
@@ -411,7 +417,10 @@ describe('OrcamentoService', () => {
         valor: 100,
         data: new Date('2025-11-10'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(transacao);
@@ -440,7 +449,10 @@ describe('OrcamentoService', () => {
         valor: -200,
         data: new Date('2025-10-31'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(transacao);
@@ -470,7 +482,10 @@ describe('OrcamentoService', () => {
         valor: -850,
         data: new Date('2025-11-10'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(transacao);
@@ -501,7 +516,10 @@ describe('OrcamentoService', () => {
         valor: -1100,
         data: new Date('2025-11-10'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(transacao);
@@ -542,7 +560,10 @@ describe('OrcamentoService', () => {
         valor: -300,
         data: new Date('2025-11-10'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(trans1);
@@ -554,6 +575,9 @@ describe('OrcamentoService', () => {
         valor: -1500,
         data: new Date('2025-11-15'),
         centro_custo_id: centroCustoId,
+        conta_id: 'test-conta-id',
+        parcelado: false,
+        classificacao_confirmada: false,
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -596,7 +620,10 @@ describe('OrcamentoService', () => {
         valor: -600,
         data: new Date('2025-11-10'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(transacao);
@@ -632,7 +659,10 @@ describe('OrcamentoService', () => {
         valor: -850,
         data: new Date('2025-11-10'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(transacao);
@@ -662,7 +692,10 @@ describe('OrcamentoService', () => {
         valor: -1200,
         data: new Date('2025-11-10'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(transacao);
@@ -730,7 +763,10 @@ describe('OrcamentoService', () => {
         valor: -600,
         data: new Date('2025-11-10'),
         categoria_id: categoriaId,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(trans1);
@@ -742,6 +778,9 @@ describe('OrcamentoService', () => {
         valor: -2700,
         data: new Date('2025-11-15'),
         centro_custo_id: centroCustoId,
+        conta_id: 'test-conta-id',
+        parcelado: false,
+        classificacao_confirmada: false,
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -754,7 +793,10 @@ describe('OrcamentoService', () => {
         valor: -550,
         data: new Date('2025-11-20'),
         categoria_id: categoria2.id,
-        created_at: new Date(),
+        conta_id: 'test-conta-id',
+      parcelado: false,
+      classificacao_confirmada: false,
+      created_at: new Date(),
         updated_at: new Date(),
       };
       await db.transacoes.add(trans3);

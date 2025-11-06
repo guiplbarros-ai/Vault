@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { logAIUsage, checkAIBudgetLimit } from '@/lib/services/ai-usage.service';
-import { categoriaService } from '@/lib/services/categoria.service';
+import { calculateCost } from '@/lib/services/ai-usage.service';
+import { getServerStore, checkAIBudgetLimitSafe } from '@/lib/services/ai-usage.store';
 import { generateClassificationPrompt, SYSTEM_PROMPT } from '@/lib/finance/classification/prompts';
 import { getCachedClassification, setCachedClassification } from '@/lib/finance/classification/prompt-cache';
 
@@ -9,7 +9,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-type AIModel = 'gpt-4o-mini' | 'gpt-4o' | 'gpt-3.5-turbo';
+type AIModel = 'gpt-4o-mini' | 'gpt-4o';
 type AIStrategy = 'aggressive' | 'balanced' | 'quality';
 
 interface BatchClassifyItem {
@@ -29,6 +29,11 @@ interface BatchClassifyRequest {
     strategy?: AIStrategy;
     concurrency?: number; // Número de classificações paralelas (padrão: 5)
   };
+  // Client-provided categories for each tipo
+  categorias?: {
+    receita?: Array<{ id: string; nome: string }>;
+    despesa?: Array<{ id: string; nome: string }>;
+  };
 }
 
 interface BatchClassifyResult {
@@ -39,6 +44,17 @@ interface BatchClassifyResult {
   reasoning: string;
   cached: boolean;
   error?: string;
+  // Dados para logging client-side
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  metadata?: {
+    modelo: string;
+    prompt: string;
+    resposta: string;
+  };
 }
 
 interface BatchClassifyResponse {
@@ -60,7 +76,8 @@ async function classifyOne(
   config: {
     modelo: AIModel;
     strategy: AIStrategy;
-    categorias: Array<any>; // Permite qualquer estrutura de categoria
+    categorias: Array<any>; // categorias do tipo do item
+    store: ReturnType<typeof getServerStore>;
   }
 ): Promise<BatchClassifyResult> {
   try {
@@ -132,17 +149,16 @@ async function classifyOne(
       }
     }
 
-    // Registra uso
-    await logAIUsage({
-      transacao_id: item.transacao_id,
-      prompt,
-      resposta,
-      modelo: config.modelo as 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo',
-      tokens_prompt: usage.prompt_tokens,
-      tokens_resposta: usage.completion_tokens,
-      categoria_sugerida_id: categoria_sugerida_id ?? undefined,
-      confianca: resultado.confianca,
+    // Log usage no store server (para budget tracking)
+    const custo_usd = calculateCost(config.modelo as any, usage.prompt_tokens, usage.completion_tokens);
+    await config.store.logUsage({
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+      tokens_total: usage.total_tokens,
+      custo_usd,
     });
+
+    // Observação: persistência/telemetria completa deve ser feita no cliente
 
     // Adiciona ao cache se confiança >= 0.7
     if (categoria_sugerida_id && categoria_nome && resultado.confianca >= 0.7) {
@@ -163,6 +179,17 @@ async function classifyOne(
       confianca: resultado.confianca,
       reasoning: resultado.reasoning,
       cached: false,
+      // Inclui usage para logging client-side
+      usage: {
+        prompt_tokens: usage.prompt_tokens,
+        completion_tokens: usage.completion_tokens,
+        total_tokens: usage.total_tokens,
+      },
+      metadata: {
+        modelo: config.modelo,
+        prompt,
+        resposta,
+      },
     };
   } catch (error) {
     console.error(`Error classifying item ${item.id}:`, error);
@@ -241,7 +268,8 @@ export async function POST(request: NextRequest) {
     const concurrency = config?.concurrency ?? 5;
 
     // Verifica limite de gastos
-    const budgetCheck = await checkAIBudgetLimit(new Date(), monthlyCostLimit, 0.8);
+    const store = getServerStore();
+    const budgetCheck = await checkAIBudgetLimitSafe(store, new Date(), monthlyCostLimit, 0.8);
     if (budgetCheck.isOverLimit && !allowOverride) {
       return NextResponse.json(
         {
@@ -252,16 +280,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Busca categorias disponíveis (por tipo)
-    const tiposUnicos = [...new Set(items.map(i => i.tipo))];
-    const categoriasMap = new Map<'receita' | 'despesa', Array<any>>();
+    // Requer categorias do cliente para cada tipo (evita Dexie no servidor)
+    const categoriasReceita = body.categorias?.receita || [];
+    const categoriasDespesa = body.categorias?.despesa || [];
+    const categoriasMap = new Map<'receita' | 'despesa', Array<any>>([
+      ['receita', categoriasReceita],
+      ['despesa', categoriasDespesa],
+    ]);
 
-    for (const tipo of tiposUnicos) {
-      const categorias = await categoriaService.listCategorias({
-        tipo: tipo as 'receita' | 'despesa',
-        ativas: true,
-      });
-      categoriasMap.set(tipo as 'receita' | 'despesa', categorias);
+    if (!categoriasReceita.length && !categoriasDespesa.length) {
+      return NextResponse.json(
+        {
+          error: 'Missing categories',
+          message: 'Forneça categorias de receita e/ou despesa no body (categorias)'
+        },
+        { status: 400 }
+      );
     }
 
     // Processa batch com concorrência controlada
@@ -281,7 +315,7 @@ export async function POST(request: NextRequest) {
           };
         }
 
-        return classifyOne(item, { modelo, strategy, categorias });
+        return classifyOne(item, { modelo, strategy, categorias, store });
       },
       concurrency
     );

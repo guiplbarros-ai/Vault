@@ -5,14 +5,22 @@
 
 import type { Categoria } from '../../types';
 
+export interface CategoriaLite {
+  id: string;
+  nome: string;
+  icone?: string;
+  grupo?: string;
+}
+
 /**
  * Gera prompt otimizado para classificação de transações
+ * Aceita tanto Categoria completa quanto CategoriaLite (DTO compacto)
  */
 export function generateClassificationPrompt(
   descricao: string,
   valor: number,
   tipo: 'receita' | 'despesa',
-  categorias: Categoria[]
+  categorias: Categoria[] | CategoriaLite[]
 ): string {
   const categoriasTexto = categorias
     .map(c => {

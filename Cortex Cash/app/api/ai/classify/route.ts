@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { logAIUsage, checkAIBudgetLimit } from '@/lib/services/ai-usage.service';
-import { categoriaService } from '@/lib/services/categoria.service';
+import { calculateCost } from '@/lib/services/ai-usage.service';
+import { getServerStore, checkAIBudgetLimitSafe } from '@/lib/services/ai-usage.store';
 import { generateClassificationPrompt, SYSTEM_PROMPT } from '@/lib/finance/classification/prompts';
 import { getCachedClassification, setCachedClassification } from '@/lib/finance/classification/prompt-cache';
 
@@ -9,8 +9,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-type AIModel = 'gpt-4o-mini' | 'gpt-4o' | 'gpt-3.5-turbo';
+type AIModel = 'gpt-4o-mini' | 'gpt-4o';
 type AIStrategy = 'aggressive' | 'balanced' | 'quality';
+
+interface CategoriaLite { id: string; nome: string }
 
 interface ClassifyRequest {
   descricao: string;
@@ -24,6 +26,8 @@ interface ClassifyRequest {
     allowOverride?: boolean;
     strategy?: AIStrategy;
   };
+  // Client-provided categories (required to avoid server-side Dexie)
+  categorias?: CategoriaLite[];
 }
 
 interface ClassifyResponse {
@@ -32,6 +36,17 @@ interface ClassifyResponse {
   confianca: number;
   reasoning: string;
   cached?: boolean;
+  // Dados para logging client-side
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  metadata?: {
+    modelo: string;
+    prompt: string;
+    resposta: string;
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -45,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: ClassifyRequest = await request.json();
-    const { descricao, valor, tipo, transacao_id, config } = body;
+    const { descricao, valor, tipo, transacao_id, config, categorias } = body;
 
     // Extract config with defaults
     const modelo = (config?.defaultModel || 'gpt-4o-mini') as AIModel;
@@ -67,7 +82,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ETAPA 2: Verifica limite de gastos antes de fazer a chamada
-    const budgetCheck = await checkAIBudgetLimit(new Date(), monthlyCostLimit, 0.8);
+    const store = getServerStore();
+    const budgetCheck = await checkAIBudgetLimitSafe(store, new Date(), monthlyCostLimit, 0.8);
     if (budgetCheck.isOverLimit && !allowOverride) {
       return NextResponse.json(
         {
@@ -85,17 +101,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Busca categorias disponíveis
-    const categorias = await categoriaService.listCategorias({
-      tipo,
-      ativas: true,
-    });
-
-    if (categorias.length === 0) {
+    // Requer categorias do cliente (evita acesso a Dexie no servidor)
+    if (!categorias || categorias.length === 0) {
       return NextResponse.json(
         {
-          error: 'No categories available',
-          message: 'Nenhuma categoria disponível para classificação',
+          error: 'Missing categories',
+          message: 'Forneça categorias ativas do cliente no body (categorias[])',
         },
         { status: 400 }
       );
@@ -171,19 +182,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Registra uso da IA
-    await logAIUsage({
-      transacao_id,
-      prompt,
-      resposta,
-      modelo: modelo as 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo',
-      tokens_prompt: usage.prompt_tokens,
-      tokens_resposta: usage.completion_tokens,
-      categoria_sugerida_id: categoria_sugerida_id ?? undefined,
-      confianca: resultado.confianca,
+    // ETAPA 5: Log usage no store server (para budget tracking)
+    const custo_usd = calculateCost(modelo as any, usage.prompt_tokens, usage.completion_tokens);
+    await store.logUsage({
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+      tokens_total: usage.total_tokens,
+      custo_usd,
     });
 
-    // ETAPA 5: Adiciona ao cache (se categoria foi encontrada e confiança >= 0.7)
+    // Observação: persistência/telemetria completa deve ser feita no cliente
+
+    // ETAPA 6: Adiciona ao cache (se categoria foi encontrada e confiança >= 0.7)
     if (categoria_sugerida_id && categoria_nome && resultado.confianca >= 0.7) {
       setCachedClassification(
         descricao,
@@ -202,6 +212,17 @@ export async function POST(request: NextRequest) {
       confianca: resultado.confianca,
       reasoning: resultado.reasoning,
       cached: false,
+      // Inclui usage para logging client-side
+      usage: {
+        prompt_tokens: usage.prompt_tokens,
+        completion_tokens: usage.completion_tokens,
+        total_tokens: usage.total_tokens,
+      },
+      metadata: {
+        modelo,
+        prompt,
+        resposta,
+      },
     };
 
     return NextResponse.json(response);

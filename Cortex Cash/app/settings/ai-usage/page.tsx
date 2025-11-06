@@ -12,6 +12,14 @@ import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Brain,
   DollarSign,
@@ -22,6 +30,8 @@ import {
   RefreshCw,
   AlertTriangle,
   Database,
+  Filter,
+  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDB } from '@/lib/db/client';
@@ -59,15 +69,24 @@ interface DailyUsage {
   tokens: number;
 }
 
+type FilterStatus = 'all' | 'confirmed' | 'pending' | 'no_suggestion';
+type FilterModel = 'all' | 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo';
+
 export default function AIUsagePage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<UsageStats | null>(null);
-  const [logs, setLogs] = useState<LogIA[]>([]);
+  const [allLogs, setAllLogs] = useState<LogIA[]>([]); // Todos os logs sem filtro
+  const [logs, setLogs] = useState<LogIA[]>([]); // Logs filtrados
   const [dailyUsage, setDailyUsage] = useState<DailyUsage[]>([]);
   const [cacheStats, setCacheStats] = useState<{
     size: number;
     max_size: number;
   } | null>(null);
+
+  // Filtros
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [filterModel, setFilterModel] = useState<FilterModel>('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Carrega dados
   const loadData = async () => {
@@ -125,7 +144,8 @@ export default function AIUsagePage() {
         .sort((a, b) => a.date.localeCompare(b.date));
 
       setDailyUsage(daily);
-      setLogs(monthLogs.slice(0, 50)); // Últimas 50
+      setAllLogs(monthLogs); // Salva todos os logs
+      setLogs(monthLogs.slice(0, 100)); // Inicialmente mostra 100
 
       // Cache stats (mock, pois cache é server-side)
       setCacheStats({
@@ -140,9 +160,52 @@ export default function AIUsagePage() {
     }
   };
 
+  // Aplica filtros
+  const applyFilters = () => {
+    let filtered = [...allLogs];
+
+    // Filtro por status
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(log => {
+        if (filterStatus === 'confirmed') {
+          return log.categoria_sugerida_id && log.confirmada;
+        } else if (filterStatus === 'pending') {
+          return log.categoria_sugerida_id && !log.confirmada;
+        } else if (filterStatus === 'no_suggestion') {
+          return !log.categoria_sugerida_id;
+        }
+        return true;
+      });
+    }
+
+    // Filtro por modelo
+    if (filterModel !== 'all') {
+      filtered = filtered.filter(log => log.modelo === filterModel);
+    }
+
+    // Filtro por busca (prompt ou resposta)
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(log =>
+        log.prompt?.toLowerCase().includes(term) ||
+        log.resposta?.toLowerCase().includes(term)
+      );
+    }
+
+    // Limita a 100 resultados
+    setLogs(filtered.slice(0, 100));
+  };
+
   useEffect(() => {
     loadData();
   }, []);
+
+  // Reaplica filtros quando mudam
+  useEffect(() => {
+    if (allLogs.length > 0) {
+      applyFilters();
+    }
+  }, [filterStatus, filterModel, searchTerm, allLogs]);
 
   return (
     <DashboardLayout>
@@ -325,7 +388,89 @@ export default function AIUsagePage() {
           }}
         >
           <div className="p-4 border-b border-white/10">
-            <h3 className="text-lg font-semibold text-white">Logs Recentes (últimos 50)</h3>
+            <h3 className="text-lg font-semibold text-white">
+              Logs de IA ({logs.length} {logs.length !== allLogs.length && `de ${allLogs.length}`})
+            </h3>
+          </div>
+
+          {/* Filtros */}
+          <div className="p-4 border-b border-white/10 space-y-3">
+            <div className="flex items-center gap-2 text-sm text-white/70 mb-2">
+              <Filter className="w-4 h-4" />
+              <span className="font-medium">Filtros</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Busca */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <Input
+                  placeholder="Buscar em prompt/resposta..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                />
+              </div>
+
+              {/* Filtro por Status */}
+              <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as FilterStatus)}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="confirmed">✓ Confirmadas</SelectItem>
+                  <SelectItem value="pending">⏳ Pendentes</SelectItem>
+                  <SelectItem value="no_suggestion">∅ Sem sugestão</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Filtro por Modelo */}
+              <Select value={filterModel} onValueChange={(value) => setFilterModel(value as FilterModel)}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Todos os modelos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os modelos</SelectItem>
+                  <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
+                  <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                  <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Badge mostrando filtros ativos */}
+            {(filterStatus !== 'all' || filterModel !== 'all' || searchTerm) && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-white/50">Filtros ativos:</span>
+                {filterStatus !== 'all' && (
+                  <Badge variant="outline" className="text-xs">
+                    Status: {filterStatus === 'confirmed' ? 'Confirmadas' : filterStatus === 'pending' ? 'Pendentes' : 'Sem sugestão'}
+                  </Badge>
+                )}
+                {filterModel !== 'all' && (
+                  <Badge variant="outline" className="text-xs">
+                    Modelo: {filterModel}
+                  </Badge>
+                )}
+                {searchTerm && (
+                  <Badge variant="outline" className="text-xs">
+                    Busca: "{searchTerm}"
+                  </Badge>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs text-white/60 hover:text-white"
+                  onClick={() => {
+                    setFilterStatus('all');
+                    setFilterModel('all');
+                    setSearchTerm('');
+                  }}
+                >
+                  Limpar filtros
+                </Button>
+              </div>
+            )}
           </div>
 
           {loading ? (

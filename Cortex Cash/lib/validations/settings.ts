@@ -62,7 +62,7 @@ export const budgetAlertsSettingsSchema = z.object({
 export const aiCostsSettingsSchema = z.object({
   apiKey: z.string(),
   enabled: z.boolean(),
-  defaultModel: z.enum(['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo']),
+  defaultModel: z.enum(['gpt-4o-mini', 'gpt-4o']),
   monthlyCostLimit: z.number().min(0).max(1000),
   allowOverride: z.boolean(),
   strategy: z.enum(['aggressive', 'balanced', 'quality']),

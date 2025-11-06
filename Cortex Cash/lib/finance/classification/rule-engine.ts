@@ -92,6 +92,9 @@ export async function classifyTransaction(
   // ETAPA 2: Se não encontrou regra e IA está habilitada, usa IA
   if (useAI) {
     try {
+      // Carrega categorias do tipo no cliente para enviar ao endpoint
+      const categorias = await categoriaService.listCategorias({ tipo: request.tipo, ativas: true });
+
       const response = await fetch('/api/ai/classify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -100,6 +103,7 @@ export async function classifyTransaction(
           valor: request.valor,
           tipo: request.tipo,
           transacao_id: request.transacao_id,
+          categorias: categorias.map(c => ({ id: c.id, nome: c.nome })),
           config: aiConfig,
         }),
       });

@@ -1,42 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAIUsageSummary, checkAIBudgetLimit } from '@/lib/services/ai-usage.service';
-
-// Taxa de câmbio BRL/USD (você pode buscar de uma API futuramente)
-const USD_TO_BRL = 6.0;
+import { getServerStore } from '@/lib/services/ai-usage.store';
+import { USD_TO_BRL } from '@/lib/config/currency';
 
 // Limite padrão em USD
 const DEFAULT_LIMIT_USD = 10.0;
 
+interface AIUsageByDay {
+  date: string; // YYYY-MM-DD
+  requests: number;
+  tokens: number;
+  cost_usd: number;
+  cost_brl: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // Get limit from query params (sent by client with their settings)
-    const searchParams = request.nextUrl.searchParams;
-    const limitParam = searchParams.get('limit');
-    const limit = limitParam ? parseFloat(limitParam) : DEFAULT_LIMIT_USD;
+    const { searchParams } = new URL(request.url);
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
 
-    const currentMonth = new Date();
-    const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+    // Default to current month
+    const now = new Date();
+    const startDate = startDateParam
+      ? new Date(startDateParam)
+      : new Date(now.getFullYear(), now.getMonth(), 1);
+    const endDate = endDateParam
+      ? new Date(endDateParam)
+      : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-    // Obter resumo de uso
-    const summary = await getAIUsageSummary(startOfMonth, endOfMonth, USD_TO_BRL);
+    const store = getServerStore();
+    const summary = await store.getUsageSummary(startDate, endDate);
 
-    // Verificar limite (usando limite do cliente)
-    const budgetCheck = await checkAIBudgetLimit(currentMonth, limit, 0.8);
+    // Agregar por dia (simplificado - retorna apenas totais para o período)
+    // Para agregação real por dia, seria necessário armazenar mais detalhes no store
+    const byDay: AIUsageByDay[] = [];
+
+    // Nota: Server store é em memória e não persiste agregações detalhadas
+    // Retorna apenas o total do período como um único dia
+    if (summary.total_requests > 0) {
+      byDay.push({
+        date: endDate.toISOString().split('T')[0],
+        requests: summary.total_requests,
+        tokens: summary.total_tokens,
+        cost_usd: summary.total_cost_usd,
+        cost_brl: summary.total_cost_usd * USD_TO_BRL,
+      });
+    }
 
     return NextResponse.json({
-      usedBrl: summary.total_cost_brl,
-      limitBrl: limit * USD_TO_BRL,
-      percentage: budgetCheck.percentageUsed,
-      isNearLimit: budgetCheck.isNearLimit,
-      isOverLimit: budgetCheck.isOverLimit,
       summary: {
         total_requests: summary.total_requests,
         total_tokens: summary.total_tokens,
-        confirmed_suggestions: summary.confirmed_suggestions,
-        rejected_suggestions: summary.rejected_suggestions,
-        average_confidence: summary.average_confidence,
+        total_cost_usd: summary.total_cost_usd,
+        total_cost_brl: summary.total_cost_usd * USD_TO_BRL,
       },
+      by_day: byDay,
+      period: {
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+      },
+      note: 'Server store is ephemeral. For persistent tracking, use client-side IndexedDB.',
     });
   } catch (error) {
     console.error('Error fetching AI usage:', error);

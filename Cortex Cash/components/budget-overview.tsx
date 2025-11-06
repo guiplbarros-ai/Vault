@@ -4,10 +4,10 @@ import { useState, useEffect, useMemo } from "react"
 import { useSetting } from '@/app/providers/settings-provider'
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { AlertCircle, TrendingUp, TrendingDown } from "lucide-react"
+import { AlertCircle, TrendingUp, TrendingDown, Sparkles, Clock, Target } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { transacaoService } from "@/lib/services/transacao.service"
-import { startOfMonth, endOfMonth, subMonths } from "date-fns"
+import { startOfMonth, endOfMonth, subMonths, differenceInDays, getDaysInMonth } from "date-fns"
 import {
   Select,
   SelectContent,
@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 
 interface BudgetData {
   categoria_id: string
@@ -27,6 +28,11 @@ interface BudgetData {
   darkColor: string
   variacao_percentual?: number
   variacao_absoluta?: number
+  previsao_fim_mes?: number
+  ritmo_gasto?: number
+  dias_restantes?: number
+  dias_decorridos?: number
+  tendencia?: 'acelerada' | 'normal' | 'controlada'
 }
 
 type ViewMode = 'valores_absolutos' | 'variacoes'
@@ -61,9 +67,29 @@ export function BudgetOverview() {
           const gastos = await transacaoService.getGastosPorCategoria(monthStart, monthEnd)
           const top4 = gastos.slice(0, 4)
 
+          // Calcular métricas de tempo
+          const daysInMonth = getDaysInMonth(now)
+          const diasDecorridos = now.getDate()
+          const diasRestantes = daysInMonth - diasDecorridos
+
           const budgetData: BudgetData[] = top4.map(gasto => {
             const limit = Math.ceil(gasto.total_gasto * 1.2 / 100) * 100
             const percentage = limit > 0 ? Math.round((gasto.total_gasto / limit) * 100) : 0
+
+            // Calcular previsões
+            const ritmoGasto = diasDecorridos > 0 ? gasto.total_gasto / diasDecorridos : 0
+            const previsaoFimMes = ritmoGasto * daysInMonth
+
+            // Determinar tendência
+            let tendencia: 'acelerada' | 'normal' | 'controlada' = 'normal'
+            if (limit > 0) {
+              const previsaoPercentual = (previsaoFimMes / limit) * 100
+              if (previsaoPercentual > 110) {
+                tendencia = 'acelerada'
+              } else if (previsaoPercentual < 90) {
+                tendencia = 'controlada'
+              }
+            }
 
             return {
               categoria_id: gasto.categoria_id,
@@ -74,6 +100,11 @@ export function BudgetOverview() {
               percentage: percentage,
               color: gasto.categoria_cor,
               darkColor: gasto.categoria_cor,
+              previsao_fim_mes: previsaoFimMes,
+              ritmo_gasto: ritmoGasto,
+              dias_restantes: diasRestantes,
+              dias_decorridos: diasDecorridos,
+              tendencia: tendencia,
             }
           })
 
@@ -95,6 +126,11 @@ export function BudgetOverview() {
 
           const top4 = variacoes.slice(0, 4)
 
+          // Calcular métricas de tempo
+          const daysInMonth = getDaysInMonth(now)
+          const diasDecorridos = now.getDate()
+          const diasRestantes = daysInMonth - diasDecorridos
+
           const budgetData: BudgetData[] = top4.map(variacao => {
             // Para variações, usamos o gasto do mês anterior como "limite"
             const limit = variacao.total_gasto_anterior > 0
@@ -104,6 +140,21 @@ export function BudgetOverview() {
             const percentage = limit > 0
               ? Math.round((variacao.total_gasto_atual / limit) * 100)
               : 0
+
+            // Calcular previsões
+            const ritmoGasto = diasDecorridos > 0 ? variacao.total_gasto_atual / diasDecorridos : 0
+            const previsaoFimMes = ritmoGasto * daysInMonth
+
+            // Determinar tendência
+            let tendencia: 'acelerada' | 'normal' | 'controlada' = 'normal'
+            if (limit > 0) {
+              const previsaoPercentual = (previsaoFimMes / limit) * 100
+              if (previsaoPercentual > 110) {
+                tendencia = 'acelerada'
+              } else if (previsaoPercentual < 90) {
+                tendencia = 'controlada'
+              }
+            }
 
             return {
               categoria_id: variacao.categoria_id,
@@ -116,6 +167,11 @@ export function BudgetOverview() {
               darkColor: variacao.categoria_cor,
               variacao_percentual: variacao.variacao_percentual,
               variacao_absoluta: variacao.variacao_absoluta,
+              previsao_fim_mes: previsaoFimMes,
+              ritmo_gasto: ritmoGasto,
+              dias_restantes: diasRestantes,
+              dias_decorridos: diasDecorridos,
+              tendencia: tendencia,
             }
           })
 
@@ -270,7 +326,7 @@ export function BudgetOverview() {
                     <span style={{ filter: 'grayscale(0%)' }}>{budget.categoria_icone}</span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className={isDark ? "text-sm font-bold text-white" : "text-sm font-bold text-foreground"}>{budget.categoria_nome}</span>
                       {isNearLimit && (
                         <AlertCircle
@@ -291,6 +347,24 @@ export function BudgetOverview() {
                         )}>
                           {budget.variacao_absoluta && budget.variacao_absoluta > 0 ? '↑' : budget.variacao_absoluta && budget.variacao_absoluta < 0 ? '↓' : '='} {Math.abs(budget.variacao_percentual).toFixed(0)}%
                         </span>
+                      )}
+                      {budget.tendencia && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs font-medium px-2 py-0.5 gap-1",
+                            budget.tendencia === 'acelerada'
+                              ? "border-red-500/50 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+                              : budget.tendencia === 'controlada'
+                              ? "border-green-500/50 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                              : "border-blue-500/50 bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
+                          )}
+                        >
+                          {budget.tendencia === 'acelerada' && <TrendingUp className="w-3 h-3" />}
+                          {budget.tendencia === 'controlada' && <TrendingDown className="w-3 h-3" />}
+                          {budget.tendencia === 'normal' && <Target className="w-3 h-3" />}
+                          {budget.tendencia === 'acelerada' ? 'Acelerada' : budget.tendencia === 'controlada' ? 'Controlada' : 'No ritmo'}
+                        </Badge>
                       )}
                     </div>
                     <span className={isDark ? "text-xs text-white/60" : "text-xs text-muted-foreground"}>
@@ -359,6 +433,62 @@ export function BudgetOverview() {
                   </div>
                 )}
               </div>
+
+              {/* Seção de previsão e métricas */}
+              {budget.previsao_fim_mes !== undefined && budget.ritmo_gasto !== undefined && budget.dias_restantes !== undefined && (
+                <div className={cn(
+                  "mt-3 p-3 rounded-lg border",
+                  isDark
+                    ? "bg-gray-800/40 border-gray-700/50"
+                    : "bg-gray-50/80 border-gray-200/80"
+                )}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className={cn("w-4 h-4", isDark ? "text-purple-400" : "text-purple-600")} />
+                    <span className={cn("text-xs font-semibold", isDark ? "text-white" : "text-foreground")}>
+                      Previsão de Fim de Mês
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col">
+                      <span className={cn("text-xs font-medium mb-1", isDark ? "text-white/70" : "text-muted-foreground")}>
+                        Projeção
+                      </span>
+                      <span className={cn(
+                        "text-sm font-bold",
+                        budget.previsao_fim_mes > budget.limit
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-green-600 dark:text-green-400"
+                      )}>
+                        R$ {budget.previsao_fim_mes.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1 mb-1">
+                        <Clock className={cn("w-3 h-3", isDark ? "text-white/70" : "text-muted-foreground")} />
+                        <span className={cn("text-xs font-medium", isDark ? "text-white/70" : "text-muted-foreground")}>
+                          Ritmo/dia
+                        </span>
+                      </div>
+                      <span className={cn("text-sm font-bold", isDark ? "text-white" : "text-foreground")}>
+                        R$ {budget.ritmo_gasto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={cn("text-xs font-medium mb-1", isDark ? "text-white/70" : "text-muted-foreground")}>
+                        Dias restantes
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className={cn("text-sm font-bold", isDark ? "text-white" : "text-foreground")}>
+                          {budget.dias_restantes}
+                        </span>
+                        <span className={cn("text-xs", isDark ? "text-white/60" : "text-muted-foreground")}>
+                          / {budget.dias_decorridos! + budget.dias_restantes} dias
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Linha de alerta sutil abaixo */}
               {isNearLimit && !isOverLimit && (

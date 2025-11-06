@@ -28,6 +28,9 @@ import { Progress } from "@/components/ui/progress";
 import { FileText, Upload, Settings, CheckCircle, Sparkles, Loader2 } from "lucide-react";
 import { importService } from "@/lib/services/import.service";
 import { contaService } from "@/lib/services/conta.service";
+import { transacaoService } from "@/lib/services/transacao.service";
+import { useBatchClassification } from "@/lib/hooks/use-batch-classification";
+import { useSetting } from "@/app/providers/settings-provider";
 import { toast } from "sonner";
 import type {
   MapeamentoColunas,
@@ -46,6 +49,14 @@ export default function ImportPage() {
   const [step, setStep] = useState<ImportStep>("template");
   const [contas, setContas] = useState<Conta[]>([]);
   const [contaSelecionada, setContaSelecionada] = useState<string>("");
+
+  // Batch classification hook
+  const { classify, isClassifying } = useBatchClassification();
+
+  // Settings
+  const [autoApplyOnImport] = useSetting<boolean>('aiCosts.autoApplyOnImport');
+  const [confidenceThreshold] = useSetting<number>('aiCosts.confidenceThreshold');
+  const [aiEnabled] = useSetting<boolean>('aiCosts.enabled');
 
   // Estado do template
   const [templateSelecionado, setTemplateSelecionado] = useState<TemplateImportacao | null>(null);
@@ -340,9 +351,79 @@ export default function ImportPage() {
         );
       } else {
         toast.success(`${result.importadas} transações importadas com sucesso! 🎉`, {
-          description: "Redirecionando para a página de transações...",
-          duration: 3000,
+          duration: 2000,
         });
+      }
+
+      // Classificação automática após importação (se configurado)
+      if (aiEnabled && autoApplyOnImport && result.importadas > 0) {
+        toast.info('🤖 Classificando transações com IA...', {
+          duration: 2000,
+        });
+
+        // Buscar transações recém-importadas da conta
+        const transacoesImportadas = await transacaoService.listTransacoes({
+          contaId: contaSelecionada,
+          limit: result.importadas,
+        });
+
+        // Preparar items para classificação (apenas transações sem categoria, excluindo transferências)
+        const itemsParaClassificar = transacoesImportadas
+          .filter(t => !t.categoria_id && t.tipo !== 'transferencia')
+          .map(t => ({
+            id: t.id,
+            descricao: t.descricao,
+            valor: Math.abs(t.valor),
+            tipo: t.tipo as 'receita' | 'despesa',
+            transacao_id: t.id,
+          }));
+
+        if (itemsParaClassificar.length > 0) {
+          const classificationResult = await classify(itemsParaClassificar);
+
+          if (classificationResult) {
+            // Aplicar categorias com confiança acima do threshold
+            const threshold = confidenceThreshold || 0.7;
+            let aplicadas = 0;
+
+            for (const result of classificationResult.results) {
+              if (
+                result.categoria_sugerida_id &&
+                result.confianca >= threshold &&
+                !result.error
+              ) {
+                try {
+                  await transacaoService.updateTransacao(result.id, {
+                    categoria_id: result.categoria_sugerida_id,
+                    classificacao_origem: 'ia',
+                    classificacao_confianca: result.confianca,
+                  });
+                  aplicadas++;
+                } catch (error) {
+                  console.error(`Erro ao aplicar categoria para transação ${result.id}:`, error);
+                }
+              }
+            }
+
+            if (aplicadas > 0) {
+              toast.success(
+                `✨ ${aplicadas} de ${itemsParaClassificar.length} transações classificadas automaticamente`,
+                {
+                  description: `Confiança mínima: ${Math.round(threshold * 100)}%`,
+                  duration: 4000,
+                }
+              );
+            } else {
+              toast.info(
+                'Nenhuma transação classificada automaticamente',
+                {
+                  description: `Nenhuma sugestão atingiu ${Math.round(threshold * 100)}% de confiança`,
+                  duration: 3000,
+                }
+              );
+            }
+          }
+        }
       }
 
       setStep("complete");

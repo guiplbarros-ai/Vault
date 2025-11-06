@@ -2,6 +2,7 @@
 
 *Automatically synced with your [v0.app](https://v0.app) deployments*
 
+[![CI Status](https://github.com/guilherme-freelaw/Coding/actions/workflows/ci.yml/badge.svg)](https://github.com/guilherme-freelaw/Coding/actions/workflows/ci.yml)
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/guilhermeplbarros-6403s-projects/v0-cortex-cash-web-app)
 [![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/BqSD1M8wkc9)
 
