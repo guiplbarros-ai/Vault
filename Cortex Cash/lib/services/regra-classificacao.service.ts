@@ -150,6 +150,8 @@ class RegraClassificacaoService {
         ativa: data.ativa ?? true,
         total_aplicacoes: 0,
         ultima_aplicacao: undefined,
+        total_confirmacoes: 0,
+        total_rejeicoes: 0,
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -320,6 +322,8 @@ class RegraClassificacaoService {
         prioridade: 0,
         ativa: true,
         total_aplicacoes: 0,
+        total_confirmacoes: 0,
+        total_rejeicoes: 0,
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -491,6 +495,108 @@ class RegraClassificacaoService {
       categoria_id: null,
       metodo: 'nenhum',
     };
+  }
+
+  /**
+   * Registra confirmação de uma regra
+   * Chamado quando usuário mantém a classificação automática
+   *
+   * @param regra_id ID da regra que foi confirmada
+   */
+  async registrarConfirmacao(regra_id: string): Promise<void> {
+    try {
+      const db = getDB();
+      const regra = await this.getRegraById(regra_id);
+
+      await db.regras_classificacao.update(regra_id, {
+        total_confirmacoes: regra.total_confirmacoes + 1,
+        updated_at: new Date(),
+      });
+    } catch (error) {
+      if (error instanceof NotFoundError) throw error;
+      throw new DatabaseError('Erro ao registrar confirmação', error as Error);
+    }
+  }
+
+  /**
+   * Registra rejeição de uma regra
+   * Chamado quando usuário altera a categoria sugerida pela regra
+   *
+   * @param regra_id ID da regra que foi rejeitada
+   */
+  async registrarRejeicao(regra_id: string): Promise<void> {
+    try {
+      const db = getDB();
+      const regra = await this.getRegraById(regra_id);
+
+      await db.regras_classificacao.update(regra_id, {
+        total_rejeicoes: regra.total_rejeicoes + 1,
+        updated_at: new Date(),
+      });
+    } catch (error) {
+      if (error instanceof NotFoundError) throw error;
+      throw new DatabaseError('Erro ao registrar rejeição', error as Error);
+    }
+  }
+
+  /**
+   * Calcula taxa de acurácia de uma regra
+   * Acurácia = confirmações / (confirmações + rejeições)
+   *
+   * @param regra_id ID da regra
+   * @returns Taxa de acurácia (0-100) ou null se sem dados
+   */
+  async getAcuracia(regra_id: string): Promise<number | null> {
+    try {
+      const regra = await this.getRegraById(regra_id);
+      const total = regra.total_confirmacoes + regra.total_rejeicoes;
+
+      if (total === 0) {
+        return null; // Sem dados suficientes
+      }
+
+      return (regra.total_confirmacoes / total) * 100;
+    } catch (error) {
+      if (error instanceof NotFoundError) throw error;
+      throw new DatabaseError('Erro ao calcular acurácia', error as Error);
+    }
+  }
+
+  /**
+   * Obtém métricas detalhadas de todas as regras
+   * Útil para dashboard de performance
+   */
+  async getMetricasDetalhadas(): Promise<{
+    regra_id: string;
+    nome: string;
+    total_aplicacoes: number;
+    total_confirmacoes: number;
+    total_rejeicoes: number;
+    acuracia: number | null;
+    ativa: boolean;
+  }[]> {
+    try {
+      const regras = await this.listRegras();
+
+      return regras.map(regra => {
+        const total = regra.total_confirmacoes + regra.total_rejeicoes;
+        const acuracia = total > 0
+          ? (regra.total_confirmacoes / total) * 100
+          : null;
+
+        return {
+          regra_id: regra.id,
+          nome: regra.nome,
+          total_aplicacoes: regra.total_aplicacoes,
+          total_confirmacoes: regra.total_confirmacoes,
+          total_rejeicoes: regra.total_rejeicoes,
+          acuracia,
+          ativa: regra.ativa,
+        };
+      });
+    } catch (error) {
+      throw new DatabaseError('Erro ao obter métricas detalhadas', error as Error);
+    }
   }
 }
 

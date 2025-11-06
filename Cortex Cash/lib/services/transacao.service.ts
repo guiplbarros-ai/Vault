@@ -8,6 +8,7 @@
 import { getDB } from '../db/client';
 import type { Transacao, CreateTransacaoDTO } from '../types';
 import type { ITransacaoService } from './interfaces';
+import { generateTransactionHash } from '../import/dedupe';
 import { generateHash } from '../utils/format';
 import { validateDTO, createTransacaoSchema } from '../validations/dtos';
 import { NotFoundError, ValidationError, DatabaseError } from '../errors';
@@ -242,9 +243,12 @@ export class TransacaoService implements ITransacaoService {
     const id = crypto.randomUUID();
     const now = new Date();
 
-    // Gera hash para dedupe
-    const hashInput = `${validatedData.conta_id}-${validatedData.data}-${validatedData.descricao}-${validatedData.valor}`;
-    const hash = await generateHash(hashInput);
+    // Gera hash canônico para deduplicação (conta_id + data(YYYY-MM-DD) + descrição normalizada + valor fixado)
+    const canonicalHash = await generateTransactionHash({
+      data: typeof validatedData.data === 'string' ? new Date(validatedData.data) : validatedData.data,
+      descricao: validatedData.descricao,
+      valor: validatedData.valor,
+    }, validatedData.conta_id);
 
     const transacao: Transacao = {
       id,
@@ -259,7 +263,7 @@ export class TransacaoService implements ITransacaoService {
       parcelado: false,
       classificacao_confirmada: !!validatedData.categoria_id,
       classificacao_origem: validatedData.categoria_id ? 'manual' : undefined,
-      hash,
+      hash: canonicalHash,
       created_at: now,
       updated_at: now,
     };

@@ -133,6 +133,11 @@ export interface RegraClassificacao {
   ativa: boolean;
   total_aplicacoes: number;
   ultima_aplicacao?: Date;
+
+  // Métricas de acurácia (Agent FINANCE v0.5)
+  total_confirmacoes: number;  // Vezes que usuário manteve a classificação
+  total_rejeicoes: number;     // Vezes que usuário mudou a classificação
+
   created_at: Date;
   updated_at: Date;
 }
@@ -142,7 +147,7 @@ export interface LogIA {
   transacao_id?: string;
   prompt: string;
   resposta: string;
-  modelo: string;
+  modelo: 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo'; // Modelos válidos para cálculo de custo
   tokens_prompt: number;
   tokens_resposta: number;
   tokens_total: number;
