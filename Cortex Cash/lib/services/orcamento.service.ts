@@ -510,6 +510,84 @@ export class OrcamentoService {
 
     return count;
   }
+
+  /**
+   * Recalcula orçamentos afetados por transações
+   * Usado após updates em massa (importação, edições em lote, etc.)
+   *
+   * @param transacaoDatas - Array de datas das transações afetadas
+   * @returns Número de orçamentos recalculados
+   *
+   * @example
+   * // Após importar 50 transações em Janeiro/2025
+   * const datasAfetadas = transacoes.map(t => t.data);
+   * await orcamentoService.recalcularAfetados(datasAfetadas);
+   */
+  async recalcularAfetados(transacaoDatas: Date[]): Promise<number> {
+    if (transacaoDatas.length === 0) return 0;
+
+    // Identifica meses únicos afetados
+    const mesesAfetados = new Set<string>();
+
+    transacaoDatas.forEach(data => {
+      const dataObj = data instanceof Date ? data : new Date(data);
+      const ano = dataObj.getFullYear();
+      const mes = (dataObj.getMonth() + 1).toString().padStart(2, '0');
+      const mesRef = `${ano}-${mes}`;
+      mesesAfetados.add(mesRef);
+    });
+
+    // Recalcula todos os orçamentos dos meses afetados
+    let totalRecalculado = 0;
+
+    for (const mesRef of mesesAfetados) {
+      try {
+        const count = await this.recalcularTodosDoMes(mesRef);
+        totalRecalculado += count;
+        console.log(`✅ Recalculados ${count} orçamentos de ${mesRef}`);
+      } catch (error) {
+        console.error(`Erro ao recalcular orçamentos de ${mesRef}:`, error);
+      }
+    }
+
+    return totalRecalculado;
+  }
+
+  /**
+   * Recalcula orçamentos de uma categoria específica
+   * Útil quando categoria é alterada em transações
+   *
+   * @param categoriaId - ID da categoria
+   * @param mesReferencia - Mês opcional (recalcula apenas este mês)
+   * @returns Número de orçamentos recalculados
+   */
+  async recalcularPorCategoria(
+    categoriaId: string,
+    mesReferencia?: string
+  ): Promise<number> {
+    const filtros: Parameters<typeof this.listOrcamentos>[0] = {
+      tipo: 'categoria',
+      categoriaId,
+    };
+
+    if (mesReferencia) {
+      filtros.mesReferencia = mesReferencia;
+    }
+
+    const orcamentos = await this.listOrcamentos(filtros);
+
+    let count = 0;
+    for (const orcamento of orcamentos) {
+      try {
+        await this.recalcularValorRealizado(orcamento.id);
+        count++;
+      } catch (error) {
+        console.error(`Erro ao recalcular orçamento ${orcamento.id}:`, error);
+      }
+    }
+
+    return count;
+  }
 }
 
 // Exportar instância singleton
