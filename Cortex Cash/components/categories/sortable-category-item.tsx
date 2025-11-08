@@ -141,25 +141,20 @@ export function SortableCategoryItem({
         <GripVertical className="h-4 w-4 text-white/70" />
       </button>
 
-      {/* Expand/Collapse */}
+      {/* Expand/Collapse - Sempre visível em categorias principais */}
       {!isSubcategoria && (
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            if (hasSubcategorias) {
-              onToggle?.();
-            }
+            onToggle?.();
           }}
-          className={cn(
-            "p-1 hover:bg-black/10 rounded transition-colors",
-            !hasSubcategorias && "invisible"
-          )}
+          className="p-1 hover:bg-black/10 rounded transition-colors"
         >
           {isExpanded ? (
             <ChevronDown className="h-5 w-5 text-white" />
           ) : (
-            <ChevronRight className="h-5 w-5 text-white" />
+            <ChevronRight className="h-5 w-5 text-white/70" />
           )}
         </button>
       )}
