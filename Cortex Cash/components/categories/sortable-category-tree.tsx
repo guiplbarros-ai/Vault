@@ -94,14 +94,76 @@ export function SortableCategoryTree({
     setExpandedIds(newExpanded);
   };
 
+  // Helper para update otimista: mover categoria para ser subcategoria
+  const moveToSubcategory = (categoriaId: string, parentId: string) => {
+    setCategorias(prevCategorias => {
+      const newCategorias = prevCategorias.map(cat => {
+        // Se é a categoria a ser movida
+        if (cat.id === categoriaId) {
+          return null; // Será removida daqui
+        }
+
+        // Se é a categoria pai que vai receber a subcategoria
+        if (cat.id === parentId) {
+          // Encontra a categoria sendo movida
+          const categoriaMovida = prevCategorias.find(c => c.id === categoriaId);
+          if (categoriaMovida) {
+            return {
+              ...cat,
+              subcategorias: [
+                ...cat.subcategorias,
+                { ...categoriaMovida, pai_id: parentId }
+              ]
+            };
+          }
+        }
+
+        // Remove a categoria das subcategorias de outras categorias (se estava lá)
+        return {
+          ...cat,
+          subcategorias: cat.subcategorias.filter(sub => sub.id !== categoriaId)
+        };
+      }).filter(Boolean) as CategoriaComSubcategorias[];
+
+      return newCategorias;
+    });
+  };
+
+  // Helper para update otimista: promover subcategoria a categoria principal
+  const promoteToMainCategory = (categoriaId: string, currentParentId: string) => {
+    setCategorias(prevCategorias => {
+      let categoriaPromovida: Categoria | null = null;
+
+      const newCategorias = prevCategorias.map(cat => {
+        if (cat.id === currentParentId) {
+          // Remove das subcategorias e guarda referência
+          const subcategoriaRemovida = cat.subcategorias.find(sub => sub.id === categoriaId);
+          if (subcategoriaRemovida) {
+            categoriaPromovida = { ...subcategoriaRemovida, pai_id: undefined };
+          }
+
+          return {
+            ...cat,
+            subcategorias: cat.subcategorias.filter(sub => sub.id !== categoriaId)
+          };
+        }
+        return cat;
+      });
+
+      // Adiciona a categoria promovida à lista principal
+      if (categoriaPromovida) {
+        return [
+          ...newCategorias,
+          { ...categoriaPromovida, subcategorias: [] }
+        ] as CategoriaComSubcategorias[];
+      }
+
+      return newCategorias;
+    });
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-
-    console.log('🎯 DragEnd Event:', {
-      activeId: active.id,
-      overId: over?.id,
-      expandedIds: Array.from(expandedIds)
-    });
 
     if (!over || active.id === over.id) {
       return;
@@ -112,28 +174,15 @@ export function SortableCategoryTree({
     const isDropzone = overIdStr.startsWith('dropzone-');
     const dropzoneParentId = isDropzone ? overIdStr.replace('dropzone-', '') : null;
 
-    console.log('🎯 Dropzone detection:', {
-      overIdStr,
-      isDropzone,
-      dropzoneParentId
-    });
-
     // Verifica se está arrastando sobre uma categoria (para virar subcategoria)
     let targetCategoria = categorias.find((c) => c.id === over.id);
 
     // Se está sobre uma dropzone, pega a categoria pai
     if (isDropzone && dropzoneParentId) {
       targetCategoria = categorias.find((c) => c.id === dropzoneParentId);
-      console.log('📦 Dropzone detectada para categoria:', targetCategoria?.nome);
     }
 
     const sourceCategoria = categorias.find((c) => c.id === active.id);
-
-    console.log('🔍 Categorias encontradas:', {
-      targetCategoria: targetCategoria?.nome,
-      sourceCategoria: sourceCategoria?.nome,
-      targetExpandida: targetCategoria ? expandedIds.has(targetCategoria.id) : false
-    });
 
     // Se não encontrou a categoria na lista principal, pode ser uma subcategoria
     let sourceSubcategoria: Categoria | undefined;
@@ -153,21 +202,24 @@ export function SortableCategoryTree({
 
     // CASO 1: Arrastar subcategoria para área principal (remover pai)
     if (sourceSubcategoria && sourceParentId && targetCategoria && !expandedIds.has(targetCategoria.id)) {
-      // Se é uma subcategoria e está sendo arrastada para uma categoria não-expandida,
-      // remove o pai para torná-la categoria principal
+      // Update otimista: atualiza UI imediatamente
+      promoteToMainCategory(sourceSubcategoria.id, sourceParentId);
+
       const { categoriaService } = await import("@/lib/services/categoria.service");
       const { toast } = await import("sonner");
 
       try {
+        // Atualiza no banco em background
         await categoriaService.updateCategoria(sourceSubcategoria.id, {
           pai_id: undefined,
         });
 
         toast.success(`"${sourceSubcategoria.nome}" agora é uma categoria principal`);
-        window.location.reload();
       } catch (error) {
         console.error('Erro ao mover categoria:', error);
-        toast.error('Erro ao mover categoria');
+        toast.error('Erro ao mover categoria. Recarregando...');
+        // Se der erro, reverte carregando do banco
+        setTimeout(() => window.location.reload(), 1500);
       }
       return;
     }
@@ -183,34 +235,25 @@ export function SortableCategoryTree({
       (expandedIds.has(targetCategoria.id) || isDropzone) && // Aceita dropzone OU categoria expandida
       sourceParentId !== targetCategoria.id;
 
-    console.log('🧩 Verificação CASO 2 (criar subcategoria):', {
-      hasTarget: !!targetCategoria,
-      hasDragged: !!draggedItem,
-      differentIds: targetCategoria && draggedItem && targetCategoria.id !== draggedItem.id,
-      isExpanded: targetCategoria && expandedIds.has(targetCategoria.id),
-      isDropzone: isDropzone,
-      notAlreadyChild: sourceParentId !== targetCategoria?.id,
-      shouldCreateSubcategory
-    });
-
     if (shouldCreateSubcategory) {
-      // Importar categoriaService
+      // Update otimista: atualiza UI imediatamente
+      moveToSubcategory(draggedItem.id, targetCategoria.id);
+
       const { categoriaService } = await import("@/lib/services/categoria.service");
       const { toast } = await import("sonner");
 
       try {
-        // Atualiza o pai_id para transformar em subcategoria
+        // Atualiza no banco em background
         await categoriaService.updateCategoria(draggedItem.id, {
           pai_id: targetCategoria.id,
         });
 
         toast.success(`"${draggedItem.nome}" agora é subcategoria de "${targetCategoria.nome}"`);
-
-        // Recarrega as categorias
-        window.location.reload();
       } catch (error) {
         console.error('Erro ao mover categoria:', error);
-        toast.error('Erro ao mover categoria');
+        toast.error('Erro ao mover categoria. Recarregando...');
+        // Se der erro, reverte carregando do banco
+        setTimeout(() => window.location.reload(), 1500);
       }
       return;
     }
