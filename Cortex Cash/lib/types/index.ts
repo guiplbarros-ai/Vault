@@ -321,20 +321,10 @@ export interface CreateCategoriaDTO {
   nome: string;
   tipo: TipoTransacao;
   grupo?: string;
+  pai_id?: string | null;
   icone?: string;
   cor?: string;
   ordem?: number;
-}
-
-export interface UpdateTransacaoDTO {
-  categoria_id?: string;
-  descricao?: string;
-  valor?: number;
-  data?: Date | string;
-  observacoes?: string;
-  tags?: string[];
-  classificacao_origem?: OrigemClassificacao;
-  classificacao_confianca?: number;
 }
 
 export interface CreateInvestimentoDTO {
@@ -792,6 +782,206 @@ export type DeepPartial<T> = {
 export type Nullable<T> = T | null;
 
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+// ============================================================================
+// Tipos para Agent PLANEJAMENTO (Financial Planning)
+// ============================================================================
+
+export type TipoCenario = 'base' | 'personalizado';
+export type ModoBehavior = 'manter_padrao' | 'percentual' | 'valor_fixo' | 'zerar';
+export type TipoConfiguracao = 'receita' | 'despesa' | 'investimento' | 'evento_unico';
+export type CategoriaObjetivo = 'casa' | 'viagem' | 'educacao' | 'aposentadoria' | 'carro' | 'outro';
+export type PrioridadeObjetivo = 'alta' | 'media' | 'baixa';
+export type StatusObjetivo = 'no_caminho' | 'precisa_ajustes' | 'inviavel';
+
+/**
+ * Cenário de Planejamento Financeiro
+ * Representa uma projeção futura do comportamento financeiro
+ */
+export interface Cenario {
+  id: string;
+  nome: string;
+  descricao?: string;
+  tipo: TipoCenario;
+  horizonte_anos: number;  // 1-10 anos
+  data_inicio: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Configuração de comportamento financeiro dentro de um cenário
+ * Define como receitas/despesas/investimentos serão diferentes do padrão atual
+ */
+export interface ConfiguracaoComportamento {
+  id: string;
+  cenario_id: string;
+  tipo: TipoConfiguracao;
+
+  // Para receitas/despesas por categoria
+  categoria_id?: string;
+  modo: ModoBehavior;
+  percentual_mudanca?: number;  // Ex: -30 (redução de 30%), +20 (aumento de 20%)
+  valor_fixo?: number;
+  data_aplicacao?: Date;  // Quando a mudança entra em vigor
+
+  // Para investimentos
+  percentual_saving?: number;  // % do saving para investir
+  taxa_retorno_mensal?: number;  // Taxa de retorno esperada (ex: 0.008 = 0.8% a.m.)
+
+  // Para eventos únicos
+  evento_descricao?: string;
+  evento_valor?: number;
+  evento_data?: Date;
+  evento_tipo?: 'receita' | 'despesa';
+
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Objetivo Financeiro dentro de um cenário
+ * Meta que o usuário quer alcançar (compra de casa, aposentadoria, etc)
+ */
+export interface ObjetivoFinanceiro {
+  id: string;
+  cenario_id: string;
+  nome: string;
+  valor_alvo: number;
+  data_alvo: Date;
+  categoria: CategoriaObjetivo;
+  prioridade: PrioridadeObjetivo;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/**
+ * Projeção mensal calculada para um cenário
+ * Dados projetados mês a mês
+ */
+export interface ProjecaoMensal {
+  mes: Date;
+  receitas: {
+    total: number;
+    porCategoria: Record<string, number>;
+  };
+  despesas: {
+    total: number;
+    porCategoria: Record<string, number>;
+  };
+  investimentos: number;
+  saving: number;  // receitas - despesas - investimentos
+  rendimento_investimentos: number;
+  patrimonio_acumulado: number;
+}
+
+/**
+ * Baseline calculado a partir do histórico
+ * Usado como base para projeções
+ */
+export interface BaselineData {
+  receitas_mensais: Record<string, number>;  // categoria_id -> valor médio
+  despesas_mensais: Record<string, number>;  // categoria_id -> valor médio
+  taxa_saving: number;  // % médio de saving
+  patrimonio_inicial: number;
+}
+
+/**
+ * Análise de viabilidade de um objetivo financeiro
+ */
+export interface ObjetivoAnalise {
+  objetivo: ObjetivoFinanceiro;
+  status: StatusObjetivo;
+  patrimonio_projetado: number;
+  diferenca: number;  // valor_alvo - patrimonio_projetado
+  percentual_alcance: number;  // (patrimonio_projetado / valor_alvo) * 100
+  sugestoes: string[];  // Sugestões de ajustes
+}
+
+/**
+ * Resultado da comparação entre cenários
+ */
+export interface ComparativoResultado {
+  cenarios: Cenario[];
+  metricas: {
+    [cenario_id: string]: {
+      patrimonio_final: number;
+      saving_acumulado: number;
+      taxa_saving_media: number;
+      receita_total_acumulada: number;
+      despesa_total_acumulada: number;
+    };
+  };
+  diferencas: {
+    patrimonio_final: {
+      maior: string;  // cenario_id
+      menor: string;  // cenario_id
+      diferenca_valor: number;
+      diferenca_percentual: number;
+    };
+    saving_acumulado: {
+      maior: string;
+      menor: string;
+      diferenca_valor: number;
+    };
+  };
+}
+
+/**
+ * DTOs para criação de entidades de planejamento
+ */
+export interface CreateCenarioDTO {
+  nome: string;
+  descricao?: string;
+  horizonte_anos: number;  // 1-10
+  duplicar_de_cenario_id?: string;  // Opcional: duplicar configurações de outro cenário
+}
+
+export interface CreateConfiguracaoDTO {
+  cenario_id: string;
+  tipo: TipoConfiguracao;
+  categoria_id?: string;
+  modo: ModoBehavior;
+  percentual_mudanca?: number;
+  valor_fixo?: number;
+  data_aplicacao?: Date | string;
+  percentual_saving?: number;
+  taxa_retorno_mensal?: number;
+  evento_descricao?: string;
+  evento_valor?: number;
+  evento_data?: Date | string;
+  evento_tipo?: 'receita' | 'despesa';
+}
+
+export interface CreateObjetivoDTO {
+  cenario_id: string;
+  nome: string;
+  valor_alvo: number;
+  data_alvo: Date | string;
+  categoria: CategoriaObjetivo;
+  prioridade: PrioridadeObjetivo;
+}
+
+/**
+ * Resultado de projeções com metadados
+ */
+export interface ResultadoProjecao {
+  cenario: Cenario;
+  projecoes: ProjecaoMensal[];
+  resumo: {
+    patrimonio_inicial: number;
+    patrimonio_final: number;
+    saving_acumulado: number;
+    receita_total: number;
+    despesa_total: number;
+    investimento_total: number;
+    rendimento_total: number;
+    taxa_saving_media: number;
+    melhor_mes: Date;  // Mês com maior saving
+    pior_mes: Date;    // Mês com menor saving (ou maior queima)
+  };
+  objetivos_analise: ObjetivoAnalise[];
+}
 
 // ============================================================================
 // Constantes

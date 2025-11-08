@@ -70,13 +70,87 @@ export function SortableCategoryTree({
     setExpandedIds(newExpanded);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
       return;
     }
 
+    // Verifica se está arrastando sobre uma categoria (para virar subcategoria)
+    const targetCategoria = categorias.find((c) => c.id === over.id);
+    const sourceCategoria = categorias.find((c) => c.id === active.id);
+
+    // Se não encontrou a categoria na lista principal, pode ser uma subcategoria
+    let sourceSubcategoria: Categoria | undefined;
+    let sourceParentId: string | undefined;
+    if (!sourceCategoria) {
+      for (const cat of categorias) {
+        const sub = cat.subcategorias.find(s => s.id === active.id);
+        if (sub) {
+          sourceSubcategoria = sub;
+          sourceParentId = cat.id;
+          break;
+        }
+      }
+    }
+
+    const draggedItem = sourceCategoria || sourceSubcategoria;
+
+    // CASO 1: Arrastar subcategoria para área principal (remover pai)
+    if (sourceSubcategoria && sourceParentId && targetCategoria && !expandedIds.has(targetCategoria.id)) {
+      // Se é uma subcategoria e está sendo arrastada para uma categoria não-expandida,
+      // remove o pai para torná-la categoria principal
+      const { categoriaService } = await import("@/lib/services/categoria.service");
+      const { toast } = await import("sonner");
+
+      try {
+        await categoriaService.updateCategoria(sourceSubcategoria.id, {
+          pai_id: undefined,
+        });
+
+        toast.success(`"${sourceSubcategoria.nome}" agora é uma categoria principal`);
+        window.location.reload();
+      } catch (error) {
+        console.error('Erro ao mover categoria:', error);
+        toast.error('Erro ao mover categoria');
+      }
+      return;
+    }
+
+    // CASO 2: Arrastar sobre uma categoria EXPANDIDA para transformar em subcategoria
+    // Só transforma em subcategoria se:
+    // 1. A categoria alvo está expandida (mostrando intenção de adicionar subcategoria)
+    // 2. O item arrastado não é já subcategoria da mesma categoria
+    if (
+      targetCategoria &&
+      draggedItem &&
+      targetCategoria.id !== draggedItem.id &&
+      expandedIds.has(targetCategoria.id) &&
+      sourceParentId !== targetCategoria.id
+    ) {
+      // Importar categoriaService
+      const { categoriaService } = await import("@/lib/services/categoria.service");
+      const { toast } = await import("sonner");
+
+      try {
+        // Atualiza o pai_id para transformar em subcategoria
+        await categoriaService.updateCategoria(draggedItem.id, {
+          pai_id: targetCategoria.id,
+        });
+
+        toast.success(`"${draggedItem.nome}" agora é subcategoria de "${targetCategoria.nome}"`);
+
+        // Recarrega as categorias
+        window.location.reload();
+      } catch (error) {
+        console.error('Erro ao mover categoria:', error);
+        toast.error('Erro ao mover categoria');
+      }
+      return;
+    }
+
+    // CASO 3: Reordenação normal entre categorias do mesmo nível
     const oldIndex = categorias.findIndex((c) => c.id === active.id);
     const newIndex = categorias.findIndex((c) => c.id === over.id);
 
