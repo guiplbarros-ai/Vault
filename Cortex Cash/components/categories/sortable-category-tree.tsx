@@ -68,8 +68,10 @@ export function SortableCategoryTree({
   const [categorias, setCategorias] = React.useState(initialCategorias);
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
 
-  // Atualiza quando props mudam
+  // Atualiza quando props mudam (CUIDADO: pode sobrescrever updates otimistas)
   React.useEffect(() => {
+    console.log('⚠️ useEffect: initialCategorias mudou, atualizando estado local');
+    console.log('📊 Nova estrutura:', initialCategorias.map(c => ({ id: c.id, nome: c.nome, subs: c.subcategorias?.length || 0 })));
     setCategorias(initialCategorias);
   }, [initialCategorias]);
 
@@ -96,26 +98,49 @@ export function SortableCategoryTree({
 
   // Helper para update otimista: mover categoria para ser subcategoria
   const moveToSubcategory = (categoriaId: string, parentId: string) => {
+    console.log('🔄 moveToSubcategory:', { categoriaId, parentId });
+
     setCategorias(prevCategorias => {
+      console.log('📊 Categorias antes:', prevCategorias.map(c => ({ id: c.id, nome: c.nome, subs: c.subcategorias.length })));
+
+      // Encontra a categoria sendo movida
+      const categoriaMovida = prevCategorias.find(c => c.id === categoriaId);
+
+      if (!categoriaMovida) {
+        console.warn('❌ Categoria não encontrada:', categoriaId);
+        return prevCategorias;
+      }
+
+      console.log('📦 Categoria movida:', { id: categoriaMovida.id, nome: categoriaMovida.nome });
+
       const newCategorias = prevCategorias.map(cat => {
-        // Se é a categoria a ser movida
+        // Se é a categoria a ser movida, remove da lista principal
         if (cat.id === categoriaId) {
-          return null; // Será removida daqui
+          return null;
         }
 
         // Se é a categoria pai que vai receber a subcategoria
         if (cat.id === parentId) {
-          // Encontra a categoria sendo movida
-          const categoriaMovida = prevCategorias.find(c => c.id === categoriaId);
-          if (categoriaMovida) {
-            return {
-              ...cat,
-              subcategorias: [
-                ...cat.subcategorias,
-                { ...categoriaMovida, pai_id: parentId }
-              ]
-            };
-          }
+          // Converte CategoriaComSubcategorias para Categoria (subcategoria não tem subcategorias)
+          const novaSubcategoria: Categoria = {
+            id: categoriaMovida.id,
+            nome: categoriaMovida.nome,
+            tipo: categoriaMovida.tipo,
+            grupo: categoriaMovida.grupo,
+            pai_id: parentId,
+            icone: categoriaMovida.icone,
+            cor: categoriaMovida.cor,
+            ordem: categoriaMovida.ordem,
+            ativa: categoriaMovida.ativa,
+            eh_fixa: categoriaMovida.eh_fixa,
+            created_at: categoriaMovida.created_at,
+            updated_at: categoriaMovida.updated_at,
+          };
+
+          return {
+            ...cat,
+            subcategorias: [...cat.subcategorias, novaSubcategoria]
+          };
         }
 
         // Remove a categoria das subcategorias de outras categorias (se estava lá)
@@ -125,13 +150,19 @@ export function SortableCategoryTree({
         };
       }).filter(Boolean) as CategoriaComSubcategorias[];
 
+      console.log('📊 Categorias depois:', newCategorias.map(c => ({ id: c.id, nome: c.nome, subs: c.subcategorias.length })));
+
       return newCategorias;
     });
   };
 
   // Helper para update otimista: promover subcategoria a categoria principal
   const promoteToMainCategory = (categoriaId: string, currentParentId: string) => {
+    console.log('⬆️ promoteToMainCategory:', { categoriaId, currentParentId });
+
     setCategorias(prevCategorias => {
+      console.log('📊 Categorias antes:', prevCategorias.map(c => ({ id: c.id, nome: c.nome, subs: c.subcategorias.length })));
+
       let categoriaPromovida: Categoria | null = null;
 
       const newCategorias = prevCategorias.map(cat => {
@@ -140,6 +171,7 @@ export function SortableCategoryTree({
           const subcategoriaRemovida = cat.subcategorias.find(sub => sub.id === categoriaId);
           if (subcategoriaRemovida) {
             categoriaPromovida = { ...subcategoriaRemovida, pai_id: undefined };
+            console.log('📦 Subcategoria encontrada:', { id: subcategoriaRemovida.id, nome: subcategoriaRemovida.nome });
           }
 
           return {
@@ -152,12 +184,17 @@ export function SortableCategoryTree({
 
       // Adiciona a categoria promovida à lista principal
       if (categoriaPromovida) {
-        return [
-          ...newCategorias,
-          { ...categoriaPromovida, subcategorias: [] }
-        ] as CategoriaComSubcategorias[];
+        const novaCategoriaComSubs: CategoriaComSubcategorias = {
+          ...categoriaPromovida,
+          subcategorias: [] // Nova categoria principal sem subcategorias
+        };
+
+        const result = [...newCategorias, novaCategoriaComSubs];
+        console.log('📊 Categorias depois:', result.map(c => ({ id: c.id, nome: c.nome, subs: c.subcategorias.length })));
+        return result;
       }
 
+      console.warn('❌ Categoria promovida não encontrada');
       return newCategorias;
     });
   };
