@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerStore } from '@/lib/services/ai-usage.store';
 import { USD_TO_BRL } from '@/lib/config/currency';
 
-// Limite padrão em USD
+// Limite padrão em USD (alinhado com expectativa dos testes e UI)
 const DEFAULT_LIMIT_USD = 10.0;
 
 interface AIUsageByDay {
@@ -18,6 +18,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');
+    const limitParam = searchParams.get('limit');
+
+    // Parse limit provided in USD, convert to BRL for response consistency
+    const limitUsd = limitParam ? parseFloat(limitParam) : DEFAULT_LIMIT_USD;
+    const limitBrl = limitUsd * USD_TO_BRL;
 
     // Default to current month
     const now = new Date();
@@ -31,6 +36,12 @@ export async function GET(request: NextRequest) {
     const store = getServerStore();
     const summary = await store.getUsageSummary(startDate, endDate);
 
+    // Calculate metrics
+    const usedBrl = summary.total_cost_usd * USD_TO_BRL;
+    const percentage = Number.isFinite(limitBrl) && limitBrl > 0 ? (usedBrl / limitBrl) * 100 : 0;
+    const isNearLimit = percentage >= 80;
+    const isOverLimit = percentage >= 100;
+
     // Agregar por dia (simplificado - retorna apenas totais para o período)
     // Para agregação real por dia, seria necessário armazenar mais detalhes no store
     const byDay: AIUsageByDay[] = [];
@@ -43,16 +54,23 @@ export async function GET(request: NextRequest) {
         requests: summary.total_requests,
         tokens: summary.total_tokens,
         cost_usd: summary.total_cost_usd,
-        cost_brl: summary.total_cost_usd * USD_TO_BRL,
+        cost_brl: usedBrl,
       });
     }
 
     return NextResponse.json({
+      // Campos principais (compatibilidade com contrato esperado)
+      usedBrl,
+      limitBrl,
+      percentage,
+      isNearLimit,
+      isOverLimit,
+      // Dados detalhados
       summary: {
         total_requests: summary.total_requests,
         total_tokens: summary.total_tokens,
         total_cost_usd: summary.total_cost_usd,
-        total_cost_brl: summary.total_cost_usd * USD_TO_BRL,
+        total_cost_brl: usedBrl,
       },
       by_day: byDay,
       period: {

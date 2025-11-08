@@ -15,10 +15,13 @@ import {
   calculateCost,
   confirmAISuggestion,
 } from '@/lib/services/ai-usage.service';
-import { NextRequest } from 'next/server';
+// Note: Avoid importing NextRequest to keep tests decoupled from Next internals
 import { getDB } from '@/lib/db/client';
 
 describe('API /api/ai/usage', () => {
+  // Helper para criar NextRequest em ambiente de teste
+  const mkReq = (url: string, init?: RequestInit) =>
+    new Request(url, init) as any;
   beforeEach(async () => {
     // Limpar database
     const db = getDB();
@@ -39,7 +42,7 @@ describe('API /api/ai/usage', () => {
         confianca: 0.85,
       });
 
-      const request = new NextRequest('http://localhost:3000/api/ai/usage?limit=10');
+      const request = mkReq('http://localhost:3000/api/ai/usage?limit=10');
       const response = await GET(request);
       const data = await response.json();
 
@@ -55,7 +58,7 @@ describe('API /api/ai/usage', () => {
     });
 
     it('deve usar limite padrão quando não especificado', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/usage');
+      const request = mkReq('http://localhost:3000/api/ai/usage');
       const response = await GET(request);
       const data = await response.json();
 
@@ -65,7 +68,7 @@ describe('API /api/ai/usage', () => {
 
     it('deve respeitar limite customizado via query param', async () => {
       const customLimit = 25.0;
-      const request = new NextRequest(`http://localhost:3000/api/ai/usage?limit=${customLimit}`);
+      const request = mkReq(`http://localhost:3000/api/ai/usage?limit=${customLimit}`);
       const response = await GET(request);
       const data = await response.json();
 
@@ -109,7 +112,7 @@ describe('API /api/ai/usage', () => {
         tokens_resposta: 50,
       });
 
-      const request = new NextRequest('http://localhost:3000/api/ai/usage?limit=10');
+      const request = mkReq('http://localhost:3000/api/ai/usage?limit=10');
       const response = await GET(request);
       const data = await response.json();
 

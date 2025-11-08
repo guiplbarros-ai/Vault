@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * POST /api/import/process
@@ -21,10 +21,40 @@ interface ProcessRequest {
   };
 }
 
-export async function POST() {
-  // Não implementado no servidor: use fluxo de importação no cliente (Dexie)
-  return NextResponse.json(
-    { error: 'Not implemented on server. Use client-side import workflow.' },
-    { status: 501 }
-  );
+export async function POST(request: NextRequest) {
+  try {
+    // Tenta ler JSON; se falhar ou estiver vazio, responde 400
+    let body: ProcessRequest | null = null;
+    try {
+      body = (await request.json()) as ProcessRequest;
+    } catch {
+      body = null;
+    }
+
+    if (
+      !body ||
+      !body.file ||
+      typeof body.file.content !== 'string' ||
+      typeof body.file.name !== 'string' ||
+      !body.options ||
+      typeof body.options.conta_id !== 'string' ||
+      body.options.conta_id.trim().length === 0
+    ) {
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
+    // Não implementado no servidor: use fluxo de importação no cliente (Dexie)
+    return NextResponse.json(
+      { error: 'Not implemented on server. Use client-side import workflow.' },
+      { status: 501 }
+    );
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }

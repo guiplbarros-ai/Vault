@@ -47,7 +47,7 @@ export async function DELETE(request: NextRequest) {
 
     if (action === 'clean') {
       // Remove apenas expirados
-      const removed = cleanExpiredCache();
+      const removed = await Promise.resolve(cleanExpiredCache() as unknown as number);
       return NextResponse.json({
         success: true,
         message: `${removed} entradas expiradas removidas`,
@@ -55,7 +55,7 @@ export async function DELETE(request: NextRequest) {
       });
     } else if (action === 'clear') {
       // Remove tudo
-      clearCache();
+      await Promise.resolve(clearCache());
       return NextResponse.json({
         success: true,
         message: 'Cache limpo completamente',

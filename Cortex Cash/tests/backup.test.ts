@@ -274,3 +274,10 @@ export const backupTests = new BackupTestSuite();
 if (typeof window !== 'undefined') {
   (window as any).testBackup = () => backupTests.runAll();
 }
+
+// Vitest placeholder to avoid "No test suite found" when running in Node
+// This suite is intentionally skipped because the real tests run in the browser.
+import { describe, it } from 'vitest';
+describe.skip('BackupTestSuite (browser-only)', () => {
+  it('placeholder', () => {});
+});

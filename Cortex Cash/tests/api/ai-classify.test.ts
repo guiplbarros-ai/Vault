@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST as classifyPOST } from '@/app/api/ai/classify/route';
 import { POST as batchClassifyPOST } from '@/app/api/ai/classify/batch/route';
-import { NextRequest } from 'next/server';
+// Note: Avoid importing NextRequest to keep tests decoupled from Next internals
 import { getDB } from '@/lib/db/client';
 import type { Categoria } from '@/lib/types';
 
@@ -79,6 +79,9 @@ vi.mock('@/lib/finance/classification/prompt-cache', () => ({
 }));
 
 describe('API /api/ai/classify', () => {
+  // Helper para criar NextRequest em ambiente de teste
+  const mkReq = (url: string, init?: RequestInit) =>
+    new Request(url, init) as any;
   // Categorias de teste (passadas no body ao invés de Dexie)
   const categoriasDespesa = [
     { id: 'mock-categoria-id', nome: 'Alimentação' },
@@ -104,7 +107,7 @@ describe('API /api/ai/classify', () => {
 
   describe('POST /api/ai/classify', () => {
     it('deve classificar transação com dados válidos', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/classify', {
+      const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
           descricao: 'IFOOD RESTAURANTE',
@@ -127,7 +130,7 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve retornar erro 400 quando faltar campo descricao', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/classify', {
+      const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
           valor: 45.50,
@@ -145,7 +148,7 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve retornar erro 400 quando faltar campo valor', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/classify', {
+      const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
           descricao: 'TESTE',
@@ -161,7 +164,7 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve retornar erro 400 quando faltar campo tipo', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/classify', {
+      const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
           descricao: 'TESTE',
@@ -176,9 +179,29 @@ describe('API /api/ai/classify', () => {
       expect(data).toHaveProperty('error');
     });
 
+    it('deve aceitar transação com valor zero (R$ 0,00)', async () => {
+      // Regression test: valor zero era rejeitado por validação incorreta
+      const request = mkReq('http://localhost:3000/api/ai/classify', {
+        method: 'POST',
+        body: JSON.stringify({
+          descricao: 'Ajuste de saldo',
+          valor: 0,
+          tipo: 'despesa',
+          categorias: categoriasDespesa,
+        }),
+      });
+
+      const response = await classifyPOST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data).toHaveProperty('categoria_sugerida_id');
+      expect(data).toHaveProperty('confianca');
+    });
+
     it('deve retornar erro 400 quando não há categorias disponíveis', async () => {
       // Envia request sem categorias no body
-      const request = new NextRequest('http://localhost:3000/api/ai/classify', {
+      const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
           descricao: 'TESTE',
@@ -207,7 +230,7 @@ describe('API /api/ai/classify', () => {
         percentageUsed: 150,
       });
 
-      const request = new NextRequest('http://localhost:3000/api/ai/classify', {
+      const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
           descricao: 'TESTE',
@@ -235,7 +258,7 @@ describe('API /api/ai/classify', () => {
         percentageUsed: 150,
       });
 
-      const request = new NextRequest('http://localhost:3000/api/ai/classify', {
+      const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
           descricao: 'TESTE',
@@ -266,7 +289,7 @@ describe('API /api/ai/classify', () => {
         timestamp: new Date(),
       });
 
-      const request = new NextRequest('http://localhost:3000/api/ai/classify', {
+      const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
           descricao: 'IFOOD RESTAURANTE',
@@ -286,7 +309,7 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve incluir transacao_id quando fornecido', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/classify', {
+      const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
           descricao: 'TESTE',
@@ -306,7 +329,7 @@ describe('API /api/ai/classify', () => {
 
   describe('POST /api/ai/classify/batch', () => {
     it('deve classificar múltiplas transações em batch', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/classify/batch', {
+      const request = mkReq('http://localhost:3000/api/ai/classify/batch', {
         method: 'POST',
         body: JSON.stringify({
           items: [
@@ -345,7 +368,7 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve retornar erro 400 quando items está vazio', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/classify/batch', {
+      const request = mkReq('http://localhost:3000/api/ai/classify/batch', {
         method: 'POST',
         body: JSON.stringify({
           items: [],
@@ -360,7 +383,7 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve retornar erro 400 quando items não é array', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/classify/batch', {
+      const request = mkReq('http://localhost:3000/api/ai/classify/batch', {
         method: 'POST',
         body: JSON.stringify({
           items: 'not-an-array',
@@ -384,7 +407,7 @@ describe('API /api/ai/classify', () => {
           tipo: 'despesa',
         }));
 
-      const request = new NextRequest('http://localhost:3000/api/ai/classify/batch', {
+      const request = mkReq('http://localhost:3000/api/ai/classify/batch', {
         method: 'POST',
         body: JSON.stringify({ items }),
       });
@@ -397,7 +420,7 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve respeitar configuração de concurrency', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/classify/batch', {
+      const request = mkReq('http://localhost:3000/api/ai/classify/batch', {
         method: 'POST',
         body: JSON.stringify({
           items: [
@@ -432,7 +455,7 @@ describe('API /api/ai/classify', () => {
         percentageUsed: 150,
       });
 
-      const request = new NextRequest('http://localhost:3000/api/ai/classify/batch', {
+      const request = mkReq('http://localhost:3000/api/ai/classify/batch', {
         method: 'POST',
         body: JSON.stringify({
           items: [
@@ -468,7 +491,7 @@ describe('API /api/ai/classify', () => {
         })
         .mockReturnValueOnce(null); // Cache miss para segundo item
 
-      const request = new NextRequest('http://localhost:3000/api/ai/classify/batch', {
+      const request = mkReq('http://localhost:3000/api/ai/classify/batch', {
         method: 'POST',
         body: JSON.stringify({
           items: [
@@ -491,7 +514,7 @@ describe('API /api/ai/classify', () => {
     });
 
     it('deve retornar summary com métricas corretas', async () => {
-      const request = new NextRequest('http://localhost:3000/api/ai/classify/batch', {
+      const request = mkReq('http://localhost:3000/api/ai/classify/batch', {
         method: 'POST',
         body: JSON.stringify({
           items: [
