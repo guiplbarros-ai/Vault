@@ -29,6 +29,7 @@ export interface SortableCategoryTreeProps {
   onSelect?: (categoria: Categoria) => void;
   selectedId?: string;
   onReorder?: (reordenacao: { id: string; novaOrdem: number }[]) => void;
+  onViewAnalytics?: (categoria: Categoria) => void;
 }
 
 export function SortableCategoryTree({
@@ -40,6 +41,7 @@ export function SortableCategoryTree({
   onSelect,
   selectedId,
   onReorder,
+  onViewAnalytics,
 }: SortableCategoryTreeProps) {
   const [categorias, setCategorias] = React.useState(initialCategorias);
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
@@ -208,23 +210,41 @@ export function SortableCategoryTree({
                 onMerge={onMerge}
                 onAddSubcategoria={onAddSubcategoria}
                 onSelect={onSelect}
+                onViewAnalytics={onViewAnalytics}
               />
 
-              {/* Subcategorias */}
-              {expandedIds.has(categoria.id) && categoria.subcategorias.length > 0 && (
+              {/* Subcategorias ou área de drop vazia */}
+              {expandedIds.has(categoria.id) && (
                 <div className="ml-6 mt-1 space-y-1">
-                  {categoria.subcategorias.map((sub) => (
-                    <SortableCategoryItem
-                      key={sub.id}
-                      categoria={sub}
-                      subcategorias={[]}
-                      isSelected={selectedId === sub.id}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                      onMerge={onMerge}
-                      onSelect={onSelect}
-                    />
-                  ))}
+                  {categoria.subcategorias.length > 0 ? (
+                    // Renderiza subcategorias existentes
+                    categoria.subcategorias.map((sub) => (
+                      <SortableCategoryItem
+                        key={sub.id}
+                        categoria={sub}
+                        subcategorias={[]}
+                        isSelected={selectedId === sub.id}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        onMerge={onMerge}
+                        onSelect={onSelect}
+                        onViewAnalytics={onViewAnalytics}
+                      />
+                    ))
+                  ) : (
+                    // Área vazia para drop quando não há subcategorias
+                    <div
+                      className="flex items-center justify-center py-4 px-4 rounded-lg border-2 border-dashed transition-colors"
+                      style={{
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                      }}
+                    >
+                      <p className="text-sm text-white/50 text-center">
+                        Arraste uma categoria aqui para criar subcategoria
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
