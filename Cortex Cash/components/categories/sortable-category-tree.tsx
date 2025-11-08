@@ -15,10 +15,32 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  useSortable,
 } from "@dnd-kit/sortable";
 import { Categoria } from "@/lib/types";
 import { CategoriaComSubcategorias } from "@/lib/services/categoria.service";
 import { SortableCategoryItem } from "./sortable-category-item";
+
+// Componente para área de drop vazia
+function DropZoneArea({ categoriaId }: { categoriaId: string }) {
+  const dropzoneId = `dropzone-${categoriaId}`;
+  const { setNodeRef, isOver } = useSortable({ id: dropzoneId });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="flex items-center justify-center py-4 px-4 rounded-lg border-2 border-dashed transition-colors"
+      style={{
+        borderColor: isOver ? 'rgba(96, 165, 250, 0.5)' : 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: isOver ? 'rgba(96, 165, 250, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+      }}
+    >
+      <p className="text-sm text-white/50 text-center">
+        {isOver ? '✨ Solte aqui para criar subcategoria' : 'Arraste uma categoria aqui para criar subcategoria'}
+      </p>
+    </div>
+  );
+}
 
 export interface SortableCategoryTreeProps {
   categorias: CategoriaComSubcategorias[];
@@ -75,13 +97,43 @@ export function SortableCategoryTree({
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
+    console.log('🎯 DragEnd Event:', {
+      activeId: active.id,
+      overId: over?.id,
+      expandedIds: Array.from(expandedIds)
+    });
+
     if (!over || active.id === over.id) {
       return;
     }
 
+    // Detecta se está arrastando sobre uma dropzone vazia
+    const overIdStr = String(over.id);
+    const isDropzone = overIdStr.startsWith('dropzone-');
+    const dropzoneParentId = isDropzone ? overIdStr.replace('dropzone-', '') : null;
+
+    console.log('🎯 Dropzone detection:', {
+      overIdStr,
+      isDropzone,
+      dropzoneParentId
+    });
+
     // Verifica se está arrastando sobre uma categoria (para virar subcategoria)
-    const targetCategoria = categorias.find((c) => c.id === over.id);
+    let targetCategoria = categorias.find((c) => c.id === over.id);
+
+    // Se está sobre uma dropzone, pega a categoria pai
+    if (isDropzone && dropzoneParentId) {
+      targetCategoria = categorias.find((c) => c.id === dropzoneParentId);
+      console.log('📦 Dropzone detectada para categoria:', targetCategoria?.nome);
+    }
+
     const sourceCategoria = categorias.find((c) => c.id === active.id);
+
+    console.log('🔍 Categorias encontradas:', {
+      targetCategoria: targetCategoria?.nome,
+      sourceCategoria: sourceCategoria?.nome,
+      targetExpandida: targetCategoria ? expandedIds.has(targetCategoria.id) : false
+    });
 
     // Se não encontrou a categoria na lista principal, pode ser uma subcategoria
     let sourceSubcategoria: Categoria | undefined;
@@ -120,17 +172,28 @@ export function SortableCategoryTree({
       return;
     }
 
-    // CASO 2: Arrastar sobre uma categoria EXPANDIDA para transformar em subcategoria
+    // CASO 2: Arrastar sobre uma categoria EXPANDIDA ou DROPZONE para transformar em subcategoria
     // Só transforma em subcategoria se:
-    // 1. A categoria alvo está expandida (mostrando intenção de adicionar subcategoria)
+    // 1. A categoria alvo está expandida (mostrando intenção de adicionar subcategoria) OU é uma dropzone
     // 2. O item arrastado não é já subcategoria da mesma categoria
-    if (
+    const shouldCreateSubcategory =
       targetCategoria &&
       draggedItem &&
       targetCategoria.id !== draggedItem.id &&
-      expandedIds.has(targetCategoria.id) &&
-      sourceParentId !== targetCategoria.id
-    ) {
+      (expandedIds.has(targetCategoria.id) || isDropzone) && // Aceita dropzone OU categoria expandida
+      sourceParentId !== targetCategoria.id;
+
+    console.log('🧩 Verificação CASO 2 (criar subcategoria):', {
+      hasTarget: !!targetCategoria,
+      hasDragged: !!draggedItem,
+      differentIds: targetCategoria && draggedItem && targetCategoria.id !== draggedItem.id,
+      isExpanded: targetCategoria && expandedIds.has(targetCategoria.id),
+      isDropzone: isDropzone,
+      notAlreadyChild: sourceParentId !== targetCategoria?.id,
+      shouldCreateSubcategory
+    });
+
+    if (shouldCreateSubcategory) {
       // Importar categoriaService
       const { categoriaService } = await import("@/lib/services/categoria.service");
       const { toast } = await import("sonner");
@@ -193,7 +256,14 @@ export function SortableCategoryTree({
       onDragEnd={handleDragEnd}
     >
       <SortableContext
-        items={categorias.map((c) => c.id)}
+        items={[
+          ...categorias.map((c) => c.id),
+          // Adiciona IDs das subcategorias e drop zones vazias
+          ...categorias.flatMap(c => [
+            ...c.subcategorias.map(sub => sub.id),
+            ...(expandedIds.has(c.id) && c.subcategorias.length === 0 ? [`dropzone-${c.id}`] : [])
+          ])
+        ]}
         strategy={verticalListSortingStrategy}
       >
         <div className="space-y-1">
@@ -233,17 +303,7 @@ export function SortableCategoryTree({
                     ))
                   ) : (
                     // Área vazia para drop quando não há subcategorias
-                    <div
-                      className="flex items-center justify-center py-4 px-4 rounded-lg border-2 border-dashed transition-colors"
-                      style={{
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                      }}
-                    >
-                      <p className="text-sm text-white/50 text-center">
-                        Arraste uma categoria aqui para criar subcategoria
-                      </p>
-                    </div>
+                    <DropZoneArea categoriaId={categoria.id} />
                   )}
                 </div>
               )}
