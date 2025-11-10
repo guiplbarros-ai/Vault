@@ -145,14 +145,9 @@ export function CategoryAnalyticsDashboard({
 
   if (loading) {
     return (
-      <Card
-        style={{
-          backgroundColor: 'rgb(15, 23, 42)',
-          borderColor: 'rgb(30, 41, 59)',
-        }}
-      >
+      <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </CardContent>
       </Card>
     );
@@ -160,15 +155,10 @@ export function CategoryAnalyticsDashboard({
 
   if (gastosPorCategoria.length === 0) {
     return (
-      <Card
-        style={{
-          backgroundColor: 'rgb(15, 23, 42)',
-          borderColor: 'rgb(30, 41, 59)',
-        }}
-      >
+      <Card>
         <CardHeader>
-          <CardTitle className="text-white">Análise por Categoria</CardTitle>
-          <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>
+          <CardTitle>Análise por Categoria</CardTitle>
+          <CardDescription>
             Nenhuma despesa classificada neste mês
           </CardDescription>
         </CardHeader>
@@ -208,19 +198,14 @@ export function CategoryAnalyticsDashboard({
   return (
     <div className="space-y-6">
       {/* Card de Resumo com Seletor de Período */}
-      <Card
-        style={{
-          backgroundColor: 'rgb(15, 23, 42)',
-          borderColor: 'rgb(30, 41, 59)',
-        }}
-      >
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-white">
+              <CardTitle>
                 Gastos por Categoria
               </CardTitle>
-              <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>
+              <CardDescription>
                 Total: {formatCurrency(totalGastos)}
               </CardDescription>
             </div>
@@ -231,10 +216,6 @@ export function CategoryAnalyticsDashboard({
                 variant="outline"
                 size="sm"
                 onClick={handleMesAnterior}
-                style={{
-                  borderColor: 'rgb(51, 65, 85)',
-                  color: 'white',
-                }}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -243,11 +224,7 @@ export function CategoryAnalyticsDashboard({
                 variant="outline"
                 size="sm"
                 onClick={handleMesAtual}
-                style={{
-                  borderColor: 'rgb(51, 65, 85)',
-                  color: 'white',
-                  minWidth: '150px',
-                }}
+                className="min-w-[150px]"
               >
                 {format(mesReferencia, 'MMMM yyyy', { locale: ptBR })}
               </Button>
@@ -258,10 +235,6 @@ export function CategoryAnalyticsDashboard({
                 onClick={handleProximoMes}
                 disabled={mesReferencia.getMonth() === new Date().getMonth() &&
                           mesReferencia.getFullYear() === new Date().getFullYear()}
-                style={{
-                  borderColor: 'rgb(51, 65, 85)',
-                  color: 'white',
-                }}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -272,15 +245,10 @@ export function CategoryAnalyticsDashboard({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Gráfico de Pizza */}
-        <Card
-          style={{
-            backgroundColor: 'rgb(15, 23, 42)',
-            borderColor: 'rgb(30, 41, 59)',
-          }}
-        >
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white text-lg">Distribuição de Gastos</CardTitle>
-            <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>
+            <CardTitle className="text-lg">Distribuição de Gastos</CardTitle>
+            <CardDescription>
               Top 8 categorias
             </CardDescription>
           </CardHeader>
@@ -303,10 +271,10 @@ export function CategoryAnalyticsDashboard({
                 <Tooltip
                   formatter={(value: number) => formatCurrency(value)}
                   contentStyle={{
-                    backgroundColor: 'rgb(30, 41, 59)',
-                    border: '1px solid rgb(51, 65, 85)',
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
                     borderRadius: '6px',
-                    color: 'white',
+                    color: 'hsl(var(--popover-foreground))',
                   }}
                 />
               </PieChart>
@@ -315,15 +283,10 @@ export function CategoryAnalyticsDashboard({
         </Card>
 
         {/* Lista de Categorias */}
-        <Card
-          style={{
-            backgroundColor: 'rgb(15, 23, 42)',
-            borderColor: 'rgb(30, 41, 59)',
-          }}
-        >
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white text-lg">Ranking de Gastos</CardTitle>
-            <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>
+            <CardTitle className="text-lg">Ranking de Gastos</CardTitle>
+            <CardDescription>
               Categorias ordenadas por valor
             </CardDescription>
           </CardHeader>
@@ -335,7 +298,7 @@ export function CategoryAnalyticsDashboard({
                 return (
                   <div
                     key={cat.categoria_id}
-                    className="space-y-1 p-2 rounded-lg hover:bg-gray-800/50 cursor-pointer transition-colors"
+                    className="space-y-1 p-2 rounded-lg hover:bg-accent cursor-pointer transition-colors"
                     onClick={() => {
                       // Simula um objeto Categoria para passar para o CategoryTrendChart
                       const categoriaObj: Categoria = {
@@ -346,6 +309,7 @@ export function CategoryAnalyticsDashboard({
                         tipo: 'despesa',
                         ordem: 0,
                         ativa: true,
+                        is_sistema: false,
                         created_at: new Date(),
                         updated_at: new Date(),
                       };
@@ -354,11 +318,11 @@ export function CategoryAnalyticsDashboard({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-400 text-sm">#{index + 1}</span>
+                        <span className="text-muted-foreground text-sm">#{index + 1}</span>
                         <span className="text-lg">{cat.categoria_icone}</span>
-                        <span className="text-white font-medium">{cat.categoria_nome}</span>
+                        <span className="font-medium">{cat.categoria_nome}</span>
                       </div>
-                      <span className="text-white font-semibold">
+                      <span className="font-semibold">
                         {formatCurrency(cat.total_gasto)}
                       </span>
                     </div>
@@ -370,12 +334,12 @@ export function CategoryAnalyticsDashboard({
                           backgroundColor: COLORS[index % COLORS.length],
                         }}
                       />
-                      <span className="text-gray-400 text-xs">{percentual.toFixed(1)}%</span>
+                      <span className="text-muted-foreground text-xs">{percentual.toFixed(1)}%</span>
                     </div>
                   </div>
                 );
               })}
-              <p className="text-gray-400 text-sm text-center mt-4">
+              <p className="text-muted-foreground text-sm text-center mt-4">
                 Clique em uma categoria para ver evolução mensal
               </p>
             </div>
@@ -385,15 +349,10 @@ export function CategoryAnalyticsDashboard({
 
       {/* Gráfico de Variações */}
       {variacoes.length > 0 && (
-        <Card
-          style={{
-            backgroundColor: 'rgb(15, 23, 42)',
-            borderColor: 'rgb(30, 41, 59)',
-          }}
-        >
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white text-lg">Comparação com Mês Anterior</CardTitle>
-            <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>
+            <CardTitle className="text-lg">Comparação com Mês Anterior</CardTitle>
+            <CardDescription>
               Top 5 maiores variações
             </CardDescription>
           </CardHeader>
@@ -402,19 +361,19 @@ export function CategoryAnalyticsDashboard({
               {/* Barra de Gráfico */}
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={barChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="name" tick={{ fill: '#9CA3AF' }} />
-                  <YAxis tick={{ fill: '#9CA3AF' }} />
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
                   <Tooltip
                     formatter={(value: number) => formatCurrency(value)}
                     contentStyle={{
-                      backgroundColor: 'rgb(30, 41, 59)',
-                      border: '1px solid rgb(51, 65, 85)',
+                      backgroundColor: 'hsl(var(--popover))',
+                      border: '1px solid hsl(var(--border))',
                       borderRadius: '6px',
-                      color: 'white',
+                      color: 'hsl(var(--popover-foreground))',
                     }}
                   />
-                  <Legend wrapperStyle={{ color: 'white' }} />
+                  <Legend />
                   <Bar dataKey="anterior" name="Mês Anterior" fill="#6B7280" />
                   <Bar dataKey="atual" name="Mês Atual" fill="#3B82F6" />
                 </BarChart>
@@ -429,16 +388,13 @@ export function CategoryAnalyticsDashboard({
                   return (
                     <div
                       key={v.categoria_id}
-                      className="flex items-center justify-between p-3 rounded-lg"
-                      style={{
-                        backgroundColor: 'rgb(30, 41, 59)',
-                      }}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted"
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-xl">{v.categoria_icone}</span>
                         <div>
-                          <p className="text-white font-medium">{v.categoria_nome}</p>
-                          <p className="text-gray-400 text-sm">
+                          <p className="font-medium">{v.categoria_nome}</p>
+                          <p className="text-muted-foreground text-sm">
                             {v.quantidade_transacoes} transações
                           </p>
                         </div>
@@ -446,10 +402,10 @@ export function CategoryAnalyticsDashboard({
 
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <p className="text-white font-semibold">
+                          <p className="font-semibold">
                             {formatCurrency(v.total_gasto_atual)}
                           </p>
-                          <p className="text-gray-400 text-sm">
+                          <p className="text-muted-foreground text-sm">
                             anterior: {formatCurrency(v.total_gasto_anterior)}
                           </p>
                         </div>

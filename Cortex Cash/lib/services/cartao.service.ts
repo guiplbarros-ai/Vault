@@ -23,6 +23,7 @@ import type {
 } from '../types';
 import { NotFoundError, DatabaseError, ValidationError } from '../errors';
 import { cartaoSchema, faturaSchema, faturaLancamentoSchema, pagarFaturaSchema } from '../validations';
+import { getCurrentUserId } from '../db/seed-usuarios';
 
 export class CartaoService {
   // ============================================================================
@@ -149,13 +150,37 @@ export class CartaoService {
     }
 
     const db = getDB();
+
+    // Validar se a instituição existe
+    const instituicao = await db.instituicoes.get(data.instituicao_id);
+    if (!instituicao) {
+      throw new NotFoundError('Instituição', data.instituicao_id);
+    }
+
+    // Validar se a conta de pagamento existe e está ativa (se fornecida)
+    if (data.conta_pagamento_id) {
+      const conta = await db.contas.get(data.conta_pagamento_id);
+      if (!conta) {
+        throw new NotFoundError('Conta de pagamento', data.conta_pagamento_id);
+      }
+      if (!conta.ativa) {
+        throw new ValidationError('Não é possível vincular cartão a uma conta inativa');
+      }
+      // Verificar se é conta-corrente
+      if (conta.tipo !== 'corrente') {
+        throw new ValidationError('Apenas contas-corrente podem ser usadas para pagamento de faturas');
+      }
+    }
+
     const id = crypto.randomUUID();
     const now = new Date();
+    const currentUserId = getCurrentUserId();
 
     const cartao: CartaoConfig = {
       ...data,
       id,
       ativo: true,
+      usuario_id: currentUserId,
       created_at: now,
       updated_at: now,
     };
@@ -184,6 +209,23 @@ export class CartaoService {
     if (!validationResult.success) {
       const errors = validationResult.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`);
       throw new ValidationError('Erro de validação ao atualizar cartão', errors);
+    }
+
+    // Validar se a conta de pagamento existe e está ativa (se fornecida)
+    if (data.conta_pagamento_id !== undefined) {
+      if (data.conta_pagamento_id) {
+        const conta = await db.contas.get(data.conta_pagamento_id);
+        if (!conta) {
+          throw new NotFoundError('Conta de pagamento', data.conta_pagamento_id);
+        }
+        if (!conta.ativa) {
+          throw new ValidationError('Não é possível vincular cartão a uma conta inativa');
+        }
+        // Verificar se é conta-corrente
+        if (conta.tipo !== 'corrente') {
+          throw new ValidationError('Apenas contas-corrente podem ser usadas para pagamento de faturas');
+        }
+      }
     }
 
     await db.cartoes_config.update(id, {
@@ -595,15 +637,9 @@ export class CartaoService {
 
   /**
    * Paga uma fatura (cria transação e atualiza fatura)
+   * Se a conta de pagamento não for fornecida, usa a conta configurada no cartão
    */
   async pagarFatura(data: PagarFaturaDTO): Promise<void> {
-    // Validar com Zod
-    const validationResult = pagarFaturaSchema.safeParse(data);
-    if (!validationResult.success) {
-      const errors = validationResult.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`);
-      throw new ValidationError('Erro de validação ao pagar fatura', errors);
-    }
-
     const db = getDB();
 
     const fatura = await db.faturas.get(data.fatura_id);
@@ -611,19 +647,41 @@ export class CartaoService {
       throw new NotFoundError('Fatura', data.fatura_id);
     }
 
-    const conta = await db.contas.get(data.conta_pagamento_id);
+    // Buscar o cartão para pegar a conta de pagamento padrão se não fornecida
+    const cartao = await db.cartoes_config.get(fatura.cartao_id);
+    if (!cartao) {
+      throw new NotFoundError('Cartão', fatura.cartao_id);
+    }
+
+    // Se não foi fornecida conta de pagamento, usa a configurada no cartão
+    let contaPagamentoId = data.conta_pagamento_id;
+    if (!contaPagamentoId && cartao.conta_pagamento_id) {
+      contaPagamentoId = cartao.conta_pagamento_id;
+      console.log(`[CartaoService] Usando conta de pagamento configurada no cartão: ${contaPagamentoId}`);
+    }
+
+    // Validar com dados completos
+    const dataCompleta = { ...data, conta_pagamento_id: contaPagamentoId };
+    const validationResult = pagarFaturaSchema.safeParse(dataCompleta);
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`);
+      throw new ValidationError('Erro de validação ao pagar fatura', errors);
+    }
+
+    const conta = await db.contas.get(contaPagamentoId);
     if (!conta) {
-      throw new NotFoundError('Conta', data.conta_pagamento_id);
+      throw new NotFoundError('Conta', contaPagamentoId);
     }
 
     // Criar transação de pagamento (despesa na conta)
     const transacaoId = crypto.randomUUID();
     const now = new Date();
     const dataPagamento = data.data_pagamento instanceof Date ? data.data_pagamento : new Date(data.data_pagamento);
+    const currentUserId = getCurrentUserId();
 
     await db.transacoes.add({
       id: transacaoId,
-      conta_id: data.conta_pagamento_id,
+      conta_id: contaPagamentoId,
       categoria_id: undefined, // Poderia ter uma categoria específica para pagamento de cartão
       data: dataPagamento,
       descricao: `Pagamento Fatura - ${fatura.mes_referencia}`,
@@ -643,6 +701,7 @@ export class CartaoService {
       hash: undefined,
       origem_arquivo: undefined,
       origem_linha: undefined,
+      usuario_id: currentUserId,
       created_at: now,
       updated_at: now,
     });

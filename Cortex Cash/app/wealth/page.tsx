@@ -12,6 +12,7 @@ import { investimentoService } from '@/lib/services/investimento.service';
 import type { PatrimonioTotal, Investimento } from '@/lib/types';
 import { Plus, TrendingUp, TrendingDown, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { THEME_COLORS } from '@/lib/constants/colors';
 
 // Novos componentes criados
 import { WealthEvolutionChart } from '@/components/wealth-evolution-chart';
@@ -89,7 +90,7 @@ export default function WealthPage() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-white/70">Carregando patrimônio...</p>
+            <p className="text-muted-foreground">Carregando patrimônio...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -105,11 +106,8 @@ export default function WealthPage() {
           actions={
             <Button
               onClick={() => setShowNewInvestmentDialog(true)}
-              className="rounded-xl px-6 py-3 text-base font-semibold text-white hover:opacity-90"
-              style={{
-                backgroundColor: '#18B0A4',
-                color: '#ffffff'
-              }}
+              size="lg"
+              className="px-6 text-base font-semibold"
             >
               <Plus className="mr-2 h-5 w-5" />
               Novo Investimento
@@ -119,13 +117,10 @@ export default function WealthPage() {
 
         {/* Cards de Resumo */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card>
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Patrimônio Total</CardDescription>
-              <CardTitle className="text-3xl text-white">
+              <CardDescription>Patrimônio Total</CardDescription>
+              <CardTitle className="text-3xl text-foreground">
                 {patrimonio
                   ? `R$ ${patrimonio.patrimonio_total.toLocaleString('pt-BR', {
                       minimumFractionDigits: 2,
@@ -136,13 +131,10 @@ export default function WealthPage() {
             </CardHeader>
           </Card>
 
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card>
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Investimentos</CardDescription>
-              <CardTitle className="text-3xl text-white">
+              <CardDescription>Investimentos</CardDescription>
+              <CardTitle className="text-3xl text-foreground">
                 {patrimonio
                   ? `R$ ${patrimonio.saldo_investimentos.toLocaleString('pt-BR', {
                       minimumFractionDigits: 2,
@@ -150,24 +142,21 @@ export default function WealthPage() {
                     })}`
                   : 'R$ 0,00'}
               </CardTitle>
-              <p className="text-xs text-white/60 mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {investimentos.length} {investimentos.length === 1 ? 'ativo' : 'ativos'}
               </p>
             </CardHeader>
           </Card>
 
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card>
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Rentabilidade</CardDescription>
-              <CardTitle className="text-3xl text-white">
+              <CardDescription>Rentabilidade</CardDescription>
+              <CardTitle className="text-3xl text-foreground">
                 {patrimonio
                   ? `${patrimonio.rentabilidade_investimentos >= 0 ? '+' : ''}${patrimonio.rentabilidade_investimentos.toFixed(2)}%`
                   : '0,00%'}
               </CardTitle>
-              <p className="text-xs text-white/60 mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Rendimento total
               </p>
             </CardHeader>
@@ -175,26 +164,23 @@ export default function WealthPage() {
         </div>
 
         {/* Card Principal com Tabs */}
-        <Card style={{
-          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-          backgroundColor: '#3B5563'
-        }}>
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white">Detalhamento Patrimonial</CardTitle>
-            <CardDescription className="text-white/70">
+            <CardTitle className="text-foreground">Detalhamento Patrimonial</CardTitle>
+            <CardDescription>
               Visualize e gerencie seus ativos e investimentos
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="overview" className="space-y-4">
-              <TabsList className="border-0" style={{ backgroundColor: '#1e293b' }}>
-                <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-white" style={{ color: '#ffffff' }}>
+              <TabsList>
+                <TabsTrigger value="overview">
                   Visão Geral
                 </TabsTrigger>
-                <TabsTrigger value="investments" className="data-[state=active]:bg-primary data-[state=active]:text-white" style={{ color: '#ffffff' }}>
+                <TabsTrigger value="investments">
                   Investimentos
                 </TabsTrigger>
-                <TabsTrigger value="analysis" className="data-[state=active]:bg-primary data-[state=active]:text-white" style={{ color: '#ffffff' }}>
+                <TabsTrigger value="analysis">
                   Análises
                 </TabsTrigger>
               </TabsList>
@@ -216,27 +202,30 @@ export default function WealthPage() {
 
                 {/* Resumo de Contas e Investimentos */}
                 {patrimonio && (
-                  <Card style={{
-                    background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                    backgroundColor: '#3B5563'
-                  }}>
+                  <Card>
                     <CardHeader>
-                      <CardTitle className="text-white">Resumo Consolidado</CardTitle>
+                      <CardTitle className="text-foreground">Resumo Consolidado</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                          <div className="text-sm font-medium text-white">Contas Bancárias</div>
-                          <div className="text-sm text-white">
+                        <div
+                          className="flex items-center justify-between border-b pb-3"
+                          style={{ borderColor: THEME_COLORS.divider }}
+                        >
+                          <div className="text-sm font-medium text-foreground">Contas Bancárias</div>
+                          <div className="text-sm text-foreground">
                             R$ {patrimonio.saldo_contas.toLocaleString('pt-BR', {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}
                           </div>
                         </div>
-                        <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                          <div className="text-sm font-medium text-white">Investimentos</div>
-                          <div className="text-sm text-white">
+                        <div
+                          className="flex items-center justify-between border-b pb-3"
+                          style={{ borderColor: THEME_COLORS.divider }}
+                        >
+                          <div className="text-sm font-medium text-foreground">Investimentos</div>
+                          <div className="text-sm text-foreground">
                             R$ {patrimonio.saldo_investimentos.toLocaleString('pt-BR', {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
@@ -244,8 +233,8 @@ export default function WealthPage() {
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-3">
-                          <div className="text-base font-bold text-white">Total</div>
-                          <div className="text-base font-bold text-white">
+                          <div className="text-base font-bold text-foreground">Total</div>
+                          <div className="text-base font-bold text-foreground">
                             R$ {patrimonio.patrimonio_total.toLocaleString('pt-BR', {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
@@ -261,20 +250,14 @@ export default function WealthPage() {
               {/* Tab: Investimentos */}
               <TabsContent value="investments" className="space-y-4">
                 {investimentos.length === 0 ? (
-                  <Card style={{
-                    background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                    backgroundColor: '#3B5563'
-                  }}>
+                  <Card>
                     <CardContent className="flex flex-col items-center justify-center py-12">
-                      <p className="text-center text-white/70 mb-4">
+                      <p className="mb-4 text-center text-muted-foreground">
                         Nenhum investimento cadastrado ainda.
                       </p>
                       <Button
                         onClick={() => setShowNewInvestmentDialog(true)}
-                        style={{
-                          backgroundColor: '#18B0A4',
-                          color: '#ffffff',
-                        }}
+                        className="px-5"
                       >
                         <Plus className="mr-2 h-4 w-4" />
                         Cadastrar Primeiro Investimento
@@ -282,13 +265,10 @@ export default function WealthPage() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <Card style={{
-                    background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                    backgroundColor: '#3B5563'
-                  }}>
+                  <Card>
                     <CardHeader>
-                      <CardTitle className="text-white">Lista de Investimentos</CardTitle>
-                      <CardDescription className="text-white/70">
+                      <CardTitle className="text-foreground">Lista de Investimentos</CardTitle>
+                      <CardDescription>
                         Todos os seus investimentos ativos
                       </CardDescription>
                     </CardHeader>
@@ -300,29 +280,29 @@ export default function WealthPage() {
                           return (
                             <div
                               key={inv.id}
-                              className="flex items-center justify-between border-b border-white/10 pb-3 last:border-0 hover:bg-white/5 p-3 rounded-lg transition-colors cursor-pointer"
+                              className="flex cursor-pointer items-center justify-between rounded-[12px] border border-transparent p-3 transition-colors hover:border-border hover:bg-[#1D3A34]"
                               onClick={() => handleViewDetails(inv.id)}
                             >
                               <div className="space-y-1 flex-1">
-                                <div className="font-medium text-white flex items-center gap-2">
+                                <div className="flex items-center gap-2 font-medium text-foreground">
                                   {inv.nome}
-                                  <Eye className="h-4 w-4 text-white/50 hover:text-white" />
+                                  <Eye className="h-4 w-4 text-muted-foreground" />
                                 </div>
-                                <div className="text-xs text-white/60">
+                                <div className="text-xs text-muted-foreground">
                                   {inv.tipo.replace('_', ' ')} • Aplicado: R$ {inv.valor_aplicado.toLocaleString('pt-BR', {
                                     minimumFractionDigits: 2,
                                   })}
                                 </div>
                               </div>
                               <div className="text-right space-y-1">
-                                <div className="font-medium text-white">
+                                <div className="font-medium text-foreground">
                                   R$ {inv.valor_atual.toLocaleString('pt-BR', {
                                     minimumFractionDigits: 2,
                                   })}
                                 </div>
                                 <div
-                                  className={`text-xs flex items-center gap-1 justify-end ${
-                                    rentabilidade >= 0 ? 'text-green-400' : 'text-red-400'
+                                  className={`flex items-center justify-end gap-1 text-xs ${
+                                    rentabilidade >= 0 ? 'text-success' : 'text-destructive'
                                   }`}
                                 >
                                   {rentabilidade >= 0 ? (
@@ -364,10 +344,10 @@ export default function WealthPage() {
 
       {/* Dialog: Novo Investimento */}
       <Dialog open={showNewInvestmentDialog} onOpenChange={setShowNewInvestmentDialog}>
-        <DialogContent className="sm:max-w-[700px] bg-[#3B5563] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white">Novo Investimento</DialogTitle>
-            <DialogDescription className="text-white/70">
+            <DialogTitle className="text-foreground">Novo Investimento</DialogTitle>
+            <DialogDescription>
               Cadastre um novo investimento no seu portfólio
             </DialogDescription>
           </DialogHeader>

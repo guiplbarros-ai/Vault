@@ -9,32 +9,11 @@ import { transacaoService } from '@/lib/services/transacao.service'
 import { categoriaService } from '@/lib/services/categoria.service'
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { getChartColors, THEME_COLORS } from '@/lib/constants/colors'
 
 interface MonthData {
   month: string
   [key: string]: number | string
-}
-
-// Get chart colors from CSS variables to support light/dark mode
-const getChartColors = (): string[] => {
-  if (typeof window === 'undefined') {
-    return [
-      'hsl(175 73% 39%)',
-      'hsl(42 89% 50%)',
-      'hsl(171 69% 50%)',
-      'hsl(32 99% 45%)',
-      'hsl(175 78% 27%)',
-    ]
-  }
-
-  const style = getComputedStyle(document.documentElement)
-  return [
-    `hsl(${style.getPropertyValue('--chart-1').trim() || '175 73% 39%'})`,
-    `hsl(${style.getPropertyValue('--chart-2').trim() || '42 89% 50%'})`,
-    `hsl(${style.getPropertyValue('--chart-3').trim() || '171 69% 50%'})`,
-    `hsl(${style.getPropertyValue('--chart-4').trim() || '32 99% 45%'})`,
-    `hsl(${style.getPropertyValue('--chart-5').trim() || '175 78% 27%'})`,
-  ]
 }
 
 export function ExpenseTrendsChart() {
@@ -161,25 +140,21 @@ export function ExpenseTrendsChart() {
   }
 
   return (
-    <Card className="p-6 shadow-md border flex flex-col h-full" style={{
-      background: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
+    <Card className="p-6 shadow-md border-border flex flex-col h-full bg-gradient-to-br from-card to-background" style={{
       minHeight: '420px'
     }}>
       <div className="mb-6 flex-shrink-0">
-        <h3 className="text-lg font-bold text-white">Evolução de Despesas</h3>
-        <p className="text-sm text-white/80">Top 3 categorias (Últimos 6 meses)</p>
+        <h3 className="text-lg font-bold text-foreground">Evolução de Despesas</h3>
+        <p className="text-sm text-secondary">Top 3 categorias (Últimos 6 meses)</p>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center flex-1 min-h-[300px]">
-          <Loader2 className={isDark ? "h-8 w-8 animate-spin text-white/50" : "h-8 w-8 animate-spin text-primary"} />
+          <Loader2 className="h-8 w-8 animate-spin text-secondary" />
         </div>
       ) : data.length === 0 || categoryNames.length === 0 ? (
         <div className="flex items-center justify-center flex-1 min-h-[300px]">
-          <p className={isDark ? "text-sm text-white/70" : "text-sm text-muted-foreground"}>Nenhuma despesa encontrada</p>
+          <p className="text-sm text-secondary">Nenhuma despesa encontrada</p>
         </div>
       ) : (
         <div className="flex-1 flex items-center min-h-0">
@@ -187,7 +162,7 @@ export function ExpenseTrendsChart() {
             <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke={isDark ? 'rgba(255, 255, 255, 0.2)' : 'hsl(var(--border))'}
+                stroke={THEME_COLORS.border}
                 vertical={true}
                 horizontal={true}
               />
@@ -196,34 +171,34 @@ export function ExpenseTrendsChart() {
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: isDark ? 'rgba(255, 255, 255, 0.7)' : 'hsl(var(--muted-foreground))' }}
+              tick={{ fill: THEME_COLORS.secondary }}
             />
             <YAxis
               fontSize={12}
               tickFormatter={formatCurrency}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: isDark ? 'rgba(255, 255, 255, 0.7)' : 'hsl(var(--muted-foreground))' }}
+              tick={{ fill: THEME_COLORS.secondary }}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
+                backgroundColor: THEME_COLORS.card,
+                border: `1px solid ${THEME_COLORS.border}`,
                 borderRadius: '0.75rem',
-                color: 'hsl(var(--foreground))',
-                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                color: THEME_COLORS.foreground,
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
               }}
               formatter={(value: number) => formatCurrency(value)}
-              labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
+              labelStyle={{ color: THEME_COLORS.foreground, fontWeight: 600 }}
             />
             <Legend
               wrapperStyle={{
                 paddingTop: '20px',
-                color: isDark ? '#FFFFFF' : undefined
+                color: THEME_COLORS.foreground
               }}
               iconType="line"
               formatter={(value: string) => (
-                <span style={{ color: isDark ? '#FFFFFF' : '#0B2230' }}>{value}</span>
+                <span style={{ color: THEME_COLORS.foreground }}>{value}</span>
               )}
             />
             {categoryNames.map((name, index) => (

@@ -46,22 +46,13 @@ export function SettingsSelect({
     <SettingsItem label={label} description={description} badge={badge}>
       <Select value={value} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger
-          className="w-[180px] !bg-[#1e293b] !text-white !border-white/20"
-          style={{
-            backgroundColor: '#1e293b',
-            color: '#ffffff',
-            borderColor: 'rgba(255, 255, 255, 0.2)'
-          }}
+          className="w-[180px] bg-card text-foreground border-border"
           onClick={(e) => e.stopPropagation()}
         >
-          <SelectValue placeholder={placeholder} className="!text-white/70" />
+          <SelectValue placeholder={placeholder} className="text-foreground/70" />
         </SelectTrigger>
         <SelectContent
-          className="!bg-gray-800 !border-gray-700"
-          style={{
-            backgroundColor: '#1f2937',
-            borderColor: '#374151'
-          }}
+          className="bg-card border-border"
           position="popper"
           sideOffset={5}
         >
@@ -69,8 +60,7 @@ export function SettingsSelect({
             <SelectItem
               key={option.value}
               value={option.value}
-              className="!text-white hover:!bg-gray-700 cursor-pointer"
-              style={{ color: '#ffffff' }}
+              className="cursor-pointer text-foreground bg-transparent hover:bg-muted"
             >
               {option.label}
             </SelectItem>

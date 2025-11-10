@@ -9,7 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { CATEGORY_COLORS } from '@/lib/constants'
+import { CATEGORY_COLORS, getColorName } from '@/lib/constants'
 
 export interface ColorPickerProps {
   value?: string
@@ -26,8 +26,15 @@ export function ColorPicker({
   disabled = false,
   className,
 }: ColorPickerProps) {
+  const [open, setOpen] = React.useState(false)
+
+  const handleColorSelect = (color: string) => {
+    onChange?.(color)
+    setOpen(false) // Fecha o popover após selecionar
+  }
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -52,7 +59,7 @@ export function ColorPicker({
                 }}
               />
             )}
-            <span style={{ color: '#ffffff' }}>{value || 'Selecione uma cor'}</span>
+            <span style={{ color: '#ffffff' }}>{value ? getColorName(value) : 'Selecione uma cor'}</span>
           </div>
         </Button>
       </PopoverTrigger>
@@ -69,7 +76,8 @@ export function ColorPicker({
             <button
               key={color}
               type="button"
-              onClick={() => onChange?.(color)}
+              onClick={() => handleColorSelect(color)}
+              title={getColorName(color)}
               className={cn(
                 'h-8 w-8 rounded-md border-2 transition-all hover:scale-110',
                 value === color ? 'border-white' : 'border-transparent'

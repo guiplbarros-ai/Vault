@@ -1,0 +1,131 @@
+/* FORÇA ESQUEMA DE CORES VERDE ESCURO (CORES.md) - NÃO EDITAR */
+
+/* Background e texto global */
+html,
+html *,
+body,
+body * {
+  --background: 160 40% 7% !important;           /* #0A1915 */
+  --foreground: 150 10% 96% !important;          /* #F2F7F5 */
+  --card: 165 35% 13% !important;                /* #142A25 */
+  --card-foreground: 150 10% 96% !important;     /* #F2F7F5 */
+  --popover: 165 35% 13% !important;             /* #142A25 */
+  --popover-foreground: 150 10% 96% !important;  /* #F2F7F5 */
+  --primary: 160 44% 39% !important;             /* #3A8F6E */
+  --primary-foreground: 150 10% 96% !important;  /* #F2F7F5 */
+  --secondary: 165 45% 68% !important;           /* #8FCDBD */
+  --secondary-foreground: 160 40% 7% !important; /* #0A1915 */
+  --muted: 165 30% 17% !important;               /* #1B342E */
+  --muted-foreground: 150 10% 96% !important;    /* #F2F7F5 */
+  --accent: 165 30% 17% !important;              /* #1B342E */
+  --accent-foreground: 150 10% 96% !important;   /* #F2F7F5 */
+  --destructive: 4 82% 68% !important;           /* #F07167 */
+  --destructive-foreground: 150 10% 96% !important;
+  --border: 165 25% 22% !important;              /* #2A4942 */
+  --input: 165 25% 22% !important;               /* #2A4942 */
+  --ring: 160 44% 39% !important;                /* #3A8F6E */
+  --success: 140 46% 60% !important;             /* #6CCB8C */
+  --warning: 42 67% 61% !important;              /* #E0B257 */
+  --gold: 45 62% 52% !important;                 /* #D4AF37 */
+}
+
+/* Força cores no root */
+:root,
+html,
+body {
+  background-color: #0A1915 !important;
+  color: #F2F7F5 !important;
+}
+
+/* Força background em todos os containers principais */
+.bg-background {
+  background-color: #0A1915 !important;
+}
+
+.bg-card {
+  background-color: #142A25 !important;
+}
+
+.text-foreground {
+  color: #F2F7F5 !important;
+}
+
+.text-card-foreground {
+  color: #F2F7F5 !important;
+}
+
+.text-muted-foreground {
+  color: #F2F7F5 !important;
+  opacity: 0.7;
+}
+
+.text-secondary {
+  color: #8FCDBD !important;
+}
+
+.text-gold {
+  color: #D4AF37 !important;
+}
+
+.text-success {
+  color: #6CCB8C !important;
+}
+
+.text-destructive {
+  color: #F07167 !important;
+}
+
+.bg-muted {
+  background-color: #1B342E !important;
+}
+
+.bg-primary {
+  background-color: #3A8F6E !important;
+}
+
+.border-border {
+  border-color: #2A4942 !important;
+}
+
+.border-b,
+.border-t,
+.border-l,
+.border-r {
+  border-color: #2A4942 !important;
+}
+
+/* Força cores em cards específicos */
+[data-slot="card"] {
+  background-color: #142A25 !important;
+  border-color: #2A4942 !important;
+  color: #F2F7F5 !important;
+}
+
+[data-slot="card-title"] {
+  color: #F2F7F5 !important;
+}
+
+[data-slot="card-description"] {
+  color: #F2F7F5 !important;
+  opacity: 0.7;
+}
+
+/* Sidebar */
+aside {
+  background-color: #142A25 !important;
+  border-right-color: #2A4942 !important;
+  color: #F2F7F5 !important;
+}
+
+/* Header */
+header {
+  background-color: #142A25 !important;
+  border-bottom-color: #2A4942 !important;
+  color: #F2F7F5 !important;
+}
+
+/* Main content */
+main {
+  background-color: #0A1915 !important;
+  color: #F2F7F5 !important;
+}

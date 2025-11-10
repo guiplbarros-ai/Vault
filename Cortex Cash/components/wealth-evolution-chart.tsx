@@ -6,6 +6,7 @@ import { useSettings } from '@/app/providers/settings-provider'
 import { patrimonioService } from '@/lib/services/patrimonio.service'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { TrendingUp } from 'lucide-react'
+import { CHART_THEME } from '@/lib/utils/chart-theme'
 
 interface WealthDataPoint {
   month: string
@@ -97,18 +98,12 @@ export function WealthEvolutionChart() {
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div
-          className="rounded-lg border p-3 shadow-lg"
-          style={{
-            backgroundColor: isDark ? '#1e293b' : '#ffffff',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-          }}
-        >
-          <p className="mb-2 font-semibold" style={{ color: isDark ? '#ffffff' : '#1e293b' }}>
+        <div style={CHART_THEME.tooltip.contentStyle}>
+          <p style={{ ...CHART_THEME.tooltip.labelStyle, marginBottom: '8px' }}>
             {payload[0].payload.month}
           </p>
           {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
+            <p key={index} style={{ fontSize: '0.875rem', color: entry.color, marginBottom: '4px' }}>
               {entry.name}: {formatCurrency(entry.value)}
             </p>
           ))}
@@ -120,19 +115,12 @@ export function WealthEvolutionChart() {
 
   if (loading) {
     return (
-      <Card
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-        }}
-      >
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <CardTitle className="text-foreground">
             Evolução Patrimonial
           </CardTitle>
-          <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+          <CardDescription className="text-secondary">
             Acompanhe o crescimento do seu patrimônio
           </CardDescription>
         </CardHeader>
@@ -140,7 +128,7 @@ export function WealthEvolutionChart() {
           <div className="flex h-[300px] items-center justify-center">
             <div className="text-center">
               <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
-              <p className={isDark ? 'text-white/70' : 'text-gray-600'}>Carregando dados...</p>
+              <p className="text-secondary">Carregando dados...</p>
             </div>
           </div>
         </CardContent>
@@ -149,75 +137,59 @@ export function WealthEvolutionChart() {
   }
 
   return (
-    <Card
-      style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-      }}
-    >
-      <CardHeader>
+    <Card style={CHART_THEME.card}>
+      <CardHeader className="pb-4">
         <div className="flex items-center gap-2">
-          <TrendingUp className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <TrendingUp className="h-5 w-5" style={{ color: '#D4AF37' }} />
+          <CardTitle style={CHART_THEME.title}>
             Evolução Patrimonial
           </CardTitle>
         </div>
-        <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+        <CardDescription style={CHART_THEME.subtitle}>
           Acompanhe o crescimento do seu patrimônio nos últimos 6 meses
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
-            />
+            <CartesianGrid {...CHART_THEME.grid} />
             <XAxis
               dataKey="month"
-              stroke={isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)'}
-              style={{ fontSize: '12px' }}
+              {...CHART_THEME.axis}
+              tick={CHART_THEME.axis.tick}
             />
             <YAxis
-              stroke={isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)'}
-              style={{ fontSize: '12px' }}
+              {...CHART_THEME.axis}
+              tick={CHART_THEME.axis.tick}
               tickFormatter={formatCurrency}
             />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend
-              wrapperStyle={{
-                paddingTop: '20px',
-                fontSize: '12px',
-                color: isDark ? '#ffffff' : '#1e293b',
-              }}
-            />
+            <Tooltip content={<CustomTooltip />} cursor={CHART_THEME.tooltip.cursor} />
+            <Legend {...CHART_THEME.legend} />
             <Line
               type="monotone"
               dataKey="patrimonio"
               name="Patrimônio Total"
-              stroke={isDark ? '#1AD4C4' : '#18B0A4'}
+              stroke="hsl(var(--gold))"
               strokeWidth={3}
-              dot={{ fill: isDark ? '#1AD4C4' : '#18B0A4', r: 4 }}
+              dot={{ fill: 'hsl(var(--gold))', r: 4 }}
               activeDot={{ r: 6 }}
             />
             <Line
               type="monotone"
               dataKey="contas"
               name="Contas"
-              stroke={isDark ? '#4ADE80' : '#22C55E'}
+              stroke="hsl(var(--success))"
               strokeWidth={2}
-              dot={{ fill: isDark ? '#4ADE80' : '#22C55E', r: 3 }}
+              dot={{ fill: 'hsl(var(--success))', r: 3 }}
               activeDot={{ r: 5 }}
             />
             <Line
               type="monotone"
               dataKey="investimentos"
               name="Investimentos"
-              stroke={isDark ? '#FCD34D' : '#F59E0B'}
+              stroke="hsl(var(--primary))"
               strokeWidth={2}
-              dot={{ fill: isDark ? '#FCD34D' : '#F59E0B', r: 3 }}
+              dot={{ fill: 'hsl(var(--primary))', r: 3 }}
               activeDot={{ r: 5 }}
             />
           </LineChart>

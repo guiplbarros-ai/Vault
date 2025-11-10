@@ -186,7 +186,7 @@ Estados:
 - Receitas: Verde (#34D399)
 - Despesas: Vermelho (#F87171)
 - Saving: Verde/Vermelho (condicional)
-- Patrimônio: #18B0A4 (brand color)
+- Patrimônio: #18B0A4 (bold)
 
 ---
 
@@ -296,103 +296,9 @@ N objetivo(s) cadastrado(s)
 
 ## 4. Design System
 
-### 4.1 Paleta de Cores
+As orientações de UI foram consolidadas em um único documento. Para tokens, padrões visuais, componentes, estados e exemplos, consulte:
 
-#### Cores Primárias
-- **Brand Primary:** `#18B0A4` (Teal)
-- **Background Dark:** `#2C3E50` (Azul escuro)
-- **Background Card:** `#3B5563` (Cinza azulado)
-
-#### Gradientes
-- **Banner:** `linear-gradient(135deg, #2C3E50 0%, #1a252f 100%)`
-- **Cards:** `linear-gradient(135deg, #3B5563 0%, #334455 100%)`
-- **Modal:** `linear-gradient(135deg, #2C3E50 0%, #1a252f 100%)`
-
-#### Cores de Estado
-- **Receitas:** Green 400 (#34D399)
-- **Despesas:** Red 400 (#F87171)
-- **Saving Positivo:** #18B0A4
-- **Saving Negativo:** Red 400
-- **Rendimentos:** Blue 400 (#60A5FA)
-- **Patrimônio:** #18B0A4 (bold)
-
-#### Opacidade de Texto
-- **Primário:** `text-white` (100%)
-- **Secundário:** `text-white/90` (90%)
-- **Terciário:** `text-white/70` (70%)
-- **Placeholder:** `text-white/40` (40%)
-
-#### Borders
-- **Default:** `border-white/20`
-- **Hover:** `border-white/30`
-- **Separator:** `border-white/10`
-
-### 4.2 Tipografia
-
-#### Títulos
-- **Page Title:** text-3xl font-bold
-- **Card Title:** text-lg (cards) | text-base (modais)
-- **Section Title:** text-sm font-medium
-
-#### Texto
-- **Body:** text-sm
-- **Caption:** text-xs
-- **Description:** text-white/70
-
-### 4.3 Espaçamento
-
-#### Gaps
-- **Page Layout:** space-y-6
-- **Grid:** gap-6
-- **Card Content:** space-y-4
-- **Form Fields:** space-y-2
-- **List Items:** space-y-2 (configs), space-y-3 (objetivos)
-
-#### Padding
-- **Card Header:** default
-- **Card Content:** default
-- **Modal:** py-4
-- **Table Cell:** py-2 px-2 (small) | py-3 px-4 (default)
-
-### 4.4 Componentes Reutilizáveis
-
-#### Buttons
-- **Primary:** `bg-[#18B0A4] text-white hover:bg-[#159890]`
-- **Outline:** `border-white/20 text-white hover:bg-white/10`
-- **Ghost:** `text-white hover:bg-white/10`
-- **Destructive:** `bg-red-600 text-white hover:bg-red-700`
-
-#### Inputs
-- **Background:** `bg-white/10`
-- **Border:** `border-white/20`
-- **Text:** `text-white`
-- **Placeholder:** `placeholder:text-white/40`
-
-#### Select Dropdowns
-- **Trigger:** `bg-white/10 border-white/20 text-white`
-- **Content:** `bg-[#2C3E50] border-white/20`
-- **Item:** `text-white hover:bg-white/10 focus:bg-white/10`
-
-#### Cards
-- **Background:** Gradiente (ver seção 4.1)
-- **Border:** `border-white/20`
-- **Hover (cards de cenário):** `hover:border-white/30`
-
-#### Badges
-- **Base (Cenário Base):** `bg-white/20 text-white border-white/30`
-- **Default:** Blue
-- **Secondary:** Gray
-- **Destructive:** Red
-- **Tamanho:** text-xs h-5
-
-#### Loading States
-- **Spinner:** `<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />`
-- **Button Saving:** `<Loader2 className="h-4 w-4 animate-spin mr-2" />`
-
-#### Empty States
-- **Ícone:** h-12 w-12 (ou h-16 w-16) opacity-50
-- **Título:** text-xl font-semibold (ou text-sm)
-- **Descrição:** text-white/70 text-center max-w-md
+- `docs/features/TEMA.md` — Tema — Orientação de UI (Dark, sólido)
 
 ---
 
@@ -458,7 +364,7 @@ N objetivo(s) cadastrado(s)
 ```
 ┌───────────────────────────────────────┐
 │          🎯 (h-16 w-16)               │
-│     Nenhum cenário criado             │
+│     Nenhum cenário criado             |
 │                                        │
 │ Crie seu primeiro cenário de          │
 │ planejamento para começar a projetar  │

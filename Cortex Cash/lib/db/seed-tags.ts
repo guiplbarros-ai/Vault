@@ -20,12 +20,20 @@ export async function seedTags(db: any): Promise<void> {
       nome: tag.nome,
       cor: tag.cor,
       tipo: tag.tipo,
+      is_sistema: true, // Tags padrão são do sistema
+      usuario_id: undefined, // Tags do sistema não pertencem a nenhum usuário
       created_at: now,
     }));
 
-    await db.tags.bulkAdd(tags);
-
-    console.log(`✅ ${TAGS_PADRAO.length} tags padrão inseridas com sucesso!`);
+    try {
+      await db.tags.bulkAdd(tags);
+      console.log(`✅ ${TAGS_PADRAO.length} tags padrão inseridas com sucesso!`);
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Algumas tags já existem, pulando duplicatas...');
+    }
   } catch (error) {
     console.error('❌ Erro ao inserir tags padrão:', error);
     throw error;

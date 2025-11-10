@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useSetting } from '@/app/providers/settings-provider'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import type { DateRange as DR } from "react-day-picker"
 import { Button } from "@/components/ui/button"
 import { DataTable, DataTableColumn } from "@/components/data-table"
 import { DataTableToolbar } from "@/components/data-table"
@@ -36,7 +37,7 @@ import { BulkCategoryAssign } from "@/components/categories/bulk-category-assign
 import { BulkAIClassify } from "@/components/classification/bulk-ai-classify"
 import { ClassifyButton } from "@/components/classification/classify-button"
 import { MonthPicker } from "@/components/ui/month-picker"
-import { startOfMonth, endOfMonth } from 'date-fns'
+import { startOfMonth, endOfMonth, differenceInCalendarDays } from 'date-fns'
 import { TagBadge } from "@/components/ui/tag-badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -53,9 +54,12 @@ import { isDuplicate } from "@/lib/import/dedupe"
 import { cn } from "@/lib/utils"
 import { ClassificationRules } from "@/components/import/classification-rules"
 import { RuleAssistant } from "@/components/classification/rule-assistant"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { ImportWizard } from "@/components/import/import-wizard"
+import { brandNavyAlpha } from "@/lib/constants/colors"
 
 export default function TransactionsPage() {
-  const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme')
+  const [activeTab, setActiveTab] = useState<'filters' | 'ai' | 'import'>('filters')
   const [transactions, setTransactions] = useState<Transacao[]>([])
   const [filteredTransactions, setFilteredTransactions] = useState<Transacao[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -63,7 +67,11 @@ export default function TransactionsPage() {
   const [contas, setContas] = useState<Conta[]>([])
   const [selectedTag, setSelectedTag] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all')
+  const [dateRange, setDateRange] = useState<DR>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  })
   const [loading, setLoading] = useState(true)
   const [searchValue, setSearchValue] = useState('')
   const [filterValues, setFilterValues] = useState<Record<string, string>>({})
@@ -77,21 +85,17 @@ export default function TransactionsPage() {
   const [transactionToView, setTransactionToView] = useState<Transacao | null>(null)
   const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([])
 
-  // Detecta se está em dark mode
-  const isDark = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    if (theme === 'dark') return true
-    if (theme === 'light') return false
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-  }, [theme])
+  // Modo claro removido: app opera somente em visual padrão (verde escuro)
 
-  // Carrega transações, tags, categorias e contas do banco
+  // Carrega transações, tags, categorias e contas do banco (limitando por período selecionado)
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true)
+        const from = dateRange?.from ? new Date(dateRange.from) : startOfMonth(new Date())
+        const to = dateRange?.to ? new Date(dateRange.to) : endOfMonth(new Date())
         const [transacoesData, tagsData, categoriasData, contasData] = await Promise.all([
-          transacaoService.listTransacoes(),
+          transacaoService.listTransacoes({ dataInicio: from, dataFim: to }),
           tagService.listTags(),
           categoriaService.listCategorias({ ativas: true }),
           contaService.listContas({ incluirInativas: false }),
@@ -110,11 +114,13 @@ export default function TransactionsPage() {
       }
     }
     loadData()
-  }, [])
+  }, [dateRange])
 
   const loadTransactions = async () => {
     try {
-      const data = await transacaoService.listTransacoes()
+      const from = dateRange?.from ? new Date(dateRange.from) : startOfMonth(new Date())
+      const to = dateRange?.to ? new Date(dateRange.to) : endOfMonth(new Date())
+      const data = await transacaoService.listTransacoes({ dataInicio: from, dataFim: to })
       setTransactions(data)
     } catch (error) {
       console.error('Erro ao carregar transações:', error)
@@ -139,39 +145,60 @@ export default function TransactionsPage() {
     return contas.find((c) => c.id === contaId)
   }
 
-  // Filtrar transações por tags, categorias E mês
+  // Filtrar transações por tags, categorias, subcategorias e período
   useEffect(() => {
     let filtered = transactions
 
-    // Filtro por mês selecionado
-    const monthStart = startOfMonth(selectedMonth)
-    const monthEnd = endOfMonth(selectedMonth)
+    // Filtro por período (dateRange)
+    const start = dateRange?.from ? new Date(dateRange.from) : undefined
+    const end = dateRange?.to ? new Date(dateRange.to) : undefined
     filtered = filtered.filter((t) => {
       const transactionDate = t.data instanceof Date ? t.data : new Date(t.data)
-      return transactionDate >= monthStart && transactionDate <= monthEnd
+      if (start && transactionDate < start) return false
+      if (end) {
+        // incluir final do dia
+        const endOfDay = new Date(end)
+        endOfDay.setHours(23, 59, 59, 999)
+        if (transactionDate > endOfDay) return false
+      }
+      return true
     })
 
     // Filtro por tag selecionada
     if (selectedTag && selectedTag !== 'all') {
       filtered = filtered.filter((t) => {
-        if (!t.tags || t.tags.length === 0) return false
-        return t.tags.includes(selectedTag)
+        if (!t.tags) return false
+        const tagArray = typeof t.tags === 'string' ? (() => { try { return JSON.parse(t.tags) } catch { return [] } })() : t.tags
+        return Array.isArray(tagArray) && tagArray.includes(selectedTag)
       })
     }
 
-    // Filtro por categoria selecionada
+    // Filtro por categoria selecionada (categoria pai)
     if (selectedCategory && selectedCategory !== 'all') {
+      const categoriaById = new Map(categorias.map(c => [c.id, c]))
       filtered = filtered.filter((t) => {
-        return t.categoria_id === selectedCategory
+        if (!t.categoria_id) return false
+        const cat = categoriaById.get(t.categoria_id)
+        if (!cat) return false
+        // Se a transação já está na categoria pai selecionada
+        if (t.categoria_id === selectedCategory) return true
+        // Se a transação está em uma subcategoria cujo pai é o selecionado
+        return cat.pai_id === selectedCategory
       })
+    }
+
+    // Filtro por subcategoria selecionada (prioritário)
+    if (selectedSubcategory && selectedSubcategory !== 'all') {
+      filtered = filtered.filter((t) => t.categoria_id === selectedSubcategory)
     }
 
     setFilteredTransactions(filtered)
-  }, [transactions, selectedTag, selectedCategory, selectedMonth])
+  }, [transactions, selectedTag, selectedCategory, selectedSubcategory, dateRange, categorias])
 
   const clearAllFilters = () => {
     setSelectedTag('all')
     setSelectedCategory('all')
+    setSelectedSubcategory('all')
   }
 
   const handleSelectTransaction = (id: string) => {
@@ -207,7 +234,7 @@ export default function TransactionsPage() {
           className="h-8 w-8 p-0"
         >
           {selectedTransactionIds.includes(row.id) ? (
-            <Check className="h-4 w-4 text-white" />
+            <Check className="h-4 w-4 text-foreground" />
           ) : (
             <div className="h-4 w-4 border border-gray-400 rounded" />
           )}
@@ -222,7 +249,7 @@ export default function TransactionsPage() {
       sortable: true,
       cell: (row) => {
         const date = row.data instanceof Date ? row.data : new Date(row.data);
-        return <span className="text-white">{date.toLocaleDateString('pt-BR')}</span>;
+        return <span className="text-foreground">{date.toLocaleDateString('pt-BR')}</span>;
       },
       width: '120px',
     },
@@ -232,7 +259,7 @@ export default function TransactionsPage() {
       accessorKey: 'descricao',
       sortable: true,
       filterable: true,
-      cell: (row) => <span className="text-white">{row.descricao}</span>,
+      cell: (row) => <span className="text-foreground">{row.descricao}</span>,
     },
     {
       id: 'category',
@@ -241,12 +268,12 @@ export default function TransactionsPage() {
       sortable: true,
       filterable: true,
       cell: (row) => {
-        if (!row.categoria_id) return <span className="text-white">-</span>
+        if (!row.categoria_id) return <span className="text-foreground">-</span>
         const categoria = getCategoriaById(row.categoria_id)
         return (
           <div className="flex items-center gap-2">
             {categoria?.icone && <span className="text-lg">{categoria.icone}</span>}
-            <span className="text-white">{categoria?.nome || row.categoria_id}</span>
+            <span className="text-foreground">{categoria?.nome || row.categoria_id}</span>
           </div>
         )
       },
@@ -258,9 +285,9 @@ export default function TransactionsPage() {
       sortable: true,
       filterable: true,
       cell: (row) => {
-        if (!row.conta_id) return <span className="text-white">-</span>
+        if (!row.conta_id) return <span className="text-foreground">-</span>
         const conta = getContaById(row.conta_id)
-        return <span className="text-white">{conta?.nome || row.conta_id}</span>
+        return <span className="text-foreground">{conta?.nome || row.conta_id}</span>
       },
     },
     {
@@ -274,20 +301,20 @@ export default function TransactionsPage() {
           <div className="flex items-center gap-1">
             {tipo === 'receita' && (
               <>
-                <ArrowUpCircle className="h-4 w-4 text-green-500" />
-                <span className="text-white">Receita</span>
+                <ArrowUpCircle className="h-4 w-4 text-success" />
+                <span className="text-foreground">Receita</span>
               </>
             )}
             {tipo === 'despesa' && (
               <>
-                <ArrowDownCircle className="h-4 w-4 text-red-500" />
-                <span className="text-white">Despesa</span>
+                <ArrowDownCircle className="h-4 w-4 text-destructive" />
+                <span className="text-foreground">Despesa</span>
               </>
             )}
             {tipo === 'transferencia' && (
               <>
-                <ArrowUpCircle className="h-4 w-4 text-blue-500" />
-                <span className="text-white">Transferência</span>
+                <ArrowUpCircle className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground">Transferência</span>
               </>
             )}
           </div>
@@ -301,7 +328,7 @@ export default function TransactionsPage() {
       accessorKey: 'valor',
       sortable: true,
       cell: (row) => (
-        <span className={row.valor > 0 ? 'font-semibold text-green-600' : 'font-semibold text-red-600'}>
+        <span className="font-semibold text-gold">
           {new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL',
@@ -315,11 +342,11 @@ export default function TransactionsPage() {
       header: 'Tags',
       accessorKey: 'tags',
       cell: (row) => {
-        if (!row.tags) return <span className="text-white">-</span>
+        if (!row.tags) return <span className="text-foreground">-</span>
 
         // Parse tags (stored as JSON string in DB)
         const tagArray = typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags
-        if (!Array.isArray(tagArray) || tagArray.length === 0) return <span className="text-white">-</span>
+        if (!Array.isArray(tagArray) || tagArray.length === 0) return <span className="text-foreground">-</span>
 
         return (
           <div className="flex flex-wrap gap-1">
@@ -345,34 +372,20 @@ export default function TransactionsPage() {
       cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="hover:bg-zinc-800/40">
-              <MoreHorizontal className="h-4 w-4 text-white" />
+            <Button variant="ghost" size="sm" className="hover:bg-accent">
+              <MoreHorizontal className="h-4 w-4 text-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className={cn(
-              isDark
-                ? "!bg-gray-800 !border-gray-700"
-                : "!bg-white !border-gray-200"
-            )}
-            style={isDark ? {
-              backgroundColor: '#1f2937',
-              borderColor: '#374151'
-            } : undefined}
+            className=""
           >
             <DropdownMenuItem
               onClick={() => {
                 setTransactionToView(row)
                 setViewDialogOpen(true)
               }}
-              className={cn(
-                "cursor-pointer",
-                isDark
-                  ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                  : "!text-white"
-              )}
-              style={isDark ? { color: '#ffffff' } : undefined}
+              className="cursor-pointer"
             >
               <Eye className="mr-2 h-4 w-4" />
               Visualizar
@@ -383,25 +396,13 @@ export default function TransactionsPage() {
                 setEditMode(true)
                 setFormDialogOpen(true)
               }}
-              className={cn(
-                "cursor-pointer",
-                isDark
-                  ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                  : "!text-white"
-              )}
-              style={isDark ? { color: '#ffffff' } : undefined}
+              className="cursor-pointer"
             >
               <Pencil className="mr-2 h-4 w-4" />
               Editar
             </DropdownMenuItem>
             <DropdownMenuItem
-              className={cn(
-                "cursor-pointer",
-                isDark
-                  ? "!text-purple-400 hover:!bg-gray-700 focus:!bg-gray-700"
-                  : "!text-purple-600"
-              )}
-              style={isDark ? { color: '#c084fc' } : undefined}
+              className="cursor-pointer text-purple-600 dark:text-purple-400"
               onClick={async (e) => {
                 e.preventDefault();
                 try {
@@ -447,13 +448,7 @@ export default function TransactionsPage() {
               Classificar com IA
             </DropdownMenuItem>
             <DropdownMenuItem
-              className={cn(
-                "cursor-pointer",
-                isDark
-                  ? "!text-red-400 hover:!bg-gray-700 focus:!bg-gray-700"
-                  : "text-destructive"
-              )}
-              style={isDark ? { color: '#f87171' } : undefined}
+              className="cursor-pointer text-destructive"
               onClick={() => {
                 setTransactionToDelete(row.id)
                 setDeleteDialogOpen(true)
@@ -559,8 +554,16 @@ export default function TransactionsPage() {
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando transações...</p>
+            <div
+              className="animate-spin rounded-full h-12 w-12 mx-auto mb-4"
+              style={{
+                borderWidth: '2px',
+                borderStyle: 'solid',
+                borderColor: 'transparent',
+                borderBottomColor: '#3A8F6E',
+              }}
+            ></div>
+            <p style={{ color: '#B2BDB9' }}>Carregando transações...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -573,167 +576,60 @@ export default function TransactionsPage() {
         <PageHeader
           title="Transações"
           description="Gerencie todas as suas movimentações financeiras"
+          actions={
+            <DateRangePicker
+              value={dateRange}
+              onChange={(range) => {
+                if (!range?.from || !range?.to) {
+                  setDateRange(range || { from: undefined, to: undefined })
+                  return
+                }
+                const days = Math.abs(differenceInCalendarDays(range.to, range.from)) + 1
+                if (days > 90) {
+                  toast.error('Período muito longo', { description: 'Selecione no máximo 90 dias.' })
+                  return
+                }
+                setDateRange(range)
+              }}
+            />
+          }
         />
 
-        {/* Card Unificado de Filtros */}
-        <Card style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
-        }}>
-          <CardHeader className="pb-3">
-            <CardTitle className={isDark ? "text-base text-white" : "text-base text-white"}>Filtros</CardTitle>
-            <CardDescription className={isDark ? "text-xs text-white/70" : "text-xs text-white/70"}>
-              Filtre as transações por categoria, tag ou período
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-4 items-end">
-              {/* Filtro de Mês */}
-              <div className="space-y-2">
-                <Label className="text-sm text-white font-medium">Período</Label>
-                <MonthPicker
-                  value={selectedMonth}
-                  onChange={setSelectedMonth}
-                />
-              </div>
+        {/* Abas para reduzir quebras e consolidar funcionalidades */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+          <TabsList className="w-full md:w-auto">
+            <TabsTrigger value="filters">
+              Filtros
+            </TabsTrigger>
+            <TabsTrigger value="ai">
+              Modo AI
+            </TabsTrigger>
+            <TabsTrigger value="import">
+              Importar
+            </TabsTrigger>
+          </TabsList>
 
-              {/* Filtro de Categoria */}
-              {categorias.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm text-white font-medium">Categoria</Label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger
-                      className={cn(
-                        "w-full text-sm border-0",
-                        "!bg-gray-800 !text-white hover:!bg-gray-700"
-                      )}
-                      style={{
-                        backgroundColor: '#1e293b',
-                        color: '#ffffff',
-                        height: '40px',
-                        minHeight: '40px'
-                      }}
-                    >
-                      <SelectValue
-                        placeholder="Todas as categorias"
-                        className={isDark ? "!text-white" : "!text-white"}
-                        style={isDark ? { color: '#ffffff' } : undefined}
-                      />
-                    </SelectTrigger>
-                    <SelectContent
-                      className={cn(
-                        isDark
-                          ? "!bg-gray-800 !border-gray-700"
-                          : "!bg-white !border-gray-200"
-                      )}
-                      style={isDark ? {
-                        backgroundColor: '#1f2937',
-                        borderColor: '#374151'
-                      } : undefined}
-                    >
-                      <SelectItem
-                        value="all"
-                        className={cn(
-                          "text-sm cursor-pointer",
-                          isDark
-                            ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                            : "!text-white"
-                        )}
-                        style={isDark ? { color: '#ffffff' } : undefined}
-                      >
-                        Todas as categorias
-                      </SelectItem>
-                      {categorias.map((cat) => (
-                        <SelectItem
-                          key={cat.id}
-                          value={cat.id}
-                          className={cn(
-                            "text-sm cursor-pointer",
-                            isDark
-                              ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                              : "!text-white"
-                          )}
-                          style={isDark ? { color: '#ffffff' } : undefined}
-                        >
-                          {cat.icone} {cat.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          {/* Lista de Transações + Filtros */}
+          <TabsContent value="filters" className="space-y-6">
+            {/* Card Unificado de Filtros (TEMA.md: superfície sólida) */}
+            <Card
+              style={{
+                backgroundColor: '#18332C',
+                borderColor: '#2A4942',
+                borderWidth: '1px',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-1)',
+              }}
+            >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base" style={{ color: '#F2F7F5' }}>Filtros</CardTitle>
+                  <CardDescription className="text-xs" style={{ color: '#B2BDB9' }}>
+                    Filtre as transações por categoria, tag ou período
+                  </CardDescription>
                 </div>
-              )}
-
-              {/* Filtro de Tag */}
-              {tags.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm text-white font-medium">Tag</Label>
-                  <Select value={selectedTag} onValueChange={setSelectedTag}>
-                    <SelectTrigger
-                      className={cn(
-                        "w-full text-sm border-0",
-                        "!bg-gray-800 !text-white hover:!bg-gray-700"
-                      )}
-                      style={{
-                        backgroundColor: '#1e293b',
-                        color: '#ffffff',
-                        height: '40px',
-                        minHeight: '40px'
-                      }}
-                    >
-                      <SelectValue
-                        placeholder="Todas as tags"
-                        className={isDark ? "!text-white" : "!text-white"}
-                        style={isDark ? { color: '#ffffff' } : undefined}
-                      />
-                    </SelectTrigger>
-                    <SelectContent
-                      className={cn(
-                        isDark
-                          ? "!bg-gray-800 !border-gray-700"
-                          : "!bg-white !border-gray-200"
-                      )}
-                      style={isDark ? {
-                        backgroundColor: '#1f2937',
-                        borderColor: '#374151'
-                      } : undefined}
-                    >
-                      <SelectItem
-                        value="all"
-                        className={cn(
-                          "text-sm cursor-pointer",
-                          isDark
-                            ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                            : "!text-white"
-                        )}
-                        style={isDark ? { color: '#ffffff' } : undefined}
-                      >
-                        Todas as tags
-                      </SelectItem>
-                      {tags.map((tag) => (
-                        <SelectItem
-                          key={tag.id}
-                          value={tag.nome}
-                          className={cn(
-                            "text-sm cursor-pointer",
-                            isDark
-                              ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                              : "!text-white"
-                          )}
-                          style={isDark ? { color: '#ffffff' } : undefined}
-                        >
-                          {tag.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Botão Nova Transação */}
-              <div className="space-y-2">
-                <Label className="text-sm opacity-0 font-medium">Ações</Label>
+                {/* Nova Transação Manual (no topo do quadro) */}
                 <Dialog open={formDialogOpen} onOpenChange={(open) => {
                   setFormDialogOpen(open)
                   if (!open) {
@@ -744,38 +640,34 @@ export default function TransactionsPage() {
                 }}>
                   <DialogTrigger asChild>
                     <Button
-                      className="w-full h-10 bg-primary text-white hover:bg-primary/90 font-medium"
-                      style={{
-                        backgroundColor: '#18B0A4',
-                        color: '#ffffff'
-                      }}
+                      className="h-10 font-medium"
                       onClick={() => {
                         setEditMode(false)
                         setTransactionToEdit(null)
                       }}
                     >
                       <Plus className="mr-2 h-4 w-4" />
-                      Nova Transação
+                      Nova Transação Manual
                     </Button>
                   </DialogTrigger>
                   <DialogContent
                     className="max-w-2xl max-h-[90vh] overflow-y-auto"
                     style={{
-                      background: isDark
-                        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-                        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-                      backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                      backgroundColor: '#18332C',
+                      borderColor: '#2A4942',
+                      borderWidth: '1px',
+                      borderRadius: 'var(--radius-md)',
+                      boxShadow: 'var(--shadow-2)',
                     }}
                   >
                     <DialogHeader>
-                      <DialogTitle className={isDark ? "text-white" : "text-white"}>
-                        {editMode ? 'Editar Transação' : 'Nova Transação'}
+                      <DialogTitle style={{ color: '#F2F7F5' }}>
+                        {editMode ? 'Editar Transação' : 'Nova Transação Manual'}
                       </DialogTitle>
-                      <DialogDescription className={isDark ? "text-white/70" : "text-gray-600"}>
+                      <DialogDescription style={{ color: '#B2BDB9' }}>
                         {editMode
                           ? 'Edite os dados da transação selecionada.'
-                          : 'Adicione uma nova transação ao seu histórico financeiro.'}
+                          : 'Adicione manualmente uma nova transação ao seu histórico financeiro.'}
                       </DialogDescription>
                     </DialogHeader>
                     <TransactionForm
@@ -801,86 +693,184 @@ export default function TransactionsPage() {
                   </DialogContent>
                 </Dialog>
               </div>
-            </div>
+            </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-3 items-end">
 
-            {/* Botão Limpar Filtros e Seleção em Massa */}
-            <div className="mt-4 flex gap-2">
-              {(selectedCategory !== 'all' || selectedTag !== 'all') && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearAllFilters}
-                  className="border-white/30 bg-white/10 text-white hover:bg-white/20"
-                >
-                  <X className="mr-2 h-3 w-3" />
-                  Limpar Filtros
-                </Button>
-              )}
-
-              {filteredTransactions.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSelectAll}
-                  className="border-white/30 bg-white/10 text-white hover:bg-white/20"
-                >
-                  {selectedTransactionIds.length === filteredTransactions.length ? (
-                    <>
-                      <X className="mr-2 h-3 w-3" />
-                      Desmarcar Todas
-                    </>
-                  ) : (
-                    <>
-                      <Check className="mr-2 h-3 w-3" />
-                      Selecionar Todas
-                    </>
+                  {/* Filtro de Categoria */}
+                  {categorias.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium" style={{ color: '#B2BDB9' }}>Categoria</Label>
+                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className="w-full text-sm">
+                          <SelectValue placeholder="Todas as categorias" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem
+                            value="all"
+                            className="text-sm cursor-pointer"
+                          >
+                            Todas as categorias
+                          </SelectItem>
+                          {categorias.map((cat) => (
+                            <SelectItem
+                              key={cat.id}
+                              value={cat.id}
+                              className="text-sm cursor-pointer"
+                            >
+                              {cat.icone} {cat.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   )}
-                </Button>
-              )}
-            </div>
 
-            {/* Indicador de resultados */}
-            {(selectedCategory !== 'all' || selectedTag !== 'all') && (
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <p className={isDark ? "text-sm text-white/70" : "text-sm text-muted-foreground"}>
-                  Mostrando {filteredTransactions.length} de {transactions.length} transações
-                </p>
+                  {/* Filtro de Subcategoria */}
+                  {categorias.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium" style={{ color: '#B2BDB9' }}>Subcategoria</Label>
+                      <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
+                        <SelectTrigger className="w-full text-sm">
+                          <SelectValue placeholder="Todas as subcategorias" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem
+                            value="all"
+                            className="text-sm cursor-pointer"
+                          >
+                            Todas as subcategorias
+                          </SelectItem>
+                          {categorias
+                            .filter(c => c.pai_id && (selectedCategory === 'all' || c.pai_id === selectedCategory))
+                            .map((sub) => (
+                              <SelectItem
+                                key={sub.id}
+                                value={sub.id}
+                                className="text-sm cursor-pointer"
+                              >
+                                {sub.icone} {sub.nome}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Filtro de Tag */}
+                  {tags.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium" style={{ color: '#B2BDB9' }}>Tag</Label>
+                      <Select value={selectedTag} onValueChange={setSelectedTag}>
+                        <SelectTrigger className="w-full text-sm">
+                          <SelectValue placeholder="Todas as tags" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem
+                            value="all"
+                            className="text-sm cursor-pointer"
+                          >
+                            Todas as tags
+                          </SelectItem>
+                          {tags.map((tag) => (
+                            <SelectItem
+                              key={tag.id}
+                              value={tag.nome}
+                              className="text-sm cursor-pointer"
+                            >
+                              {tag.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Botão removido daqui: agora no CardHeader */}
+                </div>
+
+                {/* Botão Limpar Filtros e Seleção em Massa */}
+                <div className="mt-4 flex gap-2">
+                  {(selectedCategory !== 'all' || selectedTag !== 'all') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearAllFilters}
+                    >
+                      <X className="mr-2 h-3 w-3" />
+                      Limpar Filtros
+                    </Button>
+                  )}
+
+                  {filteredTransactions.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAll}
+                    >
+                      {selectedTransactionIds.length === filteredTransactions.length ? (
+                        <>
+                          <X className="mr-2 h-3 w-3" />
+                          Desmarcar Todas
+                        </>
+                      ) : (
+                        <>
+                          <Check className="mr-2 h-3 w-3" />
+                          Selecionar Todas
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Indicador de resultados (TEMA.md: divider e fg-muted) */}
+                {(selectedCategory !== 'all' || selectedTag !== 'all') && (
+                  <div className="mt-4 pt-4" style={{ borderTop: '1px solid #213A34' }}>
+                    <p className="text-sm" style={{ color: '#8CA39C' }}>
+                      Mostrando {filteredTransactions.length} de {transactions.length} transações
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Bulk Actions */}
+            {selectedTransactionIds.length > 0 && (
+              <div className="space-y-4">
+                {/* Bulk Category Assignment */}
+                <BulkCategoryAssign
+                  selectedTransactionIds={selectedTransactionIds}
+                  onSuccess={handleBulkSuccess}
+                  onCancel={() => setSelectedTransactionIds([])}
+                />
+
+                {/* Bulk AI Classification */}
+                <BulkAIClassify
+                  selectedTransactionIds={selectedTransactionIds}
+                  onSuccess={handleBulkSuccess}
+                  onCancel={() => setSelectedTransactionIds([])}
+                />
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Bulk Actions */}
-        {selectedTransactionIds.length > 0 && (
-          <div className="space-y-4">
-            {/* Bulk Category Assignment */}
-            <BulkCategoryAssign
-              selectedTransactionIds={selectedTransactionIds}
-              onSuccess={handleBulkSuccess}
-              onCancel={() => setSelectedTransactionIds([])}
+            <DataTable
+              data={filteredTransactions}
+              columns={columns}
+              searchable={false}
             />
+          </TabsContent>
 
-            {/* Bulk AI Classification */}
-            <BulkAIClassify
-              selectedTransactionIds={selectedTransactionIds}
-              onSuccess={handleBulkSuccess}
-              onCancel={() => setSelectedTransactionIds([])}
-            />
-          </div>
-        )}
+          {/* Regras + Assistente em uma única aba para reduzir quebras */}
+          <TabsContent value="ai" className="space-y-6">
+            <ClassificationRules />
+            <RuleAssistant />
+          </TabsContent>
 
-        <DataTable
-          data={filteredTransactions}
-          columns={columns}
-          searchable={false}
-          isDark={isDark}
-        />
-
-        {/* Regras pré-mapeadas + Assistente de IA para regras */}
-        <div className="space-y-6">
-          <ClassificationRules />
-          <RuleAssistant />
-        </div>
+          {/* Importação embutida */}
+          <TabsContent value="import" className="space-y-6">
+            <ImportWizard redirectOnComplete={false} showClassificationRules={false} />
+          </TabsContent>
+        </Tabs>
 
         <ConfirmationDialog
           open={deleteDialogOpen}
@@ -890,23 +880,22 @@ export default function TransactionsPage() {
           confirmLabel="Excluir"
           variant="destructive"
           onConfirm={handleDelete}
-          isDark={isDark}
         />
 
-        {/* Dialog de Visualização */}
+        {/* Dialog de Visualização (TEMA.md: superfície sólida) */}
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
           <DialogContent
             className="max-w-lg"
             style={{
-              background: isDark
-                ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-                : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-              backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+              backgroundColor: '#18332C',
+              borderColor: '#2A4942',
+              borderWidth: '1px',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: 'var(--shadow-2)',
             }}
           >
             <DialogHeader>
-              <DialogTitle className={isDark ? "text-white" : "text-white"}>
+              <DialogTitle style={{ color: '#F2F7F5' }}>
                 Detalhes da Transação
               </DialogTitle>
             </DialogHeader>
@@ -914,8 +903,8 @@ export default function TransactionsPage() {
               <div className="space-y-4">
                 {/* Data */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Data:</span>
-                  <span className="col-span-2 text-sm">
+                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Data:</span>
+                  <span className="col-span-2 text-sm" style={{ color: '#F2F7F5' }}>
                     {(transactionToView.data instanceof Date
                       ? transactionToView.data
                       : new Date(transactionToView.data)
@@ -929,24 +918,24 @@ export default function TransactionsPage() {
 
                 {/* Tipo */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Tipo:</span>
+                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Tipo:</span>
                   <div className="col-span-2 flex items-center gap-2">
                     {transactionToView.tipo === 'receita' && (
                       <>
-                        <ArrowUpCircle className="h-4 w-4 text-green-500" />
-                        <span className="text-sm">Receita</span>
+                        <ArrowUpCircle className="h-4 w-4 text-success" />
+                        <span className="text-sm" style={{ color: '#F2F7F5' }}>Receita</span>
                       </>
                     )}
                     {transactionToView.tipo === 'despesa' && (
                       <>
-                        <ArrowDownCircle className="h-4 w-4 text-red-500" />
-                        <span className="text-sm">Despesa</span>
+                        <ArrowDownCircle className="h-4 w-4 text-destructive" />
+                        <span className="text-sm" style={{ color: '#F2F7F5' }}>Despesa</span>
                       </>
                     )}
                     {transactionToView.tipo === 'transferencia' && (
                       <>
-                        <ArrowUpCircle className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm">Transferência</span>
+                        <ArrowUpCircle className="h-4 w-4 text-secondary" />
+                        <span className="text-sm" style={{ color: '#F2F7F5' }}>Transferência</span>
                       </>
                     )}
                   </div>
@@ -954,17 +943,14 @@ export default function TransactionsPage() {
 
                 {/* Descrição */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Descrição:</span>
-                  <span className="col-span-2 text-sm">{transactionToView.descricao}</span>
+                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Descrição:</span>
+                  <span className="col-span-2 text-sm" style={{ color: '#F2F7F5' }}>{transactionToView.descricao}</span>
                 </div>
 
                 {/* Valor */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Valor:</span>
-                  <span className={cn(
-                    "col-span-2 text-sm font-semibold",
-                    transactionToView.valor > 0 ? 'text-green-600' : 'text-red-600'
-                  )}>
+                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Valor:</span>
+                  <span className="col-span-2 text-sm font-semibold" style={{ color: '#D4AF37' }}>
                     {new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL',
@@ -974,25 +960,25 @@ export default function TransactionsPage() {
 
                 {/* Categoria */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Categoria:</span>
+                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Categoria:</span>
                   <div className="col-span-2 flex items-center gap-2">
                     {transactionToView.categoria_id ? (
                       <>
                         {getCategoriaById(transactionToView.categoria_id)?.icone && (
                           <span className="text-lg">{getCategoriaById(transactionToView.categoria_id)?.icone}</span>
                         )}
-                        <span className="text-sm">{getCategoriaById(transactionToView.categoria_id)?.nome || '-'}</span>
+                        <span className="text-sm" style={{ color: '#F2F7F5' }}>{getCategoriaById(transactionToView.categoria_id)?.nome || '-'}</span>
                       </>
                     ) : (
-                      <span className="text-sm">-</span>
+                      <span className="text-sm" style={{ color: '#F2F7F5' }}>-</span>
                     )}
                   </div>
                 </div>
 
                 {/* Conta */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Conta:</span>
-                  <span className="col-span-2 text-sm">
+                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Conta:</span>
+                  <span className="col-span-2 text-sm" style={{ color: '#F2F7F5' }}>
                     {transactionToView.conta_id
                       ? getContaById(transactionToView.conta_id)?.nome || '-'
                       : '-'
@@ -1008,7 +994,7 @@ export default function TransactionsPage() {
 
                   return (
                     <div className="grid grid-cols-3 gap-2">
-                      <span className="text-sm font-medium text-muted-foreground">Tags:</span>
+                      <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Tags:</span>
                       <div className="col-span-2 flex flex-wrap gap-1">
                         {tagArray.map((tagName) => {
                           const tag = getTagByName(tagName)
@@ -1029,8 +1015,8 @@ export default function TransactionsPage() {
                 {/* Observações */}
                 {transactionToView.observacoes && (
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-sm font-medium text-muted-foreground">Observações:</span>
-                    <span className="col-span-2 text-sm">{transactionToView.observacoes}</span>
+                    <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Observações:</span>
+                    <span className="col-span-2 text-sm" style={{ color: '#F2F7F5' }}>{transactionToView.observacoes}</span>
                   </div>
                 )}
               </div>

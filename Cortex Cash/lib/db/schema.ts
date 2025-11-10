@@ -18,6 +18,11 @@ export const instituicoes = sqliteTable('instituicoes', {
 /**
  * Contas Bancárias
  * Armazena contas correntes, poupanças, investimentos, etc
+ *
+ * Filosofia de saldo: User é soberano!
+ * - saldo_referencia: Saldo conhecido em uma data específica (verificado pelo usuário)
+ * - data_referencia: Data em que o saldo foi verificado
+ * - saldo_atual: Saldo calculado (cache) a partir do saldo_referencia + transações
  */
 export const contas = sqliteTable('contas', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -26,12 +31,14 @@ export const contas = sqliteTable('contas', {
   tipo: text('tipo').notNull(), // 'corrente', 'poupanca', 'investimento', 'carteira'
   agencia: text('agencia'),
   numero: text('numero'),
-  saldo_inicial: real('saldo_inicial').notNull().default(0),
-  saldo_atual: real('saldo_atual').notNull().default(0),
+  saldo_referencia: real('saldo_referencia').notNull().default(0), // Saldo verificado pelo user
+  data_referencia: integer('data_referencia', { mode: 'timestamp' }).$defaultFn(() => new Date()), // Quando foi verificado
+  saldo_atual: real('saldo_atual').notNull().default(0), // Cache calculado
   ativa: integer('ativa', { mode: 'boolean' }).notNull().default(true),
   cor: text('cor'),
   icone: text('icone'),
   observacoes: text('observacoes'),
+  conta_pai_id: text('conta_pai_id'), // FK para conta pai (para contas vinculadas)
   created_at: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
   updated_at: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });
@@ -301,6 +308,31 @@ export const orcamentos = sqliteTable('orcamentos', {
   alerta_100: integer('alerta_100', { mode: 'boolean' }).notNull().default(true),
   alerta_80_enviado: integer('alerta_80_enviado', { mode: 'boolean' }).notNull().default(false),
   alerta_100_enviado: integer('alerta_100_enviado', { mode: 'boolean' }).notNull().default(false),
+
+  created_at: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
+
+/**
+ * Usuários
+ * Gerenciamento de usuários e permissões
+ */
+export const usuarios = sqliteTable('usuarios', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+
+  nome: text('nome').notNull(),
+  email: text('email').notNull().unique(),
+
+  // Role-based access control
+  role: text('role').notNull().default('user'), // 'admin', 'user'
+
+  // Preferências do usuário
+  avatar_url: text('avatar_url'),
+  tema_preferido: text('tema_preferido').default('auto'), // 'light', 'dark', 'auto'
+
+  // Controle de acesso
+  ativo: integer('ativo', { mode: 'boolean' }).notNull().default(true),
+  ultimo_acesso: integer('ultimo_acesso', { mode: 'timestamp' }),
 
   created_at: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
   updated_at: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),

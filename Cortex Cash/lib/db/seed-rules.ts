@@ -214,6 +214,7 @@ export async function seedCommonRules(): Promise<{
         padrao: regraSeed.padrao,
         prioridade: regraSeed.prioridade,
         ativa: true,
+        usuario_id: 'usuario-producao',
         total_aplicacoes: 0,
         ultima_aplicacao: undefined,
         total_confirmacoes: 0,
@@ -222,8 +223,16 @@ export async function seedCommonRules(): Promise<{
         updated_at: now,
       };
 
-      await db.regras_classificacao.add(regra);
-      console.log(`  ✅ Regra criada: ${regraSeed.nome} → ${categoria.nome}`);
+      try {
+        await db.regras_classificacao.add(regra);
+        console.log(`  ✅ Regra criada: ${regraSeed.nome} → ${categoria.nome}`);
+      } catch (error: any) {
+        if (error?.name !== 'ConstraintError') {
+          throw error;
+        }
+        console.log(`  ⚠️ Regra ${regraSeed.nome} já existe, pulando...`);
+        continue;
+      }
       inserted++;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro desconhecido';

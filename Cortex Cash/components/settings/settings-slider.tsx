@@ -50,7 +50,7 @@ export function SettingsSlider({
           className="flex-1"
         />
         {showValue && (
-          <span className="text-sm font-medium w-12 text-right text-white">
+          <span className="text-sm font-medium w-12 text-right text-foreground">
             {value}{unit}
           </span>
         )}

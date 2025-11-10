@@ -152,7 +152,7 @@ export default function TagsPage() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-white/70">Carregando tags...</p>
+            <p className="text-muted-foreground">Carregando tags...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -168,47 +168,48 @@ export default function TagsPage() {
           actions={
             <Button
               onClick={handleCreate}
-              className="rounded-xl px-6 py-3 text-base font-semibold text-white hover:opacity-90"
-              style={{
-                backgroundColor: '#18B0A4',
-                color: '#ffffff'
-              }}
             >
-              <Plus className="mr-2 h-5 w-5" />
+              <Plus className="mr-2 h-4 w-4" />
               Nova Tag
             </Button>
           }
         />
 
-        {/* Stats Cards */}
+        {/* Stats Cards - TEMA.md: KPI com shadow-2 e ícone em pill 36px */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card className="bg-card border-border shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]">
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Total de Tags</CardDescription>
-              <CardTitle className="text-3xl text-white">{totalTags}</CardTitle>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                  <Hash className="h-4 w-4 text-primary" />
+                </div>
+                <CardDescription className="text-muted-foreground text-sm">Total de Tags</CardDescription>
+              </div>
+              <CardTitle className="text-3xl font-bold text-foreground">{totalTags}</CardTitle>
             </CardHeader>
           </Card>
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card className="bg-card border-border shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]">
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Tags do Sistema</CardDescription>
-              <CardTitle className="text-3xl text-blue-400">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                  <Hash className="h-4 w-4 text-secondary" />
+                </div>
+                <CardDescription className="text-muted-foreground text-sm">Tags do Sistema</CardDescription>
+              </div>
+              <CardTitle className="text-3xl font-bold text-secondary">
                 {totalSistema}
               </CardTitle>
             </CardHeader>
           </Card>
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card className="bg-card border-border shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]">
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Tags Customizadas</CardDescription>
-              <CardTitle className="text-3xl text-purple-400">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                  <Hash className="h-4 w-4 text-gold" />
+                </div>
+                <CardDescription className="text-muted-foreground text-sm">Tags Customizadas</CardDescription>
+              </div>
+              <CardTitle className="text-3xl font-bold text-gold">
                 {totalCustomizadas}
               </CardTitle>
             </CardHeader>
@@ -216,39 +217,24 @@ export default function TagsPage() {
         </div>
 
         {/* Tags Grid */}
-        <Card style={{
-          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-          backgroundColor: '#3B5563'
-        }}>
+        <Card className="bg-card border-border">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div>
-                <CardTitle className="text-white">Lista de Tags</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle className="text-foreground">Lista de Tags</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   Clique em uma tag para editá-la (apenas tags customizadas)
                 </CardDescription>
               </div>
               <Tabs value={tipoFiltro} onValueChange={(v) => setTipoFiltro(v as any)} className="w-auto">
-                <TabsList className="grid grid-cols-3 border-0" style={{ backgroundColor: '#1e293b' }}>
-                  <TabsTrigger
-                    value="todas"
-                    className="data-[state=active]:bg-primary data-[state=active]:text-white"
-                    style={{ color: '#ffffff' }}
-                  >
+                <TabsList className="grid grid-cols-3">
+                  <TabsTrigger value="todas">
                     Todas
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="sistema"
-                    className="data-[state=active]:bg-primary data-[state=active]:text-white"
-                    style={{ color: '#ffffff' }}
-                  >
+                  <TabsTrigger value="sistema">
                     Sistema
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="customizada"
-                    className="data-[state=active]:bg-primary data-[state=active]:text-white"
-                    style={{ color: '#ffffff' }}
-                  >
+                  <TabsTrigger value="customizada">
                     Customizadas
                   </TabsTrigger>
                 </TabsList>
@@ -258,9 +244,9 @@ export default function TagsPage() {
           <CardContent>
             {filteredTags.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Hash className="h-12 w-12 text-white/70 mb-4" />
-                <h3 className="font-semibold text-lg mb-2 text-white">Nenhuma tag encontrada</h3>
-                <p className="text-sm text-white/70 max-w-sm">
+                <Hash className="h-12 w-12 mb-4 text-secondary" />
+                <h3 className="font-semibold text-lg mb-2 text-foreground">Nenhuma tag encontrada</h3>
+                <p className="text-sm max-w-sm text-muted-foreground">
                   Crie sua primeira tag customizada para organizar suas transações.
                 </p>
               </div>
@@ -273,13 +259,9 @@ export default function TagsPage() {
                   return (
                     <Card
                       key={tag.id}
-                      className={`cursor-pointer transition-all hover:shadow-md border-white/20 ${
+                      className={`cursor-pointer transition-all hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)] bg-card border-border ${
                         isSistema ? '' : 'hover:border-primary/50'
                       }`}
-                      style={{
-                        background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                        backgroundColor: '#3B5563'
-                      }}
                       onClick={() => handleEdit(tag)}
                     >
                       <CardContent className="p-4">
@@ -291,19 +273,19 @@ export default function TagsPage() {
                               size="sm"
                             />
                             {isSistema && (
-                              <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full border border-blue-400/30">
+                              <span className="text-xs px-2 py-0.5 rounded-full border bg-secondary/20 text-secondary border-secondary/30">
                                 Sistema
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-white/70">
+                          <div className="text-xs text-muted-foreground">
                             {usage} {usage === 1 ? 'transação' : 'transações'}
                           </div>
                           {!isSistema && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/20 w-full mt-1"
+                              className="h-7 text-xs w-full mt-1 text-destructive hover:text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleDelete(tag)
@@ -324,18 +306,12 @@ export default function TagsPage() {
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-              borderColor: 'rgba(255, 255, 255, 0.2)'
-            }}
-          >
+          <DialogContent className="bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle className="text-foreground">
                 {dialogMode === "create" ? "Nova Tag" : "Editar Tag"}
               </DialogTitle>
-              <DialogDescription className="text-white/70">
+              <DialogDescription className="text-muted-foreground">
                 {dialogMode === "create"
                   ? "Crie uma nova tag customizada para organizar suas transações."
                   : "Atualize as informações da tag."}
@@ -351,29 +327,23 @@ export default function TagsPage() {
 
         {/* Delete Confirmation */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-              borderColor: 'rgba(255, 255, 255, 0.2)'
-            }}
-          >
+          <AlertDialogContent className="bg-card border-border">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-white">Deletar Tag</AlertDialogTitle>
-              <AlertDialogDescription className="text-white/70">
+              <AlertDialogTitle className="text-foreground">Deletar Tag</AlertDialogTitle>
+              <AlertDialogDescription className="text-muted-foreground">
                 Tem certeza que deseja deletar a tag{" "}
-                <strong className="text-white">{tagParaDeletar?.nome}</strong>? Esta tag será removida
+                <strong className="text-foreground">{tagParaDeletar?.nome}</strong>? Esta tag será removida
                 de todas as transações associadas. Esta ação não pode ser
                 desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="border-0 text-white hover:bg-white/10" style={{ backgroundColor: '#1e293b', color: '#ffffff' }}>
+              <AlertDialogCancel className="bg-muted border-border text-foreground">
                 Cancelar
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="bg-destructive text-[#0E0E0E]"
               >
                 Deletar
               </AlertDialogAction>

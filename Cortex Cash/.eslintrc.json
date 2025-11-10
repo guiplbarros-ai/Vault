@@ -18,7 +18,18 @@
       }
     ],
     "prefer-const": "warn",
-    "no-console": "off"
+    "no-console": "off",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "JSXAttribute[name.name='style'] ObjectExpression > Property[key.name=/^(background|backgroundColor|color|borderColor|boxShadow|fill|stroke)$/] Literal[value]",
+        "message": "Evite cores hard-coded em style; use tokens (classes) ou variantes."
+      },
+      {
+        "selector": "JSXAttribute[name.name='style'] ObjectExpression > Property[key.name=/^(background|backgroundColor|color|borderColor|boxShadow|fill|stroke)$/] TemplateLiteral",
+        "message": "Evite cores hard-coded em style; use tokens (classes) ou variantes."
+      }
+    ]
   },
   "ignorePatterns": [".next/", "node_modules/", "out/", "build/", ".cache/"]
 }

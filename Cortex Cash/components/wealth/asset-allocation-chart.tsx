@@ -3,9 +3,10 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { patrimonioService } from '@/lib/services/patrimonio.service'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { Wallet } from 'lucide-react'
 import { useSettings } from '@/app/providers/settings-provider'
+import { getChartColors } from '@/lib/constants/colors'
 
 export function AssetAllocationChart() {
   const [data, setData] = useState<{ contas: number; investimentos: number } | null>(null)
@@ -66,23 +67,19 @@ export function AssetAllocationChart() {
     }).format(value)
   }
 
+  const COLORS = useMemo(() => [getChartColors()[0], getChartColors()[5]], [])
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div
-          className="rounded-lg border p-3 shadow-lg"
-          style={{
-            backgroundColor: isDark ? '#1e293b' : '#ffffff',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-          }}
-        >
-          <p className="mb-2 font-semibold" style={{ color: isDark ? '#ffffff' : '#1e293b' }}>
+        <div className="rounded-lg border border-border p-3 shadow-lg bg-card">
+          <p className="mb-2 font-semibold text-foreground">
             {payload[0].name}
           </p>
           <p className="text-sm" style={{ color: payload[0].payload.fill }}>
             Valor: {formatCurrency(payload[0].value)}
           </p>
-          <p className="text-sm" style={{ color: isDark ? '#ffffff' : '#1e293b' }}>
+          <p className="text-sm text-foreground">
             {payload[0].payload.percentual.toFixed(1)}% do patrimônio
           </p>
         </div>
@@ -93,16 +90,9 @@ export function AssetAllocationChart() {
 
   if (loading) {
     return (
-      <Card
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-        }}
-      >
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <CardTitle className="text-foreground">
             Alocação de Ativos
           </CardTitle>
         </CardHeader>
@@ -117,25 +107,18 @@ export function AssetAllocationChart() {
 
   if (chartData.length === 0 || (data && data.contas === 0 && data.investimentos === 0)) {
     return (
-      <Card
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-        }}
-      >
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <CardTitle className="text-foreground">
             Alocação de Ativos
           </CardTitle>
-          <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+          <CardDescription className="text-muted-foreground">
             Distribuição entre contas e investimentos
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-[300px] items-center justify-center">
-            <p className={isDark ? 'text-white/70' : 'text-gray-600'}>
+            <p className="text-muted-foreground">
               Nenhum ativo cadastrado
             </p>
           </div>
@@ -144,25 +127,16 @@ export function AssetAllocationChart() {
     )
   }
 
-  const COLORS = [isDark ? '#4ADE80' : '#22C55E', isDark ? '#FCD34D' : '#F59E0B']
-
   return (
-    <Card
-      style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-      }}
-    >
+    <Card className="bg-card">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Wallet className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <Wallet className="h-5 w-5 text-primary" />
+          <CardTitle className="text-foreground">
             Alocação de Ativos
           </CardTitle>
         </div>
-        <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+        <CardDescription className="text-muted-foreground">
           Distribuição entre contas bancárias e investimentos
         </CardDescription>
       </CardHeader>
@@ -198,10 +172,10 @@ export function AssetAllocationChart() {
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}
                 />
-                <span className={`text-sm ${isDark ? 'text-white' : 'text-white'}`}>
+                <span className="text-sm text-foreground">
                   {entry.name}
                 </span>
-                <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-white'}`}>
+                <span className="text-sm font-semibold text-foreground">
                   {entry.percentual.toFixed(1)}%
                 </span>
               </div>
@@ -211,34 +185,34 @@ export function AssetAllocationChart() {
 
         {/* Detalhamento */}
         {data && (
-          <div className="mt-6 space-y-3 border-t border-white/10 pt-4">
+          <div className="mt-6 space-y-3 border-t border-border pt-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[0] }} />
-                <span className={`text-sm ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                <span className="text-sm text-muted-foreground">
                   Total em Contas
                 </span>
               </div>
-              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+              <span className="text-sm font-medium text-foreground">
                 {formatCurrency(data.contas)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[1] }} />
-                <span className={`text-sm ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                <span className="text-sm text-muted-foreground">
                   Total em Investimentos
                 </span>
               </div>
-              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+              <span className="text-sm font-medium text-foreground">
                 {formatCurrency(data.investimentos)}
               </span>
             </div>
-            <div className="flex items-center justify-between border-t border-white/10 pt-3">
-              <span className={`text-base font-semibold ${isDark ? 'text-white' : 'text-white'}`}>
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <span className="text-base font-semibold text-foreground">
                 Patrimônio Total
               </span>
-              <span className={`text-base font-semibold ${isDark ? 'text-white' : 'text-white'}`}>
+              <span className="text-base font-semibold text-foreground">
                 {formatCurrency(data.contas + data.investimentos)}
               </span>
             </div>

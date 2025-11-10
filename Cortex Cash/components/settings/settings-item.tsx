@@ -24,13 +24,13 @@ export function SettingsItem({
     <div className="flex items-center justify-between gap-6 py-1">
       <div className="flex-1 space-y-0.5">
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium leading-none text-white">
+          <label className="text-sm font-medium leading-none text-foreground">
             {label}
           </label>
           {badge}
         </div>
         {description && (
-          <p className="text-xs text-white/70 leading-relaxed">
+          <p className="text-xs leading-relaxed text-foreground/70">
             {description}
           </p>
         )}

@@ -6,6 +6,7 @@ import { patrimonioService } from '@/lib/services/patrimonio.service'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { Building2 } from 'lucide-react'
 import { useSettings } from '@/app/providers/settings-provider'
+import { getChartColors } from '@/lib/constants/colors'
 import type { PatrimonioPorInstituicao } from '@/lib/types'
 
 export function PatrimonioByInstitutionChart() {
@@ -55,17 +56,13 @@ export function PatrimonioByInstitutionChart() {
     }).format(value)
   }
 
+  const COLORS = useMemo(() => [getChartColors()[0], getChartColors()[5]], [])
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div
-          className="rounded-lg border p-3 shadow-lg"
-          style={{
-            backgroundColor: isDark ? '#1e293b' : '#ffffff',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-          }}
-        >
-          <p className="mb-2 font-semibold" style={{ color: isDark ? '#ffffff' : '#1e293b' }}>
+        <div className="rounded-lg border border-border p-3 shadow-lg bg-card">
+          <p className="mb-2 font-semibold text-foreground">
             {payload[0].payload.name}
           </p>
           {payload.map((entry: any, index: number) => (
@@ -73,7 +70,7 @@ export function PatrimonioByInstitutionChart() {
               {entry.name}: {formatCurrency(entry.value)}
             </p>
           ))}
-          <p className="mt-2 text-sm font-semibold" style={{ color: isDark ? '#ffffff' : '#1e293b' }}>
+          <p className="mt-2 text-sm font-semibold text-foreground">
             Total: {formatCurrency(payload[0].payload.total)}
           </p>
         </div>
@@ -84,16 +81,9 @@ export function PatrimonioByInstitutionChart() {
 
   if (loading) {
     return (
-      <Card
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-        }}
-      >
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <CardTitle className="text-foreground">
             Patrimônio por Instituição
           </CardTitle>
         </CardHeader>
@@ -108,25 +98,18 @@ export function PatrimonioByInstitutionChart() {
 
   if (chartData.length === 0) {
     return (
-      <Card
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-        }}
-      >
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <CardTitle className="text-foreground">
             Patrimônio por Instituição
           </CardTitle>
-          <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+          <CardDescription className="text-muted-foreground">
             Distribuição do patrimônio entre instituições financeiras
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-[300px] items-center justify-center">
-            <p className={isDark ? 'text-white/70' : 'text-gray-600'}>
+            <p className="text-muted-foreground">
               Nenhuma instituição cadastrada
             </p>
           </div>
@@ -136,22 +119,15 @@ export function PatrimonioByInstitutionChart() {
   }
 
   return (
-    <Card
-      style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-      }}
-    >
+    <Card className="bg-card">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Building2 className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <Building2 className="h-5 w-5 text-primary" />
+          <CardTitle className="text-foreground">
             Patrimônio por Instituição
           </CardTitle>
         </div>
-        <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+        <CardDescription className="text-muted-foreground">
           Distribuição do patrimônio entre instituições financeiras
         </CardDescription>
       </CardHeader>
@@ -160,15 +136,15 @@ export function PatrimonioByInstitutionChart() {
           <BarChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke={isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
+              className="stroke-border"
             />
             <XAxis
               dataKey="name"
-              stroke={isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)'}
+              className="stroke-muted-foreground"
               style={{ fontSize: '12px' }}
             />
             <YAxis
-              stroke={isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)'}
+              className="stroke-muted-foreground"
               style={{ fontSize: '12px' }}
               tickFormatter={formatCurrency}
             />
@@ -177,19 +153,18 @@ export function PatrimonioByInstitutionChart() {
               wrapperStyle={{
                 paddingTop: '20px',
                 fontSize: '12px',
-                color: isDark ? '#ffffff' : '#1e293b',
               }}
             />
             <Bar
               dataKey="contas"
               name="Contas"
-              fill={isDark ? '#4ADE80' : '#22C55E'}
+              fill={COLORS[0]}
               radius={[4, 4, 0, 0]}
             />
             <Bar
               dataKey="investimentos"
               name="Investimentos"
-              fill={isDark ? '#FCD34D' : '#F59E0B'}
+              fill={COLORS[1]}
               radius={[4, 4, 0, 0]}
             />
           </BarChart>

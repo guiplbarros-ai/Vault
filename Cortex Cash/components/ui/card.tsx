@@ -7,23 +7,19 @@ function Card({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot="card"
       className={cn(
-        // Base: fundo opaco com efeito 3D
-        'bg-white dark:bg-zinc-900/95',
-        'text-card-foreground flex flex-col gap-6 rounded-xl',
-        // Borda com sutil gradiente
-        'border-2 border-zinc-200/80 dark:border-zinc-700/50',
-        // Efeito 3D: sombras múltiplas para profundidade
-        'shadow-[0_2px_8px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.06)]',
-        'dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),0_8px_24px_rgba(0,0,0,0.2)]',
-        // Hover: aumenta elevação
-        'hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),0_8px_24px_rgba(0,0,0,0.1)]',
-        'dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.4),0_12px_32px_rgba(0,0,0,0.3)]',
+        // TEMA.md: Cards com bg-card, border, radius-lg e shadow-1
+        'bg-card text-card-foreground',
+        'flex flex-col gap-6 rounded-[18px]',
+        // Garante opacidade total (regra do TEMA.md)
+        'dark:bg-opacity-100 dark:backdrop-blur-none',
+        // Borda: 1px solid var(--border) conforme TEMA.md
+        'border border-border',
+        // Shadow-1 do TEMA.md
+        'shadow-[0_1px_0_rgba(0,0,0,.35),0_6px_12px_rgba(0,0,0,.25)]',
+        // Hover: mantém elevação
+        'hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]',
         // Transição suave
         'transition-all duration-300',
-        // Borda superior sutil para efeito de luz
-        'before:content-[""] before:absolute before:inset-x-0 before:top-0 before:h-px',
-        'before:bg-gradient-to-r before:from-transparent before:via-zinc-200/50 before:to-transparent',
-        'dark:before:via-zinc-700/30',
         'relative py-6',
         className,
       )}
@@ -49,7 +45,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="card-title"
-      className={cn('leading-none font-semibold', className)}
+      className={cn('leading-none font-semibold text-card-foreground', className)}
       {...props}
     />
   )

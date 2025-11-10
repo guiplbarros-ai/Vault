@@ -1,397 +1,338 @@
-# PRD: Modo Claro - Cortex Cash
-**Agent IMPORT: Owner**
-**Versão**: 1.0
-**Data**: 2025-01-29
+# Tema — Orientação de UI (Dark, sólido)
+
+Este documento consolida a orientação visual da aplicação com superfícies sólidas e sem translucência, adotando a base `#132421`. Substitui orientações anteriores (incluindo variantes “Cortex Pixel Teal” e “Modo Claro”).
 
 ---
 
-## 1. Visão Geral
-
-O **Modo Claro** do Cortex Cash deve proporcionar uma experiência visual confortável para uso em ambientes bem iluminados, mantendo alta legibilidade e contraste adequado. O tema deve ser profissional, moderno e alinhado com o design system existente.
-
----
-
-## 2. Paleta de Cores - Cortex Pixel Teal
-
-### 2.1. Cores Base (Dark Mode - Padrão)
+## 1) Tokens (CSS)
 
 ```css
-/* Background Hierarchy */
---background: #0B2230;             /* Navy escuro - Fundo principal */
---foreground: #E6F7F4;             /* Verde acqua claro - Texto principal */
+:root {
+  /* Base — Melhor hierarquia de superfícies */
+  --bg-app: #0e1c19;            /* Fundo principal (mais escuro para contraste) */
+  --bg-card: #1a362f;           /* Superfície padrão (+20% contraste vs anterior) */
+  --bg-card-2: #152b26;         /* Superfície aninhada */
+  --bg-card-elevated: #1f3d36;  /* Cards com destaque (hover, ativo) */
+  --bg-input: #13251f;          /* Background de inputs (mais escuro) */
 
-/* Card e Surface */
---card: #123041;                   /* Navy médio - Cards */
---card-foreground: #E6F7F4;        /* Verde acqua claro - Texto em cards */
---surface-2: #173B4D;              /* Navy claro - Surface elevada */
+  /* Bordas — Mais visíveis */
+  --border: #2d5247;            /* Contorno principal (+35% visibilidade) */
+  --border-subtle: #203a33;     /* Divisões internas sutis */
+  --border-emphasis: #3a6456;   /* Bordas de destaque */
 
-/* Popover e Dropdown */
---popover: #123041;                /* Navy médio */
---popover-foreground: #E6F7F4;     /* Verde acqua claro */
+  /* Estados interativos */
+  --hover: #1d3a33;             /* Hover de linhas/itens */
+  --active: #234039;            /* Estado ativo/pressed */
+  --focus: #3A8F6E;             /* Anel de foco */
+  --divider: #213a34;           /* Linhas de divisão */
 
-/* Primary (Teal) */
---primary: #18B0A4;                /* Teal 500 - Cor principal */
---primary-600: #129A8F;            /* Teal 600 */
---primary-700: #0D7E75;            /* Teal 700 */
---primary-800: #0A625B;            /* Teal 800 */
---primary-foreground: #0B2230;     /* Navy escuro - Texto em primary */
+  /* Texto — Melhor legibilidade */
+  --fg-primary: #F7FAF9;        /* Texto principal (mais claro) */
+  --fg-secondary: #BBC5C2;      /* Texto secundário (melhor contraste) */
+  --fg-muted: #94a8a1;          /* Texto terciário */
+  --fg-disabled: #6b7d76;       /* Texto desabilitado */
 
-/* Secondary */
---secondary: #173B4D;              /* Navy claro */
---secondary-foreground: #E6F7F4;   /* Verde acqua claro */
+  /* Ação / Marca */
+  --accent: #3A8F6E;            /* Primário (adição/confirmar) */
+  --accent-hover: #48a080;      /* Hover do accent (mais claro) */
+  --accent-emph: #2E7D6B;       /* Ativo/pressed */
+  --link: #8FCDBD;              /* Ação sutil */
+  --money: #D4AF37;             /* Destaques monetários */
 
-/* Muted (Backgrounds sutis) */
---muted: #0F2A39;                  /* Navy muito escuro */
---muted-foreground: #B5D8D2;       /* Verde acqua médio - Texto secundário */
+  /* Status — Cores saturadas para destaque */
+  --success: #5FC883;           /* Verde mais vibrante */
+  --success-bg: #1a3329;        /* Background sutil de sucesso */
+  --warning: #E0B257;
+  --warning-bg: #2e2819;        /* Background sutil de aviso */
+  --error: #F07167;
+  --error-bg: #2e1f1f;          /* Background sutil de erro */
+  --info: #7AA6BF;
+  --info-bg: #1a262e;           /* Background sutil de info */
 
-/* Accent (Hover states) */
---accent: #173B4D;                 /* Navy claro - Hover background */
---accent-foreground: #E6F7F4;      /* Verde acqua claro */
+  /* Charts — Paleta balanceada */
+  --chart-1: #5FC883;           /* Verde (receitas) */
+  --chart-2: #F07167;           /* Vermelho (despesas) */
+  --chart-3: #E0B257;           /* Amarelo (investimentos) */
+  --chart-4: #7AA6BF;           /* Azul (poupança) */
+  --chart-5: #C49A6C;           /* Laranja (variável) */
+  --chart-6: #9AA4AD;           /* Cinza (fixo) */
 
-/* Accent Gold (Highlights monetários) */
---accent-gold: #F5C04E;            /* Ouro 500 */
---accent-gold-600: #E7A93D;        /* Ouro 600 */
---accent-gold-foreground: #0B2230; /* Navy escuro */
-
-/* Accent Orange */
---accent-orange: #F18F01;          /* Laranja 500 */
---accent-orange-foreground: #0B2230; /* Navy escuro */
-
-/* Destructive (Erros) */
---destructive: #EF4444;            /* Vermelho erro */
---destructive-foreground: #E6F7F4; /* Verde acqua claro */
-
-/* Border */
---border: #1E4657;                 /* Borda navy */
---input: #1E4657;                  /* Borda de inputs */
-
-/* Ring (Focus) */
---ring: #18B0A4;                   /* Teal 500 - Borda de foco */
-
-/* Radius */
---radius: 0.5rem;                  /* 8px - Border radius padrão */
-```
-
-### 2.2. Cores Base (Light Mode)
-
-```css
-/* Background Hierarchy */
---background: #F3FBFA;             /* Verde acqua muito claro - Fundo principal */
---foreground: #0B2230;             /* Navy escuro - Texto principal */
-
-/* Card e Surface */
---card: #FFFFFF;                   /* Branco - Cards */
---card-foreground: #0B2230;        /* Navy escuro - Texto em cards */
---surface-2: #EDF7F6;              /* Verde acqua 100 - Surface elevada */
-
-/* Popover e Dropdown */
---popover: #FFFFFF;                /* Branco */
---popover-foreground: #0B2230;     /* Navy escuro */
-
-/* Primary (Teal) */
---primary: #129A8F;                /* Teal 600 - Cor principal (mais escuro no light) */
---primary-700: #0D7E75;            /* Teal 700 */
---primary-foreground: #F3FBFA;     /* Verde acqua claro - Texto em primary */
-
-/* Secondary */
---secondary: #EDF7F6;              /* Verde acqua 100 */
---secondary-foreground: #0B2230;   /* Navy escuro */
-
-/* Muted (Backgrounds sutis) */
---muted: #EFF7F6;                  /* Verde acqua muito claro */
---muted-foreground: #325861;       /* Navy médio - Texto secundário */
-
-/* Accent (Hover states) */
---accent: #EDF7F6;                 /* Verde acqua 100 - Hover background */
---accent-foreground: #0B2230;      /* Navy escuro */
-
-/* Accent Gold (Highlights monetários) */
---accent-gold: #E7A93D;            /* Ouro 600 (mais escuro no light) */
---accent-gold-foreground: #0B2230; /* Navy escuro */
-
-/* Accent Orange */
---accent-orange: #E57E00;          /* Laranja 600 (mais escuro no light) */
---accent-orange-foreground: #0B2230; /* Navy escuro */
-
-/* Destructive (Erros) */
---destructive: #EF4444;            /* Vermelho erro */
---destructive-foreground: #FFFFFF; /* Branco */
-
-/* Border */
---border: #D2E8E5;                 /* Verde acqua 200 - Borda suave */
---input: #D2E8E5;                  /* Borda de inputs */
-
-/* Ring (Focus) */
---ring: #129A8F;                   /* Teal 600 - Borda de foco */
-```
-
-### 2.3. Cores Semânticas
-
-```css
-/* Success */
---success: #22C55E;                /* Verde sucesso */
---success-foreground: #FFFFFF;     /* Branco */
-
-/* Warning */
---warning: #F59E0B;                /* Amarelo aviso */
---warning-foreground: #0B2230;     /* Navy escuro */
-
-/* Danger */
---danger: #EF4444;                 /* Vermelho erro */
---danger-foreground: #FFFFFF;      /* Branco */
-```
-
-### 2.4. Charts (ECharts palette)
-
-```css
---chart-1: #18B0A4;  /* Teal */
---chart-2: #F5C04E;  /* Gold */
---chart-3: #5EDAC8;  /* Teal claro */
---chart-4: #F18F01;  /* Orange */
---chart-5: #0D7E75;  /* Teal escuro */
---chart-6: #E7A93D;  /* Gold escuro */
---chart-7: #0A625B;  /* Teal muito escuro */
---chart-8: #22C55E;  /* Success green */
-```
-
----
-
-## 3. Aplicação da Paleta
-
-### 3.1. Backgrounds
-
-| Elemento | Cor | Uso |
-|----------|-----|-----|
-| Body | `--background` (#FFFFFF) | Fundo principal da aplicação |
-| Sidebar | `--card` (#FFFFFF) | Menu lateral |
-| Cards | `--card` (#FFFFFF) | Cards, containers |
-| Hover | `--accent` (#F1F5F9) | Estados de hover |
-| Active | `--secondary` (#F1F5F9) | Itens ativos (sidebar) |
-
-### 3.2. Textos
-
-| Tipo | Cor | Uso |
-|------|-----|-----|
-| Títulos (H1-H3) | `--foreground` (#020817) | Headings principais |
-| Corpo | `--foreground` (#020817) | Texto padrão |
-| Secundário | `--muted-foreground` (#64748B) | Descrições, labels |
-| Disabled | `--slate-400` (#94A3B8) | Estados desabilitados |
-
-### 3.3. Bordas
-
-| Tipo | Cor | Grossura |
-|------|-----|----------|
-| Cards | `--border` (#E2E8F0) | 1px |
-| Inputs | `--input` (#E2E8F0) | 1px |
-| Dividers | `--border` (#E2E8F0) | 1px |
-| Focus Ring | `--ring` (#2563EB) | 2px |
-
-### 3.4. Componentes Específicos
-
-#### Sidebar
-- Background: `#FFFFFF`
-- Border: `#E2E8F0` (direita)
-- Item hover: `#F1F5F9`
-- Item ativo: `#EEF2FF` (primary/10)
-- Texto: `#0F172A`
-- Texto ativo: `#2563EB`
-
-#### Top Bar
-- Background: `#FFFFFF`
-- Border: `#E2E8F0` (baixo)
-- Texto: `#0F172A`
-
-#### Cards de Configuração
-- Background: `#FFFFFF`
-- Border: `#E2E8F0`
-- Header text: `#0F172A`
-- Description: `#64748B`
-
-#### Botões
-- **Primary**: Background `#2563EB`, texto `#FFFFFF`
-- **Secondary**: Background `#F1F5F9`, texto `#1E293B`
-- **Ghost**: Transparent, hover `#F1F5F9`
-- **Destructive**: Background `#EF4444`, texto `#FFFFFF`
-
-#### Inputs
-- Background: `#FFFFFF`
-- Border: `#E2E8F0`
-- Focus border: `#2563EB`
-- Placeholder: `#94A3B8`
-- Texto: `#0F172A`
-
----
-
-## 4. Contraste e Acessibilidade
-
-### 4.1. Ratios WCAG
-
-Todos os pares de cor devem atender:
-- **AA**: Mínimo 4.5:1 para texto normal
-- **AA**: Mínimo 3:1 para texto grande (18px+)
-- **AAA**: Mínimo 7:1 para texto normal (ideal)
-
-### 4.2. Verificações
-
-| Par | Ratio | Status |
-|-----|-------|--------|
-| `#020817` em `#FFFFFF` | 19.8:1 | ✅ AAA |
-| `#64748B` em `#FFFFFF` | 4.52:1 | ✅ AA |
-| `#2563EB` em `#FFFFFF` | 3.9:1 | ⚠️ AA Large |
-| `#FFFFFF` em `#2563EB` | 5.24:1 | ✅ AA |
-
----
-
-## 5. Transição de Temas
-
-### 5.1. Como Funciona
-
-1. **Modo Escuro (padrão atual)**: `<html class="dark">`
-2. **Modo Claro (novo)**: `<html class="light">` ou sem classe
-3. **Modo Auto**: Detecta `prefers-color-scheme: dark/light`
-
-### 5.2. Implementação CSS
-
-```css
-/* globals.css */
-@layer base {
-  :root {
-    /* Variáveis do modo claro aqui (padrão) */
-  }
-
-  .dark {
-    /* Sobrescreve com variáveis do modo escuro */
-  }
+  /* Raio & sombras */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --shadow-1: 0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3);
+  --shadow-2: 0 2px 0 rgba(0,0,0,.45), 0 12px 24px rgba(0,0,0,.35);
+  --shadow-colored: 0 8px 16px -4px rgba(58, 143, 110, 0.25); /* Sombra colorida accent */
 }
 ```
 
-### 5.3. Animação de Transição
+> Regra de ouro: superfícies sempre com opacidade 1 (sem `rgba(..., < 1)`, sem `backdrop-filter`, sem `blur`). Use `--bg-card`/`--bg-card-2` + `--border` + `--shadow-*`.
+
+---
+
+## 2) Camadas & Layout
+- App root: fundo `--bg-app` (imagens só no root, nunca transparecendo nas superfícies).
+- Content wrapper: max-width 1440, gutters 24–32px, grid 8pt.
+- Elevação: card padrão usa `--shadow-1`; KPI/Modal/Dropdown usam `--shadow-2`.
+
+### 2.1) Background com Efeito de Gradiente (App Root)
+
+O fundo da aplicação utiliza um gradiente radial mais escuro para criar **maior contraste** com cards e superfícies, mantendo a paleta verde escura.
+
+**Especificações do gradiente (ATUALIZADO 2025-11-10):**
 
 ```css
-* {
-  transition: background-color 0.2s ease-in-out,
-              border-color 0.2s ease-in-out,
-              color 0.2s ease-in-out;
+body, #app-root {
+  background: radial-gradient(
+    ellipse at center,
+    #152821 0%,      /* Centro: tom médio */
+    #111f1c 40%,     /* Transição: mais escuro */
+    #0e1c19 70%,     /* Base: escuro (novo --bg-app) */
+    #0a1512 100%     /* Bordas: muito escuro (vinheta forte) */
+  );
+
+  /* Garantir que o background cubra toda a viewport */
+  min-height: 100vh;
+  background-attachment: fixed;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 ```
 
-**Exceções** (sem transição):
-- Hover states
-- Focus states
-- Loaders/Spinners
+**Alternativa com CSS Variables (recomendado):**
+
+Adicione ao `:root` do tokens (seção 1):
+
+```css
+:root {
+  /* ... tokens existentes ... */
+
+  /* Background gradient — ATUALIZADO para maior contraste */
+  --bg-gradient-center: #152821;
+  --bg-gradient-mid: #111f1c;
+  --bg-gradient-base: #0e1c19;
+  --bg-gradient-edge: #0a1512;
+}
+
+/* Aplicação */
+body, #app-root {
+  background: radial-gradient(
+    ellipse at center,
+    var(--bg-gradient-center) 0%,
+    var(--bg-gradient-mid) 40%,
+    var(--bg-gradient-base) 70%,
+    var(--bg-gradient-edge) 100%
+  );
+  min-height: 100vh;
+  background-attachment: fixed;
+}
+```
+
+**Detalhes importantes:**
+
+1. **Forma do gradiente:** `ellipse` (não circular) para melhor distribuição na viewport
+2. **Posição:** `at center` para irradiar do centro da tela
+3. **Stops de cor (ATUALIZADO):**
+   - 0%: centro tom médio (#152821) - mais escuro para contraste
+   - 40%: transição escura (#111f1c)
+   - 70%: base escuro (#0e1c19) - corresponde ao --bg-app
+   - 100%: bordas muito escuras (#0a1512) - vinheta forte
+4. **Contraste aumentado:** Background ~30% mais escuro que versão anterior para criar **melhor hierarquia visual** com cards (#1a362f)
+5. **Fixed attachment:** mantém o gradiente fixo durante scroll para efeito imersivo
+6. **Sem noise/textura:** manter superfície limpa e sólida conforme orientação "anti-transparência"
+
+**Implementação em Tailwind (via config):**
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      backgroundImage: {
+        'app-gradient': `radial-gradient(ellipse at center,
+          #152821 0%,
+          #111f1c 40%,
+          #0e1c19 70%,
+          #0a1512 100%
+        )`,
+      },
+    },
+  },
+};
+
+// Uso: class="bg-app-gradient min-h-screen"
+```
+
+**Nota sobre superfícies:**
+- Este gradiente aplica-se **APENAS** ao fundo raiz da aplicação
+- Todos os cards, modais, sidebars mantêm fundos **sólidos** (`--bg-card`, `--bg-card-2`)
+- Nunca use este gradiente em componentes internos - eles devem ter `background-color` explícito e opaco
+
+### 2.2) Background com Imagem Customizada (Opcional)
+
+Para usar uma imagem como background da aplicação, adicione-a em `public/assets/backgrounds/` e utilize um **overlay radial** verde para manter a identidade visual e legibilidade.
+
+**Exemplo com imagem:**
+
+```css
+html {
+  /* Overlay verde escuro + imagem de fundo */
+  background-image:
+    radial-gradient(
+      ellipse at center,
+      rgba(21, 40, 33, 0.85) 0%,      /* Overlay com 85% opacidade */
+      rgba(17, 31, 28, 0.90) 40%,     /* 90% opacidade */
+      rgba(14, 28, 25, 0.93) 70%,     /* 93% opacidade */
+      rgba(10, 21, 18, 0.96) 100%     /* 96% opacidade (vinheta) */
+    ),
+    url('/assets/backgrounds/background.jpg');
+
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+```
+
+**Diretrizes para imagens de background:**
+
+1. **Formato recomendado:** JPG (otimizado) ou WebP para melhor performance
+2. **Resolução:** Mínimo 1920x1080px (Full HD)
+3. **Peso:** Máximo 200KB (otimizar com ferramentas de compressão)
+4. **Overlay obrigatório:** Sempre use o gradiente radial verde com opacidade 85-96% para:
+   - Manter legibilidade do texto branco
+   - Preservar a identidade visual verde escura
+   - Criar vinheta nas bordas
+5. **Tonalidade da imagem:** Preferir imagens com tons escuros ou neutros que harmonizem com o verde
+6. **Contraste:** Garantir que elementos de UI (cards, texto) se destaquem sobre a imagem
+
+**Alternativa: Background apenas com gradiente (padrão)**
+
+Se não houver imagem, use apenas o gradiente sólido (seção 2.1):
+
+```css
+html {
+  background: radial-gradient(
+    ellipse at center,
+    #152821 0%,
+    #111f1c 40%,
+    #0e1c19 70%,
+    #0a1512 100%
+  );
+}
+```
+
+## 3) Tipografia
+- Títulos (H1/H2/H3): `--fg-primary`, peso 700/600, tracking -0.2px.
+- Subtítulos/labels: `--fg-secondary`, peso 500.
+- Corpo: `--fg-primary`; metadados/legendas: `--fg-muted`.
+
+## 4) Componentes (resumo)
+- Cards/KPIs: bg `--bg-card`, borda `1px solid var(--border)`, raio `--radius-lg`, sombra `--shadow-1`. Ícone em pill 36px com `--bg-card-2`.
+- Botões:
+  - Primário: bg `--accent` → hover `--accent-emph`; texto `#FFF`; raio 12px.
+  - Secundário: bg `--bg-card-2`; borda `--border`; hover `--hover`.
+  - Ghost: bg `transparent`; texto `--link`; hover `--bg-card-2`.
+  - Destrutivo: bg `--error`; hover -8%; texto `#0E0E0E`.
+  - Foco: `outline: 2px solid var(--focus); outline-offset: 2px;`
+- Menus/Dropdowns: menu com bg `--bg-card`, borda `--border`, raio `--radius-md`, sombra `--shadow-2`; item 36px, hover `--hover`.
+- Inputs/Selects: bg `--bg-card-2`, texto `--fg-primary`, placeholder `--fg-muted`, borda `--border`, raio `--radius-sm`, 40–44px; focus com borda `--focus` + glow leve.
+- Tabelas: cabeçalho `#162B26`; linhas bg `--bg-card` (hover `--hover`); zebra com `--bg-card-2`; borda externa `--border`, raio `--radius-md`.
+- Gráficos (ECharts): background `--bg-card`; axisLabel `--fg-secondary`; splitLine `#1A3530`; tooltip `--bg-card-2` com borda `--border`; paleta `--chart-1..6`.
+- Sidebar: fundo `#111C1A`; borda direita `--border`; item hover `--hover`; ativo `--bg-card-2` + indicador `--accent`.
+- Divisores: `1px solid var(--divider)`; headers de seção com H2 + descrição `--fg-muted`.
+- Toasts: bg `--bg-card`, borda `--border`, sombra `--shadow-2`, ícone por status.
+
+### 4.1) Seletor de Datas (Date Picker)
+
+**Posicionamento fixo:**
+- Sempre localizado no canto **superior direito** da página
+- Presente em todas as abas/telas que necessitem filtro de data
+- Posição padronizada e consistente em toda a aplicação
+
+**Estrutura do componente:**
+
+1. **Barra principal:**
+   - Exibe o mês vigente centralizado (ex.: "Novembro 2025")
+   - Botão de navegação à esquerda (`←`) para retroceder meses
+   - Botão de navegação à direita (`→`) para avançar meses
+   - Visual: bg `--bg-card-2`, borda `--border`, raio `--radius-sm`
+   - Altura: 40–44px
+
+2. **Calendário (ao clicar no mês):**
+   - Abre dropdown/modal com calendário completo
+   - Permite seleção de datas específicas (início e fim)
+   - bg `--bg-card`, borda `--border`, sombra `--shadow-2`, raio `--radius-md`
+   - Dias do mês: hover `--hover`, selecionado `--accent`
+   - Dias fora do mês: `--fg-muted` com opacidade reduzida
+
+3. **Pré-configurações (quick filters):**
+   - Lista de opções rápidas dentro do calendário:
+     - Última semana
+     - Último mês
+     - Últimos 3 meses
+     - Últimos 6 meses
+     - Último ano
+     - Ano vigente
+     - Personalizado (abre calendário completo)
+   - Cada opção como botão ghost (bg `transparent`, hover `--hover`)
+   - Altura: 32px, texto `--fg-secondary`, ativo com bg `--accent` e texto `#FFF`
+
+**Comportamento:**
+- Ao selecionar navegação (← →): atualiza o mês exibido
+- Ao clicar no mês: abre dropdown com calendário + pré-configurações
+- Ao selecionar pré-configuração: aplica filtro imediatamente e fecha dropdown
+- Ao selecionar datas no calendário: aplica range selecionado
+- Estado ativo: exibir indicador visual (borda `--focus` ou badge com `--accent`)
+
+**Exemplo visual (pseudo-código):**
+```html
+<div class="date-picker-container">
+  <!-- Barra de navegação de mês -->
+  <div class="month-bar bg-[--bg-card-2] border-[--border] rounded-[--radius-sm]">
+    <button class="nav-btn">←</button>
+    <span class="current-month text-[--fg-primary]">Novembro 2025</span>
+    <button class="nav-btn">→</button>
+  </div>
+  
+  <!-- Dropdown (quando ativo) -->
+  <div class="calendar-dropdown bg-[--bg-card] border-[--border] shadow-[--shadow-2]">
+    <!-- Quick filters -->
+    <div class="quick-filters">
+      <button>Última semana</button>
+      <button>Último mês</button>
+      <button>Últimos 3 meses</button>
+      <!-- ... -->
+    </div>
+    <!-- Calendário completo -->
+    <div class="calendar-grid">
+      <!-- dias... -->
+    </div>
+  </div>
+</div>
+```
+
+## 5) Interações & Estados
+- Hover: nunca reduzir opacidade; alterar bg para `--hover` (±6–8%).
+- Pressed/Active: escurecer ~10–12% ou usar `--accent-emph`.
+- Disabled: manter bg sólido (ex.: `--bg-card-2`) e texto `--fg-muted`.
+
+## 6) Exemplo (Tailwind-ish)
+```html
+<div class="bg-[#18322C] border border-[#2A4942] rounded-[18px] shadow-[var(--shadow-1)] p-6">
+  ...
+</div>
+```
+
+## 7) Checklist “anti-transparência”
+- Remover `opacity < 1`, `backdrop-filter`, `backdrop-blur`, `bg-opacity-*`.
+- Garantir `background-color` explícito em todos os componentes.
+- Gráficos com `backgroundColor` setado (sem alpha).
+- Sidebar com fundo sólido `#111C1A`.
+- Bordas sempre `1px solid var(--border)`.
 
 ---
 
-## 6. Comportamento Esperado
-
-### 6.1. Seleção Manual
-
-**Via Configurações (`/settings`)**:
-1. Usuário clica em "Aparência"
-2. Seleciona "Modo de cor": Claro / Escuro / Automático
-3. Mudança é **imediata** (sem reload)
-4. Salvo em `localStorage`
-
-**Via Toggle (barra superior)**:
-1. Usuário clica no ícone sol/lua
-2. Dropdown mostra 3 opções com ícones
-3. Seleção aplica tema instantaneamente
-4. Ícone do botão atualiza (sol ↔ lua)
-
-### 6.2. Modo Automático
-
-1. Lê `window.matchMedia('(prefers-color-scheme: dark)')`
-2. Aplica tema correspondente
-3. **Listener ativo**: Atualiza se SO mudar tema
-4. Sem necessidade de reload
-
-### 6.3. Persistência
-
-- **Storage**: `localStorage.getItem('cortex_settings')`
-- **Key**: `appearance.theme: 'light' | 'dark' | 'auto'`
-- **Restauração**: Ao carregar página, lê localStorage antes do primeiro render
-
----
-
-## 7. Casos de Uso
-
-### 7.1. Usuário em Escritório (Dia)
-- **Preferência**: Modo Claro
-- **Motivo**: Ambiente bem iluminado, telas brilhantes
-- **Resultado**: Fundo branco, texto escuro, confortável para leitura
-
-### 7.2. Usuário em Casa (Noite)
-- **Preferência**: Modo Escuro
-- **Motivo**: Ambiente com pouca luz
-- **Resultado**: Fundo escuro, reduz fadiga ocular
-
-### 7.3. Usuário com Preferência do Sistema
-- **Preferência**: Automático
-- **Motivo**: Quer seguir tema do macOS/Windows
-- **Resultado**: Muda automaticamente com o sistema
-
----
-
-## 8. Checklist de Implementação
-
-### Passo 1: PRD ✅
-- [x] Definir paleta de cores
-- [x] Especificar contraste e acessibilidade
-- [x] Documentar comportamento esperado
-
-### Passo 2: Código
-- [ ] Atualizar `globals.css` com variáveis `:root`
-- [ ] Garantir que `.dark` sobrescreve corretamente
-- [ ] Testar aplicação de classes no `<html>`
-- [ ] Verificar transições suaves
-
-### Passo 3: Componentes
-- [ ] `ThemeToggle`: 3 opções funcionando
-- [ ] `AppearanceSection`: Dropdown sincronizado
-- [ ] `useAppearanceSettings`: Aplicando classes corretas
-- [ ] Listener de `prefers-color-scheme` ativo
-
-### Passo 4: Testes
-- [ ] Modo Claro: Visual correto
-- [ ] Modo Escuro: Visual correto
-- [ ] Modo Auto: Detecta sistema
-- [ ] Modo Auto: Atualiza com mudança do sistema
-- [ ] Persistência: Restaura ao recarregar
-
----
-
-## 9. Referências de Design
-
-### Inspirações
-- **Linear**: Modo claro clean, backgrounds brancos
-- **Notion**: Cinzas sutis, hierarquia visual clara
-- **Stripe Dashboard**: Profissional, alta legibilidade
-- **Tailwind UI**: Paleta Slate bem equilibrada
-
-### Design Tokens
-- **Font**: Inter (body), JetBrains Mono (code)
-- **Spacing**: Escala 4px (0.25rem)
-- **Shadows**: Sutis, apenas em cards elevados
-- **Radius**: 8px padrão (médio), 12px (large)
-
----
-
-## 10. Resultado Final Esperado
-
-### Visual
-- Fundo **branco puro** (#FFFFFF)
-- Texto **quase preto** (#020817)
-- Cinzas **neutros frios** (Slate)
-- Accent **azul vibrante** (#2563EB)
-- Bordas **sutis** (#E2E8F0)
-
-### UX
-- Transições **suaves** (200ms)
-- Alternância **instantânea** entre temas
-- Sem **flash de conteúdo** (FOUC)
-- **Persistente** entre sessões
-
-### Performance
-- Zero impacto: apenas classes CSS
-- Sem rerenders desnecessários
-- Listener otimizado (cleanup correto)
+Para implementação via shadcn/ui ou Tailwind, podemos publicar esses tokens em `theme.ts` ou `tailwind.config.js (extend.colors)` conforme necessário.

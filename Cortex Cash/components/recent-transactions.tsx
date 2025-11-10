@@ -32,18 +32,14 @@ export function RecentTransactions() {
     try {
       setLoading(true)
 
-      // Carrega transações e categorias
+      // Carrega transações (apenas as 5 mais recentes via índice) e categorias
       const [transacoesData, categoriasData] = await Promise.all([
-        transacaoService.listTransacoes(),
+        transacaoService.listTransacoes({ sortBy: 'data', sortOrder: 'desc', limit: 5 }),
         categoriaService.listCategorias(),
       ])
 
-      // Ordena por data decrescente e pega as 5 mais recentes
-      const sortedTransactions = transacoesData.sort((a, b) => {
-        const dateA = a.data instanceof Date ? a.data : new Date(a.data)
-        const dateB = b.data instanceof Date ? b.data : new Date(b.data)
-        return dateB.getTime() - dateA.getTime()
-      }).slice(0, 5)
+      // Já recebemos as 5 mais recentes
+      const sortedTransactions = transacoesData
 
       // Cria mapa de categorias para lookup rápido
       const categoriasMap = categoriasData.reduce((acc, cat) => {
@@ -72,24 +68,19 @@ export function RecentTransactions() {
   }
 
   return (
-    <Card className="p-6 shadow-md border" style={{
-      background: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
-    }}>
+    <Card className="p-6 shadow-md">
       <div className="mb-6">
-        <h3 className={isDark ? "text-lg font-bold text-white" : "text-lg font-bold text-foreground"}>Transações Recentes</h3>
-        <p className={isDark ? "text-sm text-white/70" : "text-sm text-muted-foreground"}>Sua atividade financeira mais recente</p>
+        <h3 className="text-lg font-bold text-card-foreground">Transações Recentes</h3>
+        <p className="text-sm text-secondary">Sua atividade financeira mais recente</p>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2 className={isDark ? "h-8 w-8 animate-spin text-white/50" : "h-8 w-8 animate-spin text-muted-foreground"} />
+          <Loader2 className="h-8 w-8 animate-spin text-secondary" />
         </div>
       ) : transactions.length === 0 ? (
         <div className="text-center py-8">
-          <p className={isDark ? "text-sm text-white/70" : "text-sm text-muted-foreground"}>Nenhuma transação encontrada</p>
+          <p className="text-sm text-secondary">Nenhuma transação encontrada</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -101,31 +92,27 @@ export function RecentTransactions() {
               <div key={transaction.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`rounded-lg p-2 ${
-                    isDark
-                      ? (isIncome ? "bg-white/15" : "bg-white/10")
-                      : (isIncome ? "bg-accent/10" : "bg-muted")
+                    isIncome ? "bg-success/15" : "bg-destructive/15"
                   }`}>
                     {isIncome ? (
-                      <ArrowDownRight className={isDark ? "h-4 w-4 text-green-400" : "h-4 w-4 text-accent"} />
+                      <ArrowDownRight className="h-4 w-4 text-success" />
                     ) : (
-                      <ArrowUpRight className={isDark ? "h-4 w-4 text-white/70" : "h-4 w-4 text-muted-foreground"} />
+                      <ArrowUpRight className="h-4 w-4 text-destructive" />
                     )}
                   </div>
                   <div>
-                    <p className={isDark ? "text-sm font-medium text-white" : "text-sm font-medium text-foreground"}>{transaction.descricao}</p>
+                    <p className="text-sm font-medium text-card-foreground">{transaction.descricao}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className={isDark ? "text-xs bg-white/20 text-white border-0" : "text-xs"}>
+                      <Badge variant="secondary" className="text-xs border-0">
                         {categoria?.nome || 'Sem categoria'}
                       </Badge>
-                      <span className={isDark ? "text-xs text-white/60" : "text-xs text-muted-foreground"}>{formatDate(transaction.data)}</span>
+                      <span className="text-xs text-secondary">{formatDate(transaction.data)}</span>
                     </div>
                   </div>
                 </div>
                 <span
                   className={`text-sm font-semibold ${
-                    isDark
-                      ? (isIncome ? "text-green-400" : "text-white")
-                      : (isIncome ? "text-accent" : "text-foreground")
+                    isIncome ? "text-success" : "text-destructive"
                   }`}
                 >
                   {isIncome ? "+" : ""}

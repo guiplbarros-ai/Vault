@@ -18,6 +18,7 @@ import { NotFoundError, DatabaseError, ValidationError } from '../errors';
 import { validateDTO, createInvestimentoSchema, createHistoricoInvestimentoSchema } from '../validations/dtos';
 import { contaService } from './conta.service';
 import { transacaoService } from './transacao.service';
+import { getCurrentUserId } from '../db/seed-usuarios';
 
 export class InvestimentoService {
   /**
@@ -148,6 +149,7 @@ export class InvestimentoService {
 
       const id = crypto.randomUUID();
       const now = new Date();
+      const currentUserId = getCurrentUserId();
 
       const investimento: Investimento = {
         id,
@@ -171,6 +173,7 @@ export class InvestimentoService {
         conta_origem_id: validatedData.conta_origem_id,
         observacoes: validatedData.observacoes,
         cor: validatedData.cor,
+        usuario_id: currentUserId,
         created_at: now,
         updated_at: now,
       };
@@ -199,16 +202,19 @@ export class InvestimentoService {
         );
 
         if (!contaInvestimento) {
+          const currentUserId = getCurrentUserId();
           contaInvestimento = await contaService.createConta({
             instituicao_id: investimento.instituicao_id,
             nome: `${instituicao?.nome ?? 'Investimentos'} - Carteira`,
             tipo: 'investimento',
-            saldo_inicial: 0,
+            saldo_referencia: 0,
+            data_referencia: new Date(),
             saldo_atual: 0,
             ativa: true,
             cor: undefined,
             icone: undefined,
             observacoes: undefined,
+            usuario_id: currentUserId,
           });
         }
 

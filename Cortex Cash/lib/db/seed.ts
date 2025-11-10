@@ -16,26 +16,36 @@ export const TAGS_PADRAO: Omit<Tag, 'id' | 'created_at'>[] = [
     nome: 'Essencial',
     cor: '#10b981', // green-500
     tipo: 'sistema',
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Importante',
     cor: '#3b82f6', // blue-500
     tipo: 'sistema',
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Supérfluo',
     cor: '#ef4444', // red-500
     tipo: 'sistema',
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Extraordinário',
     cor: '#f59e0b', // amber-500
     tipo: 'sistema',
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Recorrente',
     cor: '#8b5cf6', // purple-500
     tipo: 'sistema',
+    is_sistema: true,
+    usuario_id: undefined,
   },
 ];
 
@@ -53,6 +63,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#ef4444',
     ordem: 1,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Restaurantes',
@@ -62,6 +74,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#f87171',
     ordem: 2,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Supermercado',
@@ -71,6 +85,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#fca5a5',
     ordem: 3,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -81,6 +97,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#f59e0b',
     ordem: 4,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Combustível',
@@ -90,6 +108,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#fbbf24',
     ordem: 5,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Transporte Público',
@@ -99,6 +119,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#fcd34d',
     ordem: 6,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -109,6 +131,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#8b5cf6',
     ordem: 7,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Aluguel',
@@ -118,6 +142,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#a78bfa',
     ordem: 8,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Contas',
@@ -127,6 +153,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#c4b5fd',
     ordem: 9,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -137,6 +165,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#ec4899',
     ordem: 10,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Farmácia',
@@ -146,6 +176,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#f472b6',
     ordem: 11,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Plano de Saúde',
@@ -155,6 +187,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#f9a8d4',
     ordem: 12,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -165,6 +199,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#3b82f6',
     ordem: 13,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Cursos',
@@ -174,6 +210,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#60a5fa',
     ordem: 14,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Livros',
@@ -183,6 +221,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#93c5fd',
     ordem: 15,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -193,6 +233,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#14b8a6',
     ordem: 16,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Entretenimento',
@@ -202,6 +244,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#2dd4bf',
     ordem: 17,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Viagens',
@@ -211,6 +255,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#5eead4',
     ordem: 18,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -221,6 +267,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#a855f7',
     ordem: 19,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Roupas',
@@ -230,6 +278,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#c084fc',
     ordem: 20,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Calçados',
@@ -239,6 +289,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#d8b4fe',
     ordem: 21,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -249,6 +301,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#06b6d4',
     ordem: 22,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Streaming',
@@ -258,6 +312,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#22d3ee',
     ordem: 23,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Software',
@@ -267,6 +323,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#67e8f9',
     ordem: 24,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -277,6 +335,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#64748b',
     ordem: 25,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -287,6 +347,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#10b981',
     ordem: 26,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -297,6 +359,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#dc2626',
     ordem: 27,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -307,6 +371,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#f97316',
     ordem: 28,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -317,6 +383,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#6b7280',
     ordem: 29,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   // ==================== RECEITAS ====================
@@ -328,6 +396,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#10b981',
     ordem: 30,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -338,6 +408,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#059669',
     ordem: 31,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -348,6 +420,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#34d399',
     ordem: 32,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Dividendos',
@@ -357,6 +431,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#6ee7b7',
     ordem: 33,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
   {
     nome: 'Juros',
@@ -366,6 +442,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#a7f3d0',
     ordem: 34,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -376,6 +454,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#22c55e',
     ordem: 35,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -386,6 +466,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#4ade80',
     ordem: 36,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -396,6 +478,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#86efac',
     ordem: 37,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   {
@@ -406,6 +490,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#bbf7d0',
     ordem: 38,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 
   // ==================== TRANSFERÊNCIAS ====================
@@ -417,6 +503,8 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
     cor: '#6366f1',
     ordem: 39,
     ativa: true,
+    is_sistema: true,
+    usuario_id: undefined,
   },
 ];
 
@@ -445,12 +533,23 @@ export async function seedCategorias(db: any): Promise<void> {
         cor: categoria.cor,
         ordem: categoria.ordem,
         ativa: categoria.ativa,
+        is_sistema: true, // Categorias padrão são do sistema
+        usuario_id: undefined, // Categorias do sistema não pertencem a nenhum usuário
         created_at: now,
         updated_at: now,
       };
     });
 
-    await db.categorias.bulkAdd(categoriasParaInserir);
+    // Usa bulkAdd - se já existir, o erro é ignorado silenciosamente
+    try {
+      await db.categorias.bulkAdd(categoriasParaInserir);
+    } catch (error: any) {
+      // Ignora erro de chave duplicada (dados já existem)
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Algumas categorias já existem, pulando duplicatas...');
+    }
 
     // Agora inserir subcategorias com pai_id correto
     const subcategorias = CATEGORIAS_PADRAO.filter((c) => c.grupo);
@@ -466,18 +565,197 @@ export async function seedCategorias(db: any): Promise<void> {
         cor: categoria.cor,
         ordem: categoria.ordem,
         ativa: categoria.ativa,
+        is_sistema: true, // Categorias padrão são do sistema
+        usuario_id: undefined, // Categorias do sistema não pertencem a nenhum usuário
         created_at: now,
         updated_at: now,
       };
     });
 
-    await db.categorias.bulkAdd(subcategoriasParaInserir);
+    // Usa bulkAdd - se já existir, o erro é ignorado silenciosamente
+    try {
+      await db.categorias.bulkAdd(subcategoriasParaInserir);
+    } catch (error: any) {
+      // Ignora erro de chave duplicada (dados já existem)
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Algumas subcategorias já existem, pulando duplicatas...');
+    }
 
     console.log(`✅ ${CATEGORIAS_PADRAO.length} categorias padrão inseridas com sucesso!`);
     console.log(`   - ${principais.length} categorias principais`);
     console.log(`   - ${subcategorias.length} subcategorias`);
   } catch (error) {
     console.error('❌ Erro ao inserir categorias padrão:', error);
+    throw error;
+  }
+}
+
+/**
+ * Seed de instituições básicas do Brasil
+ * Apenas bancos principais - sem criar contas
+ */
+export async function seedInstituicoesPadrao(db: any): Promise<void> {
+  try {
+    const now = new Date();
+
+    // Verifica se já existem instituições
+    const existingCount = await db.instituicoes.count();
+    if (existingCount > 0) {
+      console.log('✅ Instituições já existem no banco');
+      return;
+    }
+
+    const instituicoes = [
+      {
+        id: crypto.randomUUID(),
+        nome: 'Nubank',
+        codigo: '260',
+        logo_url: null,
+        cor: '#8A05BE',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Inter',
+        codigo: '077',
+        logo_url: null,
+        cor: '#FF7A00',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'C6 Bank',
+        codigo: '336',
+        logo_url: null,
+        cor: '#000000',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'PagBank (PagSeguro)',
+        codigo: '290',
+        logo_url: null,
+        cor: '#00A868',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Itaú',
+        codigo: '341',
+        logo_url: null,
+        cor: '#EC7000',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Bradesco',
+        codigo: '237',
+        logo_url: null,
+        cor: '#CC092F',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Banco do Brasil',
+        codigo: '001',
+        logo_url: null,
+        cor: '#FFF200',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Caixa Econômica Federal',
+        codigo: '104',
+        logo_url: null,
+        cor: '#0066A1',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Santander',
+        codigo: '033',
+        logo_url: null,
+        cor: '#EC0000',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Picpay',
+        codigo: '380',
+        logo_url: null,
+        cor: '#21C25E',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Mercado Pago',
+        codigo: '323',
+        logo_url: null,
+        cor: '#009EE3',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'XP Investimentos',
+        codigo: '102',
+        logo_url: null,
+        cor: '#000000',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'BTG Pactual',
+        codigo: '208',
+        logo_url: null,
+        cor: '#003C7E',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Carteira (Dinheiro)',
+        codigo: 'carteira',
+        logo_url: null,
+        cor: '#6B7280',
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: crypto.randomUUID(),
+        nome: 'Outro',
+        codigo: 'outro',
+        logo_url: null,
+        cor: '#9CA3AF',
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    try {
+      await db.instituicoes.bulkAdd(instituicoes);
+      console.log(`✅ ${instituicoes.length} instituições padrão inseridas`);
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Algumas instituições já existem, pulando duplicatas...');
+    }
+  } catch (error) {
+    console.error('❌ Erro ao inserir instituições padrão:', error);
     throw error;
   }
 }
@@ -501,10 +779,18 @@ export async function initializeSeedData(db: any): Promise<void> {
   const hasData = await hasCategories(db);
 
   if (!hasData) {
-    console.log('📦 Banco vazio detectado. Inserindo categorias padrão...');
+    console.log('📦 Banco vazio detectado. Inserindo dados padrão...');
+    await seedInstituicoesPadrao(db);
     await seedCategorias(db);
   } else {
     console.log('✅ Banco já possui categorias.');
+
+    // Verifica se possui instituições, mesmo que já tenha categorias
+    const instituicoesCount = await db.instituicoes.count();
+    if (instituicoesCount === 0) {
+      console.log('📦 Adicionando instituições padrão...');
+      await seedInstituicoesPadrao(db);
+    }
   }
 }
 
@@ -544,8 +830,15 @@ export async function seedMockData(db: any): Promise<void> {
       },
     ];
 
-    await db.instituicoes.bulkAdd(instituicoes);
-    console.log(`✅ ${instituicoes.length} instituições inseridas`);
+    try {
+      await db.instituicoes.bulkAdd(instituicoes);
+      console.log(`✅ ${instituicoes.length} instituições inseridas`);
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Algumas instituições já existem, pulando duplicatas...');
+    }
 
     // 2. Contas
     const contas = [
@@ -554,7 +847,9 @@ export async function seedMockData(db: any): Promise<void> {
         instituicao_id: instituicoes[0].id, // Nubank
         nome: 'Nubank - Conta Corrente',
         tipo: 'corrente',
-        saldo_inicial: 5000.0,
+        saldo_referencia: 5000.0, // User é soberano!
+        data_referencia: now,
+        saldo_atual: 5000.0,
         ativa: true,
         created_at: now,
         updated_at: now,
@@ -564,7 +859,9 @@ export async function seedMockData(db: any): Promise<void> {
         instituicao_id: instituicoes[1].id, // Bradesco
         nome: 'Bradesco - Poupança',
         tipo: 'poupanca',
-        saldo_inicial: 15000.0,
+        saldo_referencia: 15000.0,
+        data_referencia: now,
+        saldo_atual: 15000.0,
         ativa: true,
         created_at: now,
         updated_at: now,
@@ -574,7 +871,9 @@ export async function seedMockData(db: any): Promise<void> {
         instituicao_id: instituicoes[2].id, // Inter
         nome: 'Inter - Investimentos',
         tipo: 'investimento',
-        saldo_inicial: 50000.0,
+        saldo_referencia: 50000.0,
+        data_referencia: now,
+        saldo_atual: 50000.0,
         ativa: true,
         created_at: now,
         updated_at: now,
@@ -584,15 +883,24 @@ export async function seedMockData(db: any): Promise<void> {
         instituicao_id: instituicoes[0].id, // Nubank
         nome: 'Nubank - Carteira Digital',
         tipo: 'outros',
-        saldo_inicial: 1200.0,
+        saldo_referencia: 1200.0,
+        data_referencia: now,
+        saldo_atual: 1200.0,
         ativa: true,
         created_at: now,
         updated_at: now,
       },
     ];
 
-    await db.contas.bulkAdd(contas);
-    console.log(`✅ ${contas.length} contas inseridas`);
+    try {
+      await db.contas.bulkAdd(contas);
+      console.log(`✅ ${contas.length} contas inseridas`);
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Algumas contas já existem, pulando duplicatas...');
+    }
 
     // 3. Buscar categorias já inseridas
     const categorias = await db.categorias.toArray();
@@ -807,8 +1115,15 @@ export async function seedMockData(db: any): Promise<void> {
     }
     console.log('='.repeat(60));
 
-    await db.transacoes.bulkAdd(transacoes);
-    console.log(`✅ ${transacoes.length} transações inseridas`);
+    try {
+      await db.transacoes.bulkAdd(transacoes);
+      console.log(`✅ ${transacoes.length} transações inseridas`);
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Algumas transações já existem, pulando duplicatas...');
+    }
 
     console.log('🎉 Mock data completo inserido com sucesso!');
   } catch (error) {
@@ -1036,8 +1351,15 @@ export async function seedInvestimentos(db: any): Promise<void> {
       },
     ];
 
-    await db.investimentos.bulkAdd(investimentos);
-    console.log(`✅ ${investimentos.length} investimentos inseridos`);
+    try {
+      await db.investimentos.bulkAdd(investimentos);
+      console.log(`✅ ${investimentos.length} investimentos inseridos`);
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Alguns investimentos já existem, pulando duplicatas...');
+    }
 
     // Criar histórico para cada investimento
     const historicos = [];
@@ -1081,8 +1403,15 @@ export async function seedInvestimentos(db: any): Promise<void> {
       }
     }
 
-    await db.historico_investimentos.bulkAdd(historicos);
-    console.log(`✅ ${historicos.length} registros de histórico inseridos`);
+    try {
+      await db.historico_investimentos.bulkAdd(historicos);
+      console.log(`✅ ${historicos.length} registros de histórico inseridos`);
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Alguns históricos já existem, pulando duplicatas...');
+    }
 
     console.log('🎉 Seed de investimentos completo!');
   } catch (error) {
@@ -1158,8 +1487,15 @@ export async function seedCartoes(db: any) {
       },
     ];
 
-    await db.cartoes_config.bulkAdd(cartoes);
-    console.log(`✅ ${cartoes.length} cartões inseridos`);
+    try {
+      await db.cartoes_config.bulkAdd(cartoes);
+      console.log(`✅ ${cartoes.length} cartões inseridos`);
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Alguns cartões já existem, pulando duplicatas...');
+    }
 
     // Criar faturas de exemplo para cada cartão
     const faturas = [];
@@ -1286,11 +1622,25 @@ export async function seedCartoes(db: any) {
       faturas.push(faturaAnterior);
     }
 
-    await db.faturas.bulkAdd(faturas);
-    console.log(`✅ ${faturas.length} faturas inseridas`);
+    try {
+      await db.faturas.bulkAdd(faturas);
+      console.log(`✅ ${faturas.length} faturas inseridas`);
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Algumas faturas já existem, pulando duplicatas...');
+    }
 
-    await db.faturas_lancamentos.bulkAdd(lancamentos);
-    console.log(`✅ ${lancamentos.length} lançamentos de fatura inseridos`);
+    try {
+      await db.faturas_lancamentos.bulkAdd(lancamentos);
+      console.log(`✅ ${lancamentos.length} lançamentos de fatura inseridos`);
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Alguns lançamentos já existem, pulando duplicatas...');
+    }
 
     console.log('🎉 Seed de cartões completo!');
   } catch (error) {

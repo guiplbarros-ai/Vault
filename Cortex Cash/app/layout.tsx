@@ -1,15 +1,15 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter, JetBrains_Mono, Press_Start_2P } from "next/font/google"
+import { Inter, Press_Start_2P } from "next/font/google"
 import "./globals.css"
 import { DBProvider } from "./providers/db-provider"
 import { SettingsProvider } from "./providers/settings-provider"
+import { AuthProvider } from "./providers/auth-provider"
 import { ThemeInitializer } from "@/components/theme-initializer"
-import { ServiceWorkerUpdatePrompt } from "@/components/service-worker-update-prompt"
 import { OnboardingCheck } from "@/components/onboarding-check"
+import { ServiceWorkerUpdatePrompt } from "@/components/service-worker-update-prompt"
 
 const inter = Inter({ subsets: ["latin"] })
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] })
 const pressStart2P = Press_Start_2P({
   weight: '400',
   subsets: ["latin"],
@@ -37,7 +37,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#18B0A4',
+  themeColor: '#0A1915',
 }
 
 export default function RootLayout({
@@ -50,14 +50,16 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className={`${inter.className} ${pressStart2P.variable}`}>
+      <body className={`${inter.className} ${pressStart2P.variable} text-foreground`}>
         <SettingsProvider>
           <ThemeInitializer />
           <DBProvider>
-            <OnboardingCheck>
-              {children}
-            </OnboardingCheck>
-            <ServiceWorkerUpdatePrompt />
+            <AuthProvider>
+              <OnboardingCheck>
+                {children}
+              </OnboardingCheck>
+              <ServiceWorkerUpdatePrompt />
+            </AuthProvider>
           </DBProvider>
         </SettingsProvider>
       </body>

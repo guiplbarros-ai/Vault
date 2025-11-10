@@ -50,15 +50,15 @@ describe('ContaService', () => {
       }
     });
 
-    it('deve ordenar por saldo_inicial descendente', async () => {
+    it('deve ordenar por saldo_referencia descendente', async () => {
       const result = await service.listContas({
-        sortBy: 'saldo_inicial',
+        sortBy: 'saldo_referencia',
         sortOrder: 'desc'
       });
 
       for (let i = 1; i < result.length; i++) {
-        const saldoA = result[i - 1].saldo_inicial || 0;
-        const saldoB = result[i].saldo_inicial || 0;
+        const saldoA = result[i - 1].saldo_referencia || 0;
+        const saldoB = result[i].saldo_referencia || 0;
         expect(saldoB <= saldoA).toBe(true);
       }
     });
@@ -107,7 +107,9 @@ describe('ContaService', () => {
       const novaConta: Omit<Conta, 'id' | 'created_at' | 'updated_at'> = {
         nome: 'Nova Conta',
         tipo: 'corrente',
-        saldo_inicial: 1000,
+        saldo_referencia: 1000,
+        data_referencia: new Date(),
+        saldo_atual: 1000,
         ativa: true,
         incluir_dashboard: true,
       };
@@ -118,7 +120,7 @@ describe('ContaService', () => {
       expect(result.id).toBeDefined();
       expect(result.nome).toBe('Nova Conta');
       expect(result.tipo).toBe('corrente');
-      expect(result.saldo_inicial).toBe(1000);
+      expect(result.saldo_referencia).toBe(1000);
       expect(result.created_at).toBeDefined();
       expect(result.updated_at).toBeDefined();
     });
@@ -128,7 +130,9 @@ describe('ContaService', () => {
         instituicao_id: 'inst-nubank',
         nome: 'Nubank',
         tipo: 'corrente',
-        saldo_inicial: 500,
+        saldo_referencia: 500,
+        data_referencia: new Date(),
+        saldo_atual: 500,
         ativa: true,
         incluir_dashboard: true,
       };
@@ -142,7 +146,9 @@ describe('ContaService', () => {
       const novaConta: Omit<Conta, 'id' | 'created_at' | 'updated_at'> = {
         nome: 'Conta Inativa',
         tipo: 'poupanca',
-        saldo_inicial: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
         ativa: false,
         incluir_dashboard: false,
       };
@@ -157,14 +163,14 @@ describe('ContaService', () => {
     it('deve atualizar conta existente', async () => {
       const updates = {
         nome: 'Conta Corrente Atualizada',
-        saldo_inicial: 2000,
+        saldo_referencia: 2000,
       };
 
       const result = await service.updateConta('conta-corrente', updates);
 
       expect(result).toBeDefined();
       expect(result.nome).toBe('Conta Corrente Atualizada');
-      expect(result.saldo_inicial).toBe(2000);
+      expect(result.saldo_referencia).toBe(2000);
       expect(result.updated_at).toBeDefined();
       expect(result.created_at).toBeDefined();
     });
@@ -207,7 +213,7 @@ describe('ContaService', () => {
     it('deve calcular saldo da conta corretamente', async () => {
       const result = await service.getSaldoConta('conta-corrente');
 
-      // Saldo inicial + transações
+      // Saldo de referência + transações
       expect(result).toBeGreaterThan(0);
       expect(typeof result).toBe('number');
     });
@@ -217,14 +223,16 @@ describe('ContaService', () => {
       const novaConta = await service.createConta({
         nome: 'Conta Vazia',
         tipo: 'corrente',
-        saldo_inicial: 500,
+        saldo_referencia: 500,
+        data_referencia: new Date(),
+        saldo_atual: 500,
         ativa: true,
         incluir_dashboard: true,
       });
 
       const result = await service.getSaldoConta(novaConta.id);
 
-      // getSaldoConta pode retornar saldo_inicial ou saldo calculado
+      // getSaldoConta pode retornar saldo_referencia ou saldo calculado
       expect(typeof result).toBe('number');
       expect(result).toBeGreaterThanOrEqual(0);
     });
@@ -242,7 +250,9 @@ describe('ContaService', () => {
       const novaConta = await service.createConta({
         nome: 'Conta Nova',
         tipo: 'corrente',
-        saldo_inicial: 1500,
+        saldo_referencia: 1500,
+        data_referencia: new Date(),
+        saldo_atual: 1500,
         ativa: true,
         incluir_dashboard: true,
       });

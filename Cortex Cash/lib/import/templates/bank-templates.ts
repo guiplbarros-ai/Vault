@@ -28,6 +28,8 @@ export const NUBANK_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | 'up
   formato_data: 'yyyy-MM-dd', // Nubank usa ISO
   separador_decimal: '.',
   contador_uso: 0,
+  is_favorite: false,
+  usuario_id: 'usuario-producao',
 };
 
 /**
@@ -50,6 +52,8 @@ export const INTER_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | 'upd
   formato_data: 'dd/MM/yyyy',
   separador_decimal: ',',
   contador_uso: 0,
+  is_favorite: false,
+  usuario_id: 'usuario-producao',
 };
 
 /**
@@ -73,6 +77,8 @@ export const BRADESCO_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | '
   formato_data: 'dd/MM/yyyy',
   separador_decimal: ',',
   contador_uso: 0,
+  is_favorite: false,
+  usuario_id: 'usuario-producao',
 };
 
 /**
@@ -96,6 +102,8 @@ export const ITAU_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | 'upda
   formato_data: 'dd/MM/yyyy',
   separador_decimal: ',',
   contador_uso: 0,
+  is_favorite: false,
+  usuario_id: 'usuario-producao',
 };
 
 /**
@@ -120,6 +128,8 @@ export const SANTANDER_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | 
   formato_data: 'dd/MM/yyyy',
   separador_decimal: ',',
   contador_uso: 0,
+  is_favorite: false,
+  usuario_id: 'usuario-producao',
 };
 
 /**
@@ -143,6 +153,8 @@ export const BB_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | 'update
   formato_data: 'dd/MM/yyyy',
   separador_decimal: ',',
   contador_uso: 0,
+  is_favorite: false,
+  usuario_id: 'usuario-producao',
 };
 
 /**
@@ -165,6 +177,8 @@ export const CAIXA_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | 'upd
   formato_data: 'dd/MM/yyyy',
   separador_decimal: ',',
   contador_uso: 0,
+  is_favorite: false,
+  usuario_id: 'usuario-producao',
 };
 
 /**
@@ -187,6 +201,8 @@ export const C6_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | 'update
   formato_data: 'dd/MM/yyyy',
   separador_decimal: '.',
   contador_uso: 0,
+  is_favorite: false,
+  usuario_id: 'usuario-producao',
 };
 
 /**
@@ -211,6 +227,8 @@ export const PICPAY_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | 'up
   formato_data: 'dd/MM/yyyy',
   separador_decimal: '.',
   contador_uso: 0,
+  is_favorite: false,
+  usuario_id: 'usuario-producao',
 };
 
 /**
@@ -231,6 +249,8 @@ export const GENERIC_BR_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' |
   formato_data: 'dd/MM/yyyy',
   separador_decimal: ',',
   contador_uso: 0,
+  is_favorite: false,
+  usuario_id: 'usuario-producao',
 };
 
 /**

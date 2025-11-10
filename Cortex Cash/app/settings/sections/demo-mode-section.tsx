@@ -124,8 +124,9 @@ export function DemoModeSection() {
         await db.contas.clear();
       });
 
+      // Atualiza lastPopulated mas mantém o estado do modo demo
       const newSettings: DemoModeSettings = {
-        enabled: false,
+        enabled: demoMode.enabled,
         lastPopulated: undefined,
       };
       localStorage.setItem('demo_mode_settings', JSON.stringify(newSettings));
@@ -134,7 +135,7 @@ export function DemoModeSection() {
       await loadStats();
 
       toast.success('Dados limpos', {
-        description: 'Todos os dados demo foram removidos do banco.',
+        description: 'Todos os dados foram removidos do banco.',
       });
     } catch (error) {
       console.error('Erro ao limpar dados:', error);
@@ -186,7 +187,7 @@ export function DemoModeSection() {
             Ativar Modo Demo
           </Label>
           <p className="text-sm text-white/60">
-            Permite popular e limpar dados de exemplo
+            Habilita o botão para popular dados de exemplo
           </p>
         </div>
         <Switch
@@ -238,7 +239,7 @@ export function DemoModeSection() {
 
         <Button
           onClick={handleClearDemoData}
-          disabled={!demoMode.enabled || clearing || accountCount === 0}
+          disabled={clearing || accountCount === 0}
           variant="outline"
           className="w-full border-red-500/50 text-red-400 hover:bg-red-500/20"
         >
@@ -257,20 +258,18 @@ export function DemoModeSection() {
       </div>
 
       {/* Warning */}
-      {demoMode.enabled && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-400 mt-0.5" />
-            <div className="text-sm text-white/80">
-              <p className="font-semibold text-amber-400 mb-1">Atenção</p>
-              <p>
-                Limpar dados demo irá <strong>remover TODAS as contas e transações</strong> do banco de dados.
-                Certifique-se de fazer backup antes se necessário.
-              </p>
-            </div>
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-400 mt-0.5" />
+          <div className="text-sm text-white/80">
+            <p className="font-semibold text-amber-400 mb-1">Atenção</p>
+            <p>
+              O botão "Limpar Dados" irá <strong>remover TODAS as contas e transações</strong> do banco de dados,
+              independentemente do modo demo estar ativo ou não. Certifique-se de fazer backup antes se necessário.
+            </p>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

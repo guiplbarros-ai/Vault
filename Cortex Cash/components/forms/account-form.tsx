@@ -7,8 +7,13 @@ import { accountSchema, AccountFormData } from '@/lib/validations'
 import { ACCOUNT_TYPE_OPTIONS } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { FormInput, FormSelect, FormCurrencyInput, FormColorPicker, FormCheckbox } from '@/components/forms'
+import { FormInstitutionSelect } from '@/components/forms/form-institution-select'
+import { FormParentAccountSelect } from '@/components/forms/form-parent-account-select'
 import { Separator } from '@/components/ui/separator'
 import { Loader2 } from 'lucide-react'
+import { instituicaoService } from '@/lib/services/instituicao.service'
+import { contaService } from '@/lib/services/conta.service'
+import type { Instituicao, Conta } from '@/lib/types'
 
 export interface AccountFormProps {
   defaultValues?: Partial<AccountFormData>
@@ -16,21 +21,8 @@ export interface AccountFormProps {
   onCancel?: () => void
   isLoading?: boolean
   submitLabel?: string
+  currentAccountId?: string // ID da conta sendo editada
 }
-
-// Mock options - TODO: Replace with real data from DB
-const mockInstitutionOptions = [
-  { value: 'nubank', label: 'Nubank' },
-  { value: 'inter', label: 'Banco Inter' },
-  { value: 'itau', label: 'Itaú' },
-  { value: 'bradesco', label: 'Bradesco' },
-  { value: 'santander', label: 'Santander' },
-  { value: 'banco-do-brasil', label: 'Banco do Brasil' },
-  { value: 'caixa', label: 'Caixa Econômica Federal' },
-  { value: 'xp', label: 'XP Investimentos' },
-  { value: 'btg', label: 'BTG Pactual' },
-  { value: 'other', label: 'Outro' },
-]
 
 export function AccountForm({
   defaultValues,
@@ -38,7 +30,13 @@ export function AccountForm({
   onCancel,
   isLoading = false,
   submitLabel = 'Salvar',
+  currentAccountId,
 }: AccountFormProps) {
+  const [instituicoes, setInstituicoes] = React.useState<Instituicao[]>([])
+  const [loadingInstitucoes, setLoadingInstitucoes] = React.useState(true)
+  const [contas, setContas] = React.useState<Conta[]>([])
+  const [loadingContas, setLoadingContas] = React.useState(true)
+
   const methods = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
     defaultValues: {
@@ -51,6 +49,26 @@ export function AccountForm({
       ...defaultValues,
     },
   })
+
+  // Carrega instituições e contas do banco
+  React.useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [instituicoesData, contasData] = await Promise.all([
+          instituicaoService.listInstituicoes({ sortBy: 'nome' }),
+          contaService.listContas({ incluirInativas: false })
+        ])
+        setInstituicoes(instituicoesData)
+        setContas(contasData)
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+      } finally {
+        setLoadingInstitucoes(false)
+        setLoadingContas(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const handleSubmit = methods.handleSubmit(
     async (data: AccountFormData) => {
@@ -69,6 +87,7 @@ export function AccountForm({
   )
 
   const watchType = methods.watch('type')
+  const watchParentAccount = methods.watch('parentAccount')
 
   // Debug: Log form values on change
   React.useEffect(() => {
@@ -80,17 +99,12 @@ export function AccountForm({
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit} className="space-y-6" style={{
-        // Force white labels and descriptions
-        // @ts-ignore
-        '--label-color': '#ffffff',
-        '--description-color': 'rgba(255, 255, 255, 0.7)'
-      } as React.CSSProperties}>
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-white">Informações Básicas</h3>
-            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
+            <h3 className="text-sm font-medium">Informações Básicas</h3>
+            <Separator />
           </div>
 
           <div className="form-dark-input">
@@ -99,7 +113,6 @@ export function AccountForm({
               label="Nome da Conta"
               placeholder="Ex: Conta Corrente Nubank, Cartão XP..."
               required
-              className="!bg-[#1e293b] !text-white !border-white/20 placeholder:!text-white/50"
             />
           </div>
 
@@ -114,11 +127,24 @@ export function AccountForm({
           </div>
 
           <div className="form-dark-select">
-            <FormSelect
+            <FormInstitutionSelect
               name="institution"
               label="Instituição"
-              placeholder="Selecione a instituição"
-              options={mockInstitutionOptions}
+              placeholder={loadingInstitucoes ? "Carregando..." : "Selecione a instituição"}
+              institutions={instituicoes}
+              disabled={loadingInstitucoes}
+            />
+          </div>
+
+          <div className="form-dark-select">
+            <FormParentAccountSelect
+              name="parentAccount"
+              label="Conta Vinculada"
+              placeholder={loadingContas ? "Carregando..." : "Nenhuma (conta independente)"}
+              description="Para poupanças, investimentos ou cartões vinculados a uma conta corrente"
+              accounts={contas}
+              disabled={loadingContas}
+              currentAccountId={currentAccountId}
             />
           </div>
         </div>
@@ -126,47 +152,64 @@ export function AccountForm({
         {/* Balance and Currency */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-white">Saldo e Moeda</h3>
-            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
+            <h3 className="text-sm font-medium">Saldo e Moeda</h3>
+            <Separator />
           </div>
 
           <div className="form-dark-input">
             <FormCurrencyInput
               name="balance"
-              label="Saldo Inicial"
+              label="Saldo de Referência"
               currency="BRL"
               required
               allowNegative={watchType === 'credit'}
-              className="!bg-[#1e293b] !text-white !border-white/20"
             />
           </div>
 
-          <div className="text-xs text-white/70">
+          <div className="text-xs text-muted-foreground">
             {watchType === 'credit'
               ? 'Para cartões de crédito, use valores negativos para representar dívidas'
-              : 'Informe o saldo atual da conta'}
+              : 'Informe o saldo atual verificado (usado como referência)'}
           </div>
         </div>
 
-        {/* Appearance */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-white">Aparência</h3>
-            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
-          </div>
+        {/* Appearance - Only show if no parent account */}
+        {!watchParentAccount && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Aparência</h3>
+              <Separator />
+            </div>
 
-          <FormColorPicker
-            name="color"
-            label="Cor"
-            required
-          />
-        </div>
+            <FormColorPicker
+              name="color"
+              label="Cor"
+              required
+            />
+          </div>
+        )}
+
+        {/* Show message when linked to parent account */}
+        {watchParentAccount && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Aparência</h3>
+              <Separator />
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <p className="text-sm text-muted-foreground">
+                🎨 A cor será automaticamente definida com base na conta vinculada (tom mais claro)
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Settings */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-white">Configurações</h3>
-            <Separator className="!bg-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
+            <h3 className="text-sm font-medium">Configurações</h3>
+            <Separator />
           </div>
 
           <FormCheckbox
@@ -184,7 +227,6 @@ export function AccountForm({
               variant="outline"
               onClick={onCancel}
               disabled={isLoading}
-              className="border-white/20 text-white hover:bg-white/10"
             >
               Cancelar
             </Button>
@@ -192,11 +234,7 @@ export function AccountForm({
           <Button
             type="submit"
             disabled={isLoading}
-            className="text-white"
-            style={{
-              backgroundColor: '#18B0A4',
-              color: '#ffffff'
-            }}
+            variant="default"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitLabel}

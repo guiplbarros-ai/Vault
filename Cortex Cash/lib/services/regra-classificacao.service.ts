@@ -8,6 +8,7 @@
 import { getDB } from '../db/client';
 import { DatabaseError, ValidationError, NotFoundError } from '../errors';
 import type { RegraClassificacao, TipoRegra } from '../types';
+import { getCurrentUserId } from '../db/seed-usuarios';
 
 export interface CreateRegraClassificacaoDTO {
   categoria_id: string;
@@ -140,6 +141,8 @@ class RegraClassificacaoService {
           : 1;
       }
 
+      const currentUserId = getCurrentUserId();
+
       const regra: RegraClassificacao = {
         id: crypto.randomUUID(),
         categoria_id: data.categoria_id,
@@ -152,6 +155,7 @@ class RegraClassificacaoService {
         ultima_aplicacao: undefined,
         total_confirmacoes: 0,
         total_rejeicoes: 0,
+        usuario_id: currentUserId,
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -313,6 +317,8 @@ class RegraClassificacaoService {
         this.testarRegraComPadrao(tipo_regra, padrao, t.descricao)
       ).length;
 
+      const currentUserId = getCurrentUserId();
+
       const tempRegra: RegraClassificacao = {
         id: 'preview',
         categoria_id: '',
@@ -324,6 +330,7 @@ class RegraClassificacaoService {
         total_aplicacoes: 0,
         total_confirmacoes: 0,
         total_rejeicoes: 0,
+        usuario_id: currentUserId,
         created_at: new Date(),
         updated_at: new Date(),
       };

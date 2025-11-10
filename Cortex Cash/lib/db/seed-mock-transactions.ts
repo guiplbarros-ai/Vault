@@ -39,14 +39,23 @@ export async function seedMockTransactions(): Promise<void> {
       instituicao_id: instituicaoId,
       nome: 'Conta Corrente',
       tipo: 'corrente',
-      saldo_inicial: 5000,
+      saldo_referencia: 5000, // User é soberano!
+      data_referencia: new Date(),
       saldo_atual: 5000,
       ativa: true,
+      usuario_id: 'usuario-producao',
       created_at: new Date(),
       updated_at: new Date(),
     };
-    await db.contas.add(contaPrincipal);
-    console.log('✅ Conta padrão criada');
+    try {
+      await db.contas.add(contaPrincipal);
+      console.log('✅ Conta padrão criada');
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Conta padrão já existe, usando existente...');
+    }
   } else {
     contaPrincipal = contas[0];
   }
@@ -67,7 +76,7 @@ export async function seedMockTransactions(): Promise<void> {
   const inicioMes = startOfMonth(hoje);
 
   // Transações mock realistas
-  const transacoesMock: (Omit<Transacao, 'id' | 'created_at' | 'updated_at' | 'tags' | 'parcelado' | 'classificacao_confirmada' | 'classificacao_origem' | 'hash'> & { tags?: string[] })[] = [
+  const transacoesMock: (Omit<Transacao, 'id' | 'created_at' | 'updated_at' | 'tags' | 'parcelado' | 'classificacao_confirmada' | 'classificacao_origem' | 'hash' | 'usuario_id'> & { tags?: string[] })[] = [
     // === ALIMENTAÇÃO ===
     {
       descricao: 'Almoço no restaurante',
@@ -342,6 +351,7 @@ export async function seedMockTransactions(): Promise<void> {
     return {
       id: crypto.randomUUID(),
       ...t,
+      usuario_id: 'usuario-producao',
       tags: t.tags ? JSON.stringify(t.tags) : undefined, // Convert tags array to JSON string
       parcelado: false,
       classificacao_confirmada: true,
@@ -352,7 +362,14 @@ export async function seedMockTransactions(): Promise<void> {
     };
   }));
 
-  await db.transacoes.bulkAdd(transacoesParaInserir);
+  try {
+    await db.transacoes.bulkAdd(transacoesParaInserir);
+  } catch (error: any) {
+    if (error?.name !== 'ConstraintError') {
+      throw error;
+    }
+    console.log('⚠️ Algumas transações já existem, pulando duplicatas...');
+  }
 
   console.log(`✅ ${transacoesParaInserir.length} transações mock criadas com sucesso!`);
   console.log(`   - ${transacoesParaInserir.filter(t => t.tipo === 'receita').length} receitas`);

@@ -35,8 +35,15 @@ export async function seedCenarioBase() {
       updated_at: new Date(),
     }
 
-    await db.cenarios.add(cenarioBase)
-    console.log('✓ Cenário base criado com sucesso')
+    try {
+      await db.cenarios.add(cenarioBase)
+      console.log('✓ Cenário base criado com sucesso')
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Cenário base já existe, pulando...');
+    }
 
   } catch (error) {
     console.error('Erro ao criar cenário base:', error)

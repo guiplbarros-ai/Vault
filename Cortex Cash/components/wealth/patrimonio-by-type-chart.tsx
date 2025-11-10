@@ -6,6 +6,7 @@ import { patrimonioService } from '@/lib/services/patrimonio.service'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { TrendingUp } from 'lucide-react'
 import { useSettings } from '@/app/providers/settings-provider'
+import { getChartColors } from '@/lib/constants/colors'
 import type { PatrimonioPorTipo } from '@/lib/types'
 
 const TIPO_LABELS: Record<string, string> = {
@@ -16,8 +17,6 @@ const TIPO_LABELS: Record<string, string> = {
   criptomoeda: 'Criptomoedas',
   outro: 'Outros',
 }
-
-const CHART_COLORS = ['#18B0A4', '#4ADE80', '#FCD34D', '#F59E0B', '#8B5CF6', '#EC4899']
 
 export function PatrimonioByTypeChart() {
   const [data, setData] = useState<PatrimonioPorTipo[]>([])
@@ -65,23 +64,19 @@ export function PatrimonioByTypeChart() {
     }).format(value)
   }
 
+  const CHART_COLORS = useMemo(() => getChartColors(), [])
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div
-          className="rounded-lg border p-3 shadow-lg"
-          style={{
-            backgroundColor: isDark ? '#1e293b' : '#ffffff',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-          }}
-        >
-          <p className="mb-2 font-semibold" style={{ color: isDark ? '#ffffff' : '#1e293b' }}>
+        <div className="rounded-lg border border-border p-3 shadow-lg bg-card">
+          <p className="mb-2 font-semibold text-foreground">
             {payload[0].name}
           </p>
           <p className="text-sm" style={{ color: payload[0].payload.fill }}>
             Valor: {formatCurrency(payload[0].value)}
           </p>
-          <p className="text-sm text-green-400">
+          <p className="text-sm text-success">
             Rentabilidade: {payload[0].payload.percentual >= 0 ? '+' : ''}
             {payload[0].payload.percentual.toFixed(2)}%
           </p>
@@ -93,16 +88,9 @@ export function PatrimonioByTypeChart() {
 
   if (loading) {
     return (
-      <Card
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-        }}
-      >
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <CardTitle className="text-foreground">
             Patrimônio por Tipo
           </CardTitle>
         </CardHeader>
@@ -117,25 +105,18 @@ export function PatrimonioByTypeChart() {
 
   if (chartData.length === 0) {
     return (
-      <Card
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-        }}
-      >
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <CardTitle className="text-foreground">
             Patrimônio por Tipo
           </CardTitle>
-          <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+          <CardDescription className="text-muted-foreground">
             Distribuição dos seus investimentos por categoria
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-[300px] items-center justify-center">
-            <p className={isDark ? 'text-white/70' : 'text-gray-600'}>
+            <p className="text-muted-foreground">
               Nenhum investimento cadastrado
             </p>
           </div>
@@ -145,22 +126,15 @@ export function PatrimonioByTypeChart() {
   }
 
   return (
-    <Card
-      style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-      }}
-    >
+    <Card className="bg-card">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <TrendingUp className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <TrendingUp className="h-5 w-5 text-primary" />
+          <CardTitle className="text-foreground">
             Patrimônio por Tipo
           </CardTitle>
         </div>
-        <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+        <CardDescription className="text-muted-foreground">
           Distribuição dos seus investimentos por categoria
         </CardDescription>
       </CardHeader>
@@ -186,7 +160,6 @@ export function PatrimonioByTypeChart() {
               wrapperStyle={{
                 paddingTop: '20px',
                 fontSize: '12px',
-                color: isDark ? '#ffffff' : '#1e293b',
               }}
             />
           </PieChart>

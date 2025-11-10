@@ -232,8 +232,16 @@ export default function CategoriesPage() {
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando categorias...</p>
+            <div
+              className="animate-spin rounded-full h-12 w-12 mx-auto mb-4"
+              style={{
+                borderWidth: '2px',
+                borderStyle: 'solid',
+                borderColor: 'transparent',
+                borderBottomColor: '#3A8F6E',
+              }}
+            ></div>
+            <p style={{ color: '#B2BDB9' }}>Carregando categorias...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -251,11 +259,6 @@ export default function CategoriesPage() {
               <Button
                 variant="outline"
                 onClick={handleExport}
-                className="border-0 text-white"
-                style={{
-                  backgroundColor: '#1e293b',
-                  color: '#ffffff'
-                }}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Exportar
@@ -266,42 +269,57 @@ export default function CategoriesPage() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card
+            style={{
+              backgroundColor: '#18332C',
+              borderColor: '#2A4942',
+              borderWidth: '1px',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-1)',
+            }}
+          >
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Total de Categorias</CardDescription>
-              <CardTitle className="text-3xl text-white">{statsGeral.total}</CardTitle>
-              <CardDescription className="text-white/60 text-sm mt-2">
+              <CardDescription style={{ color: '#B2BDB9' }}>Total de Categorias</CardDescription>
+              <CardTitle className="text-3xl" style={{ color: '#F2F7F5' }}>{statsGeral.total}</CardTitle>
+              <CardDescription className="text-sm mt-2" style={{ color: '#8CA39C' }}>
                 {statsGeral.categorias} categorias • {statsGeral.subcategorias} subcategorias
               </CardDescription>
             </CardHeader>
           </Card>
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card
+            style={{
+              backgroundColor: '#18332C',
+              borderColor: '#2A4942',
+              borderWidth: '1px',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-1)',
+            }}
+          >
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Categorias de Receita</CardDescription>
-              <CardTitle className="text-3xl text-green-400">
+              <CardDescription style={{ color: '#B2BDB9' }}>Categorias de Receita</CardDescription>
+              <CardTitle className="text-3xl" style={{ color: '#6CCB8C' }}>
                 {statsReceitas.total}
               </CardTitle>
-              <CardDescription className="text-green-300/70 text-sm mt-2">
+              <CardDescription className="text-sm mt-2" style={{ color: '#8CA39C' }}>
                 {statsReceitas.categorias} categorias • {statsReceitas.subcategorias} subcategorias
               </CardDescription>
             </CardHeader>
           </Card>
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card
+            style={{
+              backgroundColor: '#18332C',
+              borderColor: '#2A4942',
+              borderWidth: '1px',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-1)',
+            }}
+          >
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Categorias de Despesa</CardDescription>
-              <CardTitle className="text-3xl text-red-400">
+              <CardDescription style={{ color: '#B2BDB9' }}>Categorias de Despesa</CardDescription>
+              <CardTitle className="text-3xl" style={{ color: '#F07167' }}>
                 {statsDespesas.total}
               </CardTitle>
-              <CardDescription className="text-red-300/70 text-sm mt-2">
+              <CardDescription className="text-sm mt-2" style={{ color: '#8CA39C' }}>
                 {statsDespesas.categorias} categorias • {statsDespesas.subcategorias} subcategorias
               </CardDescription>
             </CardHeader>
@@ -313,19 +331,27 @@ export default function CategoriesPage() {
           <TabsList
             className="grid w-full grid-cols-2"
             style={{
-              backgroundColor: 'rgb(30, 41, 59)',
-              borderColor: 'rgb(51, 65, 85)',
+              backgroundColor: '#142A25',
+              borderColor: '#2A4942',
             }}
           >
             <TabsTrigger
               value="plan"
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-300"
+              style={{
+                color: '#B2BDB9',
+              }}
+              className="data-[state=active]:text-white"
+              data-active={activeTab === 'plan'}
             >
               Plano de Contas
             </TabsTrigger>
             <TabsTrigger
               value="analytics"
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-300"
+              style={{
+                color: '#B2BDB9',
+              }}
+              className="data-[state=active]:text-white"
+              data-active={activeTab === 'analytics'}
             >
               Análise de Gastos
             </TabsTrigger>
@@ -333,13 +359,18 @@ export default function CategoriesPage() {
 
           {/* Tab: Plano de Contas */}
           <TabsContent value="plan" className="space-y-4">
-            <Card style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563'
-            }}>
+            <Card
+              style={{
+                backgroundColor: '#18332C',
+                borderColor: '#2A4942',
+                borderWidth: '1px',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-1)',
+              }}
+            >
               <CardHeader>
-                <CardTitle className="text-white">Plano de Contas</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle style={{ color: '#F2F7F5' }}>Plano de Contas</CardTitle>
+                <CardDescription style={{ color: '#B2BDB9' }}>
                   Clique em uma categoria para selecioná-la ou use o menu para ações
                 </CardDescription>
               </CardHeader>
@@ -347,15 +378,16 @@ export default function CategoriesPage() {
             {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#8CA39C' }} />
                 <Input
                   placeholder="Buscar categorias..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 border-0 text-white placeholder:text-white/50"
+                  className="pl-9"
                   style={{
-                    backgroundColor: '#1e293b',
-                    color: '#ffffff',
+                    backgroundColor: '#142A25',
+                    borderColor: '#2A4942',
+                    color: '#F2F7F5',
                     height: '40px'
                   }}
                 />
@@ -365,10 +397,11 @@ export default function CategoriesPage() {
                 onValueChange={(v) => setTipoFiltro(v as TipoTransacao | "todas")}
               >
                 <SelectTrigger
-                  className="w-full sm:w-[180px] border-0 text-white"
+                  className="w-full sm:w-[180px]"
                   style={{
-                    backgroundColor: '#1e293b',
-                    color: '#ffffff',
+                    backgroundColor: '#142A25',
+                    borderColor: '#2A4942',
+                    color: '#F2F7F5',
                     height: '40px'
                   }}
                 >
@@ -376,22 +409,22 @@ export default function CategoriesPage() {
                 </SelectTrigger>
                 <SelectContent
                   style={{
-                    backgroundColor: '#1f2937',
-                    borderColor: '#374151'
+                    backgroundColor: '#142A25',
+                    borderColor: '#2A4942'
                   }}
                 >
-                  <SelectItem value="todas" className="text-white hover:!bg-gray-700" style={{ color: '#ffffff' }}>Todas</SelectItem>
-                  <SelectItem value="receita" className="text-white hover:!bg-gray-700" style={{ color: '#ffffff' }}>Receitas</SelectItem>
-                  <SelectItem value="despesa" className="text-white hover:!bg-gray-700" style={{ color: '#ffffff' }}>Despesas</SelectItem>
-                  <SelectItem value="transferencia" className="text-white hover:!bg-gray-700" style={{ color: '#ffffff' }}>Transferências</SelectItem>
+                  <SelectItem value="todas" style={{ color: '#F2F7F5' }}>Todas</SelectItem>
+                  <SelectItem value="receita" style={{ color: '#F2F7F5' }}>Receitas</SelectItem>
+                  <SelectItem value="despesa" style={{ color: '#F2F7F5' }}>Despesas</SelectItem>
+                  <SelectItem value="transferencia" style={{ color: '#F2F7F5' }}>Transferências</SelectItem>
                 </SelectContent>
               </Select>
               <Button
                 onClick={handleCreate}
-                className="text-white w-full sm:w-auto"
+                className="w-full sm:w-auto"
                 style={{
-                  backgroundColor: '#18B0A4',
-                  color: '#ffffff',
+                  backgroundColor: '#3A8F6E',
+                  color: '#F2F7F5',
                   height: '40px'
                 }}
               >
@@ -408,18 +441,18 @@ export default function CategoriesPage() {
                 {categoriasReceita.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-medium uppercase tracking-wider text-green-300">
+                      <h3 className="text-sm font-medium uppercase tracking-wider" style={{ color: '#6CCB8C' }}>
                         Receitas
                       </h3>
-                      <span className="text-xs text-green-400/70">
+                      <span className="text-xs" style={{ color: '#8CA39C' }}>
                         {categoriasReceita.length} categorias
                       </span>
                     </div>
                     <div
                       className="rounded-lg border"
                       style={{
-                        borderColor: 'rgba(34, 197, 94, 0.25)',
-                        backgroundColor: 'rgba(34, 197, 94, 0.03)',
+                        borderColor: '#2A4942',
+                        backgroundColor: '#142A25',
                       }}
                     >
                       <div className="p-2">
@@ -443,18 +476,18 @@ export default function CategoriesPage() {
                 {categoriasTransferencia.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-medium uppercase tracking-wider text-blue-300">
+                      <h3 className="text-sm font-medium uppercase tracking-wider" style={{ color: '#8FCDBD' }}>
                         Transferências
                       </h3>
-                      <span className="text-xs text-blue-400/70">
+                      <span className="text-xs" style={{ color: '#8CA39C' }}>
                         {categoriasTransferencia.length} categorias
                       </span>
                     </div>
                     <div
                       className="rounded-lg border"
                       style={{
-                        borderColor: 'rgba(59, 130, 246, 0.25)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                        borderColor: '#2A4942',
+                        backgroundColor: '#142A25',
                       }}
                     >
                       <div className="p-2">
@@ -480,18 +513,18 @@ export default function CategoriesPage() {
                 {categoriasDespesa.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-medium uppercase tracking-wider text-red-300">
+                      <h3 className="text-sm font-medium uppercase tracking-wider" style={{ color: '#F07167' }}>
                         Despesas
                       </h3>
-                      <span className="text-xs text-red-400/70">
+                      <span className="text-xs" style={{ color: '#8CA39C' }}>
                         {categoriasDespesa.length} categorias
                       </span>
                     </div>
                     <div
                       className="rounded-lg border"
                       style={{
-                        borderColor: 'rgba(239, 68, 68, 0.25)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.03)',
+                        borderColor: '#2A4942',
+                        backgroundColor: '#142A25',
                       }}
                     >
                       <div className="p-2">
@@ -532,18 +565,19 @@ export default function CategoriesPage() {
           <DialogContent
             className="max-w-2xl max-h-[90vh] overflow-y-auto"
             style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-              borderColor: 'rgba(255, 255, 255, 0.2)'
+              backgroundColor: '#18332C',
+              borderColor: '#2A4942',
+              borderWidth: '1px',
+              boxShadow: 'var(--shadow-2)',
             }}
           >
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle style={{ color: '#F2F7F5' }}>
                 {dialogMode === "create" && "Nova Categoria"}
                 {dialogMode === "edit" && "Editar Categoria"}
                 {dialogMode === "subcategoria" && "Nova Subcategoria"}
               </DialogTitle>
-              <DialogDescription className="text-white/70">
+              <DialogDescription style={{ color: '#B2BDB9' }}>
                 {dialogMode === "create" &&
                   "Crie uma nova categoria para organizar suas transações."}
                 {dialogMode === "edit" &&
@@ -565,14 +599,15 @@ export default function CategoriesPage() {
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent
             style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-              borderColor: 'rgba(255, 255, 255, 0.2)'
+              backgroundColor: '#18332C',
+              borderColor: '#2A4942',
+              borderWidth: '1px',
+              boxShadow: 'var(--shadow-2)',
             }}
           >
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-white">Desativar Categoria</AlertDialogTitle>
-              <AlertDialogDescription className="text-white/70">
+              <AlertDialogTitle style={{ color: '#F2F7F5' }}>Desativar Categoria</AlertDialogTitle>
+              <AlertDialogDescription style={{ color: '#B2BDB9' }}>
                 Tem certeza que deseja desativar a categoria{" "}
                 <strong>{categoriaParaDeletar?.nome}</strong>? As transações
                 associadas não serão excluídas, mas ficarão sem categoria. Esta
@@ -580,10 +615,13 @@ export default function CategoriesPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel style={{ color: '#F2F7F5' }}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                style={{
+                  backgroundColor: '#F07167',
+                  color: '#F2F7F5',
+                }}
               >
                 Desativar
               </AlertDialogAction>

@@ -25,6 +25,7 @@ export type TipoInvestimento =
   | 'criptomoeda'         // Bitcoin, Ethereum, etc
   | 'outro';
 export type StatusInvestimento = 'ativo' | 'resgatado' | 'vencido';
+export type UserRole = 'admin' | 'user';
 
 // ============================================================================
 // Entidades do Banco de Dados
@@ -47,12 +48,15 @@ export interface Conta {
   tipo: TipoConta;
   agencia?: string;
   numero?: string;
-  saldo_inicial: number;
-  saldo_atual: number;
+  saldo_referencia: number; // Saldo conhecido em uma data específica (user é soberano!)
+  data_referencia: Date; // Data em que o saldo_referencia foi verificado
+  saldo_atual: number; // Saldo calculado (cache) - pode ser recalculado a qualquer momento
   ativa: boolean;
   cor?: string;
   icone?: string;
   observacoes?: string;
+  conta_pai_id?: string; // FK para conta pai (para contas vinculadas - poupança, investimento, cartões)
+  usuario_id: string; // FK para usuário (multi-tenant)
   created_at: Date;
   updated_at: Date;
 }
@@ -67,6 +71,8 @@ export interface Categoria {
   cor?: string;
   ordem: number;
   ativa: boolean;
+  is_sistema: boolean; // true = categoria padrão do sistema, false = customizada pelo usuário
+  usuario_id?: string; // FK para usuário (null = sistema, preenchido = user custom)
   created_at: Date;
   updated_at: Date;
 }
@@ -76,7 +82,35 @@ export interface Tag {
   nome: string;
   cor?: string;
   tipo: 'sistema' | 'customizada';
+  is_sistema: boolean; // true = tag padrão do sistema, false = customizada pelo usuário
+  usuario_id?: string; // FK para usuário (null = sistema, preenchido = user custom)
   created_at: Date;
+}
+
+export interface Usuario {
+  id: string;
+  nome: string;
+  email: string;
+  senha_hash: string; // Hash bcrypt da senha
+  role: UserRole;
+
+  // Perfil
+  avatar_url?: string;
+  telefone?: string;
+  data_nascimento?: Date;
+  cpf?: string;
+  biografia?: string;
+
+  // Preferências
+  tema_preferido?: string;
+  moeda_preferida?: string; // BRL, USD, EUR, etc
+  idioma_preferido?: string; // pt-BR, en-US, es-ES
+
+  // Controle
+  ativo: boolean;
+  ultimo_acesso?: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface Transacao {
@@ -101,6 +135,7 @@ export interface Transacao {
   classificacao_confianca?: number;
   hash?: string;
   origem_arquivo?: string;
+  usuario_id: string; // FK para usuário (multi-tenant)
   origem_linha?: number;
   created_at: Date;
   updated_at: Date;
@@ -119,6 +154,8 @@ export interface TemplateImportacao {
   separador_decimal?: string;
   ultima_utilizacao?: Date;
   contador_uso: number;
+  is_favorite: boolean; // Flag para templates favoritados pelo usuário
+  usuario_id: string; // FK para usuário (multi-tenant)
   created_at: Date;
   updated_at: Date;
 }
@@ -138,6 +175,7 @@ export interface RegraClassificacao {
   total_confirmacoes: number;  // Vezes que usuário manteve a classificação
   total_rejeicoes: number;     // Vezes que usuário mudou a classificação
 
+  usuario_id: string; // FK para usuário (multi-tenant)
   created_at: Date;
   updated_at: Date;
 }
@@ -170,6 +208,7 @@ export interface CartaoConfig {
   dia_vencimento: number;
   ativo: boolean;
   cor?: string;
+  usuario_id: string; // FK para usuário (multi-tenant)
   created_at: Date;
   updated_at: Date;
 }
@@ -214,6 +253,7 @@ export interface CentroCusto {
   cor?: string;
   icone?: string;
   ativo: boolean;
+  usuario_id: string; // FK para usuário (multi-tenant)
   created_at: Date;
   updated_at: Date;
 }
@@ -231,6 +271,7 @@ export interface Orcamento {
   alerta_100: boolean;
   alerta_80_enviado: boolean;
   alerta_100_enviado: boolean;
+  usuario_id: string; // FK para usuário (multi-tenant)
   created_at: Date;
   updated_at: Date;
 }
@@ -253,6 +294,7 @@ export interface Investimento {
   conta_origem_id?: string; // Conta que originou o investimento
   observacoes?: string;
   cor?: string;
+  usuario_id: string; // FK para usuário (multi-tenant)
   created_at: Date;
   updated_at: Date;
 }
@@ -285,10 +327,12 @@ export interface CreateContaDTO {
   tipo: TipoConta;
   agencia?: string;
   numero?: string;
-  saldo_inicial: number;
+  saldo_referencia: number; // Saldo verificado pelo usuário
+  data_referencia?: Date; // Data da verificação (padrão: hoje)
   cor?: string;
   icone?: string;
   observacoes?: string;
+  conta_pai_id?: string; // FK para conta pai (para contas vinculadas)
 }
 
 export interface CreateTransacaoDTO {

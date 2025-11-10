@@ -86,8 +86,8 @@ export function MonthPicker({
       <Button
         size="icon"
         onClick={handlePreviousMonth}
-        className="h-10 w-10 rounded-lg border-0 text-white transition-all"
-        style={{ backgroundColor: '#1e293b', color: '#ffffff' }}
+        variant="default"
+        className="h-10 w-10 rounded-lg"
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
@@ -97,44 +97,42 @@ export function MonthPicker({
           <Button
             className={cn(
               "h-10 w-[160px] justify-center font-medium capitalize",
-              "rounded-lg border-0 text-white",
-              "transition-all",
-              "text-sm"
+              "rounded-lg text-sm"
             )}
-            style={{ backgroundColor: '#1e293b', color: '#ffffff' }}
+            variant="default"
           >
             {format(selectedDate, 'MMMM', { locale: ptBR })}
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[340px] p-0 rounded-2xl border-white/20 bg-slate-800"
+          className="w-[340px] p-0 rounded-2xl bg-popover text-popover-foreground border border-border"
           align="center"
         >
-          <div className="bg-gradient-to-br from-primary/30 to-primary/20 text-white p-4 rounded-t-2xl border-b border-white/20">
+          <div className="bg-gradient-to-br from-primary/30 to-primary/20 text-foreground p-4 rounded-t-2xl border-b border-border">
             <div className="flex items-center justify-between">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handlePreviousYear}
-                className="h-10 w-10 text-white hover:bg-white/10 rounded-lg"
+                className="h-10 w-10 rounded-lg"
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold">
                 {calendarYear}
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleNextYear}
-                className="h-10 w-10 text-white hover:bg-white/10 rounded-lg"
+                className="h-10 w-10 rounded-lg"
               >
                 <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
           </div>
 
-          <div className="p-6 bg-slate-800 rounded-b-2xl">
+          <div className="p-6 bg-popover rounded-b-2xl">
             <div className="grid grid-cols-4 gap-3 mb-6">
               {MONTHS.map((month, index) => (
                 <button
@@ -142,10 +140,10 @@ export function MonthPicker({
                   onClick={() => handleMonthSelect(index)}
                   className={cn(
                     "h-12 rounded-lg font-medium text-sm transition-all",
-                    "hover:bg-white/10",
+                    "hover:bg-accent hover:text-accent-foreground",
                     isCurrentMonth(index)
-                      ? "bg-primary text-white hover:bg-primary/90"
-                      : "text-white/70 hover:text-white"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "text-muted-foreground"
                   )}
                 >
                   {month}
@@ -153,18 +151,18 @@ export function MonthPicker({
               ))}
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-white/20 gap-3">
+            <div className="flex items-center justify-between pt-4 border-t border-border gap-3">
               <Button
                 variant="ghost"
                 onClick={handleCancel}
-                className="flex-1 text-white/70 hover:text-white hover:bg-white/10 font-semibold rounded-lg h-10"
+                className="flex-1 font-semibold rounded-lg h-10"
               >
                 CANCELAR
               </Button>
               <Button
                 onClick={handleCurrentMonth}
-                className="flex-1 bg-primary text-white hover:bg-primary/90 font-semibold rounded-lg h-10"
-                style={{ backgroundColor: '#18B0A4', color: '#ffffff' }}
+                className="flex-1 font-semibold rounded-lg h-10"
+                variant="default"
               >
                 MÊS ATUAL
               </Button>
@@ -176,8 +174,8 @@ export function MonthPicker({
       <Button
         size="icon"
         onClick={handleNextMonth}
-        className="h-10 w-10 rounded-lg border-0 text-white transition-all"
-        style={{ backgroundColor: '#1e293b', color: '#ffffff' }}
+        variant="default"
+        className="h-10 w-10 rounded-lg"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>

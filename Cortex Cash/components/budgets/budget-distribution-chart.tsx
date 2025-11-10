@@ -4,21 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { PieChart as PieChartIcon } from 'lucide-react'
 import type { OrcamentoComProgresso } from '@/lib/services/orcamento.service'
+import { getChartColors, THEME_COLORS } from '@/lib/constants/colors'
 
 interface BudgetDistributionChartProps {
   orcamentos: OrcamentoComProgresso[]
 }
 
-const COLORS = [
-  '#18B0A4', // Primary
-  '#10B981', // green-400
-  '#3B82F6', // blue-500
-  '#F59E0B', // amber-400
-  '#8B5CF6', // violet-500
-  '#EF4444', // red-400
-  '#EC4899', // pink-500
-  '#14B8A6', // teal-500
-]
+const COLORS = getChartColors()
 
 export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartProps) {
   const formatCurrency = (value: number) => {
@@ -48,20 +40,14 @@ export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartP
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div
-          className="rounded-lg p-3 shadow-lg border"
-          style={{
-            backgroundColor: '#1f2937',
-            borderColor: '#374151',
-          }}
-        >
-          <p className="font-semibold text-white mb-1">
+        <div className="rounded-lg p-3 shadow-lg border bg-card border-border">
+          <p className="font-semibold text-foreground mb-1">
             {data.icone} {data.name}
           </p>
-          <p className="text-sm text-green-400">
+          <p className="text-sm text-success">
             Realizado: {formatCurrency(data.value)}
           </p>
-          <p className="text-sm text-amber-400">
+          <p className="text-sm text-gold">
             {data.percentual.toFixed(1)}% do total
           </p>
         </div>
@@ -79,7 +65,7 @@ export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartP
               className="h-3 w-3 rounded flex-shrink-0"
               style={{ backgroundColor: entry.color }}
             ></div>
-            <span className="text-xs text-white/70 truncate">
+            <span className="text-xs text-secondary truncate">
               {entry.payload.icone} {entry.value}
             </span>
           </div>
@@ -90,24 +76,19 @@ export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartP
 
   if (chartData.length === 0) {
     return (
-      <Card
-        style={{
-          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-          backgroundColor: '#3B5563',
-        }}
-      >
+      <Card className="border-border bg-gradient-to-br from-card to-background">
         <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center gap-2">
+          <CardTitle className="text-foreground text-lg flex items-center gap-2">
             <PieChartIcon className="h-5 w-5" />
             Distribuição de Gastos
           </CardTitle>
-          <CardDescription className="text-white/70">
+          <CardDescription className="text-secondary">
             Proporção de gastos por orçamento
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-12">
-            <p className="text-white/50 text-sm">
+            <p className="text-muted-foreground text-sm">
               Nenhum gasto registrado ainda
             </p>
           </div>
@@ -117,18 +98,13 @@ export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartP
   }
 
   return (
-    <Card
-      style={{
-        background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-        backgroundColor: '#3B5563',
-      }}
-    >
+    <Card className="border-border bg-gradient-to-br from-card to-background">
       <CardHeader>
-        <CardTitle className="text-white text-lg flex items-center gap-2">
+        <CardTitle className="text-foreground text-lg flex items-center gap-2">
           <PieChartIcon className="h-5 w-5" />
           Distribuição de Gastos
         </CardTitle>
-        <CardDescription className="text-white/70">
+        <CardDescription className="text-secondary">
           Proporção de gastos por orçamento no mês
         </CardDescription>
       </CardHeader>
@@ -155,8 +131,8 @@ export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartP
         </ResponsiveContainer>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-white/70">Total Gasto no Mês</p>
-          <p className="text-2xl font-bold text-white">{formatCurrency(totalRealizado)}</p>
+          <p className="text-sm text-secondary">Total Gasto no Mês</p>
+          <p className="text-2xl font-bold text-foreground">{formatCurrency(totalRealizado)}</p>
         </div>
       </CardContent>
     </Card>

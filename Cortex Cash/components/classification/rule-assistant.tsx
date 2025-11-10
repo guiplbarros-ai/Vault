@@ -130,19 +130,14 @@ export function RuleAssistant() {
   };
 
   return (
-    <Card
-      style={{
-        background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-        backgroundColor: '#3B5563'
-      }}
-    >
+    <Card className="bg-card border-border">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-white" />
-            <CardTitle className="text-white">Assistente de Regras (IA)</CardTitle>
+            <Brain className="h-5 w-5 text-foreground" />
+            <CardTitle className="text-foreground">Assistente de Regras (IA)</CardTitle>
           </div>
-          <CardDescription className="text-white/70">
+          <CardDescription className="text-foreground/70">
             Peça sugestões de regras com base em exemplos reais
           </CardDescription>
         </div>
@@ -150,35 +145,35 @@ export function RuleAssistant() {
       <CardContent>
         <div className="grid gap-4 md:grid-cols-3 items-end">
           <div className="space-y-2 md:col-span-2">
-            <Label className="text-white">Exemplo de descrição</Label>
+            <Label className="text-foreground">Exemplo de descrição</Label>
             <Input
               value={descricaoExemplo}
               onChange={(e) => setDescricaoExemplo(e.target.value)}
               placeholder="Ex: Uber Trip 5ABCD"
-              className="!bg-[#1e293b] !text-white !border-white/20 placeholder:!text-white/50"
+              className="bg-muted text-foreground border-border placeholder:text-foreground/50"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-white">Tipo</Label>
+            <Label className="text-foreground">Tipo</Label>
             <Select value={tipo} onValueChange={(v: TipoTransacaoForm) => setTipo(v)}>
-              <SelectTrigger className="!bg-[#1e293b] !text-white !border-white/20">
+              <SelectTrigger className="bg-muted text-foreground border-border">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
-              <SelectContent className="!bg-gray-800 !border-gray-700">
-                <SelectItem value="despesa" className="!text-white">Despesa</SelectItem>
-                <SelectItem value="receita" className="!text-white">Receita</SelectItem>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="despesa" className="text-foreground">Despesa</SelectItem>
+                <SelectItem value="receita" className="text-foreground">Receita</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2 md:col-span-2">
-            <Label className="text-white">Valor (opcional)</Label>
+            <Label className="text-foreground">Valor (opcional)</Label>
             <Input
               type="number"
               step="0.01"
               value={valor}
               onChange={(e) => setValor(e.target.value === "" ? "" : Number(e.target.value))}
               placeholder="Ex: 34.90"
-              className="!bg-[#1e293b] !text-white !border-white/20 placeholder:!text-white/50"
+              className="bg-muted text-foreground border-border placeholder:text-foreground/50"
             />
           </div>
           <div className="space-y-2">
@@ -186,8 +181,7 @@ export function RuleAssistant() {
             <Button
               onClick={askAI}
               disabled={loading}
-              className="w-full text-white"
-              style={{ backgroundColor: '#18B0A4' }}
+              className="w-full bg-primary text-foreground"
             >
               {loading ? 'Consultando...' : (
                 <>
@@ -200,33 +194,31 @@ export function RuleAssistant() {
         </div>
 
         {suggestion && (
-          <div className="mt-6 p-4 rounded-lg border border-white/20 space-y-3"
-               style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+          <div className="mt-6 p-4 rounded-lg border border-border bg-muted/50 space-y-3">
             <div className="flex items-center gap-2">
-              <Wand2 className="h-4 w-4 text-white" />
-              <p className="text-white font-medium">Sugestão da IA</p>
+              <Wand2 className="h-4 w-4 text-foreground" />
+              <p className="text-foreground font-medium">Sugestão da IA</p>
             </div>
             <div className="grid md:grid-cols-3 gap-3">
-              <div className="text-white/80">
-                <p className="text-xs text-white/60">Categoria</p>
+              <div className="text-foreground/80">
+                <p className="text-xs text-foreground/60">Categoria</p>
                 <p className="font-medium">{suggestion.categoria_nome}</p>
               </div>
-              <div className="text-white/80">
-                <p className="text-xs text-white/60">Confiança</p>
+              <div className="text-foreground/80">
+                <p className="text-xs text-foreground/60">Confiança</p>
                 <Badge variant="outline" className="font-mono">
                   {Math.round(suggestion.confianca * 100)}%
                 </Badge>
               </div>
-              <div className="text-white/80">
-                <p className="text-xs text-white/60">Padrão sugerido</p>
+              <div className="text-foreground/80">
+                <p className="text-xs text-foreground/60">Padrão sugerido</p>
                 <p className="font-mono">{suggestion.padrao_sugerido}</p>
               </div>
             </div>
             <div className="pt-2">
               <Button
                 onClick={createRule}
-                className="text-white"
-                style={{ backgroundColor: '#18B0A4' }}
+                className="bg-primary text-foreground"
               >
                 Criar regra com esta sugestão
               </Button>

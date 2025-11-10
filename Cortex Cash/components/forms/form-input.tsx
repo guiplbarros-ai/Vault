@@ -14,26 +14,29 @@ export interface FormInputProps extends React.InputHTMLAttributes<HTMLInputEleme
 }
 
 export const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
-  ({ name, label, description, required, className, ...props }, ref) => {
+  ({ name, label, description, required, className, type, ...props }, ref) => {
     const { register, formState: { errors } } = useFormContext()
     const error = errors[name]
 
     // Register the field and merge with forwarded ref
-    const { ref: registerRef, ...registerRest } = register(name)
+    // Se for type="number", converte automaticamente para número
+    const { ref: registerRef, ...registerRest } = register(name, {
+      valueAsNumber: type === 'number',
+    })
 
     return (
       <div className="space-y-2">
         {label && (
           <Label
             htmlFor={name}
-            className={cn('text-white', required && 'after:content-["*"] after:ml-0.5 after:text-red-400')}
-            style={{ color: '#ffffff !important' } as React.CSSProperties}
+            className={cn(required && 'after:content-["*"] after:ml-0.5 after:text-red-400')}
           >
             {label}
           </Label>
         )}
         <Input
           id={name}
+          type={type}
           {...registerRest}
           {...props}
           ref={(e) => {
@@ -46,22 +49,17 @@ export const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
               }
             }
           }}
-          className={cn('!bg-[#1e293b] !text-white !border-white/20', error && 'border-destructive', className)}
-          style={{
-            backgroundColor: '#1e293b !important',
-            color: '#ffffff !important',
-            borderColor: 'rgba(255, 255, 255, 0.2) !important'
-          } as React.CSSProperties}
+          className={cn(error && 'border-destructive', className)}
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? `${name}-error` : description ? `${name}-description` : undefined}
         />
         {description && !error && (
-          <p id={`${name}-description`} className="text-sm text-white/70" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+          <p id={`${name}-description`} className="text-sm text-muted-foreground">
             {description}
           </p>
         )}
         {error && (
-          <p id={`${name}-error`} className="text-sm font-medium text-red-400" style={{ color: '#f87171' }}>
+          <p id={`${name}-error`} className="text-sm font-medium text-destructive">
             {error.message as string}
           </p>
         )}

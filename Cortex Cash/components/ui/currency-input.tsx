@@ -74,22 +74,37 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
     // Update display value when value prop changes (only when not focused)
     React.useEffect(() => {
       if (!isFocused) {
-        setDisplayValue(formatCurrency(value))
+        // Se o valor é 0, mostra vazio ao invés de "R$ 0,00"
+        if (value === 0 || value === undefined || value === null) {
+          setDisplayValue('')
+        } else {
+          setDisplayValue(formatCurrency(value))
+        }
       }
     }, [value, formatCurrency, isFocused])
 
     // Initialize display value on mount
     React.useEffect(() => {
-      setDisplayValue(formatCurrency(value))
+      // Se o valor é 0, mostra vazio ao invés de "R$ 0,00"
+      if (value === 0 || value === undefined || value === null) {
+        setDisplayValue('')
+      } else {
+        setDisplayValue(formatCurrency(value))
+      }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
       setIsFocused(true)
-      // Show raw number when focused for easier editing
-      setDisplayValue(value.toFixed(decimalScale))
-      // Select all text for easy replacement
-      e.target.select()
+      // Se o valor é 0, deixa vazio para o usuário começar a digitar
+      if (value === 0 || value === undefined || value === null) {
+        setDisplayValue('')
+      } else {
+        // Show raw number when focused for easier editing
+        setDisplayValue(value.toFixed(decimalScale))
+        // Select all text for easy replacement
+        setTimeout(() => e.target.select(), 0)
+      }
     }
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -179,6 +194,7 @@ export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputPro
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           disabled={disabled}
+          placeholder={formatCurrency(0)}
           className={cn('text-right font-mono', className)}
           {...props}
         />

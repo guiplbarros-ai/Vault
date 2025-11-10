@@ -160,38 +160,51 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Search and Filters */}
+      {/* Search and Filters (TEMA.md) */}
       {searchable && (
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: '#8CA39C' }} />
             <Input
               placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
+              style={{
+                backgroundColor: '#142A25',
+                borderColor: '#2A4942',
+                color: '#F2F7F5',
+              }}
             />
           </div>
         </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-xl overflow-hidden shadow-md border" style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
-      }}>
+      {/* Table (TEMA.md: superfície sólida) */}
+      <div
+        className="overflow-hidden"
+        style={{
+          backgroundColor: '#18332C',
+          borderColor: '#2A4942',
+          borderWidth: '1px',
+          borderStyle: 'solid',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--shadow-1)',
+        }}
+      >
         <Table>
           <TableHeader>
-            <TableRow className={isDark ? "bg-zinc-800/30" : "bg-zinc-50/80"}>
+            <TableRow style={{ backgroundColor: '#162B26', borderColor: '#2A4942' }}>
               {columns.map((column) => (
                 <TableHead
                   key={column.id}
-                  style={{ width: column.width }}
+                  style={{
+                    width: column.width,
+                    color: '#F2F7F5',
+                    fontWeight: 600,
+                  }}
                   className={cn(
-                    column.sortable && 'cursor-pointer select-none',
-                    isDark ? 'text-white' : ''
+                    column.sortable && 'cursor-pointer select-none'
                   )}
                   onClick={() => column.sortable && handleSort(column.id)}
                 >
@@ -206,10 +219,11 @@ export function DataTable<T extends Record<string, any>>({
           <TableBody>
             {paginatedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className={cn(
-                  "h-24 text-center",
-                  isDark ? "text-white/70" : ""
-                )}>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                  style={{ color: '#8CA39C' }}
+                >
                   {emptyMessage}
                 </TableCell>
               </TableRow>
@@ -218,13 +232,20 @@ export function DataTable<T extends Record<string, any>>({
                 <TableRow
                   key={rowIndex}
                   onClick={() => onRowClick?.(row)}
-                  className={cn(
-                    onRowClick && 'cursor-pointer',
-                    isDark ? 'hover:bg-zinc-800/40' : 'hover:bg-zinc-50/80'
-                  )}
+                  className={cn(onRowClick && 'cursor-pointer')}
+                  style={{
+                    backgroundColor: rowIndex % 2 === 0 ? '#18332C' : '#142A25',
+                    borderColor: '#2A4942',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#1D3A34'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = rowIndex % 2 === 0 ? '#18332C' : '#142A25'
+                  }}
                 >
                   {columns.map((column) => (
-                    <TableCell key={column.id}>
+                    <TableCell key={column.id} style={{ color: '#F2F7F5' }}>
                       {column.cell
                         ? column.cell(row)
                         : column.accessorKey
@@ -239,14 +260,11 @@ export function DataTable<T extends Record<string, any>>({
         </Table>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination (TEMA.md) */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <p className={cn(
-              "text-sm",
-              isDark ? "text-white/70" : "text-muted-foreground"
-            )}>
+            <p className="text-sm" style={{ color: '#B2BDB9' }}>
               Exibindo {startIndex + 1} a {endIndex} de {sortedData.length} resultados
             </p>
             <Select
@@ -256,93 +274,23 @@ export function DataTable<T extends Record<string, any>>({
                 setCurrentPage(1)
               }}
             >
-              <SelectTrigger className={cn(
-                "w-[100px]",
-                isDark
-                  ? "!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700"
-                  : "!bg-white !border-gray-300 hover:!bg-gray-50"
-              )}
-              style={isDark ? {
-                backgroundColor: '#1f2937',
-                borderColor: '#4b5563',
-                color: '#ffffff'
-              } : {
-                color: '#111827'
-              }}>
-                <SelectValue
-                  className={isDark ? "!text-white" : ""}
-                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-                />
+              <SelectTrigger className="w-[100px]">
+                <SelectValue />
               </SelectTrigger>
-              <SelectContent
-                className={cn(
-                  isDark
-                    ? "!bg-gray-800 !border-gray-700"
-                    : "!bg-white !border-gray-200"
-                )}
-                style={isDark ? {
-                  backgroundColor: '#1f2937',
-                  borderColor: '#374151'
-                } : undefined}
-              >
-                <SelectItem
-                  value="5"
-                  className={cn(
-                    "text-sm font-medium cursor-pointer",
-                    isDark
-                      ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
-                      : ""
-                  )}
-                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-                >
+              <SelectContent>
+                <SelectItem value="5" className="text-sm font-medium cursor-pointer">
                   5
                 </SelectItem>
-                <SelectItem
-                  value="10"
-                  className={cn(
-                    "text-sm font-medium cursor-pointer",
-                    isDark
-                      ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
-                      : ""
-                  )}
-                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-                >
+                <SelectItem value="10" className="text-sm font-medium cursor-pointer">
                   10
                 </SelectItem>
-                <SelectItem
-                  value="20"
-                  className={cn(
-                    "text-sm font-medium cursor-pointer",
-                    isDark
-                      ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
-                      : ""
-                  )}
-                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-                >
+                <SelectItem value="20" className="text-sm font-medium cursor-pointer">
                   20
                 </SelectItem>
-                <SelectItem
-                  value="50"
-                  className={cn(
-                    "text-sm font-medium cursor-pointer",
-                    isDark
-                      ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
-                      : ""
-                  )}
-                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-                >
+                <SelectItem value="50" className="text-sm font-medium cursor-pointer">
                   50
                 </SelectItem>
-                <SelectItem
-                  value="100"
-                  className={cn(
-                    "text-sm font-medium cursor-pointer",
-                    isDark
-                      ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
-                      : ""
-                  )}
-                  style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-                >
+                <SelectItem value="100" className="text-sm font-medium cursor-pointer">
                   100
                 </SelectItem>
               </SelectContent>
@@ -366,10 +314,7 @@ export function DataTable<T extends Record<string, any>>({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className={cn(
-              "text-sm",
-              isDark ? "text-white" : ""
-            )}>
+            <span className="text-sm" style={{ color: '#F2F7F5' }}>
               Página {currentPage} de {totalPages}
             </span>
             <Button

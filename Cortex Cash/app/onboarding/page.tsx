@@ -64,10 +64,27 @@ export default function OnboardingPage() {
         return;
       }
 
+      // Garantir que as instituições estejam seedadas
+      await ensureInstituicoes();
+
       setChecking(false);
     } catch (error) {
       console.error('Erro ao verificar status do onboarding:', error);
       setChecking(false);
+    }
+  };
+
+  const ensureInstituicoes = async () => {
+    try {
+      const { hasInstituicoes, seedInstituicoes } = await import('@/lib/db/seed-instituicoes');
+      const hasInst = await hasInstituicoes();
+
+      if (!hasInst) {
+        console.log('Seedando instituições para onboarding...');
+        await seedInstituicoes();
+      }
+    } catch (error) {
+      console.error('Erro ao verificar/seedar instituições:', error);
     }
   };
 
@@ -114,23 +131,15 @@ export default function OnboardingPage() {
   const handleAccountCreate = async (data: AccountFormData) => {
     setLoading(true);
     try {
-      // Criar instituição padrão se necessário
-      const { instituicaoService } = await import('@/lib/services/instituicao.service');
-      let instituicaoId = 'default-institution-id';
+      // Obter a instituição selecionada do formulário
+      const instituicaoId = data.institution || '';
 
-      try {
-        const instituicoes = await instituicaoService.listInstituicoes();
-        if (instituicoes.length === 0) {
-          const instituicao = await instituicaoService.createInstituicao({
-            nome: 'Minha Instituição',
-            cor: '#18B0A4',
-          });
-          instituicaoId = instituicao.id;
-        } else {
-          instituicaoId = instituicoes[0].id;
-        }
-      } catch (error) {
-        console.error('Erro ao criar/buscar instituição:', error);
+      if (!instituicaoId) {
+        toast.error('Instituição não selecionada', {
+          description: 'Por favor, selecione uma instituição.',
+        });
+        setLoading(false);
+        return;
       }
 
       // Criar conta
@@ -161,61 +170,121 @@ export default function OnboardingPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          background: 'radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%)',
+          backgroundAttachment: 'fixed',
+        }}
+      >
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-teal-400 mx-auto mb-4" />
-          <p className="text-white/70">Verificando configuração inicial...</p>
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: '#3A8F6E' }} />
+          <p style={{ color: '#BBC5C2' }}>Verificando configuração inicial...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background: 'radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%)',
+        backgroundAttachment: 'fixed',
+      }}
+    >
       <div className="w-full max-w-4xl">
         {/* Welcome Step */}
         {step === 'welcome' && (
-          <Card className="border-white/20 bg-gradient-to-br from-gray-800 to-gray-900">
+          <Card
+            className="overflow-hidden"
+            style={{
+              backgroundColor: '#1a362f',
+              border: '1px solid #2d5247',
+              borderRadius: '18px',
+              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
+            }}
+          >
             <CardHeader className="text-center pb-8">
-              <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
-                <Sparkles className="h-10 w-10 text-white" />
+              <div
+                className="mx-auto mb-6 w-20 h-20 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: '#3A8F6E' }}
+              >
+                <Sparkles className="h-10 w-10" style={{ color: '#F7FAF9' }} />
               </div>
-              <CardTitle className="text-4xl font-bold text-white mb-3">
+              <CardTitle className="text-4xl font-bold mb-3" style={{ color: '#F7FAF9' }}>
                 Bem-vindo ao Cortex Cash
               </CardTitle>
-              <CardDescription className="text-lg text-white/70">
+              <CardDescription className="text-lg" style={{ color: '#BBC5C2' }}>
                 Seu assistente financeiro inteligente com IA
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid md:grid-cols-3 gap-4">
-                <div className="text-center p-6 rounded-lg bg-white/5 border border-white/10">
-                  <BarChart3 className="h-8 w-8 text-teal-400 mx-auto mb-3" />
-                  <h3 className="text-sm font-semibold text-white mb-2">Análises Avançadas</h3>
-                  <p className="text-xs text-white/60">Dashboards e relatórios inteligentes</p>
+                <div
+                  className="text-center p-6 rounded-lg"
+                  style={{
+                    backgroundColor: '#152b26',
+                    border: '1px solid #2d5247',
+                    borderRadius: '14px',
+                  }}
+                >
+                  <BarChart3 className="h-8 w-8 mx-auto mb-3" style={{ color: '#3A8F6E' }} />
+                  <h3 className="text-sm font-semibold mb-2" style={{ color: '#F7FAF9' }}>Análises Avançadas</h3>
+                  <p className="text-xs" style={{ color: '#94a8a1' }}>Dashboards e relatórios inteligentes</p>
                 </div>
-                <div className="text-center p-6 rounded-lg bg-white/5 border border-white/10">
-                  <TrendingUp className="h-8 w-8 text-teal-400 mx-auto mb-3" />
-                  <h3 className="text-sm font-semibold text-white mb-2">Classificação IA</h3>
-                  <p className="text-xs text-white/60">Categorização automática com GPT-4o</p>
+                <div
+                  className="text-center p-6 rounded-lg"
+                  style={{
+                    backgroundColor: '#152b26',
+                    border: '1px solid #2d5247',
+                    borderRadius: '14px',
+                  }}
+                >
+                  <TrendingUp className="h-8 w-8 mx-auto mb-3" style={{ color: '#3A8F6E' }} />
+                  <h3 className="text-sm font-semibold mb-2" style={{ color: '#F7FAF9' }}>Classificação IA</h3>
+                  <p className="text-xs" style={{ color: '#94a8a1' }}>Categorização automática com GPT-4o</p>
                 </div>
-                <div className="text-center p-6 rounded-lg bg-white/5 border border-white/10">
-                  <Shield className="h-8 w-8 text-teal-400 mx-auto mb-3" />
-                  <h3 className="text-sm font-semibold text-white mb-2">100% Local</h3>
-                  <p className="text-xs text-white/60">Seus dados ficam no seu navegador</p>
+                <div
+                  className="text-center p-6 rounded-lg"
+                  style={{
+                    backgroundColor: '#152b26',
+                    border: '1px solid #2d5247',
+                    borderRadius: '14px',
+                  }}
+                >
+                  <Shield className="h-8 w-8 mx-auto mb-3" style={{ color: '#3A8F6E' }} />
+                  <h3 className="text-sm font-semibold mb-2" style={{ color: '#F7FAF9' }}>100% Local</h3>
+                  <p className="text-xs" style={{ color: '#94a8a1' }}>Seus dados ficam no seu navegador</p>
                 </div>
               </div>
 
-              <Separator className="bg-white/10" />
+              <Separator style={{ backgroundColor: '#2d5247' }} />
 
-              <div className="text-center">
+              <div className="flex justify-center gap-4">
+                <Button
+                  onClick={() => router.push('/login')}
+                  size="lg"
+                  variant="outline"
+                  className="px-8"
+                  style={{
+                    backgroundColor: '#152b26',
+                    border: '1px solid #2d5247',
+                    color: '#F7FAF9',
+                    borderRadius: '12px',
+                  }}
+                >
+                  Fazer Login
+                </Button>
                 <Button
                   onClick={() => setStep('choose-mode')}
                   size="lg"
-                  className="text-white px-8"
+                  className="px-8"
                   style={{
-                    background: 'linear-gradient(135deg, #18B0A4 0%, #16a89d 100%)',
-                    backgroundColor: '#18B0A4',
+                    backgroundColor: '#3A8F6E',
+                    color: '#F7FAF9',
+                    borderRadius: '12px',
+                    border: 'none',
                   }}
                 >
                   Começar
@@ -228,12 +297,19 @@ export default function OnboardingPage() {
 
         {/* Choose Mode Step */}
         {step === 'choose-mode' && (
-          <Card className="border-white/20 bg-gradient-to-br from-gray-800 to-gray-900">
+          <Card
+            style={{
+              backgroundColor: '#1a362f',
+              border: '1px solid #2d5247',
+              borderRadius: '18px',
+              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
+            }}
+          >
             <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold text-white mb-2">
+              <CardTitle className="text-3xl font-bold mb-2" style={{ color: '#F7FAF9' }}>
                 Como você quer começar?
               </CardTitle>
-              <CardDescription className="text-white/70">
+              <CardDescription style={{ color: '#BBC5C2' }}>
                 Escolha entre explorar com dados de exemplo ou criar sua primeira conta real
               </CardDescription>
             </CardHeader>
@@ -242,30 +318,48 @@ export default function OnboardingPage() {
                 {/* Demo Mode */}
                 <button
                   onClick={() => handleModeSelection('demo')}
-                  className="group relative overflow-hidden rounded-xl border-2 border-white/20 p-6 text-left transition-all hover:border-teal-400 hover:shadow-xl hover:shadow-teal-500/20"
+                  className="group relative overflow-hidden p-6 text-left transition-all"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(24, 176, 164, 0.1) 0%, rgba(22, 168, 157, 0.05) 100%)',
+                    backgroundColor: '#152b26',
+                    border: '2px solid #3A8F6E',
+                    borderRadius: '18px',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#1d3a33';
+                    e.currentTarget.style.boxShadow = '0 8px 16px -4px rgba(58, 143, 110, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#152b26';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
-                  <Badge className="mb-4 bg-teal-500 text-white">RECOMENDADO</Badge>
-                  <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-lg bg-teal-500/20">
-                    <Database className="h-8 w-8 text-teal-400" />
+                  <Badge
+                    className="mb-4"
+                    style={{ backgroundColor: '#3A8F6E', color: '#F7FAF9' }}
+                  >
+                    RECOMENDADO
+                  </Badge>
+                  <div
+                    className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-lg"
+                    style={{ backgroundColor: '#1a362f' }}
+                  >
+                    <Database className="h-8 w-8" style={{ color: '#3A8F6E' }} />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Modo Demonstração</h3>
-                  <p className="text-sm text-white/70 mb-4">
+                  <h3 className="text-xl font-bold mb-2" style={{ color: '#F7FAF9' }}>Modo Demonstração</h3>
+                  <p className="text-sm mb-4" style={{ color: '#BBC5C2' }}>
                     Explore todas as funcionalidades com dados de exemplo já populados
                   </p>
-                  <ul className="space-y-2 text-sm text-white/80">
+                  <ul className="space-y-2 text-sm" style={{ color: '#BBC5C2' }}>
                     <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-teal-400" />
+                      <CheckCircle2 className="h-4 w-4" style={{ color: '#3A8F6E' }} />
                       6 contas pré-configuradas
                     </li>
                     <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-teal-400" />
+                      <CheckCircle2 className="h-4 w-4" style={{ color: '#3A8F6E' }} />
                       90+ transações de exemplo
                     </li>
                     <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-teal-400" />
+                      <CheckCircle2 className="h-4 w-4" style={{ color: '#3A8F6E' }} />
                       Dashboards prontos para explorar
                     </li>
                   </ul>
@@ -274,29 +368,42 @@ export default function OnboardingPage() {
                 {/* Real Mode */}
                 <button
                   onClick={() => handleModeSelection('real')}
-                  className="group relative overflow-hidden rounded-xl border-2 border-white/20 p-6 text-left transition-all hover:border-white/40 hover:shadow-xl"
+                  className="group relative overflow-hidden p-6 text-left transition-all"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)',
+                    backgroundColor: '#152b26',
+                    border: '1px solid #2d5247',
+                    borderRadius: '18px',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#1d3a33';
+                    e.currentTarget.style.borderColor = '#3a6456';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#152b26';
+                    e.currentTarget.style.borderColor = '#2d5247';
                   }}
                 >
-                  <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-lg bg-white/10">
-                    <Wallet className="h-8 w-8 text-white" />
+                  <div
+                    className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-lg"
+                    style={{ backgroundColor: '#1a362f' }}
+                  >
+                    <Wallet className="h-8 w-8" style={{ color: '#F7FAF9' }} />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Começar do Zero</h3>
-                  <p className="text-sm text-white/70 mb-4">
+                  <h3 className="text-xl font-bold mb-2" style={{ color: '#F7FAF9' }}>Começar do Zero</h3>
+                  <p className="text-sm mb-4" style={{ color: '#BBC5C2' }}>
                     Crie sua primeira conta e comece a gerenciar suas finanças reais
                   </p>
-                  <ul className="space-y-2 text-sm text-white/80">
+                  <ul className="space-y-2 text-sm" style={{ color: '#BBC5C2' }}>
                     <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-white/60" />
+                      <CheckCircle2 className="h-4 w-4" style={{ color: '#94a8a1' }} />
                       Configure sua primeira conta
                     </li>
                     <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-white/60" />
+                      <CheckCircle2 className="h-4 w-4" style={{ color: '#94a8a1' }} />
                       Seus dados reais desde o início
                     </li>
                     <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-white/60" />
+                      <CheckCircle2 className="h-4 w-4" style={{ color: '#94a8a1' }} />
                       Controle total desde o começo
                     </li>
                   </ul>
@@ -308,43 +415,67 @@ export default function OnboardingPage() {
 
         {/* Demo Confirm Step */}
         {step === 'demo-confirm' && (
-          <Card className="border-white/20 bg-gradient-to-br from-gray-800 to-gray-900">
+          <Card
+            style={{
+              backgroundColor: '#1a362f',
+              border: '1px solid #2d5247',
+              borderRadius: '18px',
+              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
+            }}
+          >
             <CardHeader className="text-center">
-              <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-teal-500/20 flex items-center justify-center">
-                <Database className="h-8 w-8 text-teal-400" />
+              <div
+                className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: '#152b26' }}
+              >
+                <Database className="h-8 w-8" style={{ color: '#3A8F6E' }} />
               </div>
-              <CardTitle className="text-3xl font-bold text-white mb-2">
+              <CardTitle className="text-3xl font-bold mb-2" style={{ color: '#F7FAF9' }}>
                 Popular com Dados Demo
               </CardTitle>
-              <CardDescription className="text-white/70">
+              <CardDescription style={{ color: '#BBC5C2' }}>
                 Vamos criar contas e transações de exemplo para você explorar
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="rounded-lg border border-teal-500/30 bg-teal-500/10 p-6">
-                <h4 className="text-sm font-semibold text-teal-400 mb-3">O que será criado:</h4>
-                <ul className="space-y-2 text-sm text-white/80">
+              <div
+                className="rounded-lg p-6"
+                style={{
+                  border: '1px solid #3A8F6E',
+                  backgroundColor: '#1a3329',
+                  borderRadius: '14px',
+                }}
+              >
+                <h4 className="text-sm font-semibold mb-3" style={{ color: '#5FC883' }}>O que será criado:</h4>
+                <ul className="space-y-2 text-sm" style={{ color: '#BBC5C2' }}>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-teal-400" />
+                    <CheckCircle2 className="h-4 w-4" style={{ color: '#3A8F6E' }} />
                     5 instituições financeiras (Nubank, BB, Itaú, Inter, C6)
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-teal-400" />
+                    <CheckCircle2 className="h-4 w-4" style={{ color: '#3A8F6E' }} />
                     6 contas diversas (corrente, poupança, investimento, carteira)
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-teal-400" />
+                    <CheckCircle2 className="h-4 w-4" style={{ color: '#3A8F6E' }} />
                     90+ transações dos últimos 3 meses
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-teal-400" />
+                    <CheckCircle2 className="h-4 w-4" style={{ color: '#3A8F6E' }} />
                     Receitas e despesas categorizadas
                   </li>
                 </ul>
               </div>
 
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
-                <p className="text-sm text-amber-400">
+              <div
+                className="rounded-lg p-4"
+                style={{
+                  border: '1px solid #E0B257',
+                  backgroundColor: '#2e2819',
+                  borderRadius: '14px',
+                }}
+              >
+                <p className="text-sm" style={{ color: '#E0B257' }}>
                   <strong>Nota:</strong> Você poderá limpar esses dados a qualquer momento nas configurações.
                 </p>
               </div>
@@ -354,7 +485,12 @@ export default function OnboardingPage() {
                   variant="outline"
                   onClick={() => setStep('choose-mode')}
                   disabled={loading}
-                  className="border-white/20 text-white hover:bg-white/10"
+                  style={{
+                    backgroundColor: '#152b26',
+                    border: '1px solid #2d5247',
+                    color: '#F7FAF9',
+                    borderRadius: '12px',
+                  }}
                 >
                   Voltar
                 </Button>
@@ -362,10 +498,12 @@ export default function OnboardingPage() {
                   onClick={handleDemoConfirm}
                   disabled={loading}
                   size="lg"
-                  className="text-white px-8"
+                  className="px-8"
                   style={{
-                    background: 'linear-gradient(135deg, #18B0A4 0%, #16a89d 100%)',
-                    backgroundColor: '#18B0A4',
+                    backgroundColor: '#3A8F6E',
+                    color: '#F7FAF9',
+                    borderRadius: '12px',
+                    border: 'none',
                   }}
                 >
                   {loading ? (
@@ -387,15 +525,25 @@ export default function OnboardingPage() {
 
         {/* Create Account Step */}
         {step === 'create-account' && (
-          <Card className="border-white/20 bg-gradient-to-br from-gray-800 to-gray-900">
+          <Card
+            style={{
+              backgroundColor: '#1a362f',
+              border: '1px solid #2d5247',
+              borderRadius: '18px',
+              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
+            }}
+          >
             <CardHeader className="text-center">
-              <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
-                <Wallet className="h-8 w-8 text-white" />
+              <div
+                className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: '#152b26' }}
+              >
+                <Wallet className="h-8 w-8" style={{ color: '#F7FAF9' }} />
               </div>
-              <CardTitle className="text-3xl font-bold text-white mb-2">
+              <CardTitle className="text-3xl font-bold mb-2" style={{ color: '#F7FAF9' }}>
                 Criar Primeira Conta
               </CardTitle>
-              <CardDescription className="text-white/70">
+              <CardDescription style={{ color: '#BBC5C2' }}>
                 Configure sua primeira conta bancária ou cartão
               </CardDescription>
             </CardHeader>
@@ -412,21 +560,31 @@ export default function OnboardingPage() {
 
         {/* Complete Step */}
         {step === 'complete' && (
-          <Card className="border-white/20 bg-gradient-to-br from-gray-800 to-gray-900">
+          <Card
+            style={{
+              backgroundColor: '#1a362f',
+              border: '1px solid #2d5247',
+              borderRadius: '18px',
+              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
+            }}
+          >
             <CardHeader className="text-center pb-8">
-              <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                <CheckCircle2 className="h-10 w-10 text-white" />
+              <div
+                className="mx-auto mb-6 w-20 h-20 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: '#5FC883' }}
+              >
+                <CheckCircle2 className="h-10 w-10" style={{ color: '#F7FAF9' }} />
               </div>
-              <CardTitle className="text-4xl font-bold text-white mb-3">
+              <CardTitle className="text-4xl font-bold mb-3" style={{ color: '#F7FAF9' }}>
                 Tudo Pronto!
               </CardTitle>
-              <CardDescription className="text-lg text-white/70">
+              <CardDescription className="text-lg" style={{ color: '#BBC5C2' }}>
                 Seu Cortex Cash está configurado e pronto para usar
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="text-center space-y-4">
-                <p className="text-white/80">
+                <p style={{ color: '#BBC5C2' }}>
                   {selectedMode === 'demo'
                     ? 'Explore o dashboard com dados de exemplo e conheça todas as funcionalidades.'
                     : 'Comece a adicionar transações e acompanhe suas finanças em tempo real.'}
@@ -435,10 +593,12 @@ export default function OnboardingPage() {
                 <Button
                   onClick={handleComplete}
                   size="lg"
-                  className="text-white px-8"
+                  className="px-8"
                   style={{
-                    background: 'linear-gradient(135deg, #18B0A4 0%, #16a89d 100%)',
-                    backgroundColor: '#18B0A4',
+                    backgroundColor: '#3A8F6E',
+                    color: '#F7FAF9',
+                    borderRadius: '12px',
+                    border: 'none',
                   }}
                 >
                   Ir para o Dashboard

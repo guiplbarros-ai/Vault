@@ -93,10 +93,10 @@ export function InvestmentDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] bg-[#3B5563]">
+      <DialogContent className="sm:max-w-[600px] bg-card">
         <DialogHeader>
-          <DialogTitle className="text-white">Detalhes do Investimento</DialogTitle>
-          <DialogDescription className="text-white/70">
+          <DialogTitle className="text-foreground">Detalhes do Investimento</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             Informações completas e histórico de movimentações
           </DialogDescription>
         </DialogHeader>
@@ -109,31 +109,24 @@ export function InvestmentDetailModal({
           <div className="space-y-6">
             {/* Header com nome e badges */}
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-white">{investment.nome}</h3>
+              <h3 className="text-xl font-semibold text-foreground">{investment.nome}</h3>
               <div className="flex gap-2 flex-wrap">
-                <Badge
-                  variant="outline"
-                  style={{ backgroundColor: 'rgba(26, 212, 196, 0.2)', borderColor: '#1AD4C4' }}
-                >
-                  <span className="text-[#1AD4C4]">{TIPO_LABELS[investment.tipo] || investment.tipo}</span>
+                <Badge variant="outline" className="border-primary bg-primary/20">
+                  <span className="text-primary">{TIPO_LABELS[investment.tipo] || investment.tipo}</span>
                 </Badge>
                 <Badge
                   variant="outline"
-                  style={{
-                    backgroundColor:
-                      investment.status === 'ativo'
-                        ? 'rgba(74, 222, 128, 0.2)'
-                        : 'rgba(239, 68, 68, 0.2)',
-                    borderColor: investment.status === 'ativo' ? '#4ADE80' : '#EF4444',
-                  }}
+                  className={
+                    investment.status === 'ativo'
+                      ? 'border-success bg-success/20 text-success'
+                      : 'border-destructive bg-destructive/20 text-destructive'
+                  }
                 >
-                  <span style={{ color: investment.status === 'ativo' ? '#4ADE80' : '#EF4444' }}>
-                    {STATUS_LABELS[investment.status]}
-                  </span>
+                  {STATUS_LABELS[investment.status]}
                 </Badge>
                 {investment.ticker && (
-                  <Badge variant="outline" style={{ borderColor: '#ffffff50' }}>
-                    <span className="text-white/70">{investment.ticker}</span>
+                  <Badge variant="outline" className="border-border">
+                    <span className="text-muted-foreground">{investment.ticker}</span>
                   </Badge>
                 )}
               </div>
@@ -141,50 +134,50 @@ export function InvestmentDetailModal({
 
             {/* Informações financeiras */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1 p-4 rounded-lg bg-white/5">
-                <div className="flex items-center gap-2 text-white/70 text-sm">
+              <div className="space-y-1 p-4 rounded-lg bg-muted">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <DollarSign className="h-4 w-4" />
                   Valor Aplicado
                 </div>
-                <div className="text-lg font-semibold text-white">
+                <div className="text-lg font-semibold text-foreground">
                   {formatCurrency(investment.valor_aplicado)}
                 </div>
               </div>
-              <div className="space-y-1 p-4 rounded-lg bg-white/5">
-                <div className="flex items-center gap-2 text-white/70 text-sm">
+              <div className="space-y-1 p-4 rounded-lg bg-muted">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <Activity className="h-4 w-4" />
                   Valor Atual
                 </div>
-                <div className="text-lg font-semibold text-white">
+                <div className="text-lg font-semibold text-foreground">
                   {formatCurrency(investment.valor_atual)}
                 </div>
               </div>
-              <div className="space-y-1 p-4 rounded-lg bg-white/5">
-                <div className="flex items-center gap-2 text-white/70 text-sm">
+              <div className="space-y-1 p-4 rounded-lg bg-muted">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   {isPositive ? (
-                    <TrendingUp className="h-4 w-4 text-green-400" />
+                    <TrendingUp className="h-4 w-4 text-success" />
                   ) : (
-                    <TrendingDown className="h-4 w-4 text-red-400" />
+                    <TrendingDown className="h-4 w-4 text-destructive" />
                   )}
                   Rentabilidade
                 </div>
                 <div
                   className={`text-lg font-semibold ${
-                    isPositive ? 'text-green-400' : 'text-red-400'
+                    isPositive ? 'text-success' : 'text-destructive'
                   }`}
                 >
                   {isPositive ? '+' : ''}
                   {rentabilidade.toFixed(2)}%
                 </div>
               </div>
-              <div className="space-y-1 p-4 rounded-lg bg-white/5">
-                <div className="flex items-center gap-2 text-white/70 text-sm">
+              <div className="space-y-1 p-4 rounded-lg bg-muted">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <DollarSign className="h-4 w-4" />
                   Lucro/Prejuízo
                 </div>
                 <div
                   className={`text-lg font-semibold ${
-                    isPositive ? 'text-green-400' : 'text-red-400'
+                    isPositive ? 'text-success' : 'text-destructive'
                   }`}
                 >
                   {isPositive ? '+' : ''}
@@ -194,57 +187,57 @@ export function InvestmentDetailModal({
             </div>
 
             {/* Informações adicionais */}
-            <div className="space-y-3 border-t border-white/10 pt-4">
+            <div className="space-y-3 border-t border-border pt-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Instituição</span>
-                <span className="text-sm font-medium text-white">{investment.instituicao.nome}</span>
+                <span className="text-sm text-muted-foreground">Instituição</span>
+                <span className="text-sm font-medium text-foreground">{investment.instituicao.nome}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Data de Aplicação</span>
-                <span className="text-sm font-medium text-white">
+                <span className="text-sm text-muted-foreground">Data de Aplicação</span>
+                <span className="text-sm font-medium text-foreground">
                   {formatDate(investment.data_aplicacao)}
                 </span>
               </div>
               {investment.data_vencimento && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/70">Data de Vencimento</span>
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm text-muted-foreground">Data de Vencimento</span>
+                  <span className="text-sm font-medium text-foreground">
                     {formatDate(investment.data_vencimento)}
                   </span>
                 </div>
               )}
               {investment.quantidade && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/70">Quantidade</span>
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm text-muted-foreground">Quantidade</span>
+                  <span className="text-sm font-medium text-foreground">
                     {investment.quantidade.toLocaleString('pt-BR')}
                   </span>
                 </div>
               )}
               {investment.taxa_juros && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/70">Taxa de Juros</span>
-                  <span className="text-sm font-medium text-white">{investment.taxa_juros}% a.a.</span>
+                  <span className="text-sm text-muted-foreground">Taxa de Juros</span>
+                  <span className="text-sm font-medium text-foreground">{investment.taxa_juros}% a.a.</span>
                 </div>
               )}
               {investment.indexador && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/70">Indexador</span>
-                  <span className="text-sm font-medium text-white">{investment.indexador}</span>
+                  <span className="text-sm text-muted-foreground">Indexador</span>
+                  <span className="text-sm font-medium text-foreground">{investment.indexador}</span>
                 </div>
               )}
               {investment.conta_origem && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/70">Conta de Origem</span>
-                  <span className="text-sm font-medium text-white">{investment.conta_origem.nome}</span>
+                  <span className="text-sm text-muted-foreground">Conta de Origem</span>
+                  <span className="text-sm font-medium text-foreground">{investment.conta_origem.nome}</span>
                 </div>
               )}
             </div>
 
             {/* Histórico de movimentações */}
             {investment.historico && investment.historico.length > 0 && (
-              <div className="space-y-3 border-t border-white/10 pt-4">
-                <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+              <div className="space-y-3 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Histórico de Movimentações
                 </h4>
@@ -252,26 +245,26 @@ export function InvestmentDetailModal({
                   {investment.historico.map((mov) => (
                     <div
                       key={mov.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-white/5"
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted"
                     >
                       <div className="space-y-1">
-                        <div className="text-sm font-medium text-white">
+                        <div className="text-sm font-medium text-foreground">
                           {MOVIMENTACAO_LABELS[mov.tipo_movimentacao]}
                         </div>
-                        <div className="text-xs text-white/60">{formatDate(mov.data)}</div>
+                        <div className="text-xs text-muted-foreground">{formatDate(mov.data)}</div>
                       </div>
                       <div className="text-right">
                         <div
                           className={`text-sm font-medium ${
                             mov.tipo_movimentacao === 'rendimento' || mov.tipo_movimentacao === 'aporte'
-                              ? 'text-green-400'
-                              : 'text-white'
+                              ? 'text-success'
+                              : 'text-foreground'
                           }`}
                         >
                           {formatCurrency(mov.valor)}
                         </div>
                         {mov.quantidade && (
-                          <div className="text-xs text-white/60">Qtd: {mov.quantidade}</div>
+                          <div className="text-xs text-muted-foreground">Qtd: {mov.quantidade}</div>
                         )}
                       </div>
                     </div>
@@ -282,9 +275,9 @@ export function InvestmentDetailModal({
 
             {/* Observações */}
             {investment.observacoes && (
-              <div className="space-y-2 border-t border-white/10 pt-4">
-                <h4 className="text-sm font-semibold text-white">Observações</h4>
-                <p className="text-sm text-white/70">{investment.observacoes}</p>
+              <div className="space-y-2 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold text-foreground">Observações</h4>
+                <p className="text-sm text-muted-foreground">{investment.observacoes}</p>
               </div>
             )}
           </div>

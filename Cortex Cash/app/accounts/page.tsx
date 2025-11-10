@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Building2, PiggyBank, CreditCard, TrendingUp, Wallet, MoreHorizontal, Pencil, Trash2, Eye, EyeOff } from "lucide-react"
+import { Plus, Building2, PiggyBank, CreditCard, TrendingUp, Wallet, MoreHorizontal, Pencil, Trash2, Eye, EyeOff, Link2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,13 +28,16 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { ACCOUNT_TYPE_LABELS } from "@/lib/constants"
 import { AccountForm } from "@/components/forms"
 import type { AccountFormData } from "@/lib/validations"
+import { cn } from "@/lib/utils"
 import { contaService } from "@/lib/services/conta.service"
+import { instituicaoService } from "@/lib/services/instituicao.service"
 import { mapFormDataToCreateConta, mapDBAccountTypeToFormType, mapContaToFormData } from "@/lib/adapters"
-import type { Conta } from "@/lib/types"
+import type { Conta, Instituicao } from "@/lib/types"
 import { toast } from "sonner"
 import { transacaoService } from "@/lib/services/transacao.service"
 import type { Transacao } from "@/lib/types"
 import { ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { BankLogo } from "@/components/ui/bank-logo"
 
 const getAccountIcon = (type: string) => {
   const icons = {
@@ -65,28 +68,112 @@ export default function AccountsPage() {
   const [editMode, setEditMode] = useState(false)
   const [accountTransactions, setAccountTransactions] = useState<Transacao[]>([])
   const [loadingTransactions, setLoadingTransactions] = useState(false)
+  const [instituicoes, setInstituicoes] = useState<Instituicao[]>([])
+  const [accountStats, setAccountStats] = useState<Record<string, { transactionCount: number }>>({})
 
   const { formatCurrency: formatCurrencyWithSettings } = useLocalizationSettings()
 
-  // Carrega contas do banco
+  // Carrega contas e instituições do banco
   useEffect(() => {
-    loadAccounts()
+    loadData()
   }, [])
+
+  const loadData = async () => {
+    await Promise.all([
+      loadAccounts(),
+      loadInstituicoes()
+    ])
+  }
+
+  const loadInstituicoes = async () => {
+    try {
+      const data = await instituicaoService.listInstituicoes()
+      setInstituicoes(data)
+    } catch (error) {
+      console.error('Erro ao carregar instituições:', error)
+    }
+  }
+
+  // Helper para buscar instituição da conta
+  const getInstituicao = (conta: Conta): Instituicao | undefined => {
+    return instituicoes.find(inst => inst.id === conta.instituicao_id)
+  }
+
+  // Helper para buscar conta pai
+  const getContaPai = (conta: Conta): Conta | undefined => {
+    if (!conta.conta_pai_id) return undefined
+    return accounts.find(acc => acc.id === conta.conta_pai_id)
+  }
+
+  // Função para organizar contas agrupando pais e filhos
+  const organizeAccountsHierarchy = (accountsList: Conta[]): Conta[] => {
+    const organized: Conta[] = []
+    const processed = new Set<string>()
+
+    // Primeiro, adiciona contas sem pai (contas principais)
+    accountsList.forEach(account => {
+      if (!account.conta_pai_id && !processed.has(account.id)) {
+        organized.push(account)
+        processed.add(account.id)
+
+        // Logo após cada conta pai, adiciona suas contas filhas
+        const children = accountsList.filter(acc =>
+          acc.conta_pai_id === account.id && !processed.has(acc.id)
+        )
+        children.forEach(child => {
+          organized.push(child)
+          processed.add(child.id)
+        })
+      }
+    })
+
+    // Adiciona contas vinculadas cujo pai não está na lista filtrada
+    accountsList.forEach(account => {
+      if (!processed.has(account.id)) {
+        organized.push(account)
+        processed.add(account.id)
+      }
+    })
+
+    return organized
+  }
 
   // Aplica filtros quando accounts ou selectedTypeFilter mudam
   useEffect(() => {
+    let filtered: Conta[]
     if (selectedTypeFilter === 'all') {
-      setFilteredAccounts(accounts)
+      filtered = accounts
     } else {
-      setFilteredAccounts(accounts.filter(acc => acc.tipo === selectedTypeFilter))
+      filtered = accounts.filter(acc => acc.tipo === selectedTypeFilter)
     }
+
+    // Organiza hierarquicamente
+    const organized = organizeAccountsHierarchy(filtered)
+    setFilteredAccounts(organized)
   }, [accounts, selectedTypeFilter])
 
   const loadAccounts = async () => {
     try {
       setLoading(true)
-      const data = await contaService.listContas() // carrega todas as contas
+      const data = await contaService.listContas({ incluirInativas: true }) // carrega todas as contas (ativas e inativas)
       setAccounts(data)
+
+      // Carrega estatísticas de cada conta
+      const stats: Record<string, { transactionCount: number }> = {}
+      for (const account of data) {
+        try {
+          const transactions = await transacaoService.listTransacoes({
+            contaId: account.id,
+          })
+          stats[account.id] = {
+            transactionCount: transactions.length
+          }
+        } catch (error) {
+          console.error(`Erro ao carregar transações da conta ${account.id}:`, error)
+          stats[account.id] = { transactionCount: 0 }
+        }
+      }
+      setAccountStats(stats)
     } catch (error) {
       console.error('Erro ao carregar contas:', error)
       toast.error('Erro ao carregar contas', {
@@ -123,15 +210,15 @@ export default function AccountsPage() {
       if (editMode && selectedAccount) {
         // Modo edição
         const instituicaoId = selectedAccount.instituicao_id
-        const contaData = mapFormDataToCreateConta(data, instituicaoId)
+        const contaData = mapFormDataToCreateConta(data, instituicaoId, accounts)
         await contaService.updateConta(selectedAccount.id, contaData)
         toast.success('Conta atualizada', {
           description: 'A conta foi atualizada com sucesso.',
         })
       } else {
         // Modo criação
-        const instituicaoId = 'default-institution-id'
-        const contaData = mapFormDataToCreateConta(data, instituicaoId)
+        const instituicaoId = data.institution || ''
+        const contaData = mapFormDataToCreateConta(data, instituicaoId, accounts)
         console.log('[DEBUG] Dados convertidos para criar conta:', contaData)
         await contaService.createConta(contaData)
         toast.success('Conta criada', {
@@ -207,7 +294,9 @@ export default function AccountsPage() {
     return formatCurrencyWithSettings(Math.abs(value))
   }
 
-  const totalBalance = accounts.reduce((sum, account) => sum + (account.saldo_atual || 0), 0)
+  const totalBalance = accounts
+    .filter(account => account.ativa) // Só soma contas ativas
+    .reduce((sum, account) => sum + (account.saldo_atual || 0), 0)
 
   const typeFilters = [
     { value: 'all', label: 'Todas', icon: Wallet },
@@ -239,11 +328,7 @@ export default function AccountsPage() {
           actions={
             <Button
               onClick={handleNewAccount}
-              className="text-white"
-              style={{
-                backgroundColor: '#18B0A4',
-                color: '#ffffff'
-              }}
+              
             >
               <Plus className="mr-2 h-4 w-4" />
               Nova Conta
@@ -251,23 +336,24 @@ export default function AccountsPage() {
           }
         />
 
-        {/* Total Balance Card */}
-        <Card
-          className="shadow-md border"
-          style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}
-        >
+        {/* Total Balance Card - TEMA.md: KPI com shadow-2 */}
+        <Card className="shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)] bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white">Saldo Total</CardTitle>
-            <CardDescription className="text-white/70">Soma de todas as contas ativas</CardDescription>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                <Wallet className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-foreground">Saldo Total</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm">Soma de todas as contas ativas</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold text-white">
+            <div className="text-4xl font-bold text-gold">
               {formatCurrency(totalBalance)}
             </div>
-            <p className="text-sm text-white/70 mt-2">
+            <p className="text-sm mt-2 text-muted-foreground">
               {accounts.filter(a => a.ativa).length} contas ativas
             </p>
           </CardContent>
@@ -286,30 +372,21 @@ export default function AccountsPage() {
               <button
                 key={filter.value}
                 onClick={() => setSelectedTypeFilter(filter.value)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-[12px] border transition-all",
                   isActive
-                    ? 'text-white shadow-lg'
-                    : 'text-white/70 border-white/20 hover:bg-white/5'
-                }`}
-                style={
-                  isActive
-                    ? {
-                        background: 'linear-gradient(135deg, #18B0A4 0%, #16a89d 100%)',
-                        backgroundColor: '#18B0A4',
-                        borderColor: '#18B0A4'
-                      }
-                    : undefined
-                }
+                    ? "bg-primary text-primary-foreground border-primary shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]"
+                    : "bg-card text-foreground border-border hover:bg-accent"
+                )}
               >
                 <Icon className="h-4 w-4" />
                 <span className="text-sm font-medium">{filter.label}</span>
                 <Badge
                   variant="secondary"
-                  className={`ml-1 ${
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : 'bg-white/10 text-white/70'
-                  }`}
+                  className={cn(
+                    "ml-1",
+                    isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-foreground"
+                  )}
                 >
                   {count}
                 </Badge>
@@ -322,81 +399,82 @@ export default function AccountsPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredAccounts.length === 0 ? (
             <div className="col-span-full text-center py-12">
-              <Wallet className="h-12 w-12 text-white/30 mx-auto mb-4" />
-              <p className="text-white/70">Nenhuma conta encontrada para este filtro.</p>
+              <Wallet className="h-12 w-12 mx-auto mb-4 text-secondary" />
+              <p className="text-muted-foreground">Nenhuma conta encontrada para este filtro.</p>
             </div>
           ) : (
             filteredAccounts.map((account) => {
             const Icon = getAccountIcon(account.tipo)
             const formType = mapDBAccountTypeToFormType(account.tipo)
+            const contaPai = getContaPai(account)
+            const isLinkedAccount = !!account.conta_pai_id
             return (
               <Card
                 key={account.id}
-                className="relative overflow-hidden border-l-4 transition-all hover:shadow-lg"
+                className="relative overflow-hidden transition-all hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)] bg-card border-border"
                 style={{
-                  background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                  backgroundColor: '#3B5563',
-                  borderLeftColor: account.cor || '#18B0A4'
+                  borderLeftWidth: '4px',
+                  borderLeftColor: account.cor || 'hsl(var(--border))',
+                  ...(isLinkedAccount && { paddingLeft: '1.5rem' })
                 }}
               >
-                <CardHeader className="pb-3">
+                <CardHeader className={isLinkedAccount ? "pb-1 pt-2" : "pb-3"}>
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="flex h-10 w-10 items-center justify-center rounded-lg"
-                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                      >
-                        <Icon className="h-5 w-5 text-white" />
-                      </div>
+                    <div className={`flex items-center ${isLinkedAccount ? 'gap-2' : 'gap-3'}`}>
+                      <BankLogo
+                        logoUrl={getInstituicao(account)?.logo_url}
+                        bankName={getInstituicao(account)?.nome || account.nome}
+                        size={isLinkedAccount ? 32 : 40}
+                      />
                       <div>
-                        <CardTitle className="text-base text-white">{account.nome}</CardTitle>
-                        <CardDescription className="text-xs text-white/70">
+                        <CardTitle className={`${isLinkedAccount ? 'text-sm' : 'text-base'} text-foreground`}>{account.nome}</CardTitle>
+                        <CardDescription className={`${isLinkedAccount ? 'text-[11px]' : 'text-xs'} text-muted-foreground`}>
                           {ACCOUNT_TYPE_LABELS[formType]}
                         </CardDescription>
+                        {contaPai && (
+                          <div
+                            className="flex items-center gap-0.5 mt-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded w-fit bg-muted"
+                            style={{
+                              borderLeft: `2px solid ${contaPai.cor}`,
+                            }}
+                          >
+                            <Link2 className="h-2.5 w-2.5" style={{ color: contaPai.cor }} />
+                            <span>Vinculada a: <span className="font-semibold">{contaPai.nome}</span></span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white hover:bg-white/10">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-accent">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="!bg-gray-800 !border-gray-700"
-                        style={{
-                          backgroundColor: '#1f2937',
-                          borderColor: '#374151'
-                        }}
-                      >
+                      <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={() => handleViewDetails(account)}
-                          className="!text-white hover:!bg-gray-700 cursor-pointer"
-                          style={{ color: '#ffffff' }}
+                          className="cursor-pointer"
                         >
                           <Eye className="mr-2 h-4 w-4" />
                           Ver Detalhes
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleEdit(account)}
-                          className="!text-white hover:!bg-gray-700 cursor-pointer"
-                          style={{ color: '#ffffff' }}
+                          className="cursor-pointer"
                         >
                           <Pencil className="mr-2 h-4 w-4" />
                           Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleToggleActive(account)}
-                          className="!text-white hover:!bg-gray-700 cursor-pointer"
-                          style={{ color: '#ffffff' }}
+                          className="cursor-pointer"
                         >
                           <EyeOff className="mr-2 h-4 w-4" />
                           {account.ativa ? 'Desativar' : 'Ativar'}
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-white/20" />
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          className="!text-red-400 hover:!bg-red-500/20 cursor-pointer"
-                          style={{ color: '#f87171' }}
+                          className="text-destructive cursor-pointer"
                           onClick={() => {
                             setAccountToDelete(account.id)
                             setDeleteDialogOpen(true)
@@ -409,27 +487,41 @@ export default function AccountsPage() {
                     </DropdownMenu>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {account.agencia && (
-                      <p className="text-xs text-white/70">
-                        Agência: {account.agencia}
-                      </p>
-                    )}
+                <CardContent className={isLinkedAccount ? "pt-1 pb-2" : ""}>
+                  <div className={isLinkedAccount ? "space-y-1" : "space-y-3"}>
+                    {/* Saldo e Status */}
                     <div className="flex items-baseline justify-between">
                       <span
-                        className={`text-2xl font-bold ${
-                          (account.saldo_atual || 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                        }`}
+                        className={`${isLinkedAccount ? 'text-lg' : 'text-2xl'} font-bold text-gold`}
                       >
                         {formatCurrency(account.saldo_atual || 0)}
                       </span>
                       <Badge
-                        variant={account.ativa ? 'default' : 'secondary'}
-                        className={account.ativa ? 'bg-green-500/90 text-white' : 'bg-gray-600 text-white'}
+                        variant={account.ativa ? 'success' : 'secondary'}
+                        className={`${isLinkedAccount ? 'text-[10px] px-2 py-0.5' : ''}`}
                       >
                         {account.ativa ? 'Ativa' : 'Inativa'}
                       </Badge>
+                    </div>
+
+                    {/* Informações adicionais */}
+                    <div
+                      className={`flex items-center justify-between ${isLinkedAccount ? 'text-[10px]' : 'text-xs'} ${isLinkedAccount ? 'pt-1' : 'pt-2'} text-muted-foreground border-t border-border`}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>📅</span>
+                        <span>
+                          Criada em {new Date(account.created_at).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>💸</span>
+                        <span>{accountStats[account.id]?.transactionCount || 0} movimentações</span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -443,15 +535,10 @@ export default function AccountsPage() {
         <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
           <DialogContent
             className="max-w-2xl max-h-[90vh] overflow-y-auto"
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-              borderColor: '#374151'
-            }}
           >
             <DialogHeader>
-              <DialogTitle className="text-white">{editMode ? 'Editar Conta' : 'Nova Conta'}</DialogTitle>
-              <DialogDescription className="text-white/70">
+              <DialogTitle className="text-foreground">{editMode ? 'Editar Conta' : 'Nova Conta'}</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 {editMode
                   ? 'Atualize as informações da sua conta.'
                   : 'Adicione uma nova conta ou cartão ao seu sistema financeiro.'}
@@ -467,6 +554,7 @@ export default function AccountsPage() {
               }}
               isLoading={formLoading}
               submitLabel={editMode ? 'Atualizar Conta' : 'Criar Conta'}
+              currentAccountId={selectedAccount?.id}
             />
           </DialogContent>
         </Dialog>
@@ -475,15 +563,10 @@ export default function AccountsPage() {
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent
             className="max-w-2xl max-h-[90vh] overflow-y-auto"
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-              borderColor: '#374151'
-            }}
           >
             <DialogHeader>
-              <DialogTitle className="text-white">Detalhes da Conta</DialogTitle>
-              <DialogDescription className="text-white/70">
+              <DialogTitle className="text-foreground">Detalhes da Conta</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 Informações completas da conta selecionada.
               </DialogDescription>
             </DialogHeader>
@@ -491,60 +574,45 @@ export default function AccountsPage() {
               <div className="space-y-6">
                 {/* Account Header */}
                 <div className="flex items-center gap-4">
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-lg"
-                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                  >
-                    {(() => {
-                      const Icon = getAccountIcon(selectedAccount.tipo)
-                      return <Icon className="h-6 w-6 text-white" />
-                    })()}
-                  </div>
+                  <BankLogo
+                    logoUrl={getInstituicao(selectedAccount)?.logo_url}
+                    bankName={getInstituicao(selectedAccount)?.nome || selectedAccount.nome}
+                    size={48}
+                  />
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-white">{selectedAccount.nome}</h3>
-                    <p className="text-sm text-white/70">
+                    <h3 className="text-xl font-semibold text-foreground">{selectedAccount.nome}</h3>
+                    <p className="text-sm text-muted-foreground">
                       {ACCOUNT_TYPE_LABELS[mapDBAccountTypeToFormType(selectedAccount.tipo)]}
                     </p>
                   </div>
                   <Badge
-                    variant={selectedAccount.ativa ? 'default' : 'secondary'}
-                    className={`text-sm ${selectedAccount.ativa ? 'bg-green-500/90 text-white' : 'bg-gray-600 text-white'}`}
+                  variant={selectedAccount.ativa ? 'success' : 'secondary'}
+                  className="text-sm"
                   >
                     {selectedAccount.ativa ? 'Ativa' : 'Inativa'}
                   </Badge>
                 </div>
 
-                <Separator className="bg-white/20" />
+                <Separator />
 
                 {/* Account Details */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-white/70">Saldo Inicial</p>
-                    <p className="text-lg font-semibold text-white">{formatCurrency(selectedAccount.saldo_inicial)}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Saldo de Referência</p>
+                    <p className="text-lg font-semibold text-foreground">{formatCurrency(selectedAccount.saldo_referencia)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(selectedAccount.data_referencia).toLocaleDateString('pt-BR')}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-white/70">Saldo Atual</p>
-                    <p className={`text-lg font-semibold ${
-                      (selectedAccount.saldo_atual || 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}>
+                    <p className="text-sm font-medium text-muted-foreground">Saldo Atual</p>
+                    <p className="text-lg font-semibold text-gold">
                       {formatCurrency(selectedAccount.saldo_atual || 0)}
                     </p>
                   </div>
-                  {selectedAccount.agencia && (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-white/70">Agência</p>
-                      <p className="text-base text-white">{selectedAccount.agencia}</p>
-                    </div>
-                  )}
-                  {selectedAccount.numero && (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-white/70">Número da Conta</p>
-                      <p className="text-base text-white">{selectedAccount.numero}</p>
-                    </div>
-                  )}
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-white/70">Criada em</p>
-                    <p className="text-base text-white">
+                    <p className="text-sm font-medium text-muted-foreground">Criada em</p>
+                    <p className="text-base text-foreground">
                       {new Date(selectedAccount.created_at).toLocaleDateString('pt-BR', {
                         day: '2-digit',
                         month: 'long',
@@ -553,8 +621,8 @@ export default function AccountsPage() {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-white/70">Última atualização</p>
-                    <p className="text-base text-white">
+                    <p className="text-sm font-medium text-muted-foreground">Última atualização</p>
+                    <p className="text-base text-foreground">
                       {new Date(selectedAccount.updated_at).toLocaleDateString('pt-BR', {
                         day: '2-digit',
                         month: 'long',
@@ -566,23 +634,23 @@ export default function AccountsPage() {
 
                 {selectedAccount.observacoes && (
                   <>
-                    <Separator className="bg-white/20" />
+                    <Separator className="bg-border" />
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-white/70">Observações</p>
-                      <p className="text-base text-white">{selectedAccount.observacoes}</p>
+                      <p className="text-sm font-medium text-muted-foreground">Observações</p>
+                      <p className="text-base text-foreground">{selectedAccount.observacoes}</p>
                     </div>
                   </>
                 )}
 
                 {/* Transactions Section */}
-                <Separator className="bg-white/20" />
+                <Separator className="bg-border" />
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-white">Últimas Transações</h4>
+                    <h4 className="text-sm font-medium text-foreground">Últimas Transações</h4>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-white hover:bg-white/10"
+                      className="hover:bg-accent"
                       onClick={() => {
                         setDetailsDialogOpen(false)
                         // TODO: Navigate to transactions page with account filter
@@ -594,19 +662,19 @@ export default function AccountsPage() {
 
                   {loadingTransactions ? (
                     <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                   ) : accountTransactions.length > 0 ? (
                     <>
                       {/* Transaction Summary */}
                       <div className="grid grid-cols-2 gap-3">
-                        <Card className="bg-green-500/20 border-green-500/30">
+                        <Card className="bg-success/20 border-success/30">
                           <CardContent className="p-4">
                             <div className="flex items-center gap-2 mb-1">
-                              <ArrowUpRight className="h-4 w-4 text-green-400" />
-                              <p className="text-xs font-medium text-green-400">Receitas</p>
+                              <ArrowUpRight className="h-4 w-4 text-success" />
+                              <p className="text-xs font-medium text-success">Receitas</p>
                             </div>
-                            <p className="text-lg font-bold text-green-300">
+                            <p className="text-lg font-bold text-success">
                               {formatCurrency(
                                 accountTransactions
                                   .filter(t => t.tipo === 'receita')
@@ -615,13 +683,13 @@ export default function AccountsPage() {
                             </p>
                           </CardContent>
                         </Card>
-                        <Card className="bg-red-500/20 border-red-500/30">
+                        <Card className="bg-destructive/20 border-destructive/30">
                           <CardContent className="p-4">
                             <div className="flex items-center gap-2 mb-1">
-                              <ArrowDownRight className="h-4 w-4 text-red-400" />
-                              <p className="text-xs font-medium text-red-400">Despesas</p>
+                              <ArrowDownRight className="h-4 w-4 text-destructive" />
+                              <p className="text-xs font-medium text-destructive">Despesas</p>
                             </div>
-                            <p className="text-lg font-bold text-red-300">
+                            <p className="text-lg font-bold text-destructive">
                               {formatCurrency(
                                 accountTransactions
                                   .filter(t => t.tipo === 'despesa')
@@ -643,23 +711,24 @@ export default function AccountsPage() {
                           return (
                             <div
                               key={transaction.id}
-                              className="flex items-center justify-between p-3 rounded-lg border border-white/10 hover:bg-white/5 transition-colors"
+                              className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors"
                             >
                               <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                                  isIncome
-                                    ? 'bg-green-500/20'
-                                    : 'bg-red-500/20'
-                                }`}>
+                                <div
+                                  className={cn(
+                                    "flex h-8 w-8 items-center justify-center rounded-full",
+                                    isIncome ? "bg-success/20" : "bg-destructive/20"
+                                  )}
+                                >
                                   {isIncome ? (
-                                    <ArrowUpRight className="h-4 w-4 text-green-400" />
+                                    <ArrowUpRight className="h-4 w-4 text-success" />
                                   ) : (
-                                    <ArrowDownRight className="h-4 w-4 text-red-400" />
+                                    <ArrowDownRight className="h-4 w-4 text-destructive" />
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium truncate text-white">{transaction.descricao}</p>
-                                  <p className="text-xs text-white/70">
+                                  <p className="text-sm font-medium truncate">{transaction.descricao}</p>
+                                  <p className="text-xs text-muted-foreground">
                                     {transactionDate.toLocaleDateString('pt-BR', {
                                       day: '2-digit',
                                       month: 'short',
@@ -668,11 +737,12 @@ export default function AccountsPage() {
                                   </p>
                                 </div>
                               </div>
-                              <div className={`text-sm font-semibold whitespace-nowrap ml-2 ${
-                                isIncome
-                                  ? 'text-green-400'
-                                  : 'text-red-400'
-                              }`}>
+                              <div
+                                className={cn(
+                                  "text-sm font-semibold whitespace-nowrap ml-2",
+                                  isIncome ? "text-success" : "text-destructive"
+                                )}
+                              >
                                 {isIncome ? '+' : '-'} {formatCurrency(transaction.valor)}
                               </div>
                             </div>
@@ -682,7 +752,7 @@ export default function AccountsPage() {
                     </>
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-sm text-white/70">Nenhuma transação encontrada nesta conta.</p>
+                      <p className="text-sm text-muted-foreground">Nenhuma transação encontrada nesta conta.</p>
                     </div>
                   )}
                 </div>
@@ -692,7 +762,6 @@ export default function AccountsPage() {
                   <Button
                     variant="outline"
                     onClick={() => setDetailsDialogOpen(false)}
-                    className="border-white/20 text-white hover:bg-white/10"
                   >
                     Fechar
                   </Button>
@@ -701,11 +770,7 @@ export default function AccountsPage() {
                       setDetailsDialogOpen(false)
                       handleEdit(selectedAccount)
                     }}
-                    className="text-white"
-                    style={{
-                      backgroundColor: '#18B0A4',
-                      color: '#ffffff'
-                    }}
+                    
                   >
                     <Pencil className="mr-2 h-4 w-4" />
                     Editar

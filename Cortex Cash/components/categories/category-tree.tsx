@@ -33,7 +33,16 @@ export function CategoryTree({
   onSelect,
   selectedId,
 }: CategoryTreeProps) {
-  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
+  // Inicia com todas as categorias que têm subcategorias expandidas
+  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => {
+    const ids = new Set<string>();
+    categorias.forEach(cat => {
+      if (cat.subcategorias && cat.subcategorias.length > 0) {
+        ids.add(cat.id);
+      }
+    });
+    return ids;
+  });
 
   const toggleExpand = (id: string) => {
     const newExpanded = new Set(expandedIds);

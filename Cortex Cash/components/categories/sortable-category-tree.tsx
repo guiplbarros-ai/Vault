@@ -66,7 +66,17 @@ export function SortableCategoryTree({
   onViewAnalytics,
 }: SortableCategoryTreeProps) {
   const [categorias, setCategorias] = React.useState(initialCategorias);
-  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
+
+  // Inicia com todas as categorias que têm subcategorias expandidas
+  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => {
+    const ids = new Set<string>();
+    initialCategorias.forEach(cat => {
+      if (cat.subcategorias && cat.subcategorias.length > 0) {
+        ids.add(cat.id);
+      }
+    });
+    return ids;
+  });
 
   // Não sincroniza com props após mount - mantém estado local para updates otimistas
   // Se precisar recarregar do banco, o componente pai deve forçar unmount/remount
@@ -128,6 +138,8 @@ export function SortableCategoryTree({
             cor: categoriaMovida.cor,
             ordem: categoriaMovida.ordem,
             ativa: categoriaMovida.ativa,
+            is_sistema: categoriaMovida.is_sistema,
+            usuario_id: categoriaMovida.usuario_id,
             created_at: categoriaMovida.created_at,
             updated_at: categoriaMovida.updated_at,
           };
@@ -175,6 +187,8 @@ export function SortableCategoryTree({
               cor: subcategoriaRemovida.cor,
               ordem: subcategoriaRemovida.ordem,
               ativa: subcategoriaRemovida.ativa,
+              is_sistema: subcategoriaRemovida.is_sistema,
+              usuario_id: subcategoriaRemovida.usuario_id,
               created_at: subcategoriaRemovida.created_at,
               updated_at: subcategoriaRemovida.updated_at,
             };
@@ -190,19 +204,22 @@ export function SortableCategoryTree({
       });
 
       // Adiciona a categoria promovida à lista principal
-      if (categoriaPromovida) {
+      if (categoriaPromovida !== null) {
+        const catPromovida: Categoria = categoriaPromovida;
         const novaCategoriaComSubs: CategoriaComSubcategorias = {
-          id: categoriaPromovida.id,
-          nome: categoriaPromovida.nome,
-          tipo: categoriaPromovida.tipo,
-          grupo: categoriaPromovida.grupo,
-          pai_id: categoriaPromovida.pai_id,
-          icone: categoriaPromovida.icone,
-          cor: categoriaPromovida.cor,
-          ordem: categoriaPromovida.ordem,
-          ativa: categoriaPromovida.ativa,
-          created_at: categoriaPromovida.created_at,
-          updated_at: categoriaPromovida.updated_at,
+          id: catPromovida.id,
+          nome: catPromovida.nome,
+          tipo: catPromovida.tipo,
+          grupo: catPromovida.grupo,
+          pai_id: catPromovida.pai_id,
+          icone: catPromovida.icone,
+          cor: catPromovida.cor,
+          ordem: catPromovida.ordem,
+          ativa: catPromovida.ativa,
+          is_sistema: catPromovida.is_sistema,
+          usuario_id: catPromovida.usuario_id,
+          created_at: catPromovida.created_at,
+          updated_at: catPromovida.updated_at,
           subcategorias: [], // Nova categoria principal sem subcategorias
         };
 
@@ -289,7 +306,7 @@ export function SortableCategoryTree({
       (expandedIds.has(targetCategoria.id) || isDropzone) && // Aceita dropzone OU categoria expandida
       sourceParentId !== targetCategoria.id;
 
-    if (shouldCreateSubcategory) {
+    if (shouldCreateSubcategory && targetCategoria && draggedItem) {
       // Update otimista: atualiza UI imediatamente
       moveToSubcategory(draggedItem.id, targetCategoria.id);
 

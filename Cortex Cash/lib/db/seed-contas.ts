@@ -115,11 +115,13 @@ export async function seedContas(): Promise<void> {
       tipo: contaMock.tipo,
       agencia: contaMock.agencia,
       numero: contaMock.numero,
-      saldo_inicial: contaMock.saldo_inicial,
-      saldo_atual: contaMock.saldo_inicial, // Inicialmente igual ao saldo inicial
+      saldo_referencia: contaMock.saldo_inicial, // User é soberano!
+      data_referencia: now,
+      saldo_atual: contaMock.saldo_inicial, // Inicialmente igual ao saldo de referência
       ativa: true,
       cor: contaMock.cor,
       icone: contaMock.icone,
+      usuario_id: 'usuario-producao', // Usuário padrão de produção
       created_at: now,
       updated_at: now,
     }
@@ -128,7 +130,15 @@ export async function seedContas(): Promise<void> {
   }
 
   if (contas.length > 0) {
-    await db.contas.bulkAdd(contas)
+    try {
+      await db.contas.bulkAdd(contas)
+    } catch (error: any) {
+      if (error?.name !== 'ConstraintError') {
+        throw error;
+      }
+      console.log('⚠️ Algumas contas já existem, pulando duplicatas...');
+      return;
+    }
     console.log(` ${contas.length} contas criadas com sucesso!`)
   } else {
     console.log('� Nenhuma conta foi criada (institui��es n�o encontradas)')

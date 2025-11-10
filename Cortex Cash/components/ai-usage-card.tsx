@@ -91,12 +91,7 @@ export function AIUsageCard({ className }: AIUsageCardProps) {
 
   if (isLoading) {
     return (
-      <Card className={className} style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
-      }}>
+      <Card className={cn(className, "bg-card")}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -122,12 +117,7 @@ export function AIUsageCard({ className }: AIUsageCardProps) {
   const { usedBrl, limitBrl, percentage, isNearLimit, isOverLimit } = data;
 
   return (
-    <Card className={className} style={{
-      background: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
-    }}>
+    <Card className={cn(className, "bg-card")}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

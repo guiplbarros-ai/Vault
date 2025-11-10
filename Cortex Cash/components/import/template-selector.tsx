@@ -5,7 +5,7 @@ import { importService } from '@/lib/services/import.service';
 import type { TemplateImportacao } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Star, TrendingUp } from 'lucide-react';
+import { Search, Star, Heart } from 'lucide-react';
 
 /**
  * Componente para seleção de templates de importação
@@ -22,7 +22,7 @@ export function TemplateSelector({
   selectedTemplateId,
 }: TemplateSelectorProps) {
   const [templates, setTemplates] = useState<TemplateImportacao[]>([]);
-  const [popularTemplates, setPopularTemplates] = useState<TemplateImportacao[]>([]);
+  const [favoriteTemplates, setFavoriteTemplates] = useState<TemplateImportacao[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -41,12 +41,12 @@ export function TemplateSelector({
   const loadTemplates = async () => {
     setLoading(true);
     try {
-      const [allTemplates, popular] = await Promise.all([
+      const [allTemplates, favorites] = await Promise.all([
         importService.listTemplates(),
-        importService.getPopularTemplates(5),
+        importService.getFavoriteTemplates(),
       ]);
       setTemplates(allTemplates);
-      setPopularTemplates(popular);
+      setFavoriteTemplates(favorites);
     } catch (error) {
       console.error('Erro ao carregar templates:', error);
     } finally {
@@ -70,6 +70,16 @@ export function TemplateSelector({
     // Incrementar contador de uso
     await importService.incrementTemplateUsage(template.id);
     onSelectTemplate(template);
+  };
+
+  const handleToggleFavorite = async (templateId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevenir seleção do template ao clicar na estrela
+    try {
+      await importService.toggleTemplateFavorite(templateId);
+      await loadTemplates(); // Recarregar templates após favoritar/desfavoritar
+    } catch (error) {
+      console.error('Erro ao favoritar template:', error);
+    }
   };
 
   if (loading) {
@@ -99,21 +109,21 @@ export function TemplateSelector({
         />
       </div>
 
-      {/* Popular Templates */}
-      {!searchQuery && popularTemplates.length > 0 && (
+      {/* Favorite Templates */}
+      {!searchQuery && favoriteTemplates.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 text-blue-500" />
-            <h3 className="text-sm font-medium text-gray-300">Mais usados</h3>
+            <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+            <h3 className="text-sm font-medium text-gray-300">Favoritos</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {popularTemplates.map((template) => (
+            {favoriteTemplates.map((template) => (
               <TemplateCard
                 key={template.id}
                 template={template}
                 isSelected={selectedTemplateId === template.id}
                 onSelect={handleSelectTemplate}
-                isPopular
+                onToggleFavorite={handleToggleFavorite}
               />
             ))}
           </div>
@@ -122,7 +132,7 @@ export function TemplateSelector({
 
       {/* All Templates */}
       <div>
-        {!searchQuery && popularTemplates.length > 0 && (
+        {!searchQuery && favoriteTemplates.length > 0 && templates.length > 0 && (
           <h3 className="text-sm font-medium text-gray-300 mb-3">
             Todos os templates
           </h3>
@@ -130,7 +140,9 @@ export function TemplateSelector({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {templates
             .filter(
-              (t) => !popularTemplates.some((p) => p.id === t.id) || searchQuery
+              (t) =>
+                !favoriteTemplates.some((f) => f.id === t.id) ||
+                searchQuery
             )
             .map((template) => (
               <TemplateCard
@@ -138,6 +150,7 @@ export function TemplateSelector({
                 template={template}
                 isSelected={selectedTemplateId === template.id}
                 onSelect={handleSelectTemplate}
+                onToggleFavorite={handleToggleFavorite}
               />
             ))}
         </div>
@@ -163,30 +176,49 @@ interface TemplateCardProps {
   template: TemplateImportacao;
   isSelected: boolean;
   onSelect: (template: TemplateImportacao) => void;
-  isPopular?: boolean;
+  onToggleFavorite: (templateId: string, e: React.MouseEvent) => void;
 }
 
 function TemplateCard({
   template,
   isSelected,
   onSelect,
-  isPopular,
+  onToggleFavorite,
 }: TemplateCardProps) {
   return (
-    <button
+    <div
       onClick={() => onSelect(template)}
-      className="relative text-left p-4 rounded-lg border transition-all hover:border-[#18B0A4]/50"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(template);
+        }
+      }}
+      className="relative text-left p-4 rounded-lg border transition-all hover:border-[#18B0A4]/50 cursor-pointer"
       style={{
         backgroundColor: isSelected ? 'rgba(24, 176, 164, 0.15)' : 'rgba(255, 255, 255, 0.05)',
         borderColor: isSelected ? '#18B0A4' : 'rgba(255, 255, 255, 0.2)',
         borderWidth: isSelected ? '2px' : '1px',
       }}
     >
-      {isPopular && (
-        <div className="absolute top-2 right-2">
-          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-        </div>
-      )}
+      <div className="absolute top-2 right-2">
+        {/* Botão de favoritar */}
+        <button
+          onClick={(e) => onToggleFavorite(template.id, e)}
+          className="p-1 rounded hover:bg-white/10 transition-colors"
+          title={template.is_favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+        >
+          <Star
+            className={`w-4 h-4 transition-colors ${
+              template.is_favorite
+                ? 'text-yellow-500 fill-yellow-500'
+                : 'text-gray-400 hover:text-yellow-500'
+            }`}
+          />
+        </button>
+      </div>
 
       <div className="space-y-2">
         <h4 className="font-medium text-white pr-6">{template.nome}</h4>
@@ -231,6 +263,6 @@ function TemplateCard({
           </p>
         )}
       </div>
-    </button>
+    </div>
   );
 }

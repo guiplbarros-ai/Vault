@@ -4,6 +4,9 @@ export type { FormInputProps } from './form-input'
 export { FormSelect } from './form-select'
 export type { FormSelectProps, FormSelectOption } from './form-select'
 
+export { FormInstitutionSelect } from './form-institution-select'
+export type { FormInstitutionSelectProps } from './form-institution-select'
+
 export { FormTextarea } from './form-textarea'
 export type { FormTextareaProps } from './form-textarea'
 

@@ -178,7 +178,15 @@ export default function PlanejamentoPage() {
             title="Planejamento Financeiro"
             description="Projete seu futuro financeiro e simule diferentes cenários"
           />
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button
+            onClick={() => setDialogOpen(true)}
+            className="hover:bg-[#2E7D6B]"
+            style={{
+              backgroundColor: '#3A8F6E',
+              color: '#F2F7F5',
+              borderRadius: '12px',
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Novo Cenário
           </Button>
@@ -187,17 +195,19 @@ export default function PlanejamentoPage() {
         {/* Info Banner */}
         <Card
           style={{
-            background: 'linear-gradient(135deg, #2C3E50 0%, #1a252f 100%)',
-            backgroundColor: '#2C3E50',
+            backgroundColor: '#18322C',
+            borderColor: '#2A4942',
+            borderWidth: '1px',
+            borderRadius: '18px',
+            boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
           }}
-          className="border-white/20"
         >
           <CardHeader>
             <div className="flex items-start gap-3">
-              <Sparkles className="h-5 w-5 mt-0.5" style={{ color: '#18B0A4' }} />
+              <Sparkles className="h-5 w-5 mt-0.5" style={{ color: '#3A8F6E' }} />
               <div>
-                <CardTitle className="text-base text-white">Planeje seu futuro</CardTitle>
-                <CardDescription className="mt-1 text-white/70">
+                <CardTitle className="text-base" style={{ color: '#F2F7F5' }}>Planeje seu futuro</CardTitle>
+                <CardDescription className="mt-1" style={{ color: '#B2BDB9' }}>
                   Crie cenários personalizados para simular mudanças de comportamento financeiro.
                   Compare diferentes estratégias e veja o impacto no seu patrimônio ao longo dos anos.
                 </CardDescription>
@@ -209,27 +219,31 @@ export default function PlanejamentoPage() {
         {/* Lista de Cenários */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#3A8F6E' }} />
           </div>
         ) : cenarios.length === 0 ? (
           <Card
             style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563'
+              backgroundColor: '#18322C',
+              borderColor: '#2A4942',
+              borderWidth: '1px',
+              borderRadius: '18px',
+              boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
             }}
           >
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <Target className="h-16 w-16 text-white/50 mb-4" />
-              <h3 className="text-xl font-semibold mb-2 text-white">Nenhum cenário criado</h3>
-              <p className="text-white/70 text-center max-w-md mb-6">
+              <Target className="h-16 w-16 mb-4" style={{ color: '#8CA39C' }} />
+              <h3 className="text-xl font-semibold mb-2" style={{ color: '#F2F7F5' }}>Nenhum cenário criado</h3>
+              <p className="text-center max-w-md mb-6" style={{ color: '#B2BDB9' }}>
                 Crie seu primeiro cenário de planejamento para começar a projetar seu futuro financeiro.
               </p>
               <Button
                 onClick={() => setDialogOpen(true)}
-                className="text-white"
+                className="hover:bg-[#2E7D6B]"
                 style={{
-                  backgroundColor: '#18B0A4',
-                  color: '#ffffff'
+                  backgroundColor: '#3A8F6E',
+                  color: '#F2F7F5',
+                  borderRadius: '12px',
                 }}
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -246,25 +260,28 @@ export default function PlanejamentoPage() {
               return (
                 <Card
                   key={cenario.id}
-                  className="relative overflow-hidden border-white/20"
+                  className="relative overflow-hidden"
                   style={{
-                    background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                    backgroundColor: '#3B5563',
+                    backgroundColor: '#18322C',
+                    borderColor: '#2A4942',
+                    borderWidth: '1px',
+                    borderRadius: '18px',
+                    boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
                   }}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <CardTitle className="text-lg text-white">{cenario.nome}</CardTitle>
+                          <CardTitle className="text-lg" style={{ color: '#F2F7F5' }}>{cenario.nome}</CardTitle>
                           {cenario.tipo === 'base' && (
-                            <Badge variant="secondary" className="text-xs bg-white/20 text-white border-white/30">
+                            <Badge variant="secondary" style={{ backgroundColor: '#213A34', color: '#F2F7F5', borderColor: '#2A4942' }}>
                               Base
                             </Badge>
                           )}
                         </div>
                         {cenario.descricao && (
-                          <CardDescription className="text-xs line-clamp-2 text-white/70">
+                          <CardDescription className="text-xs line-clamp-2" style={{ color: '#B2BDB9' }}>
                             {cenario.descricao}
                           </CardDescription>
                         )}
@@ -274,7 +291,8 @@ export default function PlanejamentoPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-white hover:bg-white/10"
+                            className="h-8 w-8"
+                            style={{ color: '#F2F7F5' }}
                             aria-label="Menu de opções do cenário"
                           >
                             <MoreVertical className="h-4 w-4" />
@@ -282,35 +300,38 @@ export default function PlanejamentoPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="bg-[#2C3E50] border-white/20"
+                          style={{
+                            backgroundColor: '#142A25',
+                            borderColor: '#2A4942'
+                          }}
                         >
                           <DropdownMenuItem
                             onClick={() => router.push(`/planejamento/${cenario.id}`)}
-                            className="text-white hover:bg-white/10 focus:bg-white/10"
+                            style={{ color: '#F2F7F5' }}
                           >
                             <Edit className="mr-2 h-4 w-4" />
                             Editar Cenário
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleViewDetails(cenario.id)}
-                            className="text-white hover:bg-white/10 focus:bg-white/10"
+                            style={{ color: '#F2F7F5' }}
                           >
                             <Eye className="mr-2 h-4 w-4" />
                             Ver Projeção
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-white/10" />
+                          <DropdownMenuSeparator style={{ backgroundColor: '#213A34' }} />
                           <DropdownMenuItem
                             onClick={() => handleDuplicateCenario(cenario.id)}
-                            className="text-white hover:bg-white/10 focus:bg-white/10"
+                            style={{ color: '#F2F7F5' }}
                           >
                             <Copy className="mr-2 h-4 w-4" />
                             Duplicar
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-white/10" />
+                          <DropdownMenuSeparator style={{ backgroundColor: '#213A34' }} />
                           <DropdownMenuItem
                             onClick={() => handleDeleteClick(cenario.id)}
                             disabled={cenario.tipo === 'base'}
-                            className="text-red-400 hover:bg-red-500/10 focus:bg-red-500/10 disabled:opacity-50"
+                            style={{ color: '#F07167' }}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Excluir
@@ -323,40 +344,40 @@ export default function PlanejamentoPage() {
                   <CardContent className="space-y-4">
                     {/* Horizonte */}
                     <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-white/60" />
-                      <span className="text-white/70">
+                      <Calendar className="h-4 w-4" style={{ color: '#8CA39C' }} />
+                      <span style={{ color: '#B2BDB9' }}>
                         Horizonte: {cenario.horizonte_anos} {cenario.horizonte_anos === 1 ? 'ano' : 'anos'}
                       </span>
                     </div>
 
                     {/* Métricas */}
                     {resumo && (
-                      <div className="space-y-3 pt-3 border-t border-white/10">
+                      <div className="space-y-3 pt-3" style={{ borderTop: '1px solid #213A34' }}>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-white/70">Patrimônio Final</span>
-                          <span className="text-sm font-semibold text-white">
+                          <span className="text-sm" style={{ color: '#B2BDB9' }}>Patrimônio Final</span>
+                          <span className="text-sm font-semibold" style={{ color: '#D4AF37' }}>
                             {formatCurrency(resumo.patrimonio_final)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-white/70">Saving Acumulado</span>
-                          <span className="text-sm font-semibold text-[#18B0A4]">
+                          <span className="text-sm" style={{ color: '#B2BDB9' }}>Saving Acumulado</span>
+                          <span className="text-sm font-semibold" style={{ color: '#6CCB8C' }}>
                             {formatCurrency(resumo.saving_acumulado)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-white/70">Taxa de Saving</span>
-                          <span className="text-sm font-semibold text-white">
+                          <span className="text-sm" style={{ color: '#B2BDB9' }}>Taxa de Saving</span>
+                          <span className="text-sm font-semibold" style={{ color: '#F2F7F5' }}>
                             {(resumo.taxa_saving_media * 100).toFixed(1)}%
                           </span>
                         </div>
 
                         {/* Objetivos */}
                         {projecao && projecao.objetivos_analise?.length > 0 && (
-                          <div className="pt-2 border-t border-white/10">
+                          <div className="pt-2" style={{ borderTop: '1px solid #213A34' }}>
                             <div className="flex items-center gap-2 mb-2">
-                              <Target className="h-3.5 w-3.5 text-white/60" />
-                              <span className="text-xs font-medium text-white/70">
+                              <Target className="h-3.5 w-3.5" style={{ color: '#8CA39C' }} />
+                              <span className="text-xs font-medium" style={{ color: '#B2BDB9' }}>
                                 Objetivos ({projecao.objetivos_analise.length})
                               </span>
                             </div>
@@ -371,7 +392,7 @@ export default function PlanejamentoPage() {
 
                                 return (
                                   <div key={idx} className="flex items-center justify-between text-xs">
-                                    <span className="truncate flex-1 text-white/80">{analise.objetivo.nome}</span>
+                                    <span className="truncate flex-1" style={{ color: '#F2F7F5' }}>{analise.objetivo.nome}</span>
                                     <Badge
                                       variant={
                                         analise.status === 'no_caminho'
@@ -381,6 +402,10 @@ export default function PlanejamentoPage() {
                                           : 'destructive'
                                       }
                                       className="ml-2 text-[10px] h-5 flex items-center gap-1"
+                                      style={{
+                                        backgroundColor: analise.status === 'no_caminho' ? '#213A34' : analise.status === 'precisa_ajustes' ? '#3D3516' : '#3D1F1E',
+                                        color: analise.status === 'no_caminho' ? '#6CCB8C' : analise.status === 'precisa_ajustes' ? '#E0B257' : '#F07167'
+                                      }}
                                     >
                                       <StatusIcon className="h-2.5 w-2.5" />
                                       {analise.status === 'no_caminho' ? 'Ok' : analise.status === 'precisa_ajustes' ? 'Ajustar' : 'Risco'}
@@ -403,45 +428,59 @@ export default function PlanejamentoPage() {
         {/* Dialog de Novo Cenário */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent
-            className="border-white/20"
             style={{
-              background: 'linear-gradient(135deg, #2C3E50 0%, #1a252f 100%)',
-              backgroundColor: '#2C3E50',
+              backgroundColor: '#18322C',
+              borderColor: '#2A4942',
+              borderWidth: '1px',
+              borderRadius: '14px',
+              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
             }}
           >
             <DialogHeader>
-              <DialogTitle className="text-white">Novo Cenário de Planejamento</DialogTitle>
-              <DialogDescription className="text-white/70">
+              <DialogTitle style={{ color: '#F2F7F5' }}>Novo Cenário de Planejamento</DialogTitle>
+              <DialogDescription style={{ color: '#B2BDB9' }}>
                 Crie um cenário personalizado para simular seu futuro financeiro.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="nome" className="text-white">Nome do Cenário *</Label>
+                <Label htmlFor="nome" style={{ color: '#F2F7F5' }}>Nome do Cenário *</Label>
                 <Input
                   id="nome"
                   placeholder="Ex: Aposentadoria 2035, Compra de Casa"
                   value={novoCenario.nome}
                   onChange={(e) => setNovoCenario({ ...novoCenario, nome: e.target.value })}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                  style={{
+                    backgroundColor: '#142A25',
+                    borderColor: '#2A4942',
+                    color: '#F2F7F5',
+                    borderRadius: '10px',
+                  }}
+                  className="placeholder:text-[#8CA39C]"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="descricao" className="text-white">Descrição</Label>
+                <Label htmlFor="descricao" style={{ color: '#F2F7F5' }}>Descrição</Label>
                 <Textarea
                   id="descricao"
                   placeholder="Descreva o objetivo deste cenário..."
                   value={novoCenario.descricao}
                   onChange={(e) => setNovoCenario({ ...novoCenario, descricao: e.target.value })}
                   rows={3}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                  style={{
+                    backgroundColor: '#142A25',
+                    borderColor: '#2A4942',
+                    color: '#F2F7F5',
+                    borderRadius: '10px',
+                  }}
+                  className="placeholder:text-[#8CA39C]"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="horizonte" className="text-white">Horizonte de Tempo (anos) *</Label>
+                <Label htmlFor="horizonte" style={{ color: '#F2F7F5' }}>Horizonte de Tempo (anos) *</Label>
                 <Input
                   id="horizonte"
                   type="number"
@@ -451,9 +490,14 @@ export default function PlanejamentoPage() {
                   onChange={(e) =>
                     setNovoCenario({ ...novoCenario, horizonte_anos: parseInt(e.target.value) || 5 })
                   }
-                  className="bg-white/10 border-white/20 text-white"
+                  style={{
+                    backgroundColor: '#142A25',
+                    borderColor: '#2A4942',
+                    color: '#F2F7F5',
+                    borderRadius: '10px',
+                  }}
                 />
-                <p className="text-xs text-white/60">
+                <p className="text-xs" style={{ color: '#8CA39C' }}>
                   Entre 1 e 10 anos. Quanto maior o horizonte, mais tempo para seus objetivos.
                 </p>
               </div>
@@ -463,17 +507,24 @@ export default function PlanejamentoPage() {
               <Button
                 variant="outline"
                 onClick={() => setDialogOpen(false)}
-                className="border-white/20 text-white hover:bg-white/10"
+                className="hover:bg-[#1D3A34]"
+                style={{
+                  backgroundColor: '#142A25',
+                  borderColor: '#2A4942',
+                  color: '#F2F7F5',
+                  borderRadius: '12px',
+                }}
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleCreateCenario}
                 disabled={!novoCenario.nome.trim()}
-                className="text-white"
+                className="hover:bg-[#2E7D6B]"
                 style={{
-                  backgroundColor: '#18B0A4',
-                  color: '#ffffff'
+                  backgroundColor: '#3A8F6E',
+                  color: '#F2F7F5',
+                  borderRadius: '12px',
                 }}
               >
                 Criar Cenário
@@ -485,26 +536,41 @@ export default function PlanejamentoPage() {
         {/* Dialog de Confirmação de Exclusão */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent
-            className="border-white/20"
             style={{
-              background: 'linear-gradient(135deg, #2C3E50 0%, #1a252f 100%)',
-              backgroundColor: '#2C3E50',
+              backgroundColor: '#18322C',
+              borderColor: '#2A4942',
+              borderWidth: '1px',
+              borderRadius: '14px',
+              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
             }}
           >
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-white">Excluir Cenário</AlertDialogTitle>
-              <AlertDialogDescription className="text-white/70">
+              <AlertDialogTitle style={{ color: '#F2F7F5' }}>Excluir Cenário</AlertDialogTitle>
+              <AlertDialogDescription style={{ color: '#B2BDB9' }}>
                 Tem certeza que deseja excluir este cenário? Esta ação não pode ser desfeita.
                 Todos os dados de configurações e objetivos serão perdidos.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">
+              <AlertDialogCancel 
+                className="hover:bg-[#1D3A34]"
+                style={{
+                  backgroundColor: '#142A25',
+                  borderColor: '#2A4942',
+                  color: '#F2F7F5',
+                  borderRadius: '12px',
+                }}
+              >
                 Cancelar
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmDelete}
-                className="bg-red-600 text-white hover:bg-red-700"
+                className="hover:bg-[#D85F57]"
+                style={{
+                  backgroundColor: '#F07167',
+                  color: '#0E0E0E',
+                  borderRadius: '12px',
+                }}
               >
                 Excluir
               </AlertDialogAction>
@@ -515,71 +581,91 @@ export default function PlanejamentoPage() {
         {/* Dialog de Detalhes do Cenário */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent
-            className="border-white/20 max-w-4xl max-h-[80vh] overflow-y-auto"
+            className="max-w-4xl max-h-[80vh] overflow-y-auto"
             style={{
-              background: 'linear-gradient(135deg, #2C3E50 0%, #1a252f 100%)',
-              backgroundColor: '#2C3E50',
+              backgroundColor: '#18322C',
+              borderColor: '#2A4942',
+              borderWidth: '1px',
+              borderRadius: '14px',
+              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
             }}
           >
             <DialogHeader>
-              <DialogTitle className="text-white">Evolução Mensal do Cenário</DialogTitle>
-              <DialogDescription className="text-white/70">
+              <DialogTitle style={{ color: '#F2F7F5' }}>Evolução Mensal do Cenário</DialogTitle>
+              <DialogDescription style={{ color: '#B2BDB9' }}>
                 Projeção mês a mês de receitas, despesas e patrimônio acumulado
               </DialogDescription>
             </DialogHeader>
 
             {cenarioToView && projecoes.get(cenarioToView) && (
               <div className="py-4">
-                <div className="rounded-lg border border-white/10 overflow-hidden">
+                <div 
+                  className="rounded-lg overflow-hidden"
+                  style={{
+                    border: '1px solid #2A4942',
+                  }}
+                >
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-white/5 border-b border-white/10">
-                          <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
+                        <tr 
+                          style={{
+                            backgroundColor: '#162B26',
+                            borderBottom: '1px solid #213A34',
+                          }}
+                        >
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: '#B2BDB9' }}>
                             Mês
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-white/70 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: '#B2BDB9' }}>
                             Receitas
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-white/70 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: '#B2BDB9' }}>
                             Despesas
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-white/70 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: '#B2BDB9' }}>
                             Saving
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-white/70 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: '#B2BDB9' }}>
                             Rendimentos
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-white/70 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: '#B2BDB9' }}>
                             Patrimônio
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5">
+                      <tbody>
                         {projecoes.get(cenarioToView)!.projecoes.map((projecao, idx) => {
                           const mes = new Date(projecao.mes)
                           const mesAno = mes.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
 
                           return (
-                            <tr key={idx} className="hover:bg-white/5 transition-colors">
-                              <td className="px-4 py-3 text-white/90 font-medium">
+                            <tr 
+                              key={idx} 
+                              className="hover:bg-[#1D3A34] transition-colors"
+                              style={{
+                                backgroundColor: '#18322C',
+                                borderBottom: '1px solid #213A34',
+                              }}
+                            >
+                              <td className="px-4 py-3 font-medium" style={{ color: '#F2F7F5' }}>
                                 {mesAno}
                               </td>
-                              <td className="px-4 py-3 text-right text-green-400 font-medium">
+                              <td className="px-4 py-3 text-right font-medium" style={{ color: '#6CCB8C' }}>
                                 {formatCurrency(projecao.receitas.total)}
                               </td>
-                              <td className="px-4 py-3 text-right text-red-400 font-medium">
+                              <td className="px-4 py-3 text-right font-medium" style={{ color: '#F07167' }}>
                                 {formatCurrency(projecao.despesas.total)}
                               </td>
                               <td className="px-4 py-3 text-right font-semibold">
-                                <span className={projecao.saving >= 0 ? 'text-[#18B0A4]' : 'text-red-400'}>
+                                <span style={{ color: projecao.saving >= 0 ? '#6CCB8C' : '#F07167' }}>
                                   {formatCurrency(projecao.saving)}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-right text-blue-400">
+                              <td className="px-4 py-3 text-right" style={{ color: '#D4AF37' }}>
                                 {formatCurrency(projecao.rendimento_investimentos)}
                               </td>
-                              <td className="px-4 py-3 text-right text-white font-bold">
+                              <td className="px-4 py-3 text-right font-bold" style={{ color: '#D4AF37' }}>
                                 {formatCurrency(projecao.patrimonio_acumulado)}
                               </td>
                             </tr>
@@ -596,7 +682,13 @@ export default function PlanejamentoPage() {
               <Button
                 variant="outline"
                 onClick={() => setDetailsDialogOpen(false)}
-                className="border-white/20 text-white hover:bg-white/10"
+                className="hover:bg-[#1D3A34]"
+                style={{
+                  backgroundColor: '#142A25',
+                  borderColor: '#2A4942',
+                  color: '#F2F7F5',
+                  borderRadius: '12px',
+                }}
               >
                 Fechar
               </Button>

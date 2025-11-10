@@ -82,7 +82,7 @@ export function TagForm({ tag, onSubmit, onCancel }: TagFormProps) {
     <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
       {/* Nome */}
       <div className="space-y-2">
-        <Label htmlFor="nome" className="text-white">
+        <Label htmlFor="nome" className="text-foreground">
           Nome da Tag <span className="text-destructive">*</span>
         </Label>
         <Input
@@ -90,17 +90,13 @@ export function TagForm({ tag, onSubmit, onCancel }: TagFormProps) {
           placeholder="Ex: Trabalho, Pessoal, Urgente..."
           {...register("nome")}
           disabled={tag?.tipo === 'sistema'}
-          className="border-0 text-white placeholder:text-white/50"
-          style={{
-            backgroundColor: '#1e293b',
-            color: '#ffffff'
-          }}
+          className="bg-card border-border text-foreground"
         />
         {errors.nome && (
           <p className="text-sm text-destructive">{errors.nome.message}</p>
         )}
         {tag?.tipo === 'sistema' && (
-          <p className="text-xs text-white/70">
+          <p className="text-xs text-foreground/70">
             Tags do sistema não podem ter o nome alterado
           </p>
         )}
@@ -108,7 +104,7 @@ export function TagForm({ tag, onSubmit, onCancel }: TagFormProps) {
 
       {/* Cor */}
       <div className="space-y-3">
-        <Label className="text-white">Cor</Label>
+        <Label className="text-foreground">Cor</Label>
         <div className="grid grid-cols-8 gap-2">
           {CORES_PREDEFINIDAS.map((cor) => (
             <button
@@ -117,10 +113,12 @@ export function TagForm({ tag, onSubmit, onCancel }: TagFormProps) {
               onClick={() => setSelectedColor(cor)}
               className={`w-10 h-10 rounded-md transition-all hover:scale-110 ${
                 selectedColor === cor
-                  ? "ring-2 ring-offset-2 ring-primary"
+                  ? "ring-2 ring-primary ring-offset-2"
                   : ""
               }`}
-              style={{ backgroundColor: cor }}
+              style={{
+                backgroundColor: cor,
+              }}
               aria-label={`Selecionar cor ${cor}`}
             />
           ))}
@@ -128,7 +126,7 @@ export function TagForm({ tag, onSubmit, onCancel }: TagFormProps) {
 
         {/* Color Picker Nativo */}
         <div className="flex items-center gap-3">
-          <Label htmlFor="color-picker" className="text-sm text-white/70">
+          <Label htmlFor="color-picker" className="text-sm text-foreground/70">
             Ou escolha uma cor customizada:
           </Label>
           <input
@@ -136,15 +134,15 @@ export function TagForm({ tag, onSubmit, onCancel }: TagFormProps) {
             type="color"
             value={selectedColor}
             onChange={(e) => setSelectedColor(e.target.value)}
-            className="h-10 w-20 rounded border border-white/20 cursor-pointer"
+            className="h-10 w-20 rounded border border-border cursor-pointer"
           />
         </div>
 
         {/* Preview */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-white/70">Preview:</span>
+          <span className="text-sm text-foreground/70">Preview:</span>
           <div
-            className="px-3 py-1 rounded-md text-sm font-medium text-white"
+            className="px-3 py-1 rounded-md text-sm font-medium text-foreground"
             style={{ backgroundColor: selectedColor }}
           >
             {tag?.nome || "Tag de exemplo"}
@@ -159,12 +157,15 @@ export function TagForm({ tag, onSubmit, onCancel }: TagFormProps) {
           variant="outline"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="border-0 text-white hover:bg-white/10"
-          style={{ backgroundColor: '#1e293b', color: '#ffffff' }}
+          className="bg-card border-border text-foreground"
         >
           Cancelar
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-primary text-foreground"
+        >
           {isSubmitting ? "Salvando..." : tag ? "Atualizar" : "Criar"}
         </Button>
       </div>

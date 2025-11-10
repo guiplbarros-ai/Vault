@@ -9,7 +9,9 @@ export const accountSchema = z.object({
   balance: currencySchema.default(0),
   currency: z.string().length(3, 'Código de moeda deve ter 3 caracteres').default('BRL'),
   institution: z.string().optional(),
+  agency: z.string().optional(),
   accountNumber: z.string().optional(),
+  parentAccount: z.string().optional(), // ID da conta pai (para vinculação)
   color: z.string().optional(),
   icon: z.string().optional(),
   notes: z.string().optional(),

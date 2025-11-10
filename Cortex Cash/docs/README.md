@@ -75,7 +75,7 @@ Dica: Ao adicionar novos documentos, vincule-os no índice da categoria correspo
 - **[Import](./features/IMPORT.md)** - Sistema de importação (CSV, OFX)
 - **[Patrimônio](./features/PATRIMONIO.md)** - Gestão de investimentos
 - **[Configurações](./features/CONFIGURACOES.md)** - Sistema de settings
-- **[Tema](./features/TEMA.md)** - Dark/Light mode
+- **[Tema](./features/TEMA.md)** - Orientação de UI (Dark, sólido)
 
 ### 📋 Outros
 - **[Agents Architecture](./guides/AGENTES_IA.md)** - Arquitetura de 3 agentes

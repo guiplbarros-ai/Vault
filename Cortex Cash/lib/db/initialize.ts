@@ -9,6 +9,7 @@ import { getDB } from './client';
 import { CATEGORIAS_PADRAO, seedCategorias, hasCategories } from './seed';
 import { seedTags, hasTags } from './seed-tags';
 import { seedCenarioBase } from './seed-planejamento';
+import { seedUsuarios, hasUsuarios } from './seed-usuarios';
 
 const INIT_FLAG_KEY = 'cortex-cash-initialized';
 
@@ -41,14 +42,21 @@ export async function initializeDatabase(): Promise<void> {
   try {
     const db = getDB();
 
-    // Verifica se já tem categorias (dupla checagem para evitar race conditions)
+    // Verifica se já tem dados básicos (dupla checagem para evitar race conditions)
     const alreadyHasCategories = await hasCategories(db);
     const alreadyHasTags = await hasTags(db);
+    const alreadyHasUsuarios = await hasUsuarios();
 
-    if (alreadyHasCategories && alreadyHasTags) {
-      console.log('✅ Categorias e Tags já existem, pulando seed...');
+    if (alreadyHasCategories && alreadyHasTags && alreadyHasUsuarios) {
+      console.log('✅ Dados básicos já existem, pulando seed...');
       markAsInitialized();
       return;
+    }
+
+    // Seed de usuários padrão (PRIMEIRO - outros dados dependem disso)
+    if (!alreadyHasUsuarios) {
+      console.log(`🔄 Criando usuários padrão...`);
+      await seedUsuarios();
     }
 
     // Seed de categorias padrão usando bulkAdd (mais rápido e atômico)

@@ -63,7 +63,11 @@ export function FinancialSummary() {
       // Carregar dados em paralelo
       const [contas, transacoes, orcamentos, cartoes] = await Promise.all([
         contaService.listContas(),
-        transacaoService.listTransacoes(),
+        // Busca apenas transações do mês atual (reduz IO)
+        transacaoService.listTransacoes({
+          dataInicio: startOfMonth(new Date()),
+          dataFim: endOfMonth(new Date()),
+        }),
         orcamentoService.listOrcamentosComProgresso({ mesReferencia }),
         cartaoService.listCartoes({ incluirInativos: false }),
       ])
@@ -73,13 +77,8 @@ export function FinancialSummary() {
       const activeAccountsCount = contas.filter(c => c.ativa).length
 
       // === MÊS ATUAL ===
-      const monthStart = startOfMonth(new Date())
-      const monthEnd = endOfMonth(new Date())
-
-      const currentMonthTransactions = transacoes.filter(t => {
-        const transactionDate = t.data instanceof Date ? t.data : new Date(t.data)
-        return transactionDate >= monthStart && transactionDate <= monthEnd
-      })
+      // Já buscamos somente o mês atual
+      const currentMonthTransactions = transacoes
 
       const monthlyIncome = currentMonthTransactions
         .filter(t => t.tipo === 'receita')

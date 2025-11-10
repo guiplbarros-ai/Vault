@@ -10,6 +10,7 @@ import { contaService } from '@/lib/services/conta.service'
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { Transacao } from '@/lib/types'
+import { THEME_COLORS } from '@/lib/constants/colors'
 
 interface ChartData {
   month: string
@@ -34,28 +35,13 @@ export function CashFlowChart() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   }, [theme])
 
-  // ✅ Compute colors from CSS variables with correct dependencies
-  const colors = useMemo(() => {
-    if (typeof window === 'undefined') return {
-      income: 'hsl(142 71% 45%)',
-      expenses: 'hsl(0 84% 60%)',
-      investments: 'hsl(175 73% 39%)',
-      result: 'hsl(217 91% 60%)' // Blue for result line
-    }
-
-    const style = getComputedStyle(document.documentElement)
-    const chart8 = style.getPropertyValue('--chart-8').trim() || '142 71% 45%'
-    const destructive = style.getPropertyValue('--destructive').trim() || '0 84% 60%'
-    const primary = style.getPropertyValue('--primary').trim() || '175 73% 39%'
-    const chart7 = style.getPropertyValue('--chart-7').trim() || '217 91% 60%'
-
-    return {
-      income: `hsl(${chart8})`,
-      expenses: `hsl(${destructive})`,
-      investments: `hsl(${primary})`,
-      result: `hsl(${chart7})`,
-    }
-  }, [isDark, theme]) // ✅ Adicionar dependências corretas
+  // ✅ Compute colors from new color scheme
+  const colors = useMemo(() => ({
+    income: THEME_COLORS.success,
+    expenses: THEME_COLORS.destructive,
+    investments: THEME_COLORS.primary,
+    result: THEME_COLORS.gold,
+  }), [])
 
   useEffect(() => {
     loadChartData()
@@ -136,25 +122,29 @@ export function CashFlowChart() {
   }
 
   return (
-    <Card className="p-6 shadow-md border overflow-hidden flex flex-col h-full" style={{
-      background: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-      minHeight: '520px'
-    }}>
+    <Card
+      className="p-6 overflow-hidden flex flex-col h-full"
+      style={{
+        minHeight: '520px',
+        backgroundColor: THEME_COLORS.bgCard,
+        borderColor: THEME_COLORS.border,
+        borderWidth: '1px',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-1)',
+      }}
+    >
       <div className="mb-4 flex-shrink-0">
-        <h3 className="text-lg font-bold text-white">Fluxo de Caixa</h3>
-        <p className="text-sm text-white/80">Receitas vs Despesas vs Investimentos (Últimos 6 meses)</p>
+        <h3 className="text-lg font-bold" style={{ color: THEME_COLORS.fgPrimary }}>Fluxo de Caixa</h3>
+        <p className="text-sm" style={{ color: THEME_COLORS.fgSecondary }}>Receitas vs Despesas vs Investimentos (Últimos 6 meses)</p>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center flex-1 min-h-[360px]">
-          <Loader2 className={isDark ? "h-8 w-8 animate-spin text-white/50" : "h-8 w-8 animate-spin text-primary"} />
+          <Loader2 className="h-8 w-8 animate-spin text-secondary" />
         </div>
       ) : data.length === 0 ? (
         <div className="flex items-center justify-center flex-1 min-h-[360px]">
-          <p className={isDark ? "text-sm text-white/70" : "text-sm text-muted-foreground"}>Nenhuma transação encontrada</p>
+          <p className="text-sm text-secondary">Nenhuma transação encontrada</p>
         </div>
       ) : (
         <div className="-mx-2 -mb-6 flex-1 flex items-center min-h-0">
@@ -176,7 +166,7 @@ export function CashFlowChart() {
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke={isDark ? 'rgba(255, 255, 255, 0.2)' : 'hsl(var(--border))'}
+              stroke="#1A3530"
               vertical={true}
               horizontal={true}
             />
@@ -185,41 +175,41 @@ export function CashFlowChart() {
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: isDark ? 'rgba(255, 255, 255, 0.7)' : 'hsl(var(--muted-foreground))' }}
+              tick={{ fill: THEME_COLORS.fgSecondary }}
             />
             <YAxis
               fontSize={12}
               tickFormatter={formatCurrency}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: isDark ? 'rgba(255, 255, 255, 0.7)' : 'hsl(var(--muted-foreground))' }}
+              tick={{ fill: THEME_COLORS.fgSecondary }}
             />
             <ReferenceLine
               y={0}
-              stroke={isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'}
+              stroke={THEME_COLORS.border}
               strokeWidth={2}
               strokeDasharray="5 5"
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '0.75rem',
-                color: 'hsl(var(--foreground))',
-                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                backgroundColor: THEME_COLORS.bgCard2,
+                border: `1px solid ${THEME_COLORS.border}`,
+                borderRadius: 'var(--radius-md)',
+                color: THEME_COLORS.fgPrimary,
+                boxShadow: 'var(--shadow-2)',
               }}
               formatter={(value: number) => formatCurrency(value)}
-              cursor={{ fill: 'hsl(var(--muted))', opacity: 0.5 }}
-              labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
+              cursor={{ fill: THEME_COLORS.hover, opacity: 0.3 }}
+              labelStyle={{ color: THEME_COLORS.fgPrimary, fontWeight: 600 }}
             />
             <Legend
               wrapperStyle={{
                 paddingTop: '15px',
-                color: isDark ? '#FFFFFF' : undefined
+                color: THEME_COLORS.fgPrimary
               }}
               iconType="circle"
               formatter={(value: string) => (
-                <span style={{ color: isDark ? '#FFFFFF' : '#0B2230' }}>{value}</span>
+                <span style={{ color: THEME_COLORS.fgPrimary }}>{value}</span>
               )}
             />
             <Bar
@@ -253,13 +243,13 @@ export function CashFlowChart() {
                 fill: colors.result,
                 strokeWidth: 2,
                 r: 5,
-                stroke: isDark ? '#ffffff' : '#000000',
+                stroke: THEME_COLORS.foreground,
                 strokeOpacity: 0.2
               }}
               activeDot={{
                 r: 7,
                 fill: colors.result,
-                stroke: isDark ? '#ffffff' : '#000000',
+                stroke: THEME_COLORS.foreground,
                 strokeWidth: 2
               }}
             />

@@ -13,16 +13,8 @@ const nextConfig = {
     optimizePackageImports: ['recharts', 'lucide-react', 'date-fns'],
   },
 
-  // Configurações de webpack para melhor performance
-  webpack: (config, { isServer }) => {
-    // Otimiza o tamanho do bundle
-    config.optimization = {
-      ...config.optimization,
-      moduleIds: 'deterministic',
-    }
-
-    return config
-  },
+  // Configuração vazia do Turbopack para silenciar warning
+  turbopack: {},
 
   // Desabilita source maps em desenvolvimento para compilação mais rápida
   // (pode ser reativado se precisar debugar)

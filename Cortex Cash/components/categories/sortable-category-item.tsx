@@ -136,7 +136,7 @@ export function SortableCategoryItem({
       {/* Drag Handle */}
       <button
         type="button"
-        className="cursor-grab active:cursor-grabbing p-1 hover:bg-black/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+        className="cursor-grab active:cursor-grabbing p-1 hover:bg-[#0B2230]/10 rounded transition-colors opacity-0 group-hover:opacity-100"
         {...attributes}
         {...listeners}
       >
@@ -151,7 +151,7 @@ export function SortableCategoryItem({
             e.stopPropagation();
             onToggle?.();
           }}
-          className="p-1 hover:bg-black/10 rounded transition-colors"
+          className="p-1 hover:bg-[#0B2230]/10 rounded transition-colors"
         >
           {isExpanded ? (
             <ChevronDown className="h-5 w-5 text-white" />

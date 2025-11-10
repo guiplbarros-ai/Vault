@@ -70,16 +70,9 @@ export function DiversificationWidget() {
 
   if (loading) {
     return (
-      <Card
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-        }}
-      >
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <CardTitle className="text-foreground">
             Análise de Diversificação
           </CardTitle>
         </CardHeader>
@@ -97,22 +90,15 @@ export function DiversificationWidget() {
   }
 
   return (
-    <Card
-      style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-      }}
-    >
+    <Card className="bg-card">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <PieChart className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <PieChart className="h-5 w-5 text-primary" />
+          <CardTitle className="text-foreground">
             Análise de Diversificação
           </CardTitle>
         </div>
-        <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+        <CardDescription className="text-muted-foreground">
           Distribuição do seu patrimônio por categoria
         </CardDescription>
       </CardHeader>
@@ -120,16 +106,16 @@ export function DiversificationWidget() {
         {/* Contas vs Investimentos */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+            <span className="text-sm font-medium text-foreground">
               Contas vs Investimentos
             </span>
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+              <span className="text-xs text-muted-foreground">
                 Contas
               </span>
-              <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+              <span className="text-xs font-medium text-foreground">
                 {formatCurrency(data.contas_vs_investimentos.contas)} (
                 {data.contas_vs_investimentos.percentual_contas.toFixed(1)}%)
               </span>
@@ -137,15 +123,15 @@ export function DiversificationWidget() {
             <Progress
               value={data.contas_vs_investimentos.percentual_contas}
               className="h-2"
-              indicatorClassName="bg-green-500"
+              indicatorClassName="bg-success"
             />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+              <span className="text-xs text-muted-foreground">
                 Investimentos
               </span>
-              <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+              <span className="text-xs font-medium text-foreground">
                 {formatCurrency(data.contas_vs_investimentos.investimentos)} (
                 {data.contas_vs_investimentos.percentual_investimentos.toFixed(1)}%)
               </span>
@@ -153,7 +139,7 @@ export function DiversificationWidget() {
             <Progress
               value={data.contas_vs_investimentos.percentual_investimentos}
               className="h-2"
-              indicatorClassName="bg-yellow-500"
+              indicatorClassName="bg-warning"
             />
           </div>
         </div>
@@ -162,7 +148,7 @@ export function DiversificationWidget() {
         {data.por_tipo_investimento.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+              <span className="text-sm font-medium text-foreground">
                 Tipos de Investimento
               </span>
             </div>
@@ -170,10 +156,10 @@ export function DiversificationWidget() {
               {data.por_tipo_investimento.map((item) => (
                 <div key={item.tipo} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                    <span className="text-xs text-muted-foreground">
                       {TIPO_LABELS[item.tipo] || item.tipo}
                     </span>
-                    <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+                    <span className="text-xs font-medium text-foreground">
                       {formatCurrency(item.valor)} ({item.percentual.toFixed(1)}%)
                     </span>
                   </div>
@@ -188,7 +174,7 @@ export function DiversificationWidget() {
         {data.por_tipo_conta.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+              <span className="text-sm font-medium text-foreground">
                 Tipos de Conta
               </span>
             </div>
@@ -196,10 +182,10 @@ export function DiversificationWidget() {
               {data.por_tipo_conta.map((item) => (
                 <div key={item.tipo} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                    <span className="text-xs text-muted-foreground">
                       {TIPO_LABELS[item.tipo] || item.tipo}
                     </span>
-                    <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+                    <span className="text-xs font-medium text-foreground">
                       {formatCurrency(item.valor)} ({item.percentual.toFixed(1)}%)
                     </span>
                   </div>

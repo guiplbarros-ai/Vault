@@ -618,103 +618,9 @@
 
 ### 8.2 Tema e paleta
 
-> **IMPORTANTE**: O design system já está implementado em `app/globals.css`. Esta seção documenta as cores em uso.
+Orientação consolidada em um único documento. Consulte:
 
-**Cortex Pixel Teal** — Design system dark-first com pixel art aesthetic, inspirado em finanças e jogos retro.
-
-#### Paleta Dark (default - em uso)
-
-```css
-/* Base colors */
---color-background: #0a1f2e;        /* Navy escuro profundo */
---color-foreground: #e8dcc4;        /* Bege claro (texto principal) */
---color-card: #132d3f;              /* Cards e containers */
---color-muted: #1a3a4f;             /* Backgrounds secundários */
---color-muted-foreground: #9fb8c7;  /* Texto secundário */
-
-/* Brand colors */
---color-accent: #2d9b9b;            /* Teal/Turquesa (interações) */
---color-primary: #d4af37;           /* Gold/Ouro (highlights monetários) */
---color-secondary: #1a5f6f;         /* Teal escuro */
-
-/* Semantic colors */
---color-destructive: #e74c3c;       /* Vermelho (erros/despesas) */
-
-/* UI elements */
---color-border: #2d4a5c;            /* Bordas sutis */
---color-ring: #2d9b9b;              /* Focus ring */
-
-/* Chart colors */
---color-chart-1: #2d9b9b;           /* Teal */
---color-chart-2: #d4af37;           /* Gold */
---color-chart-3: #e67e22;           /* Orange */
---color-chart-4: #3498db;           /* Blue */
---color-chart-5: #9b59b6;           /* Purple */
-```
-
-#### Uso das Cores
-
-- **Primary (Gold `#d4af37`)**: Valores monetários, CTAs principais, highlights importantes
-- **Accent (Teal `#2d9b9b`)**: Interações, hovers, links, estados ativos
-- **Foreground (Bege `#e8dcc4`)**: Texto principal (contraste 12.6:1 sobre background)
-- **Muted (`#9fb8c7`)**: Texto secundário, labels, metadata
-- **Receitas**: Usar `accent` (teal) ou `chart-1`
-- **Despesas**: Usar `destructive` (red) quando negativo crítico
-- **Charts**: Usar paleta `chart-1` a `chart-5` conforme necessidade
-
-#### Componentes (shadcn/ui)
-
-- **Cards**: Background `#132d3f`, border `#2d4a5c`
-- **Buttons Primary**: Background `#d4af37` (gold), texto `#0a1f2e`
-- **Buttons Secondary**: Background `#1a5f6f` (teal escuro), texto `#e8dcc4`
-- **Inputs**: Background `#132d3f`, border `#2d4a5c`, focus ring `#2d9b9b`
-- **Tables**: Row hover `#132d3f`, border `#2d4a5c`
-
-#### Pixel Art Aesthetic
-
-```css
-/* Classe helper para cantos "pixelados" (já implementada em globals.css) */
-.pixel-corners {
-  clip-path: polygon(
-    0 4px, 4px 4px, 4px 0,
-    calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px,
-    100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px),
-    calc(100% - 4px) 100%, 4px 100%,
-    4px calc(100% - 4px), 0 calc(100% - 4px)
-  );
-}
-
-/* Scrollbar customizada */
-::-webkit-scrollbar {
-  width: 8px;
-  background: var(--color-background);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-muted);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-accent);
-}
-
-/* Transições suaves */
-* {
-  transition: colors 200ms ease;
-}
-```
-
-#### Acessibilidade
-
-- **Contraste texto/fundo**: Mínimo WCAG AA (4.5:1)
-  - `#e8dcc4` sobre `#0a1f2e` = 12.6:1 ✅
-  - `#9fb8c7` sobre `#132d3f` = 5.1:1 ✅
-- **Focus indicators**: Ring de 2px em `--color-ring` (#2d9b9b)
-- **Ícones e elementos UI**: Mínimo 3:1
-
-#### Modo Light
-
-> **v0.1-0.4**: Dark-only (prioridade para lançamento rápido)
-> **v1.0+**: Implementar light mode com inversão da paleta, mantendo mesmos accent/primary
+- `docs/features/TEMA.md` — Tema — Orientação de UI (Dark, sólido)
 
 ### 8.3 Tipografia e ícones
 - **Fonte**: Inter (títulos semibold, corpo regular).  
@@ -722,12 +628,15 @@
 - **Motion**: transições de 150–200ms, easing padrão; microinterações só quando somam.
 
 ### 8.4 Componentes e padrões
-- **Cards**: leve glassmorphism (sombras suaves).  
-- **Tabelas**: minimal com linha divisória sutil e **hover**; cabeçalho fixo; filtros por **chips** e busca global.  
-- **Notificações**: toasts no canto inferior direito; banners apenas para críticos.  
-- **Formulários**: uma coluna, labels acima; tooltips curtos em campos críticos.  
-- **Empty state**: texto direto + CTA “Importar dados”.  
-- **Tags/chips**: pílulas arredondadas com cores suaves.
+- Cards/KPIs: bg `--bg-card`, borda `1px solid var(--border)`, raio `--radius-lg`, sombra `--shadow-1`; ícone em pill 36px (`--bg-card-2`).
+- Tabelas: cabeçalho `#162B26`; linhas `--bg-card` (hover `--hover`), zebra `--bg-card-2`; borda externa `--border`, canto `--radius-md`.
+- Botões: primário `--accent` → hover `--accent-emph`; secundário `--bg-card-2` + `--border`; ghost `transparent` + texto `--link`; destrutivo `--error`.
+- Inputs/Menus: campos com `--bg-card-2` e borda `--border`; dropdown com bg `--bg-card`, raio `--radius-md`, sombra `--shadow-2`.
+- Sidebar: fundo `#111C1A`, borda direita `--border`; item ativo `--bg-card-2` com indicador `--accent`.
+- Divisores/seções: `1px solid var(--divider)`; headers com H2 + descrição `--fg-muted`.
+- Toasts: bg `--bg-card`, borda `--border`, sombra `--shadow-2`; ícone por status.
+- Acessibilidade: foco com `outline: 2px solid var(--focus); outline-offset: 2px;`.
+- Proibido: transparência (`opacity < 1` em superfícies), `backdrop-filter`, `blur`, `bg-opacity-*`.
 
 ### 8.5 Acessibilidade e atalhos
 - Contraste mínimo AA (dark/light).  

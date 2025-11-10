@@ -472,6 +472,44 @@ export class ImportService {
     }
   }
 
+  /**
+   * Favorita/desfavorita um template
+   * Agent IMPORT: Template Favorites
+   */
+  async toggleTemplateFavorite(templateId: string): Promise<boolean> {
+    const db = getDB();
+    const template = await db.templates_importacao.get(templateId);
+
+    if (!template) {
+      throw new ValidationError('Template não encontrado');
+    }
+
+    const newFavoriteState = !template.is_favorite;
+
+    await db.templates_importacao.update(templateId, {
+      is_favorite: newFavoriteState,
+      updated_at: new Date(),
+    });
+
+    return newFavoriteState;
+  }
+
+  /**
+   * Busca templates favoritos
+   * Agent IMPORT: Template Favorites
+   */
+  async getFavoriteTemplates(): Promise<TemplateImportacao[]> {
+    const db = getDB();
+
+    const favorites = await db.templates_importacao
+      .where('is_favorite')
+      .equals(1) // Dexie usa 1 para true em índices
+      .toArray();
+
+    // Ordenar por nome
+    return favorites.sort((a, b) => a.nome.localeCompare(b.nome));
+  }
+
   // ============================================================================
   // Métodos Auxiliares Privados
   // ============================================================================

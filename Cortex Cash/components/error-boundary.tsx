@@ -4,6 +4,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
+import { brandNavyAlpha } from '@/lib/constants/colors'
 
 interface Props {
   children: ReactNode
@@ -119,27 +120,17 @@ export class ErrorBoundary extends Component<Props, State> {
       // UI padrão de erro
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
-          <Card
-            className="max-w-2xl w-full"
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-              borderColor: '#374151',
-            }}
-          >
+          <Card className="max-w-2xl w-full bg-card border-border">
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
-                <div
-                  className="flex h-12 w-12 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)' }}
-                >
-                  <AlertTriangle className="h-6 w-6 text-red-400" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/20">
+                  <AlertTriangle className="h-6 w-6 text-destructive" />
                 </div>
                 <div>
-                  <CardTitle className="text-white text-xl">
+                  <CardTitle className="text-foreground text-xl">
                     Ops! Algo deu errado
                   </CardTitle>
-                  <CardDescription className="text-white/70">
+                  <CardDescription className="text-foreground/70">
                     Encontramos um erro inesperado
                   </CardDescription>
                 </div>
@@ -147,22 +138,16 @@ export class ErrorBoundary extends Component<Props, State> {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Mensagem de erro */}
-              <div
-                className="rounded-lg p-4 border"
-                style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderColor: 'rgba(239, 68, 68, 0.3)',
-                }}
-              >
-                <p className="text-sm font-mono text-red-400 mb-2">
+              <div className="rounded-lg p-4 border bg-muted/30 border-destructive/30">
+                <p className="text-sm font-mono text-destructive mb-2">
                   {this.state.error?.name}: {this.state.error?.message}
                 </p>
                 {process.env.NODE_ENV === 'development' && this.state.error?.stack && (
                   <details className="mt-3">
-                    <summary className="text-xs text-white/50 cursor-pointer hover:text-white/70">
+                    <summary className="text-xs text-foreground/50 cursor-pointer hover:text-foreground/70">
                       Stack trace (desenvolvimento)
                     </summary>
-                    <pre className="text-xs text-white/50 mt-2 overflow-auto max-h-40">
+                    <pre className="text-xs text-foreground/50 mt-2 overflow-auto max-h-40">
                       {this.state.error.stack}
                     </pre>
                   </details>
@@ -171,8 +156,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
               {/* Sugestões */}
               <div className="space-y-2">
-                <p className="text-white/70 text-sm font-semibold">O que você pode fazer:</p>
-                <ul className="list-disc list-inside text-white/60 text-sm space-y-1">
+                <p className="text-foreground/70 text-sm font-semibold">O que você pode fazer:</p>
+                <ul className="list-disc list-inside text-foreground/60 text-sm space-y-1">
                   <li>Tente atualizar a página</li>
                   <li>Verifique sua conexão com a internet</li>
                   <li>Limpe o cache do navegador</li>
@@ -184,11 +169,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="flex gap-3 pt-4">
                 <Button
                   onClick={this.handleReset}
-                  className="flex-1 text-white"
-                  style={{
-                    backgroundColor: '#18B0A4',
-                    color: '#ffffff',
-                  }}
+                  className="flex-1 bg-primary text-foreground"
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Tentar Novamente
@@ -196,11 +177,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Button
                   onClick={this.handleGoHome}
                   variant="outline"
-                  className="flex-1"
-                  style={{
-                    borderColor: 'rgb(71, 85, 105)',
-                    color: 'white',
-                  }}
+                  className="flex-1 border-border text-foreground"
                 >
                   <Home className="mr-2 h-4 w-4" />
                   Voltar ao Início
@@ -208,7 +185,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
 
               {/* Info */}
-              <p className="text-xs text-white/40 text-center pt-2">
+              <p className="text-xs text-foreground/40 text-center pt-2">
                 Este erro foi registrado automaticamente para análise
               </p>
             </CardContent>

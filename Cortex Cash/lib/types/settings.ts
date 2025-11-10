@@ -180,7 +180,7 @@ export type SettingsCategory = keyof Settings;
 /**
  * Todas as categorias de UI (incluindo views especiais)
  */
-export type UICategory = SettingsCategory | 'analytics' | 'demoMode';
+export type UICategory = SettingsCategory | 'profile' | 'analytics' | 'demoMode' | 'admin';
 
 /**
  * Value type baseado no path

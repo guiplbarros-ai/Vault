@@ -13,6 +13,7 @@ import type {
   Conta,
   Categoria,
   Tag,
+  Usuario,
   Transacao,
   TemplateImportacao,
   RegraClassificacao,
@@ -42,6 +43,7 @@ export class CortexCashDB extends Dexie {
   contas!: EntityTable<Conta, 'id'>;
   categorias!: EntityTable<Categoria, 'id'>;
   tags!: EntityTable<Tag, 'id'>;
+  usuarios!: EntityTable<Usuario, 'id'>;
   transacoes!: EntityTable<Transacao, 'id'>;
   templates_importacao!: EntityTable<TemplateImportacao, 'id'>;
   regras_classificacao!: EntityTable<RegraClassificacao, 'id'>;
@@ -154,30 +156,255 @@ export class CortexCashDB extends Dexie {
       .upgrade(async (tx) => {
         try {
           const table = tx.table('transacoes');
-          // Coleta todas as transações ordenadas por hash para facilitar identificação de duplicatas
-          const all = await table.orderBy('hash').toArray();
-          const seen = new Set<string>();
-          const toDelete: string[] = [];
+          // Itera ordenado por hash para detectar duplicatas sem carregar tudo em memória
+          let lastHash: string | undefined = undefined;
+          const idsToDelete: string[] = [];
 
-          for (const t of all) {
+          await table.orderBy('hash').each((t: any) => {
             const h = t?.hash as string | undefined;
-            if (!h) continue;
-            if (seen.has(h)) {
-              // Marcamos duplicatas para remoção (mantém o primeiro encontrado)
-              toDelete.push(t.id as string);
+            if (!h) return;
+            if (h === lastHash) {
+              if (t.id) idsToDelete.push(t.id as string);
             } else {
-              seen.add(h);
+              lastHash = h;
             }
-          }
+          });
 
-          if (toDelete.length > 0) {
-            await table.bulkDelete(toDelete);
+          if (idsToDelete.length > 0) {
+            await table.bulkDelete(idsToDelete);
           }
         } catch (err) {
           // Em caso de erro na migração, deixamos logar mas não bloqueamos o app inteiro
           console.error('Erro ao migrar dedupe de transações (v5):', err);
         }
       });
+
+    // v6: Adiciona índice de favoritos para templates de importação
+    this.version(6)
+      .stores({
+        // Adiciona índice is_favorite para filtrar templates favoritos
+        templates_importacao: 'id, instituicao_id, nome, tipo_arquivo, is_favorite',
+      })
+      .upgrade(async (tx) => {
+        try {
+          const table = tx.table('templates_importacao');
+          // Inicializa is_favorite como false para todos os templates existentes
+          await table.toCollection().modify(template => {
+            if (template.is_favorite === undefined) {
+              template.is_favorite = false;
+            }
+          });
+        } catch (err) {
+          console.error('Erro ao migrar templates com is_favorite (v6):', err);
+        }
+      });
+
+    // v7: Adiciona suporte a contas vinculadas (conta_pai_id)
+    this.version(7)
+      .stores({
+        // Adiciona índice conta_pai_id para contas vinculadas (poupança, investimento, cartões)
+        contas: 'id, instituicao_id, nome, tipo, ativa, conta_pai_id',
+      })
+      .upgrade(async (tx) => {
+        try {
+          const table = tx.table('contas');
+          // Inicializa conta_pai_id como undefined para todas as contas existentes
+          await table.toCollection().modify(conta => {
+            if (conta.conta_pai_id === undefined) {
+              conta.conta_pai_id = undefined;
+            }
+          });
+        } catch (err) {
+          console.error('Erro ao migrar contas com conta_pai_id (v7):', err);
+        }
+      });
+
+    // v8: Adiciona tabela de usuários para controle de permissões
+    this.version(8).stores({
+      // Usuários: gerenciamento de usuários e permissões
+      usuarios: 'id, email, role, ativo',
+    });
+
+    // v9: Mudança de saldo_inicial para saldo_referencia + data_referencia
+    // Filosofia: User é soberano - informa saldo atual e sistema calcula retroativo
+    this.version(9)
+      .stores({
+        // Mantém estrutura de contas mas adiciona campo data_referencia
+        contas: 'id, instituicao_id, nome, tipo, ativa, conta_pai_id, data_referencia',
+      })
+      .upgrade(async (tx) => {
+        try {
+          const table = tx.table('contas');
+          await table.toCollection().modify(conta => {
+            // Se tem saldo_inicial (legado), converte para saldo_referencia
+            if ('saldo_inicial' in conta && typeof conta.saldo_inicial === 'number') {
+              conta.saldo_referencia = conta.saldo_inicial;
+              delete conta.saldo_inicial;
+            } else if (!('saldo_referencia' in conta)) {
+              // Se não tem nenhum dos dois, inicializa com 0
+              conta.saldo_referencia = 0;
+            }
+
+            // Adiciona data_referencia (usa created_at ou data atual)
+            if (!conta.data_referencia) {
+              conta.data_referencia = conta.created_at || new Date();
+            }
+          });
+          console.log('[Migration v9] Contas migradas: saldo_inicial → saldo_referencia + data_referencia');
+        } catch (err) {
+          console.error('Erro ao migrar contas para saldo_referencia (v9):', err);
+        }
+      });
+
+    // v10: Sistema multi-usuário
+    // Adiciona usuario_id nas tabelas principais e is_sistema para dados do sistema
+    this.version(10)
+      .stores({
+        // Atualiza índices para incluir usuario_id
+        contas: 'id, instituicao_id, nome, tipo, ativa, conta_pai_id, data_referencia, usuario_id',
+        categorias: 'id, nome, tipo, grupo, pai_id, ativa, ordem, usuario_id, is_sistema',
+        tags: 'id, nome, tipo, usuario_id, is_sistema',
+        transacoes: 'id, conta_id, categoria_id, centro_custo_id, data, tipo, hash, transferencia_id, conta_destino_id, grupo_parcelamento_id, usuario_id',
+        orcamentos: 'id, nome, tipo, categoria_id, centro_custo_id, mes_referencia, usuario_id',
+        investimentos: 'id, instituicao_id, nome, tipo, ticker, status, data_aplicacao, conta_origem_id, usuario_id',
+        cartoes_config: 'id, instituicao_id, nome, ativo, usuario_id',
+        regras_classificacao: 'id, categoria_id, nome, tipo_regra, ativa, prioridade, usuario_id',
+        templates_importacao: 'id, instituicao_id, nome, tipo_arquivo, usuario_id, is_favorite',
+        centros_custo: 'id, nome, ativo, usuario_id',
+      })
+      .upgrade(async (tx) => {
+        try {
+          console.log('[Migration v10] Iniciando migração multi-usuário...');
+
+          // Criar usuário "Produção" padrão se não existir
+          const usuariosTable = tx.table('usuarios');
+          let usuarioProd = await usuariosTable.where('email').equals('producao@cortexcash.local').first();
+
+          if (!usuarioProd) {
+            const idProd = 'usuario-producao';
+            usuarioProd = {
+              id: idProd,
+              nome: '📊 Produção',
+              email: 'producao@cortexcash.local',
+              role: 'admin',
+              ativo: true,
+              created_at: new Date(),
+              updated_at: new Date(),
+            };
+            await usuariosTable.add(usuarioProd);
+            console.log('[Migration v10] Usuário Produção criado');
+          }
+
+          const usuarioId = usuarioProd.id;
+
+          // Migrar dados existentes para o usuário Produção
+          const tablesToMigrate = [
+            'contas', 'categorias', 'tags', 'transacoes', 'orcamentos',
+            'investimentos', 'cartoes_config', 'regras_classificacao',
+            'templates_importacao', 'centros_custo'
+          ];
+
+          for (const tableName of tablesToMigrate) {
+            const table = tx.table(tableName);
+            const count = await table.count();
+
+            if (count > 0) {
+              await table.toCollection().modify(record => {
+                if (!record.usuario_id) {
+                  record.usuario_id = usuarioId;
+                }
+
+                // Marcar categorias e tags padrão como sistema
+                if ((tableName === 'categorias' || tableName === 'tags') && !('is_sistema' in record)) {
+                  // Se o registro já existia antes da v10, é considerado do sistema
+                  record.is_sistema = true;
+                }
+              });
+              console.log(`[Migration v10] ${count} registros migrados em ${tableName}`);
+            }
+          }
+
+          // Salvar usuário ativo no localStorage
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('cortex-cash-current-user-id', usuarioId);
+            console.log('[Migration v10] Usuário ativo definido como Produção');
+          }
+
+          console.log('[Migration v10] Migração multi-usuário concluída!');
+        } catch (err) {
+          console.error('[Migration v10] Erro ao migrar para multi-usuário:', err);
+        }
+      });
+
+    /**
+     * v11: Adiciona campo senha_hash para autenticação real
+     * Migra usuários existentes com senha padrão (devem ser desativados)
+     */
+    this.version(11)
+      .stores({
+        // Mantém o schema atual, Dexie permite adicionar campos sem declarar no schema
+        usuarios: 'id, email, role, ativo',
+      })
+      .upgrade(async (tx) => {
+        try {
+          console.log('[Migration v11] Adicionando campo senha_hash aos usuários...');
+
+          // Hash de senha padrão: "123456" (bcrypt)
+          const DEFAULT_PASSWORD_HASH = '$2a$10$YQ3p5kZ8qZ7p5kZ8qZ7p5.YQ3p5kZ8qZ7p5kZ8qZ7p5kZ8qZ7p5kZ';
+
+          const usuariosTable = tx.table('usuarios');
+          await usuariosTable.toCollection().modify(usuario => {
+            if (!usuario.senha_hash) {
+              usuario.senha_hash = DEFAULT_PASSWORD_HASH;
+              // Desativa usuários antigos - devem criar conta real
+              usuario.ativo = false;
+              console.log(`[Migration v11] Usuário ${usuario.email} atualizado com senha padrão e desativado`);
+            }
+          });
+
+          console.log('[Migration v11] Campo senha_hash adicionado com sucesso!');
+        } catch (err) {
+          console.error('[Migration v11] Erro ao adicionar senha_hash:', err);
+        }
+      });
+
+    /**
+     * v12: Expande campos de perfil do usuário
+     * Adiciona: telefone, data_nascimento, cpf, biografia, moeda_preferida, idioma_preferido
+     */
+    this.version(12)
+      .stores({
+        // Mantém o schema atual, Dexie permite adicionar campos sem declarar no schema
+        usuarios: 'id, email, role, ativo',
+      })
+      .upgrade(async (tx) => {
+        try {
+          console.log('[Migration v12] Adicionando campos de perfil aos usuários...');
+
+          const usuariosTable = tx.table('usuarios');
+          await usuariosTable.toCollection().modify(usuario => {
+            // Inicializa novos campos de perfil se não existirem
+            if (!('telefone' in usuario)) usuario.telefone = undefined;
+            if (!('data_nascimento' in usuario)) usuario.data_nascimento = undefined;
+            if (!('cpf' in usuario)) usuario.cpf = undefined;
+            if (!('biografia' in usuario)) usuario.biografia = undefined;
+            if (!('moeda_preferida' in usuario)) usuario.moeda_preferida = 'BRL';
+            if (!('idioma_preferido' in usuario)) usuario.idioma_preferido = 'pt-BR';
+          });
+
+          console.log('[Migration v12] Campos de perfil adicionados com sucesso!');
+        } catch (err) {
+          console.error('[Migration v12] Erro ao adicionar campos de perfil:', err);
+        }
+      });
+
+    /**
+     * v13: Fix - Adiciona índice is_favorite em templates_importacao
+     * O índice foi perdido durante a migração v10
+     */
+    this.version(13).stores({
+      templates_importacao: 'id, instituicao_id, nome, tipo_arquivo, usuario_id, is_favorite',
+    });
   }
 }
 
@@ -270,12 +497,35 @@ export function getDB(): CortexCashDB {
     try {
       dbInstance = new CortexCashDB();
       console.log('✅ Instância do banco Dexie criada com sucesso');
+      // Garante que dados de sistema essenciais estejam presentes
+      // (ex.: templates de importação). Executa de forma assíncrona
+      // e idempotente para não bloquear a inicialização.
+      void ensureSystemDataSeeded();
     } catch (err) {
       console.error('❌ Erro ao criar instância do Dexie:', err);
       throw err;
     }
   }
   return dbInstance;
+}
+
+/**
+ * Garante que dados essenciais do sistema (que não dependem do usuário)
+ * sejam inseridos após inicialização/criação/limpeza do banco.
+ * - Idempotente: pode rodar múltiplas vezes sem duplicar registros
+ */
+async function ensureSystemDataSeeded(): Promise<void> {
+  try {
+    const { areTemplatesSeeded, seedBankTemplates } = await import('../import/templates/seed-templates');
+    const seeded = await areTemplatesSeeded();
+    if (!seeded) {
+      const inserted = await seedBankTemplates();
+      console.log(`🌱 Templates de importação seed realizados: ${inserted}`);
+    }
+  } catch (err) {
+    // Não bloqueia a aplicação caso falhe; apenas loga para diagnóstico
+    console.warn('Não foi possível garantir o seed de dados do sistema:', err);
+  }
 }
 
 /**
@@ -289,6 +539,7 @@ export async function exportDatabase(): Promise<Blob> {
     contas: await db.contas.toArray(),
     categorias: await db.categorias.toArray(),
     tags: await db.tags.toArray(),
+    usuarios: await db.usuarios.toArray(),
     transacoes: await db.transacoes.toArray(),
     templates_importacao: await db.templates_importacao.toArray(),
     regras_classificacao: await db.regras_classificacao.toArray(),
@@ -331,32 +582,34 @@ export async function importDatabase(file: File): Promise<void> {
     }
   });
 
-  // Importa os dados
+  // Importa os dados do backup
+  // Usa bulkPut (não bulkAdd) porque mesmo após clear(), garante que não haverá erros de duplicata
   await db.transaction('rw', db.tables, async () => {
-    if (data.instituicoes) await db.instituicoes.bulkAdd(data.instituicoes);
-    if (data.contas) await db.contas.bulkAdd(data.contas);
-    if (data.categorias) await db.categorias.bulkAdd(data.categorias);
-    if (data.tags) await db.tags.bulkAdd(data.tags);
-    if (data.transacoes) await db.transacoes.bulkAdd(data.transacoes);
-    if (data.templates_importacao) await db.templates_importacao.bulkAdd(data.templates_importacao);
-    if (data.regras_classificacao) await db.regras_classificacao.bulkAdd(data.regras_classificacao);
-    if (data.logs_ia) await db.logs_ia.bulkAdd(data.logs_ia);
-    if (data.cartoes_config) await db.cartoes_config.bulkAdd(data.cartoes_config);
-    if (data.faturas) await db.faturas.bulkAdd(data.faturas);
-    if (data.faturas_lancamentos) await db.faturas_lancamentos.bulkAdd(data.faturas_lancamentos);
-    if (data.centros_custo) await db.centros_custo.bulkAdd(data.centros_custo);
-    if (data.orcamentos) await db.orcamentos.bulkAdd(data.orcamentos);
-    if (data.investimentos) await db.investimentos.bulkAdd(data.investimentos);
-    if (data.historico_investimentos) await db.historico_investimentos.bulkAdd(data.historico_investimentos);
-    if (data.declaracoes_ir) await db.declaracoes_ir.bulkAdd(data.declaracoes_ir);
-    if (data.rendimentos_tributaveis) await db.rendimentos_tributaveis.bulkAdd(data.rendimentos_tributaveis);
-    if (data.rendimentos_isentos) await db.rendimentos_isentos.bulkAdd(data.rendimentos_isentos);
-    if (data.despesas_dedutiveis) await db.despesas_dedutiveis.bulkAdd(data.despesas_dedutiveis);
-    if (data.bens_direitos) await db.bens_direitos.bulkAdd(data.bens_direitos);
-    if (data.dividas_onus) await db.dividas_onus.bulkAdd(data.dividas_onus);
-    if (data.cenarios) await db.cenarios.bulkAdd(data.cenarios);
-    if (data.configuracoes_comportamento) await db.configuracoes_comportamento.bulkAdd(data.configuracoes_comportamento);
-    if (data.objetivos_financeiros) await db.objetivos_financeiros.bulkAdd(data.objetivos_financeiros);
+    if (data.instituicoes) await db.instituicoes.bulkPut(data.instituicoes);
+    if (data.contas) await db.contas.bulkPut(data.contas);
+    if (data.categorias) await db.categorias.bulkPut(data.categorias);
+    if (data.tags) await db.tags.bulkPut(data.tags);
+    if (data.usuarios) await db.usuarios.bulkPut(data.usuarios);
+    if (data.transacoes) await db.transacoes.bulkPut(data.transacoes);
+    if (data.templates_importacao) await db.templates_importacao.bulkPut(data.templates_importacao);
+    if (data.regras_classificacao) await db.regras_classificacao.bulkPut(data.regras_classificacao);
+    if (data.logs_ia) await db.logs_ia.bulkPut(data.logs_ia);
+    if (data.cartoes_config) await db.cartoes_config.bulkPut(data.cartoes_config);
+    if (data.faturas) await db.faturas.bulkPut(data.faturas);
+    if (data.faturas_lancamentos) await db.faturas_lancamentos.bulkPut(data.faturas_lancamentos);
+    if (data.centros_custo) await db.centros_custo.bulkPut(data.centros_custo);
+    if (data.orcamentos) await db.orcamentos.bulkPut(data.orcamentos);
+    if (data.investimentos) await db.investimentos.bulkPut(data.investimentos);
+    if (data.historico_investimentos) await db.historico_investimentos.bulkPut(data.historico_investimentos);
+    if (data.declaracoes_ir) await db.declaracoes_ir.bulkPut(data.declaracoes_ir);
+    if (data.rendimentos_tributaveis) await db.rendimentos_tributaveis.bulkPut(data.rendimentos_tributaveis);
+    if (data.rendimentos_isentos) await db.rendimentos_isentos.bulkPut(data.rendimentos_isentos);
+    if (data.despesas_dedutiveis) await db.despesas_dedutiveis.bulkPut(data.despesas_dedutiveis);
+    if (data.bens_direitos) await db.bens_direitos.bulkPut(data.bens_direitos);
+    if (data.dividas_onus) await db.dividas_onus.bulkPut(data.dividas_onus);
+    if (data.cenarios) await db.cenarios.bulkPut(data.cenarios);
+    if (data.configuracoes_comportamento) await db.configuracoes_comportamento.bulkPut(data.configuracoes_comportamento);
+    if (data.objetivos_financeiros) await db.objetivos_financeiros.bulkPut(data.objetivos_financeiros);
   });
 }
 

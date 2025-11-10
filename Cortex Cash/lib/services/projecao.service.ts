@@ -133,47 +133,15 @@ export class ProjecaoService {
   private async calcularPatrimonioAtual(todasTransacoes?: any[]): Promise<number> {
     const contas = await contaService.listContas()
 
-    // Buscar todas as transações se não foram fornecidas
-    if (!todasTransacoes) {
-      todasTransacoes = await transacaoService.listTransacoes({ limit: 50000 })
-    }
-
-    // Agrupar transações por conta
-    const transacoesPorConta: Record<string, any[]> = {}
-    for (const t of todasTransacoes) {
-      if (!transacoesPorConta[t.conta_id]) {
-        transacoesPorConta[t.conta_id] = []
-      }
-      transacoesPorConta[t.conta_id].push(t)
-    }
-
-    // Calcular saldo de cada conta
+    // Calcula o patrimônio atual somando o saldo atual de cada conta
+    // Consistência: usa calcularSaldoEmData(conta, agora) que respeita saldo_referencia/data_referencia
     let patrimonio = 0
     for (const conta of contas) {
       try {
-        const saldoInicial = conta.saldo_inicial || 0
-        const transacoes = transacoesPorConta[conta.id] || []
-
-        const saldoTransacoes = transacoes.reduce((acc, t) => {
-          if (t.tipo === 'receita') {
-            return acc + Number(t.valor)
-          } else if (t.tipo === 'despesa') {
-            return acc - Math.abs(Number(t.valor))
-          } else if (t.tipo === 'transferencia') {
-            // Transferências: soma se é conta destino, subtrai se é conta origem
-            if (t.conta_destino_id === conta.id) {
-              return acc + Number(t.valor)
-            } else {
-              return acc - Math.abs(Number(t.valor))
-            }
-          }
-          return acc
-        }, 0)
-
-        patrimonio += saldoInicial + saldoTransacoes
+        const saldoAtualConta = await contaService.calcularSaldoEmData(conta.id, new Date())
+        patrimonio += saldoAtualConta
       } catch (error) {
         console.error(`Erro ao calcular saldo da conta ${conta.id}:`, error)
-        // Continua sem quebrar
       }
     }
 

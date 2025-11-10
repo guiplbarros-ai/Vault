@@ -225,40 +225,18 @@ export function useAppearanceSettings() {
   const [fontSize] = useSetting<number>('appearance.fontSize');
   const [pixelArtMode] = useSetting<boolean>('appearance.pixelArtMode');
 
-  // Apply theme
+  // Apply theme - FORÇADO PARA SEMPRE DARK (esquema verde CORES.md)
   useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
 
-    const applyTheme = (isDark: boolean) => {
-      root.classList.remove('dark', 'light');
-      body.classList.remove('dark', 'light');
+    // Remove any existing theme classes
+    root.classList.remove('dark', 'light');
+    body.classList.remove('dark', 'light');
 
-      if (isDark) {
-        root.classList.add('dark');
-        body.classList.add('dark');
-      } else {
-        root.classList.add('light');
-        body.classList.add('light');
-      }
-    };
-
-    if (theme === 'dark') {
-      applyTheme(true);
-    } else if (theme === 'light') {
-      applyTheme(false);
-    } else {
-      // Auto: use system preference
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      applyTheme(mediaQuery.matches);
-
-      const handleChange = (e: MediaQueryListEvent) => {
-        applyTheme(e.matches);
-      };
-
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
+    // SEMPRE aplica dark mode (esquema verde)
+    root.classList.add('dark');
+    body.classList.add('dark');
   }, [theme]);
 
   // Apply density, fontSize, pixelArtMode

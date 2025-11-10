@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { TrendingUp } from 'lucide-react'
 import type { OrcamentoComProgresso } from '@/lib/services/orcamento.service'
+import { THEME_COLORS } from '@/lib/constants/colors'
 
 interface BudgetProgressChartProps {
   orcamentos: OrcamentoComProgresso[]
@@ -20,9 +21,9 @@ export function BudgetProgressChart({ orcamentos }: BudgetProgressChartProps) {
   }
 
   const getStatusColor = (percentual: number) => {
-    if (percentual >= 100) return '#EF4444' // red-400
-    if (percentual >= 80) return '#F59E0B' // amber-400
-    return '#10B981' // green-400
+    if (percentual >= 100) return THEME_COLORS.destructive
+    if (percentual >= 80) return THEME_COLORS.warning
+    return THEME_COLORS.success
   }
 
   // Preparar dados para o gráfico
@@ -41,22 +42,18 @@ export function BudgetProgressChart({ orcamentos }: BudgetProgressChartProps) {
       const data = payload[0].payload
       return (
         <div
-          className="rounded-lg p-3 shadow-lg border"
-          style={{
-            backgroundColor: '#1f2937',
-            borderColor: '#374151',
-          }}
+          className="rounded-lg p-3 shadow-lg border bg-card border-border"
         >
-          <p className="font-semibold text-white mb-1">
+          <p className="font-semibold text-foreground mb-1">
             {data.icone} {data.nome}
           </p>
-          <p className="text-sm text-green-400">
+          <p className="text-sm text-success">
             Realizado: {formatCurrency(data.realizado)}
           </p>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-secondary">
             Planejado: {formatCurrency(data.planejado)}
           </p>
-          <p className="text-sm text-amber-400 mt-1">
+          <p className="text-sm text-gold mt-1">
             {data.percentual.toFixed(1)}% usado
           </p>
         </div>
@@ -70,18 +67,13 @@ export function BudgetProgressChart({ orcamentos }: BudgetProgressChartProps) {
   }
 
   return (
-    <Card
-      style={{
-        background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-        backgroundColor: '#3B5563',
-      }}
-    >
+    <Card className="border-border bg-gradient-to-br from-card to-background">
       <CardHeader>
-        <CardTitle className="text-white text-lg flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
+        <CardTitle className="text-foreground text-lg flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-gold" />
           Progresso dos Orçamentos
         </CardTitle>
-        <CardDescription className="text-white/70">
+        <CardDescription className="text-secondary">
           Comparação entre valores realizados e planejados
         </CardDescription>
       </CardHeader>
@@ -92,21 +84,21 @@ export function BudgetProgressChart({ orcamentos }: BudgetProgressChartProps) {
             layout="vertical"
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+            <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.border} />
             <XAxis
               type="number"
-              stroke="rgba(255, 255, 255, 0.5)"
-              tick={{ fill: 'rgba(255, 255, 255, 0.7)', fontSize: 12 }}
+              stroke={THEME_COLORS.secondary}
+              tick={{ fill: THEME_COLORS.secondary, fontSize: 12 }}
               tickFormatter={formatCurrency}
             />
             <YAxis
               type="category"
               dataKey="nome"
-              stroke="rgba(255, 255, 255, 0.5)"
-              tick={{ fill: 'rgba(255, 255, 255, 0.7)', fontSize: 12 }}
+              stroke={THEME_COLORS.secondary}
+              tick={{ fill: THEME_COLORS.foreground, fontSize: 12 }}
               width={150}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: THEME_COLORS.muted, opacity: 0.5 }} />
             <Bar dataKey="planejado" fill="rgba(255, 255, 255, 0.2)" radius={[0, 4, 4, 0]} />
             <Bar dataKey="realizado" radius={[0, 4, 4, 0]}>
               {chartData.map((entry, index) => (
@@ -118,16 +110,16 @@ export function BudgetProgressChart({ orcamentos }: BudgetProgressChartProps) {
 
         <div className="mt-4 flex items-center justify-center gap-6 text-sm">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded" style={{ backgroundColor: '#10B981' }}></div>
-            <span className="text-white/70">Dentro do limite</span>
+            <div className="h-3 w-3 rounded bg-success"></div>
+            <span className="text-secondary">Dentro do limite</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded" style={{ backgroundColor: '#F59E0B' }}></div>
-            <span className="text-white/70">Atenção (80%+)</span>
+            <div className="h-3 w-3 rounded bg-warning"></div>
+            <span className="text-secondary">Atenção (80%+)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded" style={{ backgroundColor: '#EF4444' }}></div>
-            <span className="text-white/70">Excedido (100%+)</span>
+            <div className="h-3 w-3 rounded bg-destructive"></div>
+            <span className="text-secondary">Excedido (100%+)</span>
           </div>
         </div>
       </CardContent>

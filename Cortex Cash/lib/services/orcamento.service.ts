@@ -8,6 +8,7 @@
 import { getDB } from '../db/client';
 import type { Orcamento } from '../types';
 import { NotFoundError, DatabaseError, ValidationError } from '../errors';
+import { getCurrentUserId } from '../db/seed-usuarios';
 
 export interface CreateOrcamentoDTO {
   nome: string;
@@ -56,13 +57,28 @@ export class OrcamentoService {
     sortOrder?: 'asc' | 'desc';
   }): Promise<Orcamento[]> {
     const db = getDB();
+    const currentUserId = getCurrentUserId();
 
-    let orcamentos: Orcamento[] = await db.orcamentos.toArray();
+    let orcamentos: Orcamento[];
 
-    // Filtrar por mês referência
+    // Preferir índice por mês-referência quando disponível (caso de uso principal)
     if (options?.mesReferencia) {
-      orcamentos = orcamentos.filter((o) => o.mes_referencia === options.mesReferencia);
+      let chain = db.orcamentos.where('mes_referencia').equals(options.mesReferencia);
+      // Paginação no nível do Dexie quando possível
+      if (typeof options.offset === 'number' && options.offset > 0 && typeof (chain as any).offset === 'function') {
+        chain = (chain as any).offset(options.offset);
+      }
+      if (typeof options.limit === 'number' && options.limit > 0) {
+        chain = chain.limit(options.limit);
+      }
+      orcamentos = await chain.toArray();
+    } else {
+      // Fallback: carrega todos (caso menos comum)
+      orcamentos = await db.orcamentos.toArray();
     }
+
+    // Filtrar por usuário atual (sempre)
+    orcamentos = orcamentos.filter(o => o.usuario_id === currentUserId);
 
     // Filtrar por tipo
     if (options?.tipo) {
@@ -110,14 +126,15 @@ export class OrcamentoService {
       }
     });
 
-    // Aplicar paginação
-    const offset = options?.offset || 0;
-    const limit = options?.limit;
-
-    if (limit !== undefined) {
-      orcamentos = orcamentos.slice(offset, offset + limit);
-    } else if (offset > 0) {
-      orcamentos = orcamentos.slice(offset);
+    // Se não aplicamos paginação via Dexie (caso fallback), aplica aqui
+    if (!options?.mesReferencia) {
+      const offset = options?.offset || 0;
+      const limit = options?.limit;
+      if (limit !== undefined) {
+        orcamentos = orcamentos.slice(offset, offset + limit);
+      } else if (offset > 0) {
+        orcamentos = orcamentos.slice(offset);
+      }
     }
 
     return orcamentos;
@@ -149,13 +166,52 @@ export class OrcamentoService {
     mesReferencia?: string;
     tipo?: 'categoria' | 'centro_custo';
   }): Promise<OrcamentoComProgresso[]> {
+    const db = getDB();
     const orcamentos = await this.listOrcamentos(options);
 
-    const enriched = await Promise.all(
-      orcamentos.map(o => this.enrichOrcamentoComProgresso(o))
-    );
+    // Otimização: evite N consultas por item; constroi mapas de relações
+    // Só carregamos tabelas necessárias conforme tipos existentes
+    const needsCategoria = orcamentos.some(o => o.tipo === 'categoria' && o.categoria_id);
+    const needsCentro = orcamentos.some(o => o.tipo === 'centro_custo' && o.centro_custo_id);
 
-    return enriched;
+    const [categorias, centros] = await Promise.all([
+      needsCategoria ? db.categorias.toArray() : Promise.resolve([]),
+      needsCentro ? db.centros_custo.toArray() : Promise.resolve([]),
+    ]);
+    const categoriaById = new Map(categorias.map(c => [c.id, c]));
+    const centroById = new Map(centros.map(c => [c.id, c]));
+
+    return orcamentos.map((o) => {
+      const percentual_usado = o.valor_planejado > 0
+        ? (o.valor_realizado / o.valor_planejado) * 100
+        : 0;
+      const valor_restante = o.valor_planejado - o.valor_realizado;
+      let status: 'ok' | 'atencao' | 'excedido' = 'ok';
+      if (percentual_usado >= 100) status = 'excedido';
+      else if (percentual_usado >= 80) status = 'atencao';
+
+      const enriched: OrcamentoComProgresso = {
+        ...o,
+        percentual_usado,
+        valor_restante,
+        status,
+      };
+
+      if (o.tipo === 'categoria' && o.categoria_id) {
+        const cat = categoriaById.get(o.categoria_id);
+        if (cat) {
+          enriched.categoria_nome = cat.nome;
+          enriched.categoria_icone = cat.icone;
+          enriched.categoria_cor = cat.cor;
+        }
+      } else if (o.tipo === 'centro_custo' && o.centro_custo_id) {
+        const cc = centroById.get(o.centro_custo_id);
+        if (cc) {
+          enriched.centro_custo_nome = cc.nome;
+        }
+      }
+      return enriched;
+    });
   }
 
   /**
@@ -246,6 +302,8 @@ export class OrcamentoService {
     }
 
     const now = new Date();
+    const currentUserId = getCurrentUserId();
+
     const orcamento: Orcamento = {
       id: crypto.randomUUID(),
       nome: data.nome,
@@ -259,6 +317,7 @@ export class OrcamentoService {
       alerta_100: data.alerta_100 ?? true,
       alerta_80_enviado: false,
       alerta_100_enviado: false,
+      usuario_id: currentUserId,
       created_at: now,
       updated_at: now,
     };
@@ -347,26 +406,20 @@ export class OrcamentoService {
     let valorRealizado = 0;
 
     if (orcamento.tipo === 'categoria' && orcamento.categoria_id) {
-      // Buscar transações de despesa nesta categoria no mês
+      // Buscar pelo índice de data (muito mais eficiente) e filtrar categoria + tipo
       const transacoes = await db.transacoes
-        .where('categoria_id')
-        .equals(orcamento.categoria_id)
-        .and(t => {
-          const transacaoData = t.data instanceof Date ? t.data : new Date(t.data);
-          return transacaoData >= dataInicio && transacaoData <= dataFim && t.tipo === 'despesa';
-        })
+        .where('data')
+        .between(dataInicio, dataFim, true, true)
+        .and(t => t.categoria_id === orcamento.categoria_id && t.tipo === 'despesa')
         .toArray();
 
       valorRealizado = transacoes.reduce((sum, t) => sum + Math.abs(t.valor), 0);
     } else if (orcamento.tipo === 'centro_custo' && orcamento.centro_custo_id) {
-      // Buscar transações no centro de custo no mês
+      // Buscar pelo índice de data e filtrar centro de custo + tipo
       const transacoes = await db.transacoes
-        .where('centro_custo_id')
-        .equals(orcamento.centro_custo_id)
-        .and(t => {
-          const transacaoData = t.data instanceof Date ? t.data : new Date(t.data);
-          return transacaoData >= dataInicio && transacaoData <= dataFim && t.tipo === 'despesa';
-        })
+        .where('data')
+        .between(dataInicio, dataFim, true, true)
+        .and(t => t.centro_custo_id === orcamento.centro_custo_id && t.tipo === 'despesa')
         .toArray();
 
       valorRealizado = transacoes.reduce((sum, t) => sum + Math.abs(t.valor), 0);

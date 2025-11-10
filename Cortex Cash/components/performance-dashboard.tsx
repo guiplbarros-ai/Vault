@@ -4,7 +4,7 @@ import { usePerformance } from '@/lib/hooks/use-performance';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Trash2, Activity, Database, Globe, MemoryStick } from 'lucide-react';
+import { RefreshCw, Trash2, Activity, Database, Globe, MemoryStick, ShieldAlert, Eraser, Power } from 'lucide-react';
 
 function formatDuration(ms: number): string {
   if (ms < 1) return `${(ms * 1000).toFixed(0)}µs`;
@@ -24,6 +24,75 @@ export function PerformanceDashboard() {
     autoRefresh: true,
     refreshInterval: 10000,
   });
+
+  async function unregisterServiceWorkers() {
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+      // Clear caches
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map(name => caches.delete(name)));
+      }
+      // Soft reload after SW unregister
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to unregister Service Workers:', err);
+      window.location.reload();
+    }
+  }
+
+  async function clearAppCache() {
+    try {
+      // Clear Cache Storage
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map(name => caches.delete(name)));
+      }
+      // Clear localStorage keys related to caching/UI
+      try {
+        localStorage.removeItem('cortex_settings');
+        localStorage.removeItem('onboarding_complete');
+      } catch {}
+      // Reload
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to clear cache:', err);
+      window.location.reload();
+    }
+  }
+
+  async function fullReset() {
+    const confirmed = window.confirm('Isso vai limpar cache, Service Worker, localStorage e o banco local. Seus dados locais serão removidos. Continuar?');
+    if (!confirmed) return;
+    try {
+      // Delete Dexie/IndexedDB database
+      if ('indexedDB' in window) {
+        try {
+          await indexedDB.deleteDatabase('cortex-cash');
+        } catch {}
+      }
+      // Clear localStorage
+      try {
+        localStorage.clear();
+      } catch {}
+      // Unregister all SW
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+      // Clear caches
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map(name => caches.delete(name)));
+      }
+    } finally {
+      // Hard reload
+      window.location.href = window.location.origin + '/';
+    }
+  }
 
   if (!summary) {
     return (
@@ -258,6 +327,47 @@ export function PerformanceDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* Repair Tools */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Repair Tools</CardTitle>
+          <CardDescription>
+            Use these tools to fix stale caches or Service Worker issues in one click.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={unregisterServiceWorkers}
+              variant="outline"
+              size="sm"
+              title="Unregister all Service Workers and clear caches"
+            >
+              <ShieldAlert className="h-4 w-4 mr-2" />
+              Unregister Service Worker
+            </Button>
+            <Button
+              onClick={clearAppCache}
+              variant="outline"
+              size="sm"
+              title="Clear Cache Storage and refresh"
+            >
+              <Eraser className="h-4 w-4 mr-2" />
+              Clear App Cache
+            </Button>
+            <Button
+              onClick={fullReset}
+              variant="destructive"
+              size="sm"
+              title="Clear IndexedDB, localStorage, caches and unregister SW"
+            >
+              <Power className="h-4 w-4 mr-2" />
+              Full Reset (Cache + DB)
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

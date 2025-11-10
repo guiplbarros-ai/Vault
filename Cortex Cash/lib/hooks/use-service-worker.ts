@@ -151,10 +151,16 @@ export function useServiceWorker() {
     };
   }, []);
 
-  // Auto-register on mount
+  // Auto-register on mount (adiado para tempo ocioso para não disputar thread de UI)
   useEffect(() => {
     if (state.isSupported && !state.isRegistered) {
-      register();
+      const schedule = () => register();
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(schedule, { timeout: 3000 });
+      } else {
+        const id = setTimeout(schedule, 0);
+        return () => clearTimeout(id);
+      }
     }
   }, [state.isSupported, state.isRegistered, register]);
 

@@ -17,6 +17,7 @@ import { Brain, Loader2, CheckCircle, XCircle, AlertTriangle, FolderX, Power } f
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
+import { brandNavyAlpha } from '@/lib/constants/colors';
 
 interface BulkAIClassifyProps {
   selectedTransactionIds: string[];
@@ -277,7 +278,7 @@ export function BulkAIClassify({
           <div
             className="p-3 rounded-lg border border-white/10"
             style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              backgroundColor: brandNavyAlpha(0.2),
             }}
           >
             <div className="flex items-center gap-4 mb-3">

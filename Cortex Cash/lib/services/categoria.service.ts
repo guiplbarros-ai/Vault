@@ -10,6 +10,7 @@ import type { Categoria, CreateCategoriaDTO } from '../types';
 import type { ICategoriaService } from './interfaces';
 import { validateDTO, createCategoriaSchema } from '../validations/dtos';
 import { NotFoundError, ValidationError, DatabaseError } from '../errors';
+import { getCurrentUserId } from '../db/seed-usuarios';
 
 /**
  * Deriva uma cor mais clara (para subcategoria) a partir da cor base
@@ -46,8 +47,12 @@ export class CategoriaService implements ICategoriaService {
     sortOrder?: 'asc' | 'desc';
   }): Promise<Categoria[]> {
     const db = getDB();
+    const currentUserId = getCurrentUserId();
 
     let categorias = await db.categorias.toArray();
+
+    // Filtrar por usuário: mostrar categorias do sistema OU categorias do usuário atual
+    categorias = categorias.filter((c) => c.is_sistema === true || c.usuario_id === currentUserId);
 
     // Aplicar filtros
     if (options?.tipo) {
@@ -129,6 +134,7 @@ export class CategoriaService implements ICategoriaService {
 
       const id = crypto.randomUUID();
       const now = new Date();
+      const currentUserId = getCurrentUserId();
 
       const categoria: Categoria = {
         id,
@@ -140,6 +146,8 @@ export class CategoriaService implements ICategoriaService {
         cor: cor,
         ordem: validatedData.ordem || 0,
         ativa: true,
+        is_sistema: false, // Categorias criadas pelo usuário não são do sistema
+        usuario_id: currentUserId, // Pertence ao usuário atual
         created_at: now,
         updated_at: now,
       };
@@ -201,11 +209,15 @@ export class CategoriaService implements ICategoriaService {
 
   async getCategoriasByGrupo(grupo: string): Promise<Categoria[]> {
     const db = getDB();
+    const currentUserId = getCurrentUserId();
 
-    const categorias = await db.categorias
+    let categorias = await db.categorias
       .where('grupo')
       .equals(grupo)
       .toArray();
+
+    // Filtrar por usuário: mostrar categorias do sistema OU categorias do usuário atual
+    categorias = categorias.filter((c) => c.is_sistema === true || c.usuario_id === currentUserId);
 
     // Ordenar por ordem
     categorias.sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
@@ -218,8 +230,12 @@ export class CategoriaService implements ICategoriaService {
    */
   async getCategoriasPrincipais(tipo?: string): Promise<Categoria[]> {
     const db = getDB();
+    const currentUserId = getCurrentUserId();
 
     let categorias = await db.categorias.toArray();
+
+    // Filtrar por usuário: mostrar categorias do sistema OU categorias do usuário atual
+    categorias = categorias.filter((c) => c.is_sistema === true || c.usuario_id === currentUserId);
 
     // Filtrar apenas principais (sem grupo)
     categorias = categorias.filter((c) => !c.grupo && c.ativa);
@@ -239,8 +255,13 @@ export class CategoriaService implements ICategoriaService {
    */
   async searchCategorias(termo: string, tipo?: string): Promise<Categoria[]> {
     const db = getDB();
+    const currentUserId = getCurrentUserId();
 
     let categorias = await db.categorias.toArray();
+
+    // Filtrar por usuário: mostrar categorias do sistema OU categorias do usuário atual
+    categorias = categorias.filter((c) => c.is_sistema === true || c.usuario_id === currentUserId);
+
     categorias = categorias.filter(c => c.ativa === true);
 
     const termoLower = termo.toLowerCase();

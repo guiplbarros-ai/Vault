@@ -108,15 +108,9 @@ export default function BudgetsPage() {
   };
 
   const getStatusIcon = (status: 'ok' | 'atencao' | 'excedido') => {
-    if (status === 'ok') return <CheckCircle className="h-5 w-5 text-green-600" />;
-    if (status === 'atencao') return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
-    return <XCircle className="h-5 w-5 text-red-600" />;
-  };
-
-  const getStatusColor = (status: 'ok' | 'atencao' | 'excedido') => {
-    if (status === 'ok') return 'bg-green-500';
-    if (status === 'atencao') return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (status === 'ok') return <CheckCircle className="h-5 w-5" style={{ color: '#6CCB8C' }} />;
+    if (status === 'atencao') return <AlertTriangle className="h-5 w-5" style={{ color: '#E0B257' }} />;
+    return <XCircle className="h-5 w-5" style={{ color: '#F07167' }} />;
   };
 
   const getStatusText = (status: 'ok' | 'atencao' | 'excedido') => {
@@ -168,11 +162,6 @@ export default function BudgetsPage() {
                 onClick={() => {
                   toast.info('Funcionalidade em desenvolvimento');
                 }}
-                className="text-white"
-                style={{
-                  backgroundColor: '#18B0A4',
-                  color: '#ffffff'
-                }}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Orçamento
@@ -181,137 +170,206 @@ export default function BudgetsPage() {
           }
         />
 
-        <div
-          className="rounded-xl border border-white/20 p-6"
+        {/* TEMA.md: Month selector - solid bg-card, shadow-1 */}
+        <Card 
           style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563',
+            backgroundColor: '#18322C',
+            borderColor: '#2A4942',
+            borderWidth: '1px',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
           }}
         >
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleMesAnterior}
-              className="hover:bg-white/10"
-            >
-              <ChevronLeft className="h-5 w-5 text-white" />
-            </Button>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleMesAnterior}
+                style={{ color: '#F2F7F5' }}
+                className="hover:bg-[#1D3A34]"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
 
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-white/70" />
-              <span className="text-lg font-semibold capitalize text-white">{mesFormatado}</span>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" style={{ color: '#8CA39C' }} />
+                <span className="text-lg font-semibold capitalize" style={{ color: '#F2F7F5' }}>{mesFormatado}</span>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleProximoMes}
+                style={{ color: '#F2F7F5' }}
+                className="hover:bg-[#1D3A34]"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
             </div>
+          </CardContent>
+        </Card>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleProximoMes}
-              className="hover:bg-white/10"
-            >
-              <ChevronRight className="h-5 w-5 text-white" />
-            </Button>
-          </div>
-        </div>
-
+        {/* TEMA.md: Summary stats - KPI cards with shadow-2 and icon pills 36px */}
         {resumo && (
           <div className="grid gap-4 md:grid-cols-4">
-            <div
-              className="rounded-xl border border-white/20 p-4"
+            <Card 
               style={{
-                background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                backgroundColor: '#3B5563',
+                backgroundColor: '#18322C',
+                borderColor: '#2A4942',
+                borderWidth: '1px',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
               }}
             >
-              <div className="text-sm font-medium text-white mb-2">Planejado</div>
-              <div className="text-2xl font-bold text-white">
-                R$ {resumo.total_planejado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-            </div>
-
-            <div
-              className="rounded-xl border border-white/20 p-4"
-              style={{
-                background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                backgroundColor: '#3B5563',
-              }}
-            >
-              <div className="text-sm font-medium text-white mb-2">Realizado</div>
-              <div className="text-2xl font-bold text-white mb-2">
-                R$ {resumo.total_realizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-              <Progress value={resumo.percentual_usado} className="mt-2" />
-              <p className="text-xs text-white/60 mt-1">
-                {resumo.percentual_usado.toFixed(1)}% usado
-              </p>
-            </div>
-
-            <div
-              className="rounded-xl border border-white/20 p-4"
-              style={{
-                background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                backgroundColor: '#3B5563',
-              }}
-            >
-              <div className="text-sm font-medium text-white mb-2">Restante</div>
-              <div className={cn(
-                "text-2xl font-bold",
-                resumo.total_restante >= 0 ? "text-green-400" : "text-red-400"
-              )}>
-                R$ {Math.abs(resumo.total_restante).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-            </div>
-
-            <div
-              className="rounded-xl border border-white/20 p-4"
-              style={{
-                background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                backgroundColor: '#3B5563',
-              }}
-            >
-              <div className="text-sm font-medium text-white mb-3">Status</div>
-              <div className="flex gap-3 text-sm">
-                <div className="flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4 text-green-400" />
-                  <span className="text-white">{resumo.orcamentos_ok}</span>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <div 
+                    className="h-9 w-9 rounded-xl flex items-center justify-center"
+                    style={{
+                      backgroundColor: '#142A25',
+                      border: '1px solid #2A4942',
+                    }}
+                  >
+                    <Calendar className="h-4 w-4" style={{ color: '#D4AF37' }} />
+                  </div>
+                  <CardDescription className="text-sm" style={{ color: '#B2BDB9' }}>Planejado</CardDescription>
                 </div>
-                <div className="flex items-center gap-1">
-                  <AlertTriangle className="h-4 w-4 text-yellow-400" />
-                  <span className="text-white">{resumo.orcamentos_atencao}</span>
+                <CardTitle className="text-3xl font-bold" style={{ color: '#D4AF37' }}>
+                  R$ {resumo.total_planejado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card 
+              style={{
+                backgroundColor: '#18322C',
+                borderColor: '#2A4942',
+                borderWidth: '1px',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
+              }}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <div 
+                    className="h-9 w-9 rounded-xl flex items-center justify-center"
+                    style={{
+                      backgroundColor: '#142A25',
+                      border: '1px solid #2A4942',
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4" style={{ color: '#3A8F6E' }} />
+                  </div>
+                  <CardDescription className="text-sm" style={{ color: '#B2BDB9' }}>Realizado</CardDescription>
                 </div>
-                <div className="flex items-center gap-1">
-                  <XCircle className="h-4 w-4 text-red-400" />
-                  <span className="text-white">{resumo.orcamentos_excedidos}</span>
+                <CardTitle className="text-3xl font-bold" style={{ color: '#F2F7F5' }}>
+                  R$ {resumo.total_realizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Progress value={resumo.percentual_usado} className="mb-2" />
+                <p className="text-xs" style={{ color: '#8CA39C' }}>
+                  {resumo.percentual_usado.toFixed(1)}% usado
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card 
+              style={{
+                backgroundColor: '#18322C',
+                borderColor: '#2A4942',
+                borderWidth: '1px',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
+              }}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <div 
+                    className="h-9 w-9 rounded-xl flex items-center justify-center"
+                    style={{
+                      backgroundColor: '#142A25',
+                      border: '1px solid #2A4942',
+                    }}
+                  >
+                    <AlertTriangle 
+                      className="h-4 w-4" 
+                      style={{ color: resumo.total_restante >= 0 ? '#6CCB8C' : '#F07167' }} 
+                    />
+                  </div>
+                  <CardDescription className="text-sm" style={{ color: '#B2BDB9' }}>Restante</CardDescription>
                 </div>
-              </div>
-            </div>
+                <CardTitle 
+                  className="text-3xl font-bold"
+                  style={{ color: resumo.total_restante >= 0 ? '#6CCB8C' : '#F07167' }}
+                >
+                  R$ {Math.abs(resumo.total_restante).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card 
+              style={{
+                backgroundColor: '#18322C',
+                borderColor: '#2A4942',
+                borderWidth: '1px',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
+              }}
+            >
+              <CardHeader className="pb-3">
+                <CardDescription className="text-sm mb-3" style={{ color: '#B2BDB9' }}>Status Geral</CardDescription>
+                <div className="flex gap-4 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="h-4 w-4" style={{ color: '#6CCB8C' }} />
+                    <span className="font-semibold" style={{ color: '#F2F7F5' }}>{resumo.orcamentos_ok}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className="h-4 w-4" style={{ color: '#E0B257' }} />
+                    <span className="font-semibold" style={{ color: '#F2F7F5' }}>{resumo.orcamentos_atencao}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <XCircle className="h-4 w-4" style={{ color: '#F07167' }} />
+                    <span className="font-semibold" style={{ color: '#F2F7F5' }}>{resumo.orcamentos_excedidos}</span>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
           </div>
         )}
 
-        <div
-          className="rounded-xl border border-white/20"
+        {/* TEMA.md: Main budgets list - solid bg-card */}
+        <Card 
           style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563',
+            backgroundColor: '#18322C',
+            borderColor: '#2A4942',
+            borderWidth: '1px',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
           }}
         >
-          <div className="p-6 pb-4">
-            <h3 className="text-xl font-semibold text-white">Orçamentos do Mês</h3>
-            <p className="text-sm text-white/70 mt-1">
+          <CardHeader className="pb-4">
+            <CardTitle style={{ color: '#F2F7F5' }}>Orçamentos do Mês</CardTitle>
+            <CardDescription style={{ color: '#B2BDB9' }}>
               {orcamentos.length} orçamento{orcamentos.length !== 1 ? 's' : ''} cadastrado{orcamentos.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-          <div className="px-6 pb-6">
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             {orcamentos.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-white/60">Nenhum orçamento cadastrado para este mês</p>
+                <p style={{ color: '#8CA39C' }}>Nenhum orçamento cadastrado para este mês</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {orcamentos.map((orcamento) => (
                   <div
                     key={orcamento.id}
-                    className="flex items-center gap-4 p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+                    className="flex items-center gap-4 p-4 rounded-lg hover:bg-[#1D3A34] transition-all"
+                    style={{
+                      backgroundColor: '#142A25',
+                      border: '1px solid #2A4942',
+                    }}
                   >
                     <div className="flex-shrink-0">
                       {getStatusIcon(orcamento.status)}
@@ -322,36 +380,49 @@ export default function BudgetsPage() {
                         {orcamento.categoria_icone && (
                           <span className="text-lg">{orcamento.categoria_icone}</span>
                         )}
-                        <h4 className="font-semibold truncate text-white">{orcamento.nome}</h4>
-                        <Badge variant="outline" className="text-xs text-white/80 border-white/30">
+                        <h4 className="font-semibold truncate" style={{ color: '#F2F7F5' }}>{orcamento.nome}</h4>
+                        <Badge 
+                          variant="outline" 
+                          className="text-xs"
+                          style={{ 
+                            color: '#8CA39C',
+                            borderColor: '#2A4942',
+                          }}
+                        >
                           {orcamento.categoria_nome || orcamento.centro_custo_nome}
                         </Badge>
                       </div>
 
                       <div className="mt-2">
-                        <div className="flex items-center justify-between text-sm text-white/70 mb-1">
+                        <div className="flex items-center justify-between text-sm mb-1" style={{ color: '#B2BDB9' }}>
                           <span>
                             R$ {orcamento.valor_realizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de R$ {orcamento.valor_planejado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                           <span>{orcamento.percentual_usado.toFixed(1)}%</span>
                         </div>
-                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div 
+                          className="h-2 rounded-full overflow-hidden"
+                          style={{ backgroundColor: '#2A4942' }}
+                        >
                           <div
-                            className={cn("h-full transition-all", getStatusColor(orcamento.status))}
-                            style={{ width: `${Math.min(orcamento.percentual_usado, 100)}%` }}
+                            className="h-full transition-all"
+                            style={{ 
+                              width: `${Math.min(orcamento.percentual_usado, 100)}%`,
+                              backgroundColor: orcamento.status === 'ok' ? '#6CCB8C' : orcamento.status === 'atencao' ? '#E0B257' : '#F07167',
+                            }}
                           />
                         </div>
                       </div>
                     </div>
 
                     <div className="flex-shrink-0 text-right">
-                      <p className={cn(
-                        "text-lg font-bold",
-                        orcamento.valor_restante >= 0 ? "text-green-400" : "text-red-400"
-                      )}>
+                      <p 
+                        className="text-lg font-bold"
+                        style={{ color: orcamento.valor_restante >= 0 ? '#6CCB8C' : '#F07167' }}
+                      >
                         {orcamento.valor_restante >= 0 ? '+' : '-'}R$ {Math.abs(orcamento.valor_restante).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
-                      <p className="text-xs text-white/60">
+                      <p className="text-xs" style={{ color: '#8CA39C' }}>
                         {getStatusText(orcamento.status)}
                       </p>
                     </div>
@@ -359,8 +430,8 @@ export default function BudgetsPage() {
                 ))}
               </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

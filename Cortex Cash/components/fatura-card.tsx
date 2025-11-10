@@ -62,20 +62,14 @@ export function FaturaCard({
   const isPaga = status === 'paga'
 
   return (
-    <Card
-      className="overflow-hidden hover:shadow-lg transition-all"
-      style={{
-        background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-        backgroundColor: '#3B5563'
-      }}
-    >
+    <Card className="overflow-hidden hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)] transition-all bg-card border-border">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-lg capitalize text-white">
+            <CardTitle className="text-lg capitalize text-foreground">
               {formatMesReferencia(mes_referencia)}
             </CardTitle>
-            <CardDescription className="flex items-center gap-1 text-white/70">
+            <CardDescription className="flex items-center gap-1 text-muted-foreground">
               <CreditCard className="h-3 w-3" />
               {cartao_nome}
             </CardDescription>
@@ -96,21 +90,21 @@ export function FaturaCard({
         {/* Valor */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-white/70">Valor Total</span>
-            <span className="text-2xl font-bold text-white">{formatCurrency(valor_total)}</span>
+            <span className="text-sm text-muted-foreground">Valor Total</span>
+            <span className="text-2xl font-bold text-gold">{formatCurrency(valor_total)}</span>
           </div>
 
           {!isPaga && valor_pago > 0 && (
             <>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/70">Valor Pago</span>
-                <span className="font-medium text-green-400">
+                <span className="text-muted-foreground">Valor Pago</span>
+                <span className="font-medium text-success">
                   {formatCurrency(valor_pago)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/70">Valor Restante</span>
-                <span className={`font-semibold ${isVencida ? 'text-red-400' : 'text-white'}`}>
+                <span className="text-muted-foreground">Valor Restante</span>
+                <span className={`font-semibold ${isVencida ? 'text-destructive' : 'text-foreground'}`}>
                   {formatCurrency(valorRestante)}
                 </span>
               </div>
@@ -120,9 +114,9 @@ export function FaturaCard({
 
         {/* Vencimento */}
         <div className="flex items-center gap-2 text-sm">
-          <Calendar className="h-4 w-4 text-white/70" />
-          <span className="text-white/70">Vencimento:</span>
-          <span className={`font-medium ${isVencida ? 'text-red-400' : 'text-white'}`}>
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Vencimento:</span>
+          <span className={`font-medium ${isVencida ? 'text-destructive' : 'text-foreground'}`}>
             {formatDate(data_vencimento)}
           </span>
         </div>
@@ -133,7 +127,7 @@ export function FaturaCard({
             <Button
               variant="outline"
               size="sm"
-              className="flex-1 border-white/20 text-white hover:bg-white/10"
+              className="flex-1 border-border text-foreground"
               onClick={() => onViewDetails(id)}
             >
               <Eye className="mr-2 h-4 w-4" />
@@ -143,11 +137,10 @@ export function FaturaCard({
           {onPay && !isPaga && (
             <Button
               size="sm"
-              className="flex-1 text-white"
+              className="flex-1 text-foreground"
               onClick={() => onPay(id)}
               style={{
-                backgroundColor: isVencida ? '#ef4444' : '#18B0A4',
-                color: '#ffffff'
+                backgroundColor: isVencida ? 'hsl(var(--destructive))' : 'hsl(var(--primary))'
               }}
             >
               <DollarSign className="mr-2 h-4 w-4" />

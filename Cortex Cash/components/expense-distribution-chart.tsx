@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react'
 import { transacaoService } from '@/lib/services/transacao.service'
 import { categoriaService } from '@/lib/services/categoria.service'
 import { startOfMonth, endOfMonth } from 'date-fns'
+import { getChartColors } from '@/lib/constants/colors'
 
 interface ChartData {
   name: string
@@ -15,34 +16,6 @@ interface ChartData {
   color: string
   percentage: number
   [key: string]: any  // index signature for recharts compatibility
-}
-
-// Get chart colors from CSS variables to support light/dark mode
-const getChartColors = (): string[] => {
-  if (typeof window === 'undefined') {
-    return [
-      'hsl(175 73% 39%)',
-      'hsl(42 89% 50%)',
-      'hsl(171 69% 50%)',
-      'hsl(32 99% 45%)',
-      'hsl(175 78% 27%)',
-      'hsl(38 74% 45%)',
-      'hsl(175 78% 21%)',
-      'hsl(142 71% 40%)',
-    ]
-  }
-
-  const style = getComputedStyle(document.documentElement)
-  return [
-    `hsl(${style.getPropertyValue('--chart-1').trim() || '175 73% 39%'})`,
-    `hsl(${style.getPropertyValue('--chart-2').trim() || '42 89% 50%'})`,
-    `hsl(${style.getPropertyValue('--chart-3').trim() || '171 69% 50%'})`,
-    `hsl(${style.getPropertyValue('--chart-4').trim() || '32 99% 45%'})`,
-    `hsl(${style.getPropertyValue('--chart-5').trim() || '175 78% 27%'})`,
-    `hsl(${style.getPropertyValue('--chart-6').trim() || '38 74% 45%'})`,
-    `hsl(${style.getPropertyValue('--chart-7').trim() || '175 78% 21%'})`,
-    `hsl(${style.getPropertyValue('--chart-8').trim() || '142 71% 40%'})`,
-  ]
 }
 
 // ✅ Named export
@@ -175,7 +148,7 @@ export function ExpenseDistributionChart() {
       <text
         x={x}
         y={y}
-        fill={isDark ? '#ffffff' : '#334155'}
+        className="fill-foreground"
         textAnchor={textAnchor}
         dominantBaseline="central"
         style={{
@@ -189,35 +162,24 @@ export function ExpenseDistributionChart() {
     )
   }
 
-  // Custom tooltip com melhor contraste e design compacto
+  // Custom tooltip com melhor contraste e design compacto (TEMA.md)
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
         <div
           style={{
-            backgroundColor: '#4B5563', // Cinza escuro
+            backgroundColor: '#142A25',
+            border: '1px solid #2A4942',
+            borderRadius: 'var(--radius-md)',
             padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.2)',
+            boxShadow: 'var(--shadow-2)',
           }}
         >
-          <p style={{
-            color: '#ffffff',
-            fontSize: '11px',
-            fontWeight: 600,
-            margin: 0,
-            marginBottom: '2px'
-          }}>
+          <p style={{ color: '#F2F7F5', fontSize: '11px', fontWeight: 600, margin: 0, marginBottom: '2px' }}>
             {data.name}
           </p>
-          <p style={{
-            color: '#ffffff',
-            fontSize: '10px',
-            margin: 0,
-            opacity: 0.9
-          }}>
+          <p style={{ color: '#B2BDB9', fontSize: '10px', margin: 0 }}>
             {formatCurrency(data.value)}
           </p>
         </div>
@@ -227,29 +189,33 @@ export function ExpenseDistributionChart() {
   }
 
   return (
-    <Card className="p-6 shadow-md border overflow-hidden flex flex-col h-full" style={{
-      background: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-      minHeight: '420px'
-    }}>
+    <Card
+      className="p-6 overflow-hidden flex flex-col h-full"
+      style={{
+        minHeight: '420px',
+        backgroundColor: '#18322C',
+        borderColor: '#2A4942',
+        borderWidth: '1px',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-1)',
+      }}
+    >
       <div className="mb-6 flex-shrink-0">
-        <h3 className="text-lg font-bold text-white">
+        <h3 className="text-lg font-bold" style={{ color: '#F2F7F5' }}>
           Distribuição de Despesas
         </h3>
-        <p className="text-sm text-white/80">
+        <p className="text-sm" style={{ color: '#B2BDB9' }}>
           Todas as categorias do mês
         </p>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center flex-1 min-h-[300px]">
-          <Loader2 className={isDark ? "h-8 w-8 animate-spin text-white/50" : "h-8 w-8 animate-spin text-primary"} />
+          <Loader2 className="h-8 w-8 animate-spin text-secondary" />
         </div>
       ) : data.length === 0 ? (
         <div className="flex items-center justify-center flex-1 min-h-[300px]">
-          <p className={isDark ? "text-sm text-white/70" : "text-sm text-muted-foreground"}>
+          <p className="text-sm text-secondary">
             Nenhuma despesa encontrada
           </p>
         </div>
@@ -262,7 +228,7 @@ export function ExpenseDistributionChart() {
                   cx="50%"
                   cy="50%"
                   labelLine={{
-                    stroke: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+                    className: "stroke-border",
                     strokeWidth: 1,
                   }}
                   label={renderCustomLabel}

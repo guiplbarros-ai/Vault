@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { investimentoService } from '@/lib/services/investimento.service'
 import { TrendingUp, TrendingDown, Award } from 'lucide-react'
 import { useSettings } from '@/app/providers/settings-provider'
+import { THEME_COLORS } from '@/lib/constants/colors'
 import type { Investimento } from '@/lib/types'
 
 const TIPO_LABELS: Record<string, string> = {
@@ -65,16 +66,9 @@ export function TopPerformersWidget() {
 
   if (loading) {
     return (
-      <Card
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-        }}
-      >
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <CardTitle className="text-foreground">
             Melhores Investimentos
           </CardTitle>
         </CardHeader>
@@ -89,25 +83,18 @@ export function TopPerformersWidget() {
 
   if (topPerformers.length === 0) {
     return (
-      <Card
-        style={{
-          background: isDark
-            ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-            : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-          backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-        }}
-      >
+      <Card className="bg-card">
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <CardTitle className="text-foreground">
             Melhores Investimentos
           </CardTitle>
-          <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+          <CardDescription className="text-muted-foreground">
             Top 5 investimentos por rentabilidade
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex h-[200px] items-center justify-center">
-            <p className={isDark ? 'text-white/70' : 'text-gray-600'}>
+            <p className="text-muted-foreground">
               Nenhum investimento cadastrado
             </p>
           </div>
@@ -117,22 +104,15 @@ export function TopPerformersWidget() {
   }
 
   return (
-    <Card
-      style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
-      }}
-    >
+    <Card className="bg-card">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Award className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
-          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
+          <Award className="h-5 w-5 text-primary" />
+          <CardTitle className="text-foreground">
             Melhores Investimentos
           </CardTitle>
         </div>
-        <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
+        <CardDescription className="text-muted-foreground">
           Top 5 investimentos por rentabilidade
         </CardDescription>
       </CardHeader>
@@ -146,43 +126,41 @@ export function TopPerformersWidget() {
             return (
               <div
                 key={inv.id}
-                className="flex items-start justify-between border-b border-white/10 pb-4 last:border-0 last:pb-0"
+                className="flex items-start justify-between border-b border-border pb-4 last:border-0 last:pb-0"
               >
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center gap-2">
                     <span
                       className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
                         index === 0
-                          ? 'bg-yellow-500 text-white'
+                          ? 'bg-gold text-foreground'
                           : index === 1
-                          ? 'bg-gray-400 text-white'
+                          ? 'bg-muted-foreground text-foreground'
                           : index === 2
-                          ? 'bg-orange-600 text-white'
-                          : isDark
-                          ? 'bg-white/10 text-white'
-                          : 'bg-gray-200 text-gray-700'
+                          ? 'bg-warning text-foreground'
+                          : 'bg-muted text-foreground'
                       }`}
                     >
                       {index + 1}
                     </span>
-                    <span className={`font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+                    <span className="font-medium text-foreground">
                       {inv.nome}
                     </span>
                   </div>
-                  <div className={`text-xs ml-8 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                  <div className="text-xs ml-8 text-muted-foreground">
                     {TIPO_LABELS[inv.tipo] || inv.tipo}
                     {inv.ticker && ` • ${inv.ticker}`}
                   </div>
-                  <div className={`text-xs ml-8 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
+                  <div className="text-xs ml-8 text-muted-foreground">
                     Aplicado: {formatCurrency(inv.valor_aplicado)}
                   </div>
                 </div>
                 <div className="text-right space-y-1">
-                  <div className={`font-medium ${isDark ? 'text-white' : 'text-white'}`}>
+                  <div className="font-medium text-foreground">
                     {formatCurrency(inv.valor_atual)}
                   </div>
                   <div className={`flex items-center gap-1 justify-end text-xs font-medium ${
-                    isPositive ? 'text-green-400' : 'text-red-400'
+                    isPositive ? 'text-success' : 'text-destructive'
                   }`}>
                     {isPositive ? (
                       <TrendingUp className="h-3 w-3" />
@@ -191,7 +169,7 @@ export function TopPerformersWidget() {
                     )}
                     {isPositive ? '+' : ''}{rentabilidade.toFixed(2)}%
                   </div>
-                  <div className={`text-xs ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className={`text-xs ${isPositive ? 'text-success' : 'text-destructive'}`}>
                     {isPositive ? '+' : ''}{formatCurrency(lucro)}
                   </div>
                 </div>

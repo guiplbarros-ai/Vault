@@ -196,74 +196,25 @@ export function BudgetOverview() {
   }, [viewMode])
 
   return (
-    <Card className="p-6 shadow-md border overflow-hidden flex flex-col h-full" style={{
-      background: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      backgroundColor: isDark ? '#3B5563' : '#FFFFFF',
+    <Card className="p-6 shadow-md border-border overflow-hidden flex flex-col h-full bg-gradient-to-br from-card to-background" style={{
       minHeight: '520px'
     }}>
       <div className="mb-6 flex items-start justify-between gap-4 flex-shrink-0">
         <div className="flex-1">
-          <h3 className={isDark ? "text-lg font-bold text-white" : "text-lg font-bold text-foreground"}>Visão Geral do Orçamento</h3>
-          <p className={isDark ? "text-sm text-white/70" : "text-sm text-muted-foreground"}>
+          <h3 className="text-lg font-bold text-foreground">Visão Geral do Orçamento</h3>
+          <p className="text-sm text-muted-foreground">
             {viewMode === 'valores_absolutos' ? 'Top 4 maiores gastos' : 'Top 4 maiores variações vs mês anterior'}
           </p>
         </div>
         <Select value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
-          <SelectTrigger
-            className={cn(
-              "w-[200px] h-9 text-xs font-medium",
-              isDark
-                ? "!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 data-[state=open]:!bg-gray-700"
-                : "!bg-white !border-gray-300 hover:!bg-gray-50"
-            )}
-            style={isDark ? {
-              backgroundColor: '#1f2937',
-              borderColor: '#4b5563',
-              color: '#ffffff'
-            } : {
-              color: '#111827'
-            }}
-          >
-            <SelectValue
-              className={isDark ? "!text-white" : ""}
-              style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-            />
+          <SelectTrigger className="w-[200px] h-9 text-xs font-medium bg-card border-border hover:bg-muted">
+            <SelectValue />
           </SelectTrigger>
-          <SelectContent
-            className={cn(
-              isDark
-                ? "!bg-gray-800 !border-gray-700"
-                : "!bg-white !border-gray-200"
-            )}
-            style={isDark ? {
-              backgroundColor: '#1f2937',
-              borderColor: '#374151'
-            } : undefined}
-          >
-            <SelectItem
-              value="valores_absolutos"
-              className={cn(
-                "text-sm font-medium cursor-pointer",
-                isDark
-                  ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
-                  : ""
-              )}
-              style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-            >
+          <SelectContent className="bg-card border-border">
+            <SelectItem value="valores_absolutos" className="text-sm font-medium cursor-pointer hover:bg-muted">
               Maiores Valores
             </SelectItem>
-            <SelectItem
-              value="variacoes"
-              className={cn(
-                "text-sm font-medium cursor-pointer",
-                isDark
-                  ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
-                  : ""
-              )}
-              style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-            >
+            <SelectItem value="variacoes" className="text-sm font-medium cursor-pointer hover:bg-muted">
               Maiores Variações
             </SelectItem>
           </SelectContent>
@@ -289,10 +240,10 @@ export function BudgetOverview() {
 
       {!loading && budgets.length === 0 && (
         <div className="text-center py-8 flex-1 flex flex-col justify-center">
-          <p className={isDark ? "text-white/60" : "text-muted-foreground"}>
+          <p className="text-muted-foreground">
             Nenhuma despesa registrada neste mês
           </p>
-          <p className={cn("text-xs mt-2", isDark ? "text-white/40" : "text-muted-foreground/60")}>
+          <p className="text-xs mt-2 text-muted-foreground/60">
             Adicione transações para visualizar o orçamento
           </p>
         </div>
@@ -327,12 +278,12 @@ export function BudgetOverview() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={isDark ? "text-sm font-bold text-white" : "text-sm font-bold text-foreground"}>{budget.categoria_nome}</span>
+                      <span className="text-sm font-bold text-foreground">{budget.categoria_nome}</span>
                       {isNearLimit && (
                         <AlertCircle
                           className={cn(
                             "h-4 w-4 animate-pulse",
-                            isOverLimit ? "text-destructive" : "text-orange-500"
+                            isOverLimit ? "text-destructive" : "text-warning"
                           )}
                         />
                       )}
@@ -367,7 +318,7 @@ export function BudgetOverview() {
                         </Badge>
                       )}
                     </div>
-                    <span className={isDark ? "text-xs text-white/60" : "text-xs text-muted-foreground"}>
+                    <span className="text-xs text-muted-foreground">
                       {viewMode === 'valores_absolutos'
                         ? `Limite: R$ ${budget.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                         : `Mês anterior: R$ ${budget.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -376,7 +327,7 @@ export function BudgetOverview() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className={isDark ? "text-base font-bold text-white" : "text-base font-bold text-foreground"}>
+                  <span className="text-base font-bold text-foreground">
                     R$ {budget.spent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   <div className="flex items-center gap-1">
@@ -401,12 +352,8 @@ export function BudgetOverview() {
                   <div className="flex-1">
                     <Progress
                       value={Math.min(budget.percentage, 100)}
-                      className={cn(
-                        "h-4 rounded-lg shadow-inner",
-                        isDark ? "bg-gray-700/50" : "bg-gray-200/80"
-                      )}
+                      className="h-4 rounded-lg shadow-inner bg-muted/50"
                       indicatorColor={currentColor}
-                      backgroundColor={isDark ? "rgba(55, 65, 81, 0.5)" : "rgba(229, 231, 235, 0.8)"}
                       showGlow={isNearLimit}
                     />
                   </div>
@@ -436,52 +383,47 @@ export function BudgetOverview() {
 
               {/* Seção de previsão e métricas */}
               {budget.previsao_fim_mes !== undefined && budget.ritmo_gasto !== undefined && budget.dias_restantes !== undefined && (
-                <div className={cn(
-                  "mt-3 p-3 rounded-lg border",
-                  isDark
-                    ? "bg-gray-800/40 border-gray-700/50"
-                    : "bg-gray-50/80 border-gray-200/80"
-                )}>
+                <div className="mt-3 p-3 rounded-lg border bg-muted/40 border-border/50">
                   <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className={cn("w-4 h-4", isDark ? "text-purple-400" : "text-purple-600")} />
-                    <span className={cn("text-xs font-semibold", isDark ? "text-white" : "text-foreground")}>
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span className="text-xs font-semibold text-foreground">
                       Previsão de Fim de Mês
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="flex flex-col">
-                      <span className={cn("text-xs font-medium mb-1", isDark ? "text-white/70" : "text-muted-foreground")}>
+                      <span className="text-xs font-medium mb-1 text-muted-foreground">
                         Projeção
                       </span>
                       <span className={cn(
                         "text-sm font-bold",
                         budget.previsao_fim_mes > budget.limit
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-green-600 dark:text-green-400"
+                          ? "text-destructive"
+                          : "text-success"
                       )}>
                         R$ {budget.previsao_fim_mes.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                     <div className="flex flex-col">
                       <div className="flex items-center gap-1 mb-1">
-                        <Clock className={cn("w-3 h-3", isDark ? "text-white/70" : "text-muted-foreground")} />
-                        <span className={cn("text-xs font-medium", isDark ? "text-white/70" : "text-muted-foreground")}>
+                        <Clock className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground">
                           Ritmo/dia
                         </span>
                       </div>
-                      <span className={cn("text-sm font-bold", isDark ? "text-white" : "text-foreground")}>
+                      <span className="text-sm font-bold text-foreground">
                         R$ {budget.ritmo_gasto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                     <div className="flex flex-col">
-                      <span className={cn("text-xs font-medium mb-1", isDark ? "text-white/70" : "text-muted-foreground")}>
+                      <span className="text-xs font-medium mb-1 text-muted-foreground">
                         Dias restantes
                       </span>
                       <div className="flex items-center gap-1">
-                        <span className={cn("text-sm font-bold", isDark ? "text-white" : "text-foreground")}>
+                        <span className="text-sm font-bold text-foreground">
                           {budget.dias_restantes}
                         </span>
-                        <span className={cn("text-xs", isDark ? "text-white/60" : "text-muted-foreground")}>
+                        <span className="text-xs text-muted-foreground">
                           / {budget.dias_decorridos! + budget.dias_restantes} dias
                         </span>
                       </div>
@@ -492,9 +434,9 @@ export function BudgetOverview() {
 
               {/* Linha de alerta sutil abaixo */}
               {isNearLimit && !isOverLimit && (
-                <div className="mt-2 flex items-center gap-2 text-xs text-orange-600 dark:text-orange-400">
-                  <div className="h-1 flex-1 rounded-full bg-orange-500/20">
-                    <div className="h-full w-1/2 rounded-full bg-orange-500 animate-pulse" />
+                <div className="mt-2 flex items-center gap-2 text-xs text-warning">
+                  <div className="h-1 flex-1 rounded-full bg-warning/20">
+                    <div className="h-full w-1/2 rounded-full bg-warning animate-pulse" />
                   </div>
                   <span className="font-medium">Atenção ao limite</span>
                 </div>

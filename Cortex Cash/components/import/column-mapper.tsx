@@ -91,13 +91,7 @@ export function ColumnMapper({
 
   return (
     <div className="space-y-6">
-      <Card
-        className="p-6"
-        style={{
-          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-          backgroundColor: '#3B5563',
-        }}
-      >
+      <Card className="p-6 bg-card">
         <div className="space-y-4">
           <div>
             <h3 className="text-lg font-semibold mb-2">Mapeamento de Colunas</h3>
@@ -172,13 +166,7 @@ export function ColumnMapper({
       </Card>
 
       {/* Configurações Adicionais */}
-      <Card
-        className="p-6"
-        style={{
-          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-          backgroundColor: '#3B5563',
-        }}
-      >
+      <Card className="p-6 bg-card">
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Configurações de Formato</h3>
 
@@ -216,13 +204,7 @@ export function ColumnMapper({
 
       {/* Preview dos Dados */}
       {sampleData.length > 0 && (
-        <Card
-          className="p-6"
-          style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563',
-          }}
-        >
+        <Card className="p-6 bg-card">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">
               Preview (primeiras 5 linhas)

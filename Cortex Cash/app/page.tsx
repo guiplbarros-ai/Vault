@@ -12,6 +12,7 @@ import { contaService } from '@/lib/services/conta.service'
 import { startOfMonth, endOfMonth } from 'date-fns'
 import type { Transacao, Conta } from '@/lib/types'
 import { Wallet, TrendingUp, TrendingDown, PiggyBank, Loader2 } from 'lucide-react'
+import { THEME_COLORS } from '@/lib/constants/colors'
 
 // ✅ Lazy load heavy Recharts components com default exports
 const CashFlowChart = dynamic(() => import('@/components/cash-flow-chart'), {
@@ -36,15 +37,7 @@ const WealthEvolutionChart = dynamic(() => import('@/components/wealth-evolution
 })
 
 // ✅ Lazy load other heavy components
-const BudgetOverview = dynamic(() => import('@/components/budget-overview'), {
-  loading: () => <ChartSkeleton />,
-  ssr: false
-})
 const RecentTransactions = dynamic(() => import('@/components/recent-transactions'), {
-  loading: () => <ChartSkeleton />,
-  ssr: false
-})
-const FinancialSummary = dynamic(() => import('@/components/financial-summary'), {
   loading: () => <ChartSkeleton />,
   ssr: false
 })
@@ -52,13 +45,12 @@ const FinancialSummary = dynamic(() => import('@/components/financial-summary'),
 // Lightweight components (não precisa lazy load)
 import { PopularTagsWidget } from "@/components/popular-tags-widget"
 import { PopularCategoriesWidget } from "@/components/popular-categories-widget"
-import { AccuracyWidget } from "@/components/classification/accuracy-widget"
 
 // ✅ Skeleton para charts durante carregamento
 function ChartSkeleton() {
   return (
     <div className="h-[400px] w-full rounded-xl border bg-card p-6 flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <Loader2 className="h-8 w-8 animate-spin text-secondary" />
     </div>
   )
 }
@@ -164,75 +156,54 @@ export default function DashboardPage() {
   }, [theme])
 
   // ✅ Memoizar statsCards para evitar recriação a cada render
+  // Cores baseadas em TEMA.md: superfícies sólidas sem translucência
   const statsCards = useMemo(() => [
     {
       title: "Saldo Total",
       value: loading ? "Carregando..." : formatCurrency(stats.totalBalance),
       icon: Wallet,
-      iconColor: isDark ? '#1AD4C4' : '#18B0A4', // Teal primary
-      iconBgColor: isDark ? 'rgba(26, 212, 196, 0.15)' : 'rgba(24, 176, 164, 0.15)',
-      titleColor: isDark ? '#1AD4C4' : '#18B0A4',
-      valueClassName: isDark ? 'text-[#1AD4C4]' : 'text-[#18B0A4]',
-      cardBgGradient: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      cardBgColor: isDark ? '#3B5563' : '#FFFFFF',
-      bottomBarColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+      iconColor: THEME_COLORS.money,
+      iconBgColor: THEME_COLORS.bgCard2,       // Superfície aninhada sólida
+      titleColor: THEME_COLORS.fgSecondary,
+      valueClassName: 'text-gold',
+      cardBgColor: THEME_COLORS.bgCard,        // Superfície sólida
+      bottomBarColor: THEME_COLORS.divider,
     },
     {
       title: "Receitas do Mês",
       value: loading ? "Carregando..." : formatCurrency(stats.monthlyIncome),
       icon: TrendingUp,
-      iconColor: isDark ? '#4ADE80' : '#22C55E', // Green
-      iconBgColor: isDark ? 'rgba(74, 222, 128, 0.15)' : 'rgba(34, 197, 94, 0.15)',
-      titleColor: isDark ? '#4ADE80' : '#22C55E',
-      valueClassName: isDark ? 'text-[#4ADE80]' : 'text-[#22C55E]',
-      cardBgGradient: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      cardBgColor: isDark ? '#3B5563' : '#FFFFFF',
-      bottomBarColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+      iconColor: THEME_COLORS.success,
+      iconBgColor: THEME_COLORS.bgCard2,
+      titleColor: THEME_COLORS.fgSecondary,
+      valueClassName: 'text-success',
+      cardBgColor: THEME_COLORS.bgCard,
+      bottomBarColor: THEME_COLORS.divider,
     },
     {
       title: "Despesas do Mês",
       value: loading ? "Carregando..." : formatCurrency(stats.monthlyExpenses),
       icon: TrendingDown,
-      iconColor: isDark ? '#FA6B6B' : '#EF4444', // Red
-      iconBgColor: isDark ? 'rgba(250, 107, 107, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-      titleColor: isDark ? '#FA6B6B' : '#EF4444',
-      valueClassName: isDark ? 'text-[#FA6B6B]' : 'text-[#EF4444]',
-      cardBgGradient: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      cardBgColor: isDark ? '#3B5563' : '#FFFFFF',
-      bottomBarColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+      iconColor: THEME_COLORS.error,
+      iconBgColor: THEME_COLORS.bgCard2,
+      titleColor: THEME_COLORS.fgSecondary,
+      valueClassName: 'text-destructive',
+      cardBgColor: THEME_COLORS.bgCard,
+      bottomBarColor: THEME_COLORS.divider,
     },
     {
       title: "Resultado",
       value: loading ? "Carregando..." : formatCurrency(stats.monthlyResult),
       description: stats.monthlyResult > 0 ? "Saving" : stats.monthlyResult < 0 ? "Queima de caixa" : "Neutro",
       icon: PiggyBank,
-      iconColor: stats.monthlyResult >= 0
-        ? (isDark ? '#4ADE80' : '#22C55E') // Verde
-        : (isDark ? '#FA6B6B' : '#EF4444'), // Vermelho
-      iconBgColor: stats.monthlyResult >= 0
-        ? (isDark ? 'rgba(74, 222, 128, 0.15)' : 'rgba(34, 197, 94, 0.15)')
-        : (isDark ? 'rgba(250, 107, 107, 0.15)' : 'rgba(239, 68, 68, 0.15)'),
-      titleColor: stats.monthlyResult >= 0
-        ? (isDark ? '#4ADE80' : '#22C55E')
-        : (isDark ? '#FA6B6B' : '#EF4444'),
-      valueColor: stats.monthlyResult >= 0
-        ? (isDark ? '#4ADE80' : '#22C55E') // Verde para Saving
-        : (isDark ? '#FA6B6B' : '#EF4444'), // Vermelho para Queima
-      cardBgGradient: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      cardBgColor: isDark ? '#3B5563' : '#FFFFFF',
-      bottomBarColor: stats.monthlyResult >= 0
-        ? (isDark ? '#4ADE80' : '#22C55E') // Verde para Saving
-        : (isDark ? '#FA6B6B' : '#EF4444'), // Vermelho para Queima
+      iconColor: stats.monthlyResult >= 0 ? THEME_COLORS.success : THEME_COLORS.error,
+      iconBgColor: THEME_COLORS.bgCard2,
+      titleColor: THEME_COLORS.fgSecondary,
+      valueColor: stats.monthlyResult >= 0 ? THEME_COLORS.success : THEME_COLORS.error,
+      cardBgColor: THEME_COLORS.bgCard,
+      bottomBarColor: stats.monthlyResult >= 0 ? THEME_COLORS.success : THEME_COLORS.error,
     },
-  ], [stats, loading, isDark, formatCurrency])
+  ], [stats, loading, formatCurrency])
 
   return (
     <DashboardLayout>
@@ -249,9 +220,6 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Resumo Financeiro Consolidado */}
-        <FinancialSummary />
-
         {/* Stats Overview Detalhado */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {statsCards.map((stat) => (
@@ -262,11 +230,8 @@ export default function DashboardPage() {
         {/* Charts and Recent Data */}
         {!loading && (
           <>
-            {/* Fluxo de Caixa e Budget (full width em 2 colunas) */}
-            <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
-              <CashFlowChart />
-              <BudgetOverview />
-            </div>
+            {/* Fluxo de Caixa (full width) */}
+            <CashFlowChart />
 
             {/* Evolução de Receitas, Despesas e Distribuição (3 colunas) */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 md:items-stretch">
@@ -275,11 +240,10 @@ export default function DashboardPage() {
               <ExpenseDistributionChart />
             </div>
 
-            {/* Tags, Categorias e Acurácia de IA (3 colunas) */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 md:items-stretch">
+            {/* Tags e Categorias (2 colunas) */}
+            <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
               <PopularTagsWidget />
               <PopularCategoriesWidget />
-              <AccuracyWidget />
             </div>
 
             {/* Evolução Patrimonial (full width) */}

@@ -45,38 +45,19 @@ export function ConfirmationDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent
-        className={cn(
-          "rounded-xl shadow-md border",
-          isDark ? "!bg-gray-800 !border-gray-700" : "!bg-white !border-gray-200"
-        )}
-        style={isDark ? {
-          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-          backgroundColor: '#3B5563',
-          borderColor: '#374151'
-        } : undefined}
-      >
+      <AlertDialogContent className="rounded-xl shadow-md border bg-card border-border">
         <AlertDialogHeader>
-          <AlertDialogTitle className={isDark ? "text-white" : ""}>
+          <AlertDialogTitle className="text-foreground">
             {title}
           </AlertDialogTitle>
-          <AlertDialogDescription className={isDark ? "text-white/70" : ""}>
+          <AlertDialogDescription className="text-foreground/70">
             {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel
             disabled={loading}
-            className={cn(
-              isDark
-                ? "!bg-gray-700 !border-gray-600 !text-white hover:!bg-gray-600"
-                : ""
-            )}
-            style={isDark ? {
-              backgroundColor: '#374151',
-              borderColor: '#4b5563',
-              color: '#ffffff'
-            } : undefined}
+            className="bg-card border-border text-foreground hover:bg-muted"
           >
             {cancelLabel}
           </AlertDialogCancel>
@@ -85,18 +66,9 @@ export function ConfirmationDialog({
             disabled={loading}
             className={cn(
               variant === 'destructive'
-                ? '!bg-red-600 !text-white hover:!bg-red-700'
-                : isDark
-                ? '!bg-primary !text-white hover:!bg-primary/90'
-                : ''
+                ? 'bg-destructive text-foreground hover:bg-destructive/90'
+                : 'bg-primary text-foreground hover:bg-primary/90'
             )}
-            style={
-              variant === 'destructive'
-                ? { backgroundColor: '#dc2626', color: '#ffffff' }
-                : variant === 'default' && isDark
-                ? { backgroundColor: '#18B0A4', color: '#ffffff' }
-                : undefined
-            }
           >
             {loading ? 'Processando...' : confirmLabel}
           </AlertDialogAction>

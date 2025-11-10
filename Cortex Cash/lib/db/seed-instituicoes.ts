@@ -1,8 +1,8 @@
 /**
- * Seed de Institui��es Financeiras
+ * Seed de Instituições Financeiras
  * Agent BACKEND: Owner
  *
- * Popula institui��es brasileiras comuns para modo demo
+ * Popula instituições brasileiras comuns para modo demo
  */
 
 import type { Instituicao } from '../types'
@@ -12,97 +12,97 @@ export const INSTITUICOES_PADRAO: Omit<Instituicao, 'id' | 'created_at' | 'updat
   {
     nome: 'Nubank',
     codigo: '260',
-    logo_url: '',
+    logo_url: '/logos/banks/nubank.png',
     cor: '#820AD1',
   },
   {
     nome: 'Inter',
     codigo: '077',
-    logo_url: '',
+    logo_url: '/logos/banks/inter.png',
     cor: '#FF7A00',
   },
   {
-    nome: 'Ita�',
+    nome: 'Itaú',
     codigo: '341',
-    logo_url: '',
+    logo_url: '/logos/banks/itau.png',
     cor: '#EC7000',
   },
   {
     nome: 'Bradesco',
     codigo: '237',
-    logo_url: '',
+    logo_url: '/logos/banks/bradesco.png',
     cor: '#CC092F',
   },
   {
     nome: 'Banco do Brasil',
     codigo: '001',
-    logo_url: '',
+    logo_url: '/logos/banks/bb.png',
     cor: '#FFF100',
   },
   {
-    nome: 'Caixa Econ�mica',
+    nome: 'Caixa Econômica',
     codigo: '104',
-    logo_url: '',
+    logo_url: '/logos/banks/caixa.png',
     cor: '#0066A1',
   },
   {
     nome: 'Santander',
     codigo: '033',
-    logo_url: '',
+    logo_url: '/logos/banks/santander.png',
     cor: '#EC0000',
   },
   {
     nome: 'C6 Bank',
     codigo: '336',
-    logo_url: '',
+    logo_url: '/logos/banks/c6.png',
     cor: '#000000',
   },
   {
     nome: 'PagBank',
     codigo: '290',
-    logo_url: '',
+    logo_url: '/logos/banks/pagbank.png',
     cor: '#00A868',
   },
   {
     nome: 'Mercado Pago',
     codigo: '323',
-    logo_url: '',
+    logo_url: '/logos/banks/mercadopago.svg',
     cor: '#009EE3',
   },
   {
     nome: 'Neon',
     codigo: '735',
-    logo_url: '',
+    logo_url: '/logos/banks/neon.svg',
     cor: '#00D9D5',
   },
   {
     nome: 'BTG Pactual',
     codigo: '208',
-    logo_url: '',
+    logo_url: '/logos/banks/btg.png',
     cor: '#000000',
   },
   {
     nome: 'XP Investimentos',
     codigo: '102',
-    logo_url: '',
+    logo_url: '/logos/banks/xp.png',
     cor: '#000000',
   },
   {
     nome: 'Modal',
     codigo: '746',
-    logo_url: '',
+    logo_url: '/logos/banks/modal.svg',
     cor: '#1B4FFF',
   },
   {
     nome: 'Rico',
     codigo: '355',
-    logo_url: '',
+    logo_url: '/logos/banks/rico.svg',
     cor: '#000080',
   },
 ]
 
 /**
- * Verifica se j� existem institui��es no banco
+ * Verifica se já existem instituições no banco
  */
 export async function hasInstituicoes(): Promise<boolean> {
   const db = getDB()
@@ -111,14 +111,14 @@ export async function hasInstituicoes(): Promise<boolean> {
 }
 
 /**
- * Popula o banco com institui��es padr�o
+ * Popula o banco com instituições padrão
  */
 export async function seedInstituicoes(): Promise<void> {
   const db = getDB()
   const alreadyHas = await hasInstituicoes()
 
   if (alreadyHas) {
-    console.log(' Institui��es j� existem, pulando seed...')
+    console.log('✓ Instituições já existem, pulando seed...')
     return
   }
 
@@ -131,16 +131,23 @@ export async function seedInstituicoes(): Promise<void> {
     updated_at: now,
   }))
 
-  await db.instituicoes.bulkAdd(instituicoes)
-  console.log(` ${instituicoes.length} institui��es criadas com sucesso!`)
+  try {
+    await db.instituicoes.bulkAdd(instituicoes)
+    console.log(`✓ ${instituicoes.length} instituições criadas com sucesso!`)
+  } catch (error: any) {
+    if (error?.name !== 'ConstraintError') {
+      throw error;
+    }
+    console.log('⚠️ Algumas instituições já existem, pulando duplicatas...');
+  }
 }
 
 /**
- * Cria apenas institui��es essenciais (Nubank, Inter, Ita�)
+ * Cria apenas instituições essenciais (Nubank, Inter, Itaú)
  */
 export async function seedInstituicoesEssenciais(): Promise<void> {
   const db = getDB()
-  const essenciais = INSTITUICOES_PADRAO.slice(0, 3) // Nubank, Inter, Ita�
+  const essenciais = INSTITUICOES_PADRAO.slice(0, 3) // Nubank, Inter, Itaú
 
   const now = new Date()
 
@@ -151,6 +158,13 @@ export async function seedInstituicoesEssenciais(): Promise<void> {
     updated_at: now,
   }))
 
-  await db.instituicoes.bulkAdd(instituicoes)
-  console.log(` ${instituicoes.length} institui��es essenciais criadas!`)
+  try {
+    await db.instituicoes.bulkAdd(instituicoes)
+    console.log(`✓ ${instituicoes.length} instituições essenciais criadas!`)
+  } catch (error: any) {
+    if (error?.name !== 'ConstraintError') {
+      throw error;
+    }
+    console.log('⚠️ Algumas instituições já existem, pulando duplicatas...');
+  }
 }

@@ -99,7 +99,7 @@ export interface IContaService {
     incluirInativas?: boolean;
     limit?: number;
     offset?: number;
-    sortBy?: 'nome' | 'saldo_inicial' | 'created_at';
+    sortBy?: 'nome' | 'saldo_referencia' | 'created_at';
     sortOrder?: 'asc' | 'desc';
   }): Promise<Conta[]>;
 

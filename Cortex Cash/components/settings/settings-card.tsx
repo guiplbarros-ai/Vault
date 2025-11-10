@@ -24,17 +24,18 @@ export function SettingsCard({
 }: SettingsCardProps) {
   return (
     <Card
-      className={cn("border-white/10", className)}
-      style={{
-        background: 'rgba(255, 255, 255, 0.03)',
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-        backdropFilter: 'blur(10px)'
-      }}
+      className={cn("bg-card border-border", className)}
     >
-      <CardHeader className="pb-4 border-b border-white/10">
-        <CardTitle className="text-base font-semibold text-white">{title}</CardTitle>
+      <CardHeader
+        className="pb-4 border-b border-border"
+      >
+        <CardTitle className="text-base font-semibold text-foreground">
+          {title}
+        </CardTitle>
         {description && (
-          <CardDescription className="text-sm text-white/60 mt-1">{description}</CardDescription>
+          <CardDescription className="text-sm mt-1 text-foreground/60">
+            {description}
+          </CardDescription>
         )}
       </CardHeader>
       <CardContent className="space-y-6 pt-6">

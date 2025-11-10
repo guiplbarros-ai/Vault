@@ -8,6 +8,7 @@
 import { getDB } from '../db/client';
 import type { Tag } from '../types';
 import { NotFoundError, ValidationError, DatabaseError, DuplicateError } from '../errors';
+import { getCurrentUserId } from '../db/seed-usuarios';
 
 export interface CreateTagDTO {
   nome: string;
@@ -109,12 +110,15 @@ export class TagService {
 
       const id = crypto.randomUUID();
       const now = new Date();
+      const currentUserId = getCurrentUserId();
 
       const tag: Tag = {
         id,
         nome: data.nome.trim(),
         cor: data.cor,
         tipo: data.tipo || 'customizada',
+        is_sistema: false,
+        usuario_id: currentUserId,
         created_at: now,
       };
 

@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, FileText, TrendingUp, AlertCircle } from "lucide-react"
+import { Plus, FileText, AlertCircle } from "lucide-react"
 
 export default function TaxPage() {
   const [declaracoes] = useState<any[]>([])
@@ -19,11 +19,8 @@ export default function TaxPage() {
           description="Gerencie suas declarações e otimize sua tributação"
           actions={
             <Button
-              className="rounded-xl px-6 py-3 text-base font-semibold text-white hover:opacity-90"
-              style={{
-                backgroundColor: '#18B0A4',
-                color: '#ffffff'
-              }}
+              size="lg"
+              className="px-6 text-base font-semibold"
             >
               <Plus className="mr-2 h-5 w-5" />
               Nova Declaração
@@ -33,40 +30,31 @@ export default function TaxPage() {
 
         {/* Cards de Resumo */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card>
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Declarações</CardDescription>
-              <CardTitle className="text-3xl text-white">{declaracoes.length}</CardTitle>
-              <p className="text-xs text-white/60 mt-1">
+              <CardDescription>Declarações</CardDescription>
+              <CardTitle className="text-3xl text-foreground">{declaracoes.length}</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
                 Cadastradas no sistema
               </p>
             </CardHeader>
           </Card>
 
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card>
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Status Atual</CardDescription>
-              <CardTitle className="text-2xl text-white">Em dia</CardTitle>
-              <p className="text-xs text-white/60 mt-1">
+              <CardDescription>Status Atual</CardDescription>
+              <CardTitle className="text-2xl text-foreground">Em dia</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
                 Nenhuma pendência
               </p>
             </CardHeader>
           </Card>
 
-          <Card style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563'
-          }}>
+          <Card>
             <CardHeader className="pb-3">
-              <CardDescription className="text-white/70">Próxima Entrega</CardDescription>
-              <CardTitle className="text-2xl text-white">Abril/2026</CardTitle>
-              <p className="text-xs text-white/60 mt-1">
+              <CardDescription>Próxima Entrega</CardDescription>
+              <CardTitle className="text-2xl text-foreground">Abril/2026</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
                 Ano-calendário 2025
               </p>
             </CardHeader>
@@ -74,45 +62,26 @@ export default function TaxPage() {
         </div>
 
         {/* Card Principal */}
-        <Card style={{
-          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-          backgroundColor: '#3B5563'
-        }}>
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white">Gestão de Declarações</CardTitle>
-            <CardDescription className="text-white/70">
+            <CardTitle className="text-foreground">Gestão de Declarações</CardTitle>
+            <CardDescription>
               Organize rendimentos, despesas e bens para sua declaração
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="declaracoes" className="space-y-4">
-              <TabsList className="border-0" style={{ backgroundColor: '#1e293b' }}>
-                <TabsTrigger
-                  value="declaracoes"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-white"
-                  style={{ color: '#ffffff' }}
-                >
+              <TabsList>
+                <TabsTrigger value="declaracoes">
                   Declarações
                 </TabsTrigger>
-                <TabsTrigger
-                  value="rendimentos"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-white"
-                  style={{ color: '#ffffff' }}
-                >
+                <TabsTrigger value="rendimentos">
                   Rendimentos
                 </TabsTrigger>
-                <TabsTrigger
-                  value="deducoes"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-white"
-                  style={{ color: '#ffffff' }}
-                >
+                <TabsTrigger value="deducoes">
                   Deduções
                 </TabsTrigger>
-                <TabsTrigger
-                  value="bens"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-white"
-                  style={{ color: '#ffffff' }}
-                >
+                <TabsTrigger value="bens">
                   Bens e Direitos
                 </TabsTrigger>
               </TabsList>
@@ -120,11 +89,11 @@ export default function TaxPage() {
               <TabsContent value="declaracoes" className="space-y-4">
                 {declaracoes.length === 0 ? (
                   <div className="text-center py-12">
-                    <FileText className="h-12 w-12 text-white/70 mx-auto mb-4" />
-                    <p className="text-white/70 text-lg mb-2">
+                    <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                    <p className="mb-2 text-lg text-muted-foreground">
                       Nenhuma declaração cadastrada
                     </p>
-                    <p className="text-white/50 text-sm">
+                    <p className="text-sm text-muted-foreground">
                       Crie sua primeira declaração para começar
                     </p>
                   </div>
@@ -136,19 +105,19 @@ export default function TaxPage() {
               </TabsContent>
 
               <TabsContent value="rendimentos" className="space-y-4">
-                <div className="text-center py-8 text-white/70">
+                <div className="py-8 text-center text-muted-foreground">
                   Cadastro de rendimentos em desenvolvimento...
                 </div>
               </TabsContent>
 
               <TabsContent value="deducoes" className="space-y-4">
-                <div className="text-center py-8 text-white/70">
+                <div className="py-8 text-center text-muted-foreground">
                   Cadastro de deduções em desenvolvimento...
                 </div>
               </TabsContent>
 
               <TabsContent value="bens" className="space-y-4">
-                <div className="text-center py-8 text-white/70">
+                <div className="py-8 text-center text-muted-foreground">
                   Cadastro de bens e direitos em desenvolvimento...
                 </div>
               </TabsContent>
@@ -157,23 +126,20 @@ export default function TaxPage() {
         </Card>
 
         {/* Card de Sugestões */}
-        <Card style={{
-          background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-          backgroundColor: '#3B5563'
-        }}>
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <AlertCircle className="h-5 w-5" />
               Sugestões Inteligentes
             </CardTitle>
-            <CardDescription className="text-white/70">
+            <CardDescription>
               Identificamos automaticamente transações que podem ser declaradas
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-white/70">
+            <div className="py-8 text-center text-muted-foreground">
               Sistema de sugestões em desenvolvimento...
-              <p className="text-xs text-white/50 mt-2">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Analisaremos suas transações, investimentos e rendimentos automaticamente
               </p>
             </div>

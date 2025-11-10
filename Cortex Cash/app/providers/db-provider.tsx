@@ -45,12 +45,14 @@ export function DBProvider({ children }: DBProviderProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isOpeningDB, setIsOpeningDB] = useState(false);
 
   useEffect(() => {
     // Só executa no cliente
     if (typeof window === 'undefined') return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
+    let longOpenId: ReturnType<typeof setTimeout>;
 
     async function initialize() {
       try {
@@ -63,16 +65,36 @@ export function DBProvider({ children }: DBProviderProps) {
           setIsLoading(false);
         }, 10000);
 
-        // Check IndexedDB support (async - detects Safari private mode blocks)
-        const { checkIndexedDBSupportAsync } = await import('@/lib/db/client');
-        const support = await checkIndexedDBSupportAsync();
-
-        if (!support.supported) {
-          throw new Error(support.error || 'IndexedDB não está disponível neste navegador');
+        // Verificação síncrona básica (não bloqueia)
+        const { checkIndexedDBSupport, checkIndexedDBSupportAsync } = await import('@/lib/db/client');
+        const basicSupport = checkIndexedDBSupport();
+        if (!basicSupport.supported) {
+          throw new Error(basicSupport.error || 'IndexedDB não está disponível neste navegador');
         }
 
-        // Inicializa Dexie (IndexedDB)
+        // Dispara verificação assíncrona COMPLETA em background (Safari modo privado, etc.)
+        // Não bloqueia a UI — apenas reporta erro se detectar bloqueio.
+        checkIndexedDBSupportAsync()
+          .then((support) => {
+            if (!support.supported) {
+              setError(support.error || 'IndexedDB pode estar bloqueado (modo privado ou configurações)');
+            }
+          })
+          .catch(() => {
+            // Silencia erros não críticos desta verificação
+          });
+
+        // Inicializa Dexie (IndexedDB) imediatamente após checagem básica
         const dbInstance = getDB();
+        // Aguarda abertura/migrações para evitar telas internas ficarem em "loading infinito"
+        setIsOpeningDB(true);
+        // Se abrir demorar, mostramos ao usuário que está migrando
+        longOpenId = setTimeout(() => {
+          console.log('⏳ Abertura/migração do banco demorando...');
+        }, 1200);
+        await dbInstance.open();
+        clearTimeout(longOpenId);
+        setIsOpeningDB(false);
 
         console.log('✅ Banco de dados Dexie inicializado');
 
@@ -86,10 +108,17 @@ export function DBProvider({ children }: DBProviderProps) {
 
         console.log('✅ Cortex Cash pronto para uso!');
 
-        // Inicializa dados padrão em background (não bloqueia a UI)
-        initializeDatabase()
-          .then(() => console.log('✅ Inicialização de dados completa'))
-          .catch(err => console.error('⚠️ Erro na inicialização (não crítico):', err));
+        // Inicializa dados padrão em background (não bloqueia a UI) e preferencialmente quando o thread estiver ocioso
+        const scheduleSeed = () => {
+          initializeDatabase()
+            .then(() => console.log('✅ Inicialização de dados completa'))
+            .catch(err => console.error('⚠️ Erro na inicialização (não crítico):', err));
+        };
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(scheduleSeed, { timeout: 3000 });
+        } else {
+          setTimeout(scheduleSeed, 0);
+        }
 
       } catch (err) {
         console.error('❌ Erro ao inicializar banco de dados:', err);
@@ -104,6 +133,7 @@ export function DBProvider({ children }: DBProviderProps) {
     // Cleanup
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
+      if (longOpenId) clearTimeout(longOpenId);
     };
   }, []);
 
@@ -122,7 +152,7 @@ export function DBProvider({ children }: DBProviderProps) {
           <div>
             <h2 className="text-xl font-bold text-primary">Cortex Cash</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              Inicializando banco de dados...
+              {isOpeningDB ? 'Abrindo/migrando banco de dados...' : 'Inicializando banco de dados...'}
             </p>
           </div>
           <div className="flex justify-center">

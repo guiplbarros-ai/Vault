@@ -190,8 +190,11 @@ async function seedContas(instituicoes: Instituicao[]): Promise<Conta[]> {
   for (const data of contasData) {
     const conta = await contaService.createConta({
       ...data,
+      saldo_referencia: data.saldo_inicial, // User é soberano!
+      data_referencia: new Date(),
       ativa: true,
       saldo_atual: data.saldo_inicial, // Será recalculado depois
+      usuario_id: 'usuario-producao', // Será sobrescrito com o usuário atual no service
     });
     contas.push(conta);
   }

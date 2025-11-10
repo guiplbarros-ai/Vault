@@ -254,11 +254,7 @@ export default function CreditCardsPage() {
           actions={
             <Button
               onClick={handleNewCartao}
-              className="text-white"
-              style={{
-                backgroundColor: '#18B0A4',
-                color: '#ffffff'
-              }}
+              className="bg-primary text-foreground"
             >
               <Plus className="mr-2 h-4 w-4" />
               Novo Cartão
@@ -267,26 +263,16 @@ export default function CreditCardsPage() {
         />
 
         {cartoes.length === 0 ? (
-          <Card
-            className="border-2 border-dashed border-white/20"
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563'
-            }}
-          >
+          <Card className="border-2 border-dashed bg-card border-border">
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <CreditCard className="h-16 w-16 text-white/50 mb-4" />
-              <h3 className="text-xl font-semibold mb-2 text-white">Nenhum cartão cadastrado</h3>
-              <p className="text-white/70 text-center max-w-md mb-6">
+              <CreditCard className="h-16 w-16 mb-4 text-secondary" />
+              <h3 className="text-xl font-semibold mb-2 text-foreground">Nenhum cartão cadastrado</h3>
+              <p className="text-center max-w-md mb-6 text-muted-foreground">
                 Comece adicionando seu primeiro cartão de crédito para acompanhar gastos e faturas.
               </p>
               <Button
                 onClick={handleNewCartao}
-                className="text-white"
-                style={{
-                  backgroundColor: '#18B0A4',
-                  color: '#ffffff'
-                }}
+                className="bg-primary text-foreground"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Adicionar Primeiro Cartão
@@ -295,48 +281,54 @@ export default function CreditCardsPage() {
           </Card>
         ) : (
           <>
-            {/* Summary Cards */}
+            {/* Summary Cards - TEMA.md: KPI com shadow-2 e ícone em pill 36px */}
             <div className="grid gap-4 md:grid-cols-3">
-              <Card style={{
-                background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                backgroundColor: '#3B5563'
-              }}>
+              <Card className="bg-card border-border shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]">
                 <CardHeader className="pb-3">
-                  <CardDescription className="text-white/70">Limite Total</CardDescription>
-                  <CardTitle className="text-3xl text-white">{formatCurrency(totalLimite)}</CardTitle>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                      <DollarSign className="h-4 w-4 text-primary" />
+                    </div>
+                    <CardDescription className="text-muted-foreground text-sm">Limite Total</CardDescription>
+                  </div>
+                  <CardTitle className="text-3xl font-bold text-foreground">{formatCurrency(totalLimite)}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs text-white/70">
+                  <p className="text-xs text-muted-foreground">
                     {cartoes.filter(c => c.ativo).length} cartões ativos
                   </p>
                 </CardContent>
               </Card>
 
-              <Card style={{
-                background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                backgroundColor: '#3B5563'
-              }}>
+              <Card className="bg-card border-border shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]">
                 <CardHeader className="pb-3">
-                  <CardDescription className="text-white/70">Limite Usado</CardDescription>
-                  <CardTitle className="text-3xl text-amber-400">{formatCurrency(totalUsado)}</CardTitle>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                      <CreditCard className="h-4 w-4 text-warning" />
+                    </div>
+                    <CardDescription className="text-muted-foreground text-sm">Limite Usado</CardDescription>
+                  </div>
+                  <CardTitle className="text-3xl font-bold text-warning">{formatCurrency(totalUsado)}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs text-white/70">
+                  <p className="text-xs text-muted-foreground">
                     {percentualUsado.toFixed(1)}% do limite total
                   </p>
                 </CardContent>
               </Card>
 
-              <Card style={{
-                background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                backgroundColor: '#3B5563'
-              }}>
+              <Card className="bg-card border-border shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]">
                 <CardHeader className="pb-3">
-                  <CardDescription className="text-white/70">Limite Disponível</CardDescription>
-                  <CardTitle className="text-3xl text-green-400">{formatCurrency(totalDisponivel)}</CardTitle>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                      <DollarSign className="h-4 w-4 text-success" />
+                    </div>
+                    <CardDescription className="text-muted-foreground text-sm">Limite Disponível</CardDescription>
+                  </div>
+                  <CardTitle className="text-3xl font-bold text-success">{formatCurrency(totalDisponivel)}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs text-white/70">
+                  <p className="text-xs text-muted-foreground">
                     Disponível para uso
                   </p>
                 </CardContent>
@@ -353,7 +345,7 @@ export default function CreditCardsPage() {
               <TabsContent value="overview" className="space-y-6">
                 {/* Credit Cards Grid */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-4 text-white">Meus Cartões</h3>
+                  <h3 className="text-lg font-semibold mb-4 text-foreground">Meus Cartões</h3>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {cartoes.map((cartao) => {
                       const limite = limites[cartao.id]
@@ -362,25 +354,20 @@ export default function CreditCardsPage() {
                       return (
                         <Card
                           key={cartao.id}
-                          className="relative overflow-hidden border-l-4 transition-all hover:shadow-lg"
+                          className="relative overflow-hidden border-l-4 transition-all hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)] bg-card border-border"
                           style={{
-                            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                            backgroundColor: '#3B5563',
-                            borderLeftColor: cartao.cor || '#18B0A4'
+                            borderLeftColor: cartao.cor || 'hsl(var(--primary))'
                           }}
                         >
                           <CardHeader className="pb-3">
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-3">
-                                <div
-                                  className="flex h-10 w-10 items-center justify-center rounded-lg"
-                                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                                >
-                                  <Icon className="h-5 w-5 text-white" />
+                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                                  <Icon className="h-5 w-5 text-foreground" />
                                 </div>
                                 <div>
-                                  <CardTitle className="text-base text-white">{cartao.nome}</CardTitle>
-                                  <CardDescription className="text-xs text-white/70">
+                                  <CardTitle className="text-base text-foreground">{cartao.nome}</CardTitle>
+                                  <CardDescription className="text-xs text-muted-foreground">
                                     {cartao.bandeira && BANDEIRAS[cartao.bandeira] && (
                                       <span className="capitalize">{BANDEIRAS[cartao.bandeira]}</span>
                                     )}
@@ -391,46 +378,35 @@ export default function CreditCardsPage() {
                               </div>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white hover:bg-white/10">
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-foreground">
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="end"
-                                  className="!bg-gray-800 !border-gray-700"
-                                  style={{
-                                    backgroundColor: '#1f2937',
-                                    borderColor: '#374151'
-                                  }}
-                                >
+                                <DropdownMenuContent align="end" className="bg-card border-border">
                                   <DropdownMenuItem
                                     onClick={() => handleViewDetails(cartao)}
-                                    className="!text-white hover:!bg-gray-700 cursor-pointer"
-                                    style={{ color: '#ffffff' }}
+                                    className="cursor-pointer text-foreground"
                                   >
                                     <Eye className="mr-2 h-4 w-4" />
                                     Ver Detalhes
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => handleEdit(cartao)}
-                                    className="!text-white hover:!bg-gray-700 cursor-pointer"
-                                    style={{ color: '#ffffff' }}
+                                    className="cursor-pointer text-foreground"
                                   >
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Editar
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => handleToggleActive(cartao)}
-                                    className="!text-white hover:!bg-gray-700 cursor-pointer"
-                                    style={{ color: '#ffffff' }}
+                                    className="cursor-pointer text-foreground"
                                   >
                                     <EyeOff className="mr-2 h-4 w-4" />
                                     {cartao.ativo ? 'Desativar' : 'Ativar'}
                                   </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="!bg-gray-600" />
+                                  <DropdownMenuSeparator className="bg-border" />
                                   <DropdownMenuItem
-                                    className="!text-red-400 hover:!bg-gray-700 cursor-pointer"
-                                    style={{ color: '#f87171' }}
+                                    className="cursor-pointer text-destructive"
                                     onClick={() => {
                                       setCartaoToDelete(cartao.id)
                                       setDeleteDialogOpen(true)
@@ -445,33 +421,33 @@ export default function CreditCardsPage() {
                           </CardHeader>
                           <CardContent className="space-y-3">
                             <div className="flex items-baseline justify-between">
-                              <span className="text-xs text-white/70">Limite Total</span>
-                              <span className="text-lg font-bold text-white">{formatCurrency(cartao.limite_total)}</span>
+                              <span className="text-xs text-muted-foreground">Limite Total</span>
+                              <span className="text-lg font-bold text-gold">{formatCurrency(cartao.limite_total)}</span>
                             </div>
                             {limite && (
                               <>
                                 <div className="flex items-baseline justify-between text-sm">
-                                  <span className="text-white/70">Usado</span>
-                                  <span className="font-semibold text-amber-400">
+                                  <span className="text-muted-foreground">Usado</span>
+                                  <span className="font-semibold text-warning">
                                     {formatCurrency(limite.limite_usado)}
                                   </span>
                                 </div>
                                 <div className="flex items-baseline justify-between text-sm">
-                                  <span className="text-white/70">Disponível</span>
-                                  <span className="font-semibold text-green-400">
+                                  <span className="text-muted-foreground">Disponível</span>
+                                  <span className="font-semibold text-success">
                                     {formatCurrency(limite.limite_disponivel)}
                                   </span>
                                 </div>
                               </>
                             )}
-                            <div className="pt-2 border-t border-white/20 flex items-center justify-between text-xs">
-                              <span className="text-white/70">Vence dia {cartao.dia_vencimento}</span>
+                            <div className="pt-2 flex items-center justify-between text-xs border-t border-border">
+                              <span className="text-muted-foreground">Vence dia {cartao.dia_vencimento}</span>
                               <Badge
                                 variant={cartao.ativo ? 'default' : 'secondary'}
                                 className="text-xs"
                                 style={{
-                                  backgroundColor: cartao.ativo ? '#18B0A4' : 'rgba(255, 255, 255, 0.2)',
-                                  color: '#ffffff'
+                                  backgroundColor: cartao.ativo ? 'hsl(var(--primary))' : 'hsl(var(--muted))',
+                                  color: 'hsl(var(--foreground))'
                                 }}
                               >
                                 {cartao.ativo ? 'Ativo' : 'Inativo'}
@@ -486,7 +462,7 @@ export default function CreditCardsPage() {
 
                 {/* Credit Card Limits */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-4 text-white">Uso de Limite</h3>
+                  <h3 className="text-lg font-semibold mb-4 text-foreground">Uso de Limite</h3>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {cartoes.filter(c => c.ativo).map((cartao) => {
                       const limite = limites[cartao.id]
@@ -517,7 +493,7 @@ export default function CreditCardsPage() {
 
                   return (
                     <div key={cartao.id}>
-                      <h3 className="text-lg font-semibold mb-4 text-white">{cartao.nome}</h3>
+                      <h3 className="text-lg font-semibold mb-4 text-foreground">{cartao.nome}</h3>
                       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {cartaoFaturas.map((fatura) => (
                           <FaturaCard
@@ -549,17 +525,10 @@ export default function CreditCardsPage() {
 
         {/* Form Dialog for Create/Edit */}
         <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
-          <DialogContent
-            className="max-w-2xl max-h-[90vh] overflow-y-auto"
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-              borderColor: '#374151'
-            }}
-          >
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-white">{editMode ? 'Editar Cartão' : 'Novo Cartão'}</DialogTitle>
-              <DialogDescription className="text-white/70">
+              <DialogTitle className="text-foreground">{editMode ? 'Editar Cartão' : 'Novo Cartão'}</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 {editMode
                   ? 'Atualize as informações do seu cartão de crédito.'
                   : 'Adicione um novo cartão de crédito ao sistema.'}

@@ -5,6 +5,7 @@ import { useFormContext, Controller } from 'react-hook-form'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { brandNavyAlpha } from '@/lib/constants/colors'
 
 export interface FormCheckboxProps {
   name: string
@@ -21,7 +22,13 @@ export const FormCheckbox = React.forwardRef<HTMLButtonElement, FormCheckboxProp
 
     return (
       <div className={cn('space-y-2', className)}>
-        <div className="flex items-start space-x-3">
+        <div
+          className="flex items-start gap-3 rounded-lg border p-3"
+          style={{
+            backgroundColor: brandNavyAlpha(0.15),
+            borderColor: brandNavyAlpha(0.3)
+          }}
+        >
           <Controller
             name={name}
             control={control}

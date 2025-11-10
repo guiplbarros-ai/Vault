@@ -4,6 +4,7 @@ import * as React from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
 
 import { cn } from "@/lib/utils"
+import { brandNavyAlpha } from "@/lib/constants/colors"
 
 function Slider({
   className,
@@ -39,28 +40,21 @@ function Slider({
       <SliderPrimitive.Track
         data-slot="slider-track"
         className={cn(
-          "relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
+          "relative grow overflow-hidden rounded-full bg-border data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
         )}
-        style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
           className={cn(
-            "absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
+            "absolute bg-primary data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
           )}
-          style={{ backgroundColor: '#18B0A4' }}
         />
       </SliderPrimitive.Track>
       {Array.from({ length: _values.length }, (_, index) => (
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
-          className="block size-4 shrink-0 rounded-full border-2 shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
-          style={{
-            borderColor: '#18B0A4',
-            backgroundColor: '#ffffff',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-          }}
+          className="block size-4 shrink-0 rounded-full border-2 border-primary bg-foreground shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
         />
       ))}
     </SliderPrimitive.Root>

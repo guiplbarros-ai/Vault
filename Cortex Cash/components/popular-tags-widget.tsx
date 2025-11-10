@@ -112,18 +112,13 @@ export function PopularTagsWidget() {
 
   if (loading) {
     return (
-      <Card style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
-      }}>
+      <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2 text-white">
+          <CardTitle className="text-base flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Tags Mais Usadas
           </CardTitle>
-          <CardDescription className="text-white/70">Carregando...</CardDescription>
+          <CardDescription>Carregando...</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -131,18 +126,13 @@ export function PopularTagsWidget() {
 
   if (popularTags.length === 0) {
     return (
-      <Card style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-          : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
-      }}>
+      <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2 text-white">
+          <CardTitle className="text-base flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Tags Mais Usadas
           </CardTitle>
-          <CardDescription className="text-white/70">
+          <CardDescription>
             Nenhuma tag utilizada ainda. Adicione tags às suas transações!
           </CardDescription>
         </CardHeader>
@@ -151,77 +141,27 @@ export function PopularTagsWidget() {
   }
 
   return (
-    <Card style={{
-      background: isDark
-        ? 'linear-gradient(135deg, #3B5563 0%, #334455 100%)'
-        : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-      backgroundColor: isDark ? '#3B5563' : '#FFFFFF'
-    }}>
+    <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-base flex items-center gap-2 text-white">
+            <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Tags Mais Usadas
             </CardTitle>
-            <CardDescription className="text-white/70">
+            <CardDescription>
               {metric === 'count' ? 'Por número de transações' : 'Por volume financeiro'}
             </CardDescription>
           </div>
           <Select value={metric} onValueChange={(value) => setMetric(value as MetricType)}>
-            <SelectTrigger
-              className={cn(
-                "w-[140px] h-8 text-xs font-medium",
-                isDark
-                  ? "!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 data-[state=open]:!bg-gray-700"
-                  : "!bg-white !border-gray-300 hover:!bg-gray-50"
-              )}
-              style={isDark ? {
-                backgroundColor: '#1f2937',
-                borderColor: '#4b5563',
-                color: '#ffffff'
-              } : {
-                color: '#111827'
-              }}
-            >
-              <SelectValue
-                className={isDark ? "!text-white" : ""}
-                style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-              />
+            <SelectTrigger className="w-[140px] h-8 text-xs font-medium">
+              <SelectValue />
             </SelectTrigger>
-            <SelectContent
-              className={cn(
-                isDark
-                  ? "!bg-gray-800 !border-gray-700"
-                  : "!bg-white !border-gray-200"
-              )}
-              style={isDark ? {
-                backgroundColor: '#1f2937',
-                borderColor: '#374151'
-              } : undefined}
-            >
-              <SelectItem
-                value="count"
-                className={cn(
-                  "text-sm font-medium cursor-pointer",
-                  isDark
-                    ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
-                    : ""
-                )}
-                style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-              >
+            <SelectContent>
+              <SelectItem value="count" className="text-sm font-medium cursor-pointer">
                 Transações
               </SelectItem>
-              <SelectItem
-                value="volume"
-                className={cn(
-                  "text-sm font-medium cursor-pointer",
-                  isDark
-                    ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700 data-[state=checked]:!bg-gray-700"
-                    : ""
-                )}
-                style={isDark ? { color: '#ffffff' } : { color: '#111827' }}
-              >
+              <SelectItem value="volume" className="text-sm font-medium cursor-pointer">
                 Volume (R$)
               </SelectItem>
             </SelectContent>
@@ -233,10 +173,10 @@ export function PopularTagsWidget() {
           {popularTags.map(({ tag, count, volume }, index) => (
             <div
               key={tag.id}
-              className="flex items-center justify-between gap-3 pb-3 border-b border-white/10 last:border-0 last:pb-0"
+              className="flex items-center justify-between gap-3 pb-3 border-b last:border-0 last:pb-0"
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-white/60 w-5">
+                <span className="text-sm font-medium text-secondary w-5">
                   #{index + 1}
                 </span>
                 <TagBadge label={tag.nome} cor={tag.cor} size="sm" />
@@ -244,13 +184,13 @@ export function PopularTagsWidget() {
               <div className="flex items-center gap-2">
                 {metric === 'count' ? (
                   <>
-                    <span className="text-sm font-medium text-white">{count}</span>
-                    <span className="text-xs text-white/60">
+                    <span className="text-sm font-medium text-card-foreground">{count}</span>
+                    <span className="text-xs text-secondary">
                       {count === 1 ? "transação" : "transações"}
                     </span>
                   </>
                 ) : (
-                  <span className="text-sm font-medium text-white">{formatCurrency(volume)}</span>
+                  <span className="text-sm font-medium text-gold">{formatCurrency(volume)}</span>
                 )}
               </div>
             </div>

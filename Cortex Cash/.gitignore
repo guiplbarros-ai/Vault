@@ -25,3 +25,27 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# build outputs and caches
+dist/
+.turbo/
+.cache/
+.eslintcache
+.next/cache
+
+# test coverage
+coverage/
+.nyc_output/
+coverage-final.json
+
+# editors and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# logs (general)
+*.log
+
+# pnpm local store (if present in repo)
+.pnpm-store/

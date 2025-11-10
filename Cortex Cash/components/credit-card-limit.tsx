@@ -53,25 +53,20 @@ export function CreditCardLimit({
 
   return (
     <Card
-      className="relative overflow-hidden border-l-4 transition-all hover:shadow-lg"
+      className="relative overflow-hidden border-l-4 transition-all hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]"
       style={{
-        background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-        backgroundColor: '#3B5563',
         borderLeftColor: cor
       }}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-lg"
-              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-            >
-              <CreditCard className="h-5 w-5 text-white" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+              <CreditCard className="h-5 w-5 text-foreground" />
             </div>
             <div>
-              <CardTitle className="text-base text-white">{nome}</CardTitle>
-              <CardDescription className="text-xs text-white/70">
+              <CardTitle className="text-base">{nome}</CardTitle>
+              <CardDescription className="text-xs text-muted-foreground">
                 {bandeira && <span className="capitalize">{bandeira}</span>}
                 {bandeira && ultimos_digitos && ' • '}
                 {ultimos_digitos && <span>•••• {ultimos_digitos}</span>}
@@ -79,7 +74,7 @@ export function CreditCardLimit({
             </div>
           </div>
           {percentual_usado >= 70 && (
-            <AlertTriangle className="h-5 w-5 text-amber-400" />
+            <AlertTriangle className="h-5 w-5 text-warning" />
           )}
         </div>
       </CardHeader>
@@ -87,8 +82,8 @@ export function CreditCardLimit({
         {/* Progress Bar */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-white/70">Limite Utilizado</span>
-            <span className={`font-semibold ${percentual_usado >= 90 ? 'text-red-400' : percentual_usado >= 70 ? 'text-amber-400' : 'text-green-400'}`}>
+            <span className="text-muted-foreground">Limite Utilizado</span>
+            <span className={`font-semibold ${percentual_usado >= 90 ? 'text-destructive' : percentual_usado >= 70 ? 'text-warning' : 'text-success'}`}>
               {percentual_usado.toFixed(1)}%
             </span>
           </div>
@@ -102,21 +97,21 @@ export function CreditCardLimit({
         {/* Amounts */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <p className="text-xs text-white/70">Usado</p>
-            <p className="text-sm font-semibold text-white">{formatCurrency(limite_usado)}</p>
+            <p className="text-xs text-muted-foreground">Usado</p>
+            <p className="text-sm font-semibold text-warning">{formatCurrency(limite_usado)}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-white/70">Disponível</p>
-            <p className={`text-sm font-semibold ${percentual_usado >= 90 ? 'text-red-400' : percentual_usado >= 70 ? 'text-amber-400' : 'text-green-400'}`}>
+            <p className="text-xs text-muted-foreground">Disponível</p>
+            <p className={`text-sm font-semibold ${percentual_usado >= 90 ? 'text-destructive' : percentual_usado >= 70 ? 'text-warning' : 'text-success'}`}>
               {formatCurrency(limite_disponivel)}
             </p>
           </div>
         </div>
 
-        <div className="pt-2 border-t border-white/20">
+        <div className="pt-2 border-t border-border">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-white/70">Limite Total</span>
-            <span className="text-sm font-bold text-white">{formatCurrency(limite_total)}</span>
+            <span className="text-xs text-muted-foreground">Limite Total</span>
+            <span className="text-sm font-bold text-gold">{formatCurrency(limite_total)}</span>
           </div>
         </div>
 
@@ -125,10 +120,6 @@ export function CreditCardLimit({
           <Badge
             variant={percentual_usado >= 90 ? 'destructive' : 'default'}
             className="w-full justify-center"
-            style={{
-              backgroundColor: percentual_usado >= 90 ? '#ef4444' : '#f59e0b',
-              color: '#ffffff'
-            }}
           >
             {getStatusText()}
           </Badge>

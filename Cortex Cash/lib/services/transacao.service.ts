@@ -15,6 +15,7 @@ import { NotFoundError, ValidationError, DatabaseError, DuplicateError } from '.
 import { contaService } from './conta.service';
 import { orcamentoService } from './orcamento.service';
 import { format } from 'date-fns';
+import { getCurrentUserId } from '../db/seed-usuarios';
 
 export class TransacaoService implements ITransacaoService {
   /**
@@ -72,6 +73,7 @@ export class TransacaoService implements ITransacaoService {
     }
 
     const db = getDB();
+    const currentUserId = getCurrentUserId();
     const transferenciaId = crypto.randomUUID();
     const now = new Date();
     const dataTransacao = typeof data === 'string' ? new Date(data) : (data || now);
@@ -91,6 +93,7 @@ export class TransacaoService implements ITransacaoService {
       parcelado: false,
       classificacao_confirmada: true,
       classificacao_origem: 'manual',
+      usuario_id: currentUserId, // Pertence ao usuário atual
       hash: await generateHash(`${contaOrigemId}-${contaDestinoId}-${dataTransacao.toISOString()}-${descricao}-orig-${valor}`),
       created_at: now,
       updated_at: now,
@@ -111,6 +114,7 @@ export class TransacaoService implements ITransacaoService {
       parcelado: false,
       classificacao_confirmada: true,
       classificacao_origem: 'manual',
+      usuario_id: currentUserId, // Pertence ao usuário atual
       hash: await generateHash(`${contaOrigemId}-${contaDestinoId}-${dataTransacao.toISOString()}-${descricao}-dest-${valor}`),
       created_at: now,
       updated_at: now,
@@ -140,6 +144,7 @@ export class TransacaoService implements ITransacaoService {
     sortOrder?: 'asc' | 'desc';
   }): Promise<Transacao[]> {
     const db = getDB();
+    const currentUserId = getCurrentUserId();
 
     // Buscar transações de forma eficiente usando índices quando possível
     let transacoes: Transacao[];
@@ -149,16 +154,60 @@ export class TransacaoService implements ITransacaoService {
         // Intervalo por data
         const start = filters.dataInicio ? (filters.dataInicio instanceof Date ? filters.dataInicio : new Date(filters.dataInicio)) : new Date(0);
         const end = filters.dataFim ? (filters.dataFim instanceof Date ? filters.dataFim : new Date(filters.dataFim)) : new Date(8640000000000000);
-        transacoes = await db.transacoes.where('data').between(start, end, true, true).toArray();
+        let chain = db.transacoes.where('data').between(start, end, true, true);
+        // Aplica paginação no nível do Dexie quando possível
+        if (typeof filters?.offset === 'number' && filters.offset > 0 && typeof (chain as any).offset === 'function') {
+          chain = (chain as any).offset(filters.offset);
+        }
+        if (typeof filters?.limit === 'number' && filters.limit > 0) {
+          chain = chain.limit(filters.limit);
+        }
+        transacoes = await chain.toArray();
+      } else if (
+        // Caso específico: apenas ordenar por data e limitar resultados (ótimo para "recentes")
+        !filters?.contaId &&
+        !filters?.categoriaId &&
+        !filters?.tipo &&
+        !filters?.busca &&
+        !filters?.dataInicio &&
+        !filters?.dataFim &&
+        filters?.sortBy === 'data' &&
+        typeof filters.limit === 'number' &&
+        (!filters.offset || filters.offset === 0)
+      ) {
+        const order = db.transacoes.orderBy('data');
+        const ordered = (filters.sortOrder || 'desc') === 'desc' ? order.reverse() : order;
+        transacoes = await ordered.limit(filters.limit).toArray();
       } else if (filters?.contaId) {
         // Filtro por conta
-        transacoes = await db.transacoes.where('conta_id').equals(filters.contaId).toArray();
+        let chain = db.transacoes.where('conta_id').equals(filters.contaId);
+        if (typeof filters?.offset === 'number' && filters.offset > 0 && typeof (chain as any).offset === 'function') {
+          chain = (chain as any).offset(filters.offset);
+        }
+        if (typeof filters?.limit === 'number' && filters.limit > 0) {
+          chain = chain.limit(filters.limit);
+        }
+        transacoes = await chain.toArray();
       } else if (filters?.categoriaId) {
         // Filtro por categoria
-        transacoes = await db.transacoes.where('categoria_id').equals(filters.categoriaId).toArray();
+        let chain = db.transacoes.where('categoria_id').equals(filters.categoriaId);
+        if (typeof filters?.offset === 'number' && filters.offset > 0 && typeof (chain as any).offset === 'function') {
+          chain = (chain as any).offset(filters.offset);
+        }
+        if (typeof filters?.limit === 'number' && filters.limit > 0) {
+          chain = chain.limit(filters.limit);
+        }
+        transacoes = await chain.toArray();
       } else if (filters?.tipo) {
         // Filtro por tipo
-        transacoes = await db.transacoes.where('tipo').equals(filters.tipo).toArray();
+        let chain = db.transacoes.where('tipo').equals(filters.tipo);
+        if (typeof filters?.offset === 'number' && filters.offset > 0 && typeof (chain as any).offset === 'function') {
+          chain = (chain as any).offset(filters.offset);
+        }
+        if (typeof filters?.limit === 'number' && filters.limit > 0) {
+          chain = chain.limit(filters.limit);
+        }
+        transacoes = await chain.toArray();
       } else {
         // Sem filtros primários: carrega todas
         transacoes = await db.transacoes.toArray();
@@ -167,6 +216,9 @@ export class TransacaoService implements ITransacaoService {
       // Fallback seguro caso algum índice falhe
       transacoes = await db.transacoes.toArray();
     }
+
+    // Filtrar por usuário atual (SEMPRE)
+    transacoes = transacoes.filter((t) => t.usuario_id === currentUserId);
 
     // Aplicar filtros
     if (filters?.contaId) {
@@ -232,14 +284,11 @@ export class TransacaoService implements ITransacaoService {
       }
     });
 
-    // Aplicar paginação
-    const offset = filters?.offset || 0;
-    const limit = filters?.limit;
-
-    if (limit !== undefined) {
-      transacoes = transacoes.slice(offset, offset + limit);
-    } else if (offset > 0) {
-      transacoes = transacoes.slice(offset);
+    // Aplicar paginação somente se não foi possível aplicar no nível do Dexie
+    if (filters?.limit === undefined && (filters?.offset || 0) > 0) {
+      transacoes = transacoes.slice(filters!.offset);
+    } else if (filters?.limit === undefined && (filters?.offset || 0) === 0) {
+      // Sem paginação solicitada: deixa tudo
     }
 
     return transacoes;
@@ -263,6 +312,7 @@ export class TransacaoService implements ITransacaoService {
       const validatedData = validateDTO(createTransacaoSchema, data);
 
       const db = getDB();
+      const currentUserId = getCurrentUserId();
 
     const id = crypto.randomUUID();
     const now = new Date();
@@ -293,6 +343,7 @@ export class TransacaoService implements ITransacaoService {
       parcelado: false,
       classificacao_confirmada: !!validatedData.categoria_id,
       classificacao_origem: validatedData.categoria_id ? 'manual' : undefined,
+      usuario_id: currentUserId, // Pertence ao usuário atual
       hash: canonicalHash,
       created_at: now,
       updated_at: now,

@@ -21,12 +21,12 @@ export interface StatCardProps {
   iconColor?: string
   iconBgColor?: string
   titleColor?: string
-  cardBgGradient?: string
-  cardBgColor?: string
+  cardBgColor?: string      // Cor de fundo sólida (sem gradientes)
   bottomBarColor?: string
 }
 
 // ✅ Memoizar StatCard para evitar re-renders desnecessários
+// TEMA.md: Superfícies sólidas (opacidade 1, sem gradientes/blur)
 export const StatCard = memo(function StatCard({
   title,
   value,
@@ -37,43 +37,50 @@ export const StatCard = memo(function StatCard({
   valueClassName,
   valueColor,
   iconColor = 'hsl(var(--primary))',
-  iconBgColor = 'hsl(var(--primary) / 0.1)',
-  titleColor,
-  cardBgGradient,
+  iconBgColor = 'hsl(var(--muted))',
+  titleColor = 'hsl(var(--muted-foreground))',
   cardBgColor,
   bottomBarColor,
 }: StatCardProps) {
   const isPositiveTrend = trend && trend.value > 0
   const isNegativeTrend = trend && trend.value < 0
 
-  const cardElement = (
+  return (
     <Card
       className={cn(
-        !cardBgGradient && 'shadow-md hover:shadow-lg transition-all duration-200', // Só aplica shadows se não tiver wrapper
-        cardBgGradient && '!bg-transparent border-0', // Remove bg e border quando temos wrapper customizado
-        !cardBgGradient && className // Só aplica className se não tiver wrapper (senão fica no wrapper)
+        'relative overflow-hidden transition-all duration-200',
+        className
       )}
+      style={{
+        backgroundColor: cardBgColor,
+        borderColor: 'var(--border)',
+        borderWidth: '1px',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-1)',
+      }}
     >
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <p
-            className="text-sm font-semibold"
-            style={titleColor ? { color: titleColor } : undefined}
-          >{title}</p>
+            className="text-sm font-semibold tracking-tight"
+            style={{ color: titleColor }}
+          >
+            {title}
+          </p>
           {Icon && (
             <div
-              className="flex h-12 w-12 items-center justify-center rounded-xl shadow-sm"
+              className="flex h-9 w-9 items-center justify-center rounded-lg"
               style={{ backgroundColor: iconBgColor }}
             >
-              <Icon className="h-6 w-6" style={{ color: iconColor }} />
+              <Icon className="h-5 w-5" style={{ color: iconColor }} />
             </div>
           )}
         </div>
         <div>
           <div
             className={cn(
-              'text-3xl font-bold mb-1',
-              !valueColor && (cardBgGradient ? 'text-white dark:text-white' : 'text-foreground'),
+              'text-3xl font-bold mb-1 tracking-tight',
+              !valueColor && 'text-foreground',
               valueClassName
             )}
             style={valueColor ? { color: valueColor } : undefined}
@@ -93,8 +100,8 @@ export const StatCard = memo(function StatCard({
                   style={
                     isPositiveTrend
                       ? {
-                          backgroundColor: 'hsl(var(--chart-8) / 0.2)',
-                          color: 'hsl(var(--chart-8))',
+                          backgroundColor: 'hsl(var(--success) / 0.2)',
+                          color: 'hsl(var(--success))',
                         }
                       : isNegativeTrend
                       ? {
@@ -111,41 +118,23 @@ export const StatCard = memo(function StatCard({
                 </span>
               )}
               {description && (
-                <span className={cn(
-                  "font-medium",
-                  cardBgGradient ? "text-white/70 dark:text-white/70" : "text-muted-foreground"
-                )}>{description}</span>
+                <span
+                  className="font-medium"
+                  style={{ color: 'var(--fg-muted)' }}
+                >
+                  {description}
+                </span>
               )}
             </div>
           )}
         </div>
       </CardContent>
+      {bottomBarColor && (
+        <div
+          className="absolute bottom-0 left-0 right-0 h-1"
+          style={{ backgroundColor: bottomBarColor }}
+        />
+      )}
     </Card>
   )
-
-  // Se temos gradient customizado, envolvemos em um div com o background
-  if (cardBgGradient) {
-    return (
-      <div
-        className={cn(
-          'rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-200 relative',
-          className // Aplica as classes CSS 3D (com border) no wrapper
-        )}
-        style={{
-          background: cardBgGradient,
-          backgroundColor: cardBgColor || '#FFFFFF',
-        }}
-      >
-        {cardElement}
-        {bottomBarColor && (
-          <div
-            className="absolute bottom-0 left-0 right-0 h-1.5"
-            style={{ backgroundColor: bottomBarColor }}
-          />
-        )}
-      </div>
-    )
-  }
-
-  return cardElement
 })

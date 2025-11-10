@@ -27,8 +27,9 @@ describe('ContaService', () => {
         nome: 'Conta Teste',
         tipo: 'corrente' as const,
         instituicao_id: 'inst-1',
-        saldo_inicial: 1000,
-      saldo_atual: 1000,
+        saldo_referencia: 1000,
+        data_referencia: new Date(),
+        saldo_atual: 1000,
         ativa: true,
       };
 
@@ -38,25 +39,26 @@ describe('ContaService', () => {
       expect(result.id).toBeDefined();
       expect(result.nome).toBe('Conta Teste');
       expect(result.tipo).toBe('corrente');
-      expect(result.saldo_inicial).toBe(1000);
+      expect(result.saldo_referencia).toBe(1000);
       expect(result.ativa).toBe(true);
       expect(result.created_at).toBeInstanceOf(Date);
       expect(result.updated_at).toBeInstanceOf(Date);
     });
 
-    it('deve criar conta com saldo_inicial 0 por padrão', async () => {
+    it('deve criar conta com saldo_referencia 0 por padrão', async () => {
       const novaConta = {
         nome: 'Conta Sem Saldo',
         tipo: 'corrente' as const,
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
-      ativa: true,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
+        ativa: true,
       };
 
       const result = await service.createConta(novaConta);
 
-      expect(result.saldo_inicial).toBeUndefined();
+      expect(result.saldo_referencia).toBeUndefined();
     });
   });
 
@@ -67,24 +69,27 @@ describe('ContaService', () => {
         nome: 'Conta A',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 100,
-      saldo_atual: 100,
+        saldo_referencia: 100,
+        data_referencia: new Date(),
+        saldo_atual: 100,
         ativa: true,
       });
       await service.createConta({
         nome: 'Conta B',
         tipo: 'poupanca',
         instituicao_id: 'inst-1',
-        saldo_inicial: 200,
-      saldo_atual: 200,
+        saldo_referencia: 200,
+        data_referencia: new Date(),
+        saldo_atual: 200,
         ativa: true,
       });
       await service.createConta({
         nome: 'Conta C Inativa',
         tipo: 'corrente',
         instituicao_id: 'inst-2',
-        saldo_inicial: 300,
-      saldo_atual: 300,
+        saldo_referencia: 300,
+        data_referencia: new Date(),
+        saldo_atual: 300,
         ativa: false,
       });
     });
@@ -109,11 +114,11 @@ describe('ContaService', () => {
       expect(result[1].nome).toBe('Conta B');
     });
 
-    it('deve ordenar por saldo_inicial descendente', async () => {
-      const result = await service.listContas({ sortBy: 'saldo_inicial', sortOrder: 'desc' });
+    it('deve ordenar por saldo_referencia descendente', async () => {
+      const result = await service.listContas({ sortBy: 'saldo_referencia', sortOrder: 'desc' });
 
-      expect(result[0].saldo_inicial).toBe(200);
-      expect(result[1].saldo_inicial).toBe(100);
+      expect(result[0].saldo_referencia).toBe(200);
+      expect(result[1].saldo_referencia).toBe(100);
     });
 
     it('deve aplicar paginação corretamente', async () => {
@@ -129,8 +134,9 @@ describe('ContaService', () => {
         nome: 'Conta Teste',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: true,
       });
 
@@ -154,18 +160,19 @@ describe('ContaService', () => {
         nome: 'Conta Original',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: true,
       });
 
       const result = await service.updateConta(created.id, {
         nome: 'Conta Atualizada',
-        saldo_inicial: 500,
+        saldo_referencia: 500,
       });
 
       expect(result.nome).toBe('Conta Atualizada');
-      expect(result.saldo_inicial).toBe(500);
+      expect(result.saldo_referencia).toBe(500);
       expect(result.updated_at.getTime()).toBeGreaterThan(created.updated_at.getTime());
     });
 
@@ -182,8 +189,9 @@ describe('ContaService', () => {
         nome: 'Conta Ativa',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: true,
       });
 
@@ -197,8 +205,9 @@ describe('ContaService', () => {
         nome: 'Conta Inativa',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: false,
       });
 
@@ -220,8 +229,9 @@ describe('ContaService', () => {
         nome: 'Conta Vazia',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: true,
       });
 
@@ -236,8 +246,9 @@ describe('ContaService', () => {
         nome: 'Conta Teste',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: true,
       });
 
@@ -277,14 +288,15 @@ describe('ContaService', () => {
   });
 
   describe('getSaldoTotal', () => {
-    it('deve somar saldo_inicial + saldo das transações', async () => {
+    it('deve somar saldo_referencia + saldo das transações', async () => {
       const db = getDB();
       const conta = await service.createConta({
         nome: 'Conta Teste',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 500,
-      saldo_atual: 500,
+        saldo_referencia: 500,
+        data_referencia: new Date(),
+        saldo_atual: 500,
         ativa: true,
       });
 
@@ -320,8 +332,9 @@ describe('ContaService', () => {
         nome: 'Conta para Deletar',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: true,
       });
 
@@ -339,8 +352,9 @@ describe('ContaService', () => {
         nome: 'Conta para Hard Delete',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: true,
       });
 
@@ -357,24 +371,27 @@ describe('ContaService', () => {
         nome: 'Conta Inst 1 - A',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: true,
       });
       await service.createConta({
         nome: 'Conta Inst 1 - B',
         tipo: 'poupanca',
         instituicao_id: 'inst-1',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: true,
       });
       await service.createConta({
         nome: 'Conta Inst 2',
         tipo: 'corrente',
         instituicao_id: 'inst-2',
-        saldo_inicial: 0,
-      saldo_atual: 0,
+        saldo_referencia: 0,
+        data_referencia: new Date(),
+        saldo_atual: 0,
       ativa: true,
       });
     });

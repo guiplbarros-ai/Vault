@@ -19,9 +19,9 @@ export function PageHeader({
   return (
     <div className={cn('flex items-start justify-between', className)}>
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-white">{title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
         {description && (
-          <p className="text-white/70">{description}</p>
+          <p className="text-muted-foreground">{description}</p>
         )}
       </div>
       {actions && (

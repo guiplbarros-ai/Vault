@@ -5,166 +5,304 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ==========================================================================
+   FORÇA CORES VERDE ESCURO (CORES.md) - SEM AFETAR LAYOUT
+   ========================================================================== */
+
+/* Background com imagem - PRIORIDADE MÁXIMA */
+html,
+html.dark,
+html[lang] {
+  background-color: #0e1c19 !important;
+  background-image:
+    radial-gradient(
+      ellipse at center,
+      rgba(21, 40, 33, 0.85) 0%,
+      rgba(17, 31, 28, 0.90) 40%,
+      rgba(14, 28, 25, 0.93) 70%,
+      rgba(10, 21, 18, 0.96) 100%
+    ),
+    url('/assets/backgrounds/background.jpg') !important;
+  background-position: center center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+  min-height: 100vh !important;
+}
+
+body,
+body.dark,
+body[class] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Força opacidade total em cards e containers (sem translucência) */
+[data-slot="card"],
+.card,
+.bg-card,
+aside,
+header,
+main,
+[class*="card"] {
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Força background sólido em cards — NOVO: Melhor contraste */
+[data-slot="card"],
+.card,
+.bg-card {
+  background-color: #1a362f !important;
+  border-color: #2d5247 !important;
+}
+
+/* Sidebar com background sólido */
+aside {
+  background-color: #0e1814 !important;
+  border-right: 1px solid #2d5247 !important;
+}
+
+/* Header com background sólido */
+header {
+  background-color: #1a362f !important;
+  border-bottom: 1px solid #2d5247 !important;
+}
+
+/* Main com background transparente para mostrar gradiente */
+main {
+  background-color: transparent !important;
+}
+
+/* Força opacidade em gráficos, barras de progresso e outros elementos visuais */
+canvas,
+svg,
+[role="progressbar"],
+[class*="chart"],
+[class*="graph"],
+.recharts-wrapper,
+.recharts-surface {
+  opacity: 1 !important;
+}
+
+/* Backgrounds sólidos para elementos de UI — NOVO: Melhor contraste */
+.bg-muted {
+  background-color: #152b26 !important;
+  opacity: 1 !important;
+}
+
+.bg-primary {
+  background-color: #3A8F6E !important;
+  opacity: 1 !important;
+}
+
+.bg-secondary {
+  background-color: #1f3d36 !important;
+  opacity: 1 !important;
+}
+
+.bg-success {
+  background-color: #5FC883 !important;
+  opacity: 1 !important;
+}
+
+.bg-destructive {
+  background-color: #F07167 !important;
+  opacity: 1 !important;
+}
+
+.bg-warning {
+  background-color: #E0B257 !important;
+  opacity: 1 !important;
+}
+
+.bg-gold {
+  background-color: #D4AF37 !important;
+  opacity: 1 !important;
+}
+
+/* Força bordas visíveis */
+.border,
+[class*="border-"] {
+  border-color: #2A4942 !important;
+}
+
+/* Remove qualquer transparência de popover/dropdown */
+[data-slot="popover"],
+.popover,
+[role="dialog"],
+[role="menu"],
+[role="listbox"] {
+  background-color: #18322C !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Remove transparência de backgrounds com opacity nas classes Tailwind */
+[class*="bg-background/"],
+[class*="bg-card/"],
+[class*="bg-primary/"],
+[class*="bg-secondary/"],
+[class*="bg-muted/"] {
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Força opacidade em skeletons e loading states */
+.animate-pulse,
+[class*="skeleton"] {
+  opacity: 1 !important;
+}
+
+/* Força opacidade em inputs e selects */
+input,
+textarea,
+select,
+button {
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* FORÇA REMOÇÃO DE TODOS OS BACKDROP FILTERS E BLURS */
+*,
+*::before,
+*::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Remove blur de classes Tailwind */
+[class*="backdrop-blur"],
+[class*="bg-opacity"],
+[class*="bg-transparent"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+/* ==========================================================================
    CORTEX PIXEL TEAL THEME
    Design System baseado no logo pixel art com navy/teal e acentos gold/orange
    ========================================================================== */
 
 /* ==========================================================================
-   LIGHT MODE (Padrão para :root sem classe)
+   GLOBAL THEME (Apenas modo escuro em tons de verde)
    ========================================================================== */
 
 :root {
-  /* Background Hierarchy */
-  --background: 165 30% 97%;         /* #F5FAFA - Verde acqua muito claro */
-  --foreground: 200 61% 11%;         /* #0B2230 - Navy escuro */
+  /* TEMA.md - Background Gradient (seção 2.1) */
+  --bg-gradient-center: #1a2f2a;
+  --bg-gradient-mid: #152821;
+  --bg-gradient-base: #132421;
+  --bg-gradient-edge: #0f1e1b;
 
-  /* Card e Surface */
-  --card: 0 0% 100%;                 /* #FFFFFF - Branco puro */
-  --card-foreground: 200 61% 11%;    /* #0B2230 - Navy escuro */
+  /* TEMA.md - Background Principal */
+  --background: 165 33% 11%;          /* #132421 - Background principal */
+  --foreground: 150 10% 96%;          /* #F2F7F5 - Texto principal */
 
-  /* Popover e Dropdown */
-  --popover: 0 0% 100%;              /* #FFFFFF - Branco */
-  --popover-foreground: 200 61% 11%; /* #0B2230 - Navy escuro */
+  /* TEMA.md - Cards / Painéis */
+  --card: 165 33% 15%;                /* #18322C - Background de cards */
+  --card-foreground: 150 10% 96%;     /* #F2F7F5 - Texto de cards */
 
-  /* Primary (Teal) */
-  --primary: 175 73% 39%;            /* #18B0A4 - Teal 500 */
-  --primary-foreground: 0 0% 100%;   /* #FFFFFF - Branco */
+  /* TEMA.md - Popover e Dropdown */
+  --popover: 165 33% 15%;             /* #18322C - Mesma cor dos cards */
+  --popover-foreground: 150 10% 96%;  /* #F2F7F5 - Texto */
 
-  /* Secondary */
-  --secondary: 165 25% 95%;          /* #EFF6F5 - Verde acqua 50 */
-  --secondary-foreground: 200 61% 11%; /* #0B2230 - Navy escuro */
+  /* TEMA.md - Primary (Ações principais) */
+  --primary: 160 44% 39%;             /* #3A8F6E - Focus/Primary */
+  --primary-foreground: 150 10% 96%;  /* #F2F7F5 - Texto branco */
 
-  /* Muted (Backgrounds sutis) */
-  --muted: 165 25% 95%;              /* #EFF6F5 - Verde acqua 50 */
-  --muted-foreground: 200 20% 40%;   /* #5A7B87 - Navy médio */
+  /* TEMA.md - Secondary (Links e ações sutis) */
+  --secondary: 165 45% 68%;           /* #8FCDBD - Links/Ações sutis */
+  --secondary-foreground: 165 33% 11%; /* Texto escuro para contraste */
 
-  /* Accent (Hover states) */
-  --accent: 165 30% 92%;             /* #E5F2F1 - Verde acqua 100 */
-  --accent-foreground: 200 61% 11%;  /* #0B2230 - Navy escuro */
+  /* TEMA.md - Muted (Superfície aninhada bg-card-2) */
+  --muted: 165 30% 13%;               /* #142A25 - Superfície aninhada */
+  --muted-foreground: 165 15% 60%;    /* #8CA39C - Texto muted */
 
-  /* Destructive (Erros) */
-  --destructive: 0 84% 60%;          /* #EF4444 - Vermelho */
-  --destructive-foreground: 0 0% 100%; /* #FFFFFF - Branco */
+  /* TEMA.md - Accent (hover) */
+  --accent: 165 30% 17%;              /* #1D3A34 - Hover de linhas/itens */
+  --accent-foreground: 150 10% 96%;   /* #F2F7F5 - Texto */
 
-  /* Border */
-  --border: 165 20% 88%;             /* #D8E8E6 - Verde acqua 200 */
-  --input: 165 20% 88%;              /* #D8E8E6 - Verde acqua 200 */
+  /* CORES.md - Destructive (Erros) */
+  --destructive: 4 82% 68%;           /* #F07167 - Erro */
+  --destructive-foreground: 150 10% 96%;
 
-  /* Ring (Focus) */
-  --ring: 175 73% 39%;               /* #18B0A4 - Teal 500 */
+  /* CORES.md - Bordas */
+  --border: 165 25% 22%;              /* #2A4942 - Borda */
+  --input: 165 25% 22%;               /* #2A4942 - Borda de input */
 
-  /* Charts */
-  --chart-1: 175 73% 39%;            /* #18B0A4 - Teal */
-  --chart-2: 42 89% 50%;             /* #E7A93D - Gold mais escuro */
-  --chart-3: 171 69% 50%;            /* Teal médio */
-  --chart-4: 32 99% 45%;             /* #E57E00 - Orange mais escuro */
-  --chart-5: 175 78% 27%;            /* #0D7E75 - Teal escuro */
-  --chart-6: 38 74% 45%;             /* Gold escuro */
-  --chart-7: 175 78% 21%;            /* #0A625B - Teal muito escuro */
-  --chart-8: 142 71% 40%;            /* Success green mais escuro */
+  /* CORES.md - Ring (Focus) */
+  --ring: 160 44% 39%;                /* #3A8F6E - Focus */
+
+  /* CORES.md - Cores adicionais */
+  --success: 140 46% 60%;             /* #6CCB8C - Sucesso */
+  --warning: 42 67% 61%;              /* #E0B257 - Alerta */
+  --gold: 45 62% 52%;                 /* #D4AF37 - Destaques monetários */
+
+  /* CORES.md - Charts (Gráficos) */
+  --chart-1: 140 46% 60%;             /* #6CCB8C */
+  --chart-2: 200 16% 63%;             /* #9AA4AD */
+  --chart-3: 30 37% 59%;              /* #C49A6C */
+  --chart-4: 200 28% 59%;             /* #7AA6BF */
+  --chart-5: 160 44% 39%;             /* #3A8F6E */
+  --chart-6: 42 67% 61%;              /* #E0B257 */
+  --chart-7: 165 35% 13%;             /* Cor escura extra */
+  --chart-8: 140 46% 60%;             /* #6CCB8C */
 
   /* Radius */
-  --radius: 0.5rem;                  /* 8px - Border radius padrão */
+  --radius: 0.5rem;
 
-  /* App background (light) */
-  --app-bg-image: url('/assets/backgrounds/background - claro.jpg');
+  /* Remove backgrounds com imagens (sem translucências) */
+  --app-bg-image: none;
   --app-bg-size: cover;
   --app-bg-position: center center;
   --app-bg-attachment: fixed;
   --app-bg-repeat: no-repeat;
 }
 
-/* ==========================================================================
-   DARK MODE (quando .dark está presente)
-   ========================================================================== */
-
-html.dark,
-.dark {
-  /* Background Hierarchy - Mais escuro */
-  --background: 200 30% 12% !important;         /* #1A2A33 - Navy muito escuro */
-  --foreground: 165 70% 95% !important;         /* #F0FAF8 - Verde acqua quase branco */
-
-  /* App background image only in dark mode */
-  --app-bg-image: url('/assets/backgrounds/background - escuro.jpg');
-
-  /* Card e Surface - mais claras */
-  --card: 200 28% 20% !important;               /* #293D47 - Navy escuro */
-  --card-foreground: 165 70% 95% !important;    /* #F0FAF8 - Verde acqua quase branco */
-
-  /* Popover e Dropdown */
-  --popover: 200 28% 18%;            /* #232E36 - Navy escuro */
-  --popover-foreground: 165 70% 95%; /* #F0FAF8 - Verde acqua quase branco */
-
-  /* Primary (Teal) - mais brilhante */
-  --primary: 175 80% 50%;            /* #1AD4C4 - Teal brilhante */
-  --primary-foreground: 200 40% 10%; /* #0D1F29 - Navy muito escuro */
-
-  /* Secondary - ajustado */
-  --secondary: 200 25% 25%;          /* #33525E - Navy médio escuro */
-  --secondary-foreground: 165 70% 95%; /* #F0FAF8 - Verde acqua quase branco */
-
-  /* Muted (Backgrounds sutis) - ajustado */
-  --muted: 200 22% 22%;              /* #2E4550 - Navy médio */
-  --muted-foreground: 165 35% 75%;   /* #AEDBD3 - Verde acqua claro */
-
-  /* Accent (Hover states) - mais claro */
-  --accent: 200 25% 40%;             /* #558399 - Navy médio claro */
-  --accent-foreground: 165 70% 95%;  /* #F0FAF8 - Verde acqua quase branco */
-
-  /* Destructive (Erros) - mais brilhante */
-  --destructive: 0 90% 65%;          /* #FA6B6B - Vermelho claro */
-  --destructive-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-
-  /* Border - mais visível */
-  --border: 195 40% 28%;             /* #2F5362 - Navy borda */
-  --input: 195 40% 28%;              /* #2F5362 - Navy borda */
-
-  /* Ring (Focus) - brilhante */
-  --ring: 175 80% 50%;               /* #1AD4C4 - Teal brilhante */
-
-  /* Charts - mais brilhantes para dark mode */
-  --chart-1: 175 80% 50%;            /* #1AD4C4 - Teal brilhante */
-  --chart-2: 42 95% 70%;             /* #F9D574 - Gold claro */
-  --chart-3: 171 75% 65%;            /* #7DE8D8 - Teal muito claro */
-  --chart-4: 32 100% 60%;            /* #FFA340 - Orange brilhante */
-  --chart-5: 175 70% 40%;            /* #18A89A - Teal médio */
-  --chart-6: 38 80% 65%;             /* #F0C068 - Gold médio */
-  --chart-7: 175 60% 35%;            /* #248F83 - Teal escuro mas visível */
-  --chart-8: 142 75% 55%;            /* #4ADE80 - Success green brilhante */
-}
+/* Não há modo claro: as variáveis acima são globais e únicas */
 
 /* ==========================================================================
    TAILWIND THEME MAPPING
    ========================================================================== */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-chart-6: var(--chart-6);
-  --color-chart-7: var(--chart-7);
-  --color-chart-8: var(--chart-8);
+  /* TEMA.md - Cores diretas em HSL para Tailwind v4 */
+  --color-background: 165 33% 11%;          /* #132421 */
+  --color-foreground: 150 10% 96%;          /* #F2F7F5 */
+  --color-card: 165 33% 15%;                /* #18322C */
+  --color-card-foreground: 150 10% 96%;     /* #F2F7F5 */
+  --color-popover: 165 33% 15%;             /* #18322C */
+  --color-popover-foreground: 150 10% 96%;  /* #F2F7F5 */
+  --color-primary: 160 44% 39%;             /* #3A8F6E */
+  --color-primary-foreground: 150 10% 96%;  /* #F2F7F5 */
+  --color-secondary: 165 45% 68%;           /* #8FCDBD */
+  --color-secondary-foreground: 165 33% 11%; /* #132421 */
+  --color-muted: 165 30% 13%;               /* #142A25 */
+  --color-muted-foreground: 165 15% 60%;    /* #8CA39C */
+  --color-accent: 165 30% 17%;              /* #1D3A34 */
+  --color-accent-foreground: 150 10% 96%;   /* #F2F7F5 */
+  --color-destructive: 4 82% 68%;           /* #F07167 */
+  --color-destructive-foreground: 150 10% 96%;
+  --color-border: 165 25% 22%;              /* #2A4942 */
+  --color-input: 165 25% 22%;               /* #2A4942 */
+  --color-ring: 160 44% 39%;                /* #3A8F6E */
+  --color-success: 140 46% 60%;             /* #6CCB8C */
+  --color-warning: 42 67% 61%;              /* #E0B257 */
+  --color-gold: 45 62% 52%;                 /* #D4AF37 */
+  --color-chart-1: 140 46% 60%;             /* #6CCB8C */
+  --color-chart-2: 200 16% 63%;             /* #9AA4AD */
+  --color-chart-3: 30 37% 59%;              /* #C49A6C */
+  --color-chart-4: 200 28% 59%;             /* #7AA6BF */
+  --color-chart-5: 160 44% 39%;             /* #3A8F6E */
+  --color-chart-6: 42 67% 61%;              /* #E0B257 */
+  --color-chart-7: 165 35% 13%;             /* #142A25 */
+  --color-chart-8: 140 46% 60%;             /* #6CCB8C */
 
   /* Font families */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -187,23 +325,44 @@ html.dark,
     @apply border-border outline-ring/50;
   }
 
-  body {
-    @apply bg-background text-foreground;
-    /* Dark-only background image via CSS variables */
-    background-image: var(--app-bg-image);
-    background-size: var(--app-bg-size);
-    background-position: var(--app-bg-position);
-    background-attachment: var(--app-bg-attachment);
-    background-repeat: var(--app-bg-repeat);
+  html {
+    @apply text-foreground;
+    /* Background com imagem customizada + overlay verde escuro */
+    background-image:
+      radial-gradient(
+        ellipse at center,
+        rgba(21, 40, 33, 0.85) 0%,
+        rgba(17, 31, 28, 0.90) 40%,
+        rgba(14, 28, 25, 0.93) 70%,
+        rgba(10, 21, 18, 0.96) 100%
+      ),
+      url('/assets/backgrounds/background.jpg') !important;
+    background-position: center center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    color: #F7FAF9 !important;
+    min-height: 100vh;
     /* Previne layout shift quando scrollbar aparece/desaparece */
     scrollbar-gutter: stable;
   }
 
-  /* Smooth transitions for theme changes */
-  * {
-    transition: background-color 0.2s ease-in-out,
-                border-color 0.2s ease-in-out,
-                color 0.2s ease-in-out;
+  body {
+    @apply text-foreground;
+    /* Body transparente para mostrar background com imagem do html */
+    background: transparent !important;
+    color: #F7FAF9 !important;
+    min-height: 100vh;
+  }
+
+  /* Garante cores corretas para todos os elementos de texto */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-foreground;
+    color: #F7FAF9;
+  }
+
+  p, span, div, label {
+    color: inherit;
   }
 }
 
@@ -265,8 +424,8 @@ html.dark,
 .pixel-art-mode textarea {
   border-radius: 0 !important;
   box-shadow:
-    2px 2px 0 0 rgba(0, 0, 0, 0.3),
-    4px 4px 0 0 rgba(0, 0, 0, 0.1) !important;
+    2px 2px 0 0 rgba(11, 34, 48, 0.3),
+    4px 4px 0 0 rgba(11, 34, 48, 0.1) !important;
 }
 
 /* Cantos pixelados (estilo NES) */
@@ -291,14 +450,14 @@ html.dark,
 .pixel-art-mode button:hover {
   transform: translate(-1px, -1px) !important;
   box-shadow:
-    3px 3px 0 0 rgba(0, 0, 0, 0.4),
-    5px 5px 0 0 rgba(0, 0, 0, 0.15) !important;
+    3px 3px 0 0 rgba(11, 34, 48, 0.4),
+    5px 5px 0 0 rgba(11, 34, 48, 0.15) !important;
 }
 
 .pixel-art-mode button:active {
   transform: translate(1px, 1px) !important;
   box-shadow:
-    1px 1px 0 0 rgba(0, 0, 0, 0.3) !important;
+    1px 1px 0 0 rgba(11, 34, 48, 0.3) !important;
 }
 
 /* Ícones pixelados com mais cor e contraste */
@@ -314,7 +473,7 @@ html.dark,
 /* Ícones na sidebar com cores mais vibrantes */
 .pixel-art-mode aside svg,
 .pixel-art-mode nav svg {
-  filter: contrast(1.5) saturate(1.8) brightness(1.2) drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.5));
+  filter: contrast(1.5) saturate(1.8) brightness(1.2) drop-shadow(1px 1px 0 rgba(11, 34, 48, 0.5));
 }
 
 /* Ícones em cards e headers */
@@ -413,15 +572,15 @@ html.dark,
 /* Sombras de texto pixeladas */
 .pixel-art-mode .text-shadow-pixel {
   text-shadow:
-    2px 2px 0 rgba(0, 0, 0, 0.5),
-    3px 3px 0 rgba(0, 0, 0, 0.2);
+    2px 2px 0 rgba(11, 34, 48, 0.5),
+    3px 3px 0 rgba(11, 34, 48, 0.2);
 }
 
 /* Cores mais vibrantes para textos importantes */
 .pixel-art-mode h1,
 .pixel-art-mode h2,
 .pixel-art-mode h3 {
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+  text-shadow: 1px 1px 0 rgba(11, 34, 48, 0.3);
   font-weight: normal !important;
 }
 
@@ -432,7 +591,7 @@ html.dark,
 }
 
 .pixel-art-mode a:hover {
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
+  text-shadow: 1px 1px 0 rgba(11, 34, 48, 0.5);
 }
 
 /* Badges e tags com visual pixel art */
@@ -442,7 +601,7 @@ html.dark,
   padding: 4px 8px !important;
   font-weight: bold !important;
   border: 2px solid currentColor !important;
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 2px 2px 0 0 rgba(11, 34, 48, 0.2) !important;
 }
 
 /* Aumenta contraste de cores primárias */
@@ -469,15 +628,75 @@ html.dark,
 }
 
 /* ==========================================================================
-   SETTINGS PAGE FIXES - Garantir texto branco em modo escuro
+   DARK MODE TEXT FIXES - Garantir texto branco em modo escuro
    ========================================================================== */
 
-/* Força texto branco em todos os elementos dentro de SettingsCard */
-[data-slot="card"] p,
-[data-slot="card"] span,
-[data-slot="card"] label,
-[data-slot="card"] div {
-  color: rgba(255, 255, 255, 0.9);
+/* Força cores corretas em modo escuro para todos os textos */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark [data-slot="card"] h1,
+.dark [data-slot="card"] h2,
+.dark [data-slot="card"] h3,
+.dark [data-slot="card"] h4,
+.dark [data-slot="card"] h5,
+.dark [data-slot="card"] h6 {
+  color: hsl(var(--card-foreground)) !important;
+}
+
+.dark [data-slot="card-title"] {
+  color: hsl(var(--card-foreground)) !important;
+}
+
+.dark [data-slot="card-description"] {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Força cards completamente opacos no modo escuro */
+.dark [data-slot="card"] {
+  background-color: hsl(var(--card)) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+}
+
+/* Força bordas visíveis no modo escuro */
+.dark [data-slot="card"],
+.dark .border,
+.dark [class*="border-"] {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Dividers e separadores */
+.dark hr,
+.dark .divide-y > * + *,
+.dark [class*="border-t"],
+.dark [class*="border-b"],
+.dark [class*="border-l"],
+.dark [class*="border-r"] {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Inputs e elementos de formulário */
+.dark input,
+.dark textarea,
+.dark select {
+  border-color: hsl(var(--input)) !important;
+}
+
+/* Ícones SVG no modo escuro */
+.dark svg {
+  color: inherit;
+}
+
+.dark [class*="text-primary"] svg,
+.dark .text-primary svg {
+  color: hsl(var(--primary)) !important;
 }
 
 /* Força texto branco em botões outline no modo escuro */
@@ -628,3 +847,216 @@ html.dark,
     0 6px 12px -3px currentColor,
     inset 0 -2px 16px currentColor;
 }
+
+/* ==========================================================================
+   MELHORIAS DE CONTRASTE E HIERARQUIA VISUAL (2025-11-10)
+   Implementa os novos tokens do TEMA.md para melhor legibilidade
+   ========================================================================== */
+
+/* Cards com hierarquia de elevação */
+.card-elevated,
+[data-elevated="true"] {
+  background-color: #1f3d36 !important;
+  border-color: #3a6456 !important;
+  box-shadow: 0 2px 0 rgba(0,0,0,.45), 0 12px 24px rgba(0,0,0,.35) !important;
+}
+
+/* Inputs com melhor contraste */
+input,
+textarea,
+select {
+  background-color: #13251f !important;
+  border-color: #2d5247 !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #3A8F6E !important;
+  box-shadow: 0 0 0 3px rgba(58, 143, 110, 0.15) !important;
+}
+
+/* Botões com melhor feedback */
+button:hover,
+[data-slot="button"]:hover {
+  background-color: #48a080 !important;
+}
+
+button:active,
+[data-slot="button"]:active {
+  background-color: #2E7D6B !important;
+}
+
+/* Cards de status com backgrounds sutis */
+.card-success,
+[data-status="success"] {
+  background-color: #1a3329 !important;
+  border-left: 4px solid #5FC883 !important;
+}
+
+.card-warning,
+[data-status="warning"] {
+  background-color: #2e2819 !important;
+  border-left: 4px solid #E0B257 !important;
+}
+
+.card-error,
+[data-status="error"] {
+  background-color: #2e1f1f !important;
+  border-left: 4px solid #F07167 !important;
+}
+
+.card-info,
+[data-status="info"] {
+  background-color: #1a262e !important;
+  border-left: 4px solid #7AA6BF !important;
+}
+
+/* Texto com melhor contraste */
+.text-primary {
+  color: #F7FAF9 !important;
+}
+
+.text-secondary {
+  color: #BBC5C2 !important;
+}
+
+.text-muted {
+  color: #94a8a1 !important;
+}
+
+.text-disabled {
+  color: #6b7d76 !important;
+}
+
+/* Divisores mais visíveis */
+hr,
+.divider {
+  border-color: #2d5247 !important;
+}
+
+/* Hover states mais perceptíveis */
+.hover\:bg-accent:hover,
+[role="menuitem"]:hover,
+[role="option"]:hover,
+tr:hover {
+  background-color: #234039 !important;
+}
+
+/* Sombra colorida para elementos de destaque */
+.shadow-accent {
+  box-shadow: 0 8px 16px -4px rgba(58, 143, 110, 0.25) !important;
+}
+
+/* Main transparente para mostrar background do html (com imagem) */
+main {
+  background: transparent !important;
+}
+
+/* Ajuste de bordas em todos os elementos */
+.border {
+  border-width: 1px !important;
+  border-color: #2d5247 !important;
+}
+
+.border-emphasis {
+  border-color: #3a6456 !important;
+}
+
+.border-subtle {
+  border-color: #203a33 !important;
+}
+
+/* Charts com backgrounds mais contrastantes */
+[class*="recharts"],
+canvas {
+  background-color: transparent !important;
+}
+
+/* Popover e dropdown com melhor contraste */
+[data-slot="popover"],
+[role="menu"],
+[role="dialog"] {
+  background-color: #1a362f !important;
+  border-color: #2d5247 !important;
+  box-shadow: 0 2px 0 rgba(0,0,0,.45), 0 12px 24px rgba(0,0,0,.35) !important;
+}
+
+/* Tabs e navegação */
+[role="tab"][data-state="active"] {
+  background-color: #1f3d36 !important;
+  border-bottom: 2px solid #3A8F6E !important;
+}
+
+/* Progress bars */
+[role="progressbar"] {
+  background-color: #13251f !important;
+}
+
+[role="progressbar"] > div {
+  background-color: #3A8F6E !important;
+}
+
+/* Badges com melhor contraste */
+[data-slot="badge"],
+.badge {
+  background-color: #152b26 !important;
+  border: 1px solid #2d5247 !important;
+  color: #BBC5C2 !important;
+}
+
+/* Badges coloridos */
+.badge-success {
+  background-color: #1a3329 !important;
+  border-color: #5FC883 !important;
+  color: #5FC883 !important;
+}
+
+.badge-warning {
+  background-color: #2e2819 !important;
+  border-color: #E0B257 !important;
+  color: #E0B257 !important;
+}
+
+.badge-error {
+  background-color: #2e1f1f !important;
+  border-color: #F07167 !important;
+  color: #F07167 !important;
+}
+
+.badge-info {
+  background-color: #1a262e !important;
+  border-color: #7AA6BF !important;
+  color: #7AA6BF !important;
+}
+
+/* Skeleton loaders */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #152b26 0%,
+    #1a362f 50%,
+    #152b26 100%
+  ) !important;
+  background-size: 200% 100% !important;
+  animation: skeleton-loading 1.5s ease-in-out infinite !important;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Tooltips */
+[data-slot="tooltip"],
+[role="tooltip"] {
+  background-color: #0e1814 !important;
+  border: 1px solid #2d5247 !important;
+  color: #F7FAF9 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4) !important;
+}
+

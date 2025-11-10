@@ -179,12 +179,7 @@ export function ClassificationRules() {
   };
 
   return (
-    <Card
-      style={{
-        background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-        backgroundColor: '#3B5563'
-      }}
-    >
+    <Card className="bg-card">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -302,14 +297,7 @@ export function ClassificationRules() {
 
       {/* Dialog de Criação/Edição */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent
-          className="max-w-2xl"
-          style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563',
-            borderColor: 'rgba(255, 255, 255, 0.2)'
-          }}
-        >
+        <DialogContent className="max-w-2xl bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-white">
               {editingRule ? 'Editar Regra' : 'Nova Regra'}
