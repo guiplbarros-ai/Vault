@@ -14,8 +14,10 @@ import { transacaoService } from '@/lib/services/transacao.service';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Loader2, TrendingUp, TrendingDown, Minus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Minus, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { MonthPicker } from '@/components/ui/month-picker';
+import { CategoryTrendChart } from './category-trend-chart';
+import type { Categoria } from '@/lib/types';
 
 interface CategoryData {
   categoria_id: string;
@@ -38,7 +40,19 @@ interface CategoryVariation {
   quantidade_transacoes: number;
 }
 
-export function CategoryAnalyticsDashboard() {
+interface CategoryAnalyticsDashboardProps {
+  selectedCategoriaId?: string;
+  selectedCategoria?: Categoria;
+  onCategorySelect?: (categoria: Categoria) => void;
+  onClearSelection?: () => void;
+}
+
+export function CategoryAnalyticsDashboard({
+  selectedCategoriaId,
+  selectedCategoria,
+  onCategorySelect,
+  onClearSelection
+}: CategoryAnalyticsDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [gastosPorCategoria, setGastosPorCategoria] = useState<CategoryData[]>([]);
   const [variacoes, setVariacoes] = useState<CategoryVariation[]>([]);
@@ -159,6 +173,33 @@ export function CategoryAnalyticsDashboard() {
           </CardDescription>
         </CardHeader>
       </Card>
+    );
+  }
+
+  // Se uma categoria foi selecionada, mostra apenas o gráfico de evolução
+  if (selectedCategoriaId && selectedCategoria) {
+    return (
+      <div className="space-y-6">
+        {/* Botão para voltar */}
+        <Button
+          variant="outline"
+          onClick={onClearSelection}
+          style={{
+            borderColor: 'rgb(51, 65, 85)',
+            color: 'white',
+          }}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar para visão geral
+        </Button>
+
+        {/* Gráfico de evolução da categoria selecionada */}
+        <CategoryTrendChart
+          categoriaId={selectedCategoriaId}
+          categoriaNome={selectedCategoria.nome}
+          categoriaIcone={selectedCategoria.icone}
+        />
+      </div>
     );
   }
 
@@ -292,7 +333,25 @@ export function CategoryAnalyticsDashboard() {
                 const percentual = (cat.total_gasto / totalGastos) * 100;
 
                 return (
-                  <div key={cat.categoria_id} className="space-y-1">
+                  <div
+                    key={cat.categoria_id}
+                    className="space-y-1 p-2 rounded-lg hover:bg-gray-800/50 cursor-pointer transition-colors"
+                    onClick={() => {
+                      // Simula um objeto Categoria para passar para o CategoryTrendChart
+                      const categoriaObj: Categoria = {
+                        id: cat.categoria_id,
+                        nome: cat.categoria_nome,
+                        icone: cat.categoria_icone,
+                        cor: cat.categoria_cor,
+                        tipo: 'despesa',
+                        ordem: 0,
+                        ativa: true,
+                        created_at: new Date(),
+                        updated_at: new Date(),
+                      };
+                      onCategorySelect?.(categoriaObj);
+                    }}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-gray-400 text-sm">#{index + 1}</span>
@@ -316,6 +375,9 @@ export function CategoryAnalyticsDashboard() {
                   </div>
                 );
               })}
+              <p className="text-gray-400 text-sm text-center mt-4">
+                Clique em uma categoria para ver evolução mensal
+              </p>
             </div>
           </CardContent>
         </Card>

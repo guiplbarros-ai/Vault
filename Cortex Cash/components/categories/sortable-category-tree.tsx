@@ -68,12 +68,8 @@ export function SortableCategoryTree({
   const [categorias, setCategorias] = React.useState(initialCategorias);
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
 
-  // Atualiza quando props mudam (CUIDADO: pode sobrescrever updates otimistas)
-  React.useEffect(() => {
-    console.log('⚠️ useEffect: initialCategorias mudou, atualizando estado local');
-    console.log('📊 Nova estrutura:', initialCategorias.map(c => ({ id: c.id, nome: c.nome, subs: c.subcategorias?.length || 0 })));
-    setCategorias(initialCategorias);
-  }, [initialCategorias]);
+  // Não sincroniza com props após mount - mantém estado local para updates otimistas
+  // Se precisar recarregar do banco, o componente pai deve forçar unmount/remount
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -132,7 +128,6 @@ export function SortableCategoryTree({
             cor: categoriaMovida.cor,
             ordem: categoriaMovida.ordem,
             ativa: categoriaMovida.ativa,
-            eh_fixa: categoriaMovida.eh_fixa,
             created_at: categoriaMovida.created_at,
             updated_at: categoriaMovida.updated_at,
           };
@@ -170,7 +165,19 @@ export function SortableCategoryTree({
           // Remove das subcategorias e guarda referência
           const subcategoriaRemovida = cat.subcategorias.find(sub => sub.id === categoriaId);
           if (subcategoriaRemovida) {
-            categoriaPromovida = { ...subcategoriaRemovida, pai_id: undefined };
+            categoriaPromovida = {
+              id: subcategoriaRemovida.id,
+              nome: subcategoriaRemovida.nome,
+              tipo: subcategoriaRemovida.tipo,
+              grupo: subcategoriaRemovida.grupo,
+              pai_id: undefined,
+              icone: subcategoriaRemovida.icone,
+              cor: subcategoriaRemovida.cor,
+              ordem: subcategoriaRemovida.ordem,
+              ativa: subcategoriaRemovida.ativa,
+              created_at: subcategoriaRemovida.created_at,
+              updated_at: subcategoriaRemovida.updated_at,
+            };
             console.log('📦 Subcategoria encontrada:', { id: subcategoriaRemovida.id, nome: subcategoriaRemovida.nome });
           }
 
@@ -185,8 +192,18 @@ export function SortableCategoryTree({
       // Adiciona a categoria promovida à lista principal
       if (categoriaPromovida) {
         const novaCategoriaComSubs: CategoriaComSubcategorias = {
-          ...categoriaPromovida,
-          subcategorias: [] // Nova categoria principal sem subcategorias
+          id: categoriaPromovida.id,
+          nome: categoriaPromovida.nome,
+          tipo: categoriaPromovida.tipo,
+          grupo: categoriaPromovida.grupo,
+          pai_id: categoriaPromovida.pai_id,
+          icone: categoriaPromovida.icone,
+          cor: categoriaPromovida.cor,
+          ordem: categoriaPromovida.ordem,
+          ativa: categoriaPromovida.ativa,
+          created_at: categoriaPromovida.created_at,
+          updated_at: categoriaPromovida.updated_at,
+          subcategorias: [], // Nova categoria principal sem subcategorias
         };
 
         const result = [...newCategorias, novaCategoriaComSubs];

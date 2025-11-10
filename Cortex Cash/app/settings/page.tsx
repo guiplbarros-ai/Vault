@@ -18,10 +18,12 @@ import {
   Upload,
   DollarSign,
   Brain,
+  BarChart3,
   Zap,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  TestTube
 } from 'lucide-react';
-import type { SettingsCategory } from '@/lib/types/settings';
+import type { SettingsCategory, UICategory } from '@/lib/types/settings';
 
 // Import sections
 import { AppearanceSection } from './sections/appearance-section';
@@ -30,54 +32,73 @@ import { DataPrivacySection } from './sections/data-privacy-section';
 import { ImportSection } from './sections/import-section';
 import { BudgetAlertsSection } from './sections/budget-alerts-section';
 import { AICostsSection } from './sections/ai-costs-section';
+import { AnalyticsSection } from './sections/analytics-section';
 import { PerformanceSection } from './sections/performance-section';
 import { AdvancedSection } from './sections/advanced-section';
+import { DemoModeSection } from './sections/demo-mode-section';
 
-const CATEGORIES = [
+const CATEGORIES: Array<{
+  key: UICategory;
+  label: string;
+  description: string;
+  icon: any;
+}> = [
   {
-    key: 'appearance' as SettingsCategory,
+    key: 'appearance',
     label: 'Aparência',
     description: 'Tema, densidade e tipografia',
     icon: Palette,
   },
   {
-    key: 'localization' as SettingsCategory,
+    key: 'localization',
     label: 'Localização',
     description: 'Idioma, moeda e formatos',
     icon: Globe,
   },
   {
-    key: 'dataPrivacy' as SettingsCategory,
+    key: 'dataPrivacy',
     label: 'Dados e Privacidade',
     description: 'Backup, storage e telemetria',
     icon: Shield,
   },
   {
-    key: 'importClassification' as SettingsCategory,
+    key: 'importClassification',
     label: 'Importação',
     description: 'Duplicatas, regras e templates',
     icon: Upload,
   },
   {
-    key: 'budgetAlerts' as SettingsCategory,
+    key: 'budgetAlerts',
     label: 'Orçamento',
     description: 'Alertas e projeções',
     icon: DollarSign,
   },
   {
-    key: 'aiCosts' as SettingsCategory,
+    key: 'aiCosts',
     label: 'IA e Custos',
     description: 'OpenAI, modelos e limites',
     icon: Brain,
   },
   {
-    key: 'performance' as SettingsCategory,
+    key: 'analytics',
+    label: 'Analytics de IA',
+    description: 'Métricas e performance da IA',
+    icon: BarChart3,
+  },
+  {
+    key: 'performance',
     label: 'Performance',
     description: 'Cache, paginação e otimizações',
     icon: Zap,
   },
   {
-    key: 'advanced' as SettingsCategory,
+    key: 'demoMode',
+    label: 'Modo Demo',
+    description: 'Dados de exemplo e testes',
+    icon: TestTube,
+  },
+  {
+    key: 'advanced',
     label: 'Avançado',
     description: 'Modo dev, logs e experimentos',
     icon: SettingsIcon,
@@ -85,7 +106,7 @@ const CATEGORIES = [
 ];
 
 export default function SettingsPage() {
-  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('appearance');
+  const [activeCategory, setActiveCategory] = useState<UICategory>('appearance');
 
   const renderSection = () => {
     switch (activeCategory) {
@@ -101,8 +122,12 @@ export default function SettingsPage() {
         return <BudgetAlertsSection />;
       case 'aiCosts':
         return <AICostsSection />;
+      case 'analytics':
+        return <AnalyticsSection />;
       case 'performance':
         return <PerformanceSection />;
+      case 'demoMode':
+        return <DemoModeSection />;
       case 'advanced':
         return <AdvancedSection />;
       default:

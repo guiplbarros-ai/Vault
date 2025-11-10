@@ -79,7 +79,7 @@ export function DiversificationWidget() {
         }}
       >
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
             Análise de Diversificação
           </CardTitle>
         </CardHeader>
@@ -108,7 +108,7 @@ export function DiversificationWidget() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <PieChart className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
-          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
             Análise de Diversificação
           </CardTitle>
         </div>
@@ -120,7 +120,7 @@ export function DiversificationWidget() {
         {/* Contas vs Investimentos */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-white'}`}>
               Contas vs Investimentos
             </span>
           </div>
@@ -129,7 +129,7 @@ export function DiversificationWidget() {
               <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
                 Contas
               </span>
-              <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-white'}`}>
                 {formatCurrency(data.contas_vs_investimentos.contas)} (
                 {data.contas_vs_investimentos.percentual_contas.toFixed(1)}%)
               </span>
@@ -145,7 +145,7 @@ export function DiversificationWidget() {
               <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
                 Investimentos
               </span>
-              <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-white'}`}>
                 {formatCurrency(data.contas_vs_investimentos.investimentos)} (
                 {data.contas_vs_investimentos.percentual_investimentos.toFixed(1)}%)
               </span>
@@ -162,7 +162,7 @@ export function DiversificationWidget() {
         {data.por_tipo_investimento.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-white'}`}>
                 Tipos de Investimento
               </span>
             </div>
@@ -173,7 +173,7 @@ export function DiversificationWidget() {
                     <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
                       {TIPO_LABELS[item.tipo] || item.tipo}
                     </span>
-                    <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-white'}`}>
                       {formatCurrency(item.valor)} ({item.percentual.toFixed(1)}%)
                     </span>
                   </div>
@@ -188,7 +188,7 @@ export function DiversificationWidget() {
         {data.por_tipo_conta.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-white'}`}>
                 Tipos de Conta
               </span>
             </div>
@@ -199,7 +199,7 @@ export function DiversificationWidget() {
                     <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
                       {TIPO_LABELS[item.tipo] || item.tipo}
                     </span>
-                    <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <span className={`text-xs font-medium ${isDark ? 'text-white' : 'text-white'}`}>
                       {formatCurrency(item.valor)} ({item.percentual.toFixed(1)}%)
                     </span>
                   </div>

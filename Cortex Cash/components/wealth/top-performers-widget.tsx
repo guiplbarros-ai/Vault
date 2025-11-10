@@ -74,7 +74,7 @@ export function TopPerformersWidget() {
         }}
       >
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
             Melhores Investimentos
           </CardTitle>
         </CardHeader>
@@ -98,7 +98,7 @@ export function TopPerformersWidget() {
         }}
       >
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
             Melhores Investimentos
           </CardTitle>
           <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
@@ -128,7 +128,7 @@ export function TopPerformersWidget() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Award className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
-          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
             Melhores Investimentos
           </CardTitle>
         </div>
@@ -165,7 +165,7 @@ export function TopPerformersWidget() {
                     >
                       {index + 1}
                     </span>
-                    <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <span className={`font-medium ${isDark ? 'text-white' : 'text-white'}`}>
                       {inv.nome}
                     </span>
                   </div>
@@ -178,7 +178,7 @@ export function TopPerformersWidget() {
                   </div>
                 </div>
                 <div className="text-right space-y-1">
-                  <div className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <div className={`font-medium ${isDark ? 'text-white' : 'text-white'}`}>
                     {formatCurrency(inv.valor_atual)}
                   </div>
                   <div className={`flex items-center gap-1 justify-end text-xs font-medium ${

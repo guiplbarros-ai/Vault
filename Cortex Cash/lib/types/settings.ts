@@ -178,6 +178,11 @@ export type SettingsPath =
 export type SettingsCategory = keyof Settings;
 
 /**
+ * Todas as categorias de UI (incluindo views especiais)
+ */
+export type UICategory = SettingsCategory | 'analytics' | 'demoMode';
+
+/**
  * Value type baseado no path
  */
 export type SettingsValue<T extends SettingsPath> =

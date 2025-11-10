@@ -49,7 +49,10 @@ import { contaService } from "@/lib/services/conta.service"
 import { mapFormDataToDTO, mapDBTypeToFormType } from "@/lib/adapters"
 import type { Transacao, Tag, Categoria, Conta } from "@/lib/types"
 import { toast } from "sonner"
+import { isDuplicate } from "@/lib/import/dedupe"
 import { cn } from "@/lib/utils"
+import { ClassificationRules } from "@/components/import/classification-rules"
+import { RuleAssistant } from "@/components/classification/rule-assistant"
 
 export default function TransactionsPage() {
   const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme')
@@ -367,7 +370,7 @@ export default function TransactionsPage() {
                 "cursor-pointer",
                 isDark
                   ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                  : "!text-gray-900"
+                  : "!text-white"
               )}
               style={isDark ? { color: '#ffffff' } : undefined}
             >
@@ -384,7 +387,7 @@ export default function TransactionsPage() {
                 "cursor-pointer",
                 isDark
                   ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                  : "!text-gray-900"
+                  : "!text-white"
               )}
               style={isDark ? { color: '#ffffff' } : undefined}
             >
@@ -498,6 +501,20 @@ export default function TransactionsPage() {
         })
       } else {
         // Modo criação
+        // Verificação preventiva de duplicidade no cliente para melhor UX
+        const duplicate = await isDuplicate(dto.conta_id, {
+          data: typeof dto.data === 'string' ? new Date(dto.data) : dto.data,
+          descricao: dto.descricao,
+          valor: dto.valor,
+        })
+        if (duplicate) {
+          toast.error('Transação duplicada detectada', {
+            description: 'Já existe uma transação com a mesma data, descrição e valor nesta conta.',
+          })
+          setFormLoading(false)
+          return
+        }
+
         await transacaoService.createTransacao(dto)
         toast.success('Transação criada', {
           description: 'A transação foi criada com sucesso.',
@@ -601,7 +618,7 @@ export default function TransactionsPage() {
                     >
                       <SelectValue
                         placeholder="Todas as categorias"
-                        className={isDark ? "!text-white" : "!text-gray-900"}
+                        className={isDark ? "!text-white" : "!text-white"}
                         style={isDark ? { color: '#ffffff' } : undefined}
                       />
                     </SelectTrigger>
@@ -622,7 +639,7 @@ export default function TransactionsPage() {
                           "text-sm cursor-pointer",
                           isDark
                             ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                            : "!text-gray-900"
+                            : "!text-white"
                         )}
                         style={isDark ? { color: '#ffffff' } : undefined}
                       >
@@ -636,7 +653,7 @@ export default function TransactionsPage() {
                             "text-sm cursor-pointer",
                             isDark
                               ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                              : "!text-gray-900"
+                              : "!text-white"
                           )}
                           style={isDark ? { color: '#ffffff' } : undefined}
                         >
@@ -667,7 +684,7 @@ export default function TransactionsPage() {
                     >
                       <SelectValue
                         placeholder="Todas as tags"
-                        className={isDark ? "!text-white" : "!text-gray-900"}
+                        className={isDark ? "!text-white" : "!text-white"}
                         style={isDark ? { color: '#ffffff' } : undefined}
                       />
                     </SelectTrigger>
@@ -688,7 +705,7 @@ export default function TransactionsPage() {
                           "text-sm cursor-pointer",
                           isDark
                             ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                            : "!text-gray-900"
+                            : "!text-white"
                         )}
                         style={isDark ? { color: '#ffffff' } : undefined}
                       >
@@ -702,7 +719,7 @@ export default function TransactionsPage() {
                             "text-sm cursor-pointer",
                             isDark
                               ? "!text-white hover:!bg-gray-700 focus:!bg-gray-700"
-                              : "!text-gray-900"
+                              : "!text-white"
                           )}
                           style={isDark ? { color: '#ffffff' } : undefined}
                         >
@@ -752,7 +769,7 @@ export default function TransactionsPage() {
                     }}
                   >
                     <DialogHeader>
-                      <DialogTitle className={isDark ? "text-white" : "text-gray-900"}>
+                      <DialogTitle className={isDark ? "text-white" : "text-white"}>
                         {editMode ? 'Editar Transação' : 'Nova Transação'}
                       </DialogTitle>
                       <DialogDescription className={isDark ? "text-white/70" : "text-gray-600"}>
@@ -859,6 +876,12 @@ export default function TransactionsPage() {
           isDark={isDark}
         />
 
+        {/* Regras pré-mapeadas + Assistente de IA para regras */}
+        <div className="space-y-6">
+          <ClassificationRules />
+          <RuleAssistant />
+        </div>
+
         <ConfirmationDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
@@ -883,7 +906,7 @@ export default function TransactionsPage() {
             }}
           >
             <DialogHeader>
-              <DialogTitle className={isDark ? "text-white" : "text-gray-900"}>
+              <DialogTitle className={isDark ? "text-white" : "text-white"}>
                 Detalhes da Transação
               </DialogTitle>
             </DialogHeader>

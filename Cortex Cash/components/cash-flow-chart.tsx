@@ -19,6 +19,7 @@ interface ChartData {
   result: number // Saving (positivo) ou Queima de caixa (negativo)
 }
 
+// ✅ Named export
 export function CashFlowChart() {
   const [data, setData] = useState<ChartData[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,7 +34,7 @@ export function CashFlowChart() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   }, [theme])
 
-  // Compute colors from CSS variables to support light/dark mode
+  // ✅ Compute colors from CSS variables with correct dependencies
   const colors = useMemo(() => {
     if (typeof window === 'undefined') return {
       income: 'hsl(142 71% 45%)',
@@ -54,7 +55,7 @@ export function CashFlowChart() {
       investments: `hsl(${primary})`,
       result: `hsl(${chart7})`,
     }
-  }, [])
+  }, [isDark, theme]) // ✅ Adicionar dependências corretas
 
   useEffect(() => {
     loadChartData()
@@ -269,3 +270,6 @@ export function CashFlowChart() {
     </Card>
   )
 }
+
+// ✅ Default export para dynamic import
+export default CashFlowChart

@@ -45,10 +45,10 @@ const getChartColors = (): string[] => {
   ]
 }
 
+// ✅ Named export
 export function ExpenseDistributionChart() {
   const [data, setData] = useState<ChartData[]>([])
   const [loading, setLoading] = useState(true)
-  const COLORS = useMemo(() => getChartColors(), [])
   const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme')
 
   // Detecta se está em dark mode
@@ -58,6 +58,9 @@ export function ExpenseDistributionChart() {
     if (theme === 'light') return false
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   }, [theme])
+
+  // ✅ Corrigir useMemo para atualizar cores quando tema mudar
+  const COLORS = useMemo(() => getChartColors(), [isDark, theme])
 
   useEffect(() => {
     loadChartData()
@@ -280,3 +283,6 @@ export function ExpenseDistributionChart() {
     </Card>
   )
 }
+
+// ✅ Default export para dynamic import
+export default ExpenseDistributionChart

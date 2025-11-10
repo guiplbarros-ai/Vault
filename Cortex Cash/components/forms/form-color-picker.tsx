@@ -35,7 +35,11 @@ export const FormColorPicker = React.forwardRef<HTMLButtonElement, FormColorPick
     return (
       <div className="space-y-2">
         {label && (
-          <Label htmlFor={name} className={cn(required && 'after:content-["*"] after:ml-0.5 after:text-destructive')}>
+          <Label
+            htmlFor={name}
+            className={cn('text-white', required && 'after:content-["*"] after:ml-0.5 after:text-red-400')}
+            style={{ color: '#ffffff !important' } as React.CSSProperties}
+          >
             {label}
           </Label>
         )}
@@ -53,12 +57,12 @@ export const FormColorPicker = React.forwardRef<HTMLButtonElement, FormColorPick
           )}
         />
         {description && !error && (
-          <p id={`${name}-description`} className="text-sm text-muted-foreground">
+          <p id={`${name}-description`} className="text-sm text-white/70" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
             {description}
           </p>
         )}
         {error && (
-          <p id={`${name}-error`} className="text-sm font-medium text-destructive">
+          <p id={`${name}-error`} className="text-sm font-medium text-red-400" style={{ color: '#f87171' }}>
             {error.message as string}
           </p>
         )}

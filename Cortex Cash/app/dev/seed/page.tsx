@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { getDB } from '@/lib/db/client';
 import { seedMockData, seedInvestimentos, seedCategorias, seedCartoes } from '@/lib/db/seed';
+import { seedCenarioBase } from '@/lib/db/seed-planejamento';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
@@ -54,6 +55,9 @@ export default function SeedPage() {
 
       // Inserir cartões de crédito
       await seedCartoes(db);
+
+      // Inserir cenário base de planejamento
+      await seedCenarioBase();
 
       // Buscar estatísticas
       const [categorias, instituicoes, contas, transacoes, investimentos, historico_investimentos, cartoes, faturas, lancamentos] = await Promise.all([

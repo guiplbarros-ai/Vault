@@ -129,7 +129,7 @@ export function WealthEvolutionChart() {
         }}
       >
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
             Evolução Patrimonial
           </CardTitle>
           <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
@@ -160,7 +160,7 @@ export function WealthEvolutionChart() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <TrendingUp className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
-          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
             Evolução Patrimonial
           </CardTitle>
         </div>
@@ -226,3 +226,6 @@ export function WealthEvolutionChart() {
     </Card>
   )
 }
+
+// ✅ Default export para dynamic import
+export default WealthEvolutionChart

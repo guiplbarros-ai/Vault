@@ -61,6 +61,8 @@ export default function CategoriesPage() {
   const [categoriaParaMesclar, setCategoriaParaMesclar] = useState<Categoria | undefined>()
 
   const [selectedCategoriaId, setSelectedCategoriaId] = useState<string>()
+  const [selectedCategoriaForAnalytics, setSelectedCategoriaForAnalytics] = useState<Categoria | undefined>()
+  const [activeTab, setActiveTab] = useState<string>("plan")
 
   useEffect(() => {
     loadCategorias()
@@ -131,6 +133,11 @@ export default function CategoriesPage() {
   const handleMerge = (categoria: Categoria) => {
     setCategoriaParaMesclar(categoria)
     setMergeDialogOpen(true)
+  }
+
+  const handleViewAnalytics = (categoria: Categoria) => {
+    setSelectedCategoriaForAnalytics(categoria)
+    setActiveTab("analytics")
   }
 
   const handleReorder = async (reordenacao: { id: string; novaOrdem: number }[]) => {
@@ -215,6 +222,11 @@ export default function CategoriesPage() {
   const statsReceitas = countCategories(categorias.filter((c) => c.tipo === "receita"))
   const statsDespesas = countCategories(categorias.filter((c) => c.tipo === "despesa"))
 
+  // Agrupamentos para segregação visual
+  const categoriasReceita = filteredCategorias.filter((c) => c.tipo === "receita")
+  const categoriasDespesa = filteredCategorias.filter((c) => c.tipo === "despesa")
+  const categoriasTransferencia = filteredCategorias.filter((c) => c.tipo === "transferencia")
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -247,17 +259,6 @@ export default function CategoriesPage() {
               >
                 <Download className="mr-2 h-4 w-4" />
                 Exportar
-              </Button>
-              <Button
-                onClick={handleCreate}
-                className="text-white"
-                style={{
-                  backgroundColor: '#18B0A4',
-                  color: '#ffffff'
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Categoria
               </Button>
             </div>
           }
@@ -308,7 +309,7 @@ export default function CategoriesPage() {
         </div>
 
         {/* Tabs para Plano de Contas e Análise de Gastos */}
-        <Tabs defaultValue="plan" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList
             className="grid w-full grid-cols-2"
             style={{
@@ -385,26 +386,144 @@ export default function CategoriesPage() {
                   <SelectItem value="transferencia" className="text-white hover:!bg-gray-700" style={{ color: '#ffffff' }}>Transferências</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                onClick={handleCreate}
+                className="text-white w-full sm:w-auto"
+                style={{
+                  backgroundColor: '#18B0A4',
+                  color: '#ffffff',
+                  height: '40px'
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Categoria
+              </Button>
             </div>
 
-            {/* Category Tree */}
-            <SortableCategoryTree
-              categorias={filteredCategorias}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onMerge={handleMerge}
-              onAddSubcategoria={handleAddSubcategoria}
-              onSelect={(cat) => setSelectedCategoriaId(cat.id)}
-              selectedId={selectedCategoriaId}
-              onReorder={handleReorder}
-            />
+            {/* Segregação visual: Receitas vs Despesas */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Coluna esquerda: Receitas em cima, Transferências embaixo */}
+              <div className="space-y-6">
+                {/* Receitas */}
+                {categoriasReceita.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium uppercase tracking-wider text-green-300">
+                        Receitas
+                      </h3>
+                      <span className="text-xs text-green-400/70">
+                        {categoriasReceita.length} categorias
+                      </span>
+                    </div>
+                    <div
+                      className="rounded-lg border"
+                      style={{
+                        borderColor: 'rgba(34, 197, 94, 0.25)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.03)',
+                      }}
+                    >
+                      <div className="p-2">
+                        <SortableCategoryTree
+                          categorias={categoriasReceita}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onMerge={handleMerge}
+                          onAddSubcategoria={handleAddSubcategoria}
+                          onSelect={(cat) => setSelectedCategoriaId(cat.id)}
+                          selectedId={selectedCategoriaId}
+                          onReorder={handleReorder}
+                          onViewAnalytics={handleViewAnalytics}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transferências */}
+                {categoriasTransferencia.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium uppercase tracking-wider text-blue-300">
+                        Transferências
+                      </h3>
+                      <span className="text-xs text-blue-400/70">
+                        {categoriasTransferencia.length} categorias
+                      </span>
+                    </div>
+                    <div
+                      className="rounded-lg border"
+                      style={{
+                        borderColor: 'rgba(59, 130, 246, 0.25)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                      }}
+                    >
+                      <div className="p-2">
+                        <SortableCategoryTree
+                          categorias={categoriasTransferencia}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onMerge={handleMerge}
+                          onAddSubcategoria={handleAddSubcategoria}
+                          onSelect={(cat) => setSelectedCategoriaId(cat.id)}
+                          selectedId={selectedCategoriaId}
+                          onReorder={handleReorder}
+                          onViewAnalytics={handleViewAnalytics}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Coluna direita: Despesas */}
+              <div>
+                {categoriasDespesa.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium uppercase tracking-wider text-red-300">
+                        Despesas
+                      </h3>
+                      <span className="text-xs text-red-400/70">
+                        {categoriasDespesa.length} categorias
+                      </span>
+                    </div>
+                    <div
+                      className="rounded-lg border"
+                      style={{
+                        borderColor: 'rgba(239, 68, 68, 0.25)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.03)',
+                      }}
+                    >
+                      <div className="p-2">
+                        <SortableCategoryTree
+                          categorias={categoriasDespesa}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onMerge={handleMerge}
+                          onAddSubcategoria={handleAddSubcategoria}
+                          onSelect={(cat) => setSelectedCategoriaId(cat.id)}
+                          selectedId={selectedCategoriaId}
+                          onReorder={handleReorder}
+                          onViewAnalytics={handleViewAnalytics}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
           </TabsContent>
 
           {/* Tab: Análise de Gastos */}
           <TabsContent value="analytics" className="space-y-4">
-            <CategoryAnalyticsDashboard />
+            <CategoryAnalyticsDashboard
+              selectedCategoriaId={selectedCategoriaForAnalytics?.id}
+              selectedCategoria={selectedCategoriaForAnalytics}
+              onCategorySelect={(cat) => setSelectedCategoriaForAnalytics(cat)}
+              onClearSelection={() => setSelectedCategoriaForAnalytics(undefined)}
+            />
           </TabsContent>
         </Tabs>
 

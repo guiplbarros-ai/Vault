@@ -507,3 +507,6 @@ export function BudgetOverview() {
     </Card>
   )
 }
+
+// ✅ Default export para dynamic import
+export default BudgetOverview

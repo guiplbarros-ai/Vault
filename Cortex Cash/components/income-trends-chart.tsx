@@ -42,7 +42,6 @@ export function IncomeTrendsChart() {
   const [categoryNames, setCategoryNames] = useState<string[]>([])
   const [categoryColors, setCategoryColors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
-  const COLORS = useMemo(() => getChartColors(), [])
   const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme')
 
   // Detecta se está em dark mode
@@ -52,6 +51,9 @@ export function IncomeTrendsChart() {
     if (theme === 'light') return false
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   }, [theme])
+
+  // ✅ Corrigir useMemo para atualizar cores quando tema mudar
+  const COLORS = useMemo(() => getChartColors(), [isDark, theme])
 
   useEffect(() => {
     loadChartData()
@@ -242,3 +244,6 @@ export function IncomeTrendsChart() {
     </Card>
   )
 }
+
+// ✅ Default export para dynamic import
+export default IncomeTrendsChart

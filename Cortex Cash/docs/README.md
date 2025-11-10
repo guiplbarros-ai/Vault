@@ -43,8 +43,9 @@ Este índice consolida e organiza a documentação por categorias. Use-o como po
 - Índice de traduções: [translations/](./translations/README.md)
 
 ## Relatórios
-- Relatórios de finanças e budgets (v0.5): [FINANCE_REPORTS_BUDGETS_V0.5.md](./FINANCE_REPORTS_BUDGETS_V0.5.md)
-- Índice de relatórios: [reports/](./reports/README.md)
+- Índice por tema (recomendado): [reports/](./reports/README.md)
+- Code Scan Report (2025-11-06): [issues/CODE_SCAN_REPORT_2025-11-06.md](./issues/CODE_SCAN_REPORT_2025-11-06.md)
+- Finanças v0.5: [FINANCE_REPORTS_BUDGETS_V0.5.md](./FINANCE_REPORTS_BUDGETS_V0.5.md)
 
 ## Arquivo
 - Arquivos históricos/legados: [archives/](./archives)

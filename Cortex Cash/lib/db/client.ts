@@ -30,6 +30,9 @@ import type {
   DespesaDedutivel,
   BemDireito,
   DividaOnus,
+  Cenario,
+  ConfiguracaoComportamento,
+  ObjetivoFinanceiro,
 } from '../types';
 
 // Define o banco de dados Dexie
@@ -56,6 +59,9 @@ export class CortexCashDB extends Dexie {
   despesas_dedutiveis!: EntityTable<DespesaDedutivel, 'id'>;
   bens_direitos!: EntityTable<BemDireito, 'id'>;
   dividas_onus!: EntityTable<DividaOnus, 'id'>;
+  cenarios!: EntityTable<Cenario, 'id'>;
+  configuracoes_comportamento!: EntityTable<ConfiguracaoComportamento, 'id'>;
+  objetivos_financeiros!: EntityTable<ObjetivoFinanceiro, 'id'>;
 
   constructor() {
     super('cortex-cash');
@@ -130,6 +136,48 @@ export class CortexCashDB extends Dexie {
       bens_direitos: 'id, declaracao_id, tipo',
       dividas_onus: 'id, declaracao_id, tipo',
     });
+
+    // v4: Adiciona tabelas para Planejamento Financeiro
+    this.version(4).stores({
+      cenarios: 'id, nome, tipo, created_at',
+      configuracoes_comportamento: 'id, cenario_id, tipo, categoria_id, data_aplicacao',
+      objetivos_financeiros: 'id, cenario_id, data_alvo, categoria, prioridade',
+    });
+
+    // v5: Índice único para deduplicação de transações (hash) + migração para remover duplicatas antigas
+    this.version(5)
+      .stores({
+        // Torna hash único para impedir duplicatas
+        transacoes:
+          'id, conta_id, categoria_id, centro_custo_id, data, tipo, &hash, transferencia_id, conta_destino_id, grupo_parcelamento_id',
+      })
+      .upgrade(async (tx) => {
+        try {
+          const table = tx.table('transacoes');
+          // Coleta todas as transações ordenadas por hash para facilitar identificação de duplicatas
+          const all = await table.orderBy('hash').toArray();
+          const seen = new Set<string>();
+          const toDelete: string[] = [];
+
+          for (const t of all) {
+            const h = t?.hash as string | undefined;
+            if (!h) continue;
+            if (seen.has(h)) {
+              // Marcamos duplicatas para remoção (mantém o primeiro encontrado)
+              toDelete.push(t.id as string);
+            } else {
+              seen.add(h);
+            }
+          }
+
+          if (toDelete.length > 0) {
+            await table.bulkDelete(toDelete);
+          }
+        } catch (err) {
+          // Em caso de erro na migração, deixamos logar mas não bloqueamos o app inteiro
+          console.error('Erro ao migrar dedupe de transações (v5):', err);
+        }
+      });
   }
 }
 
@@ -252,6 +300,15 @@ export async function exportDatabase(): Promise<Blob> {
     orcamentos: await db.orcamentos.toArray(),
     investimentos: await db.investimentos.toArray(),
     historico_investimentos: await db.historico_investimentos.toArray(),
+    declaracoes_ir: await db.declaracoes_ir.toArray(),
+    rendimentos_tributaveis: await db.rendimentos_tributaveis.toArray(),
+    rendimentos_isentos: await db.rendimentos_isentos.toArray(),
+    despesas_dedutiveis: await db.despesas_dedutiveis.toArray(),
+    bens_direitos: await db.bens_direitos.toArray(),
+    dividas_onus: await db.dividas_onus.toArray(),
+    cenarios: await db.cenarios.toArray(),
+    configuracoes_comportamento: await db.configuracoes_comportamento.toArray(),
+    objetivos_financeiros: await db.objetivos_financeiros.toArray(),
   };
 
   const json = JSON.stringify(data, null, 2);
@@ -291,6 +348,15 @@ export async function importDatabase(file: File): Promise<void> {
     if (data.orcamentos) await db.orcamentos.bulkAdd(data.orcamentos);
     if (data.investimentos) await db.investimentos.bulkAdd(data.investimentos);
     if (data.historico_investimentos) await db.historico_investimentos.bulkAdd(data.historico_investimentos);
+    if (data.declaracoes_ir) await db.declaracoes_ir.bulkAdd(data.declaracoes_ir);
+    if (data.rendimentos_tributaveis) await db.rendimentos_tributaveis.bulkAdd(data.rendimentos_tributaveis);
+    if (data.rendimentos_isentos) await db.rendimentos_isentos.bulkAdd(data.rendimentos_isentos);
+    if (data.despesas_dedutiveis) await db.despesas_dedutiveis.bulkAdd(data.despesas_dedutiveis);
+    if (data.bens_direitos) await db.bens_direitos.bulkAdd(data.bens_direitos);
+    if (data.dividas_onus) await db.dividas_onus.bulkAdd(data.dividas_onus);
+    if (data.cenarios) await db.cenarios.bulkAdd(data.cenarios);
+    if (data.configuracoes_comportamento) await db.configuracoes_comportamento.bulkAdd(data.configuracoes_comportamento);
+    if (data.objetivos_financeiros) await db.objetivos_financeiros.bulkAdd(data.objetivos_financeiros);
   });
 }
 

@@ -74,6 +74,7 @@ export const createCategoriaSchema = z.object({
   nome: z.string().min(1, 'Nome é obrigatório').max(50, 'Nome muito longo'),
   tipo: tipoTransacaoSchema,
   grupo: z.string().max(50, 'Grupo muito longo').optional(),
+  pai_id: z.string().uuid('ID da categoria pai inválido').nullable().optional(),
   icone: z.string().max(50, 'Ícone muito longo').optional(),
   cor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor deve estar no formato hexadecimal (#RRGGBB)').optional(),
   ordem: z.number().int('Ordem deve ser um número inteiro').nonnegative('Ordem não pode ser negativa').optional(),

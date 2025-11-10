@@ -8,6 +8,7 @@
 import { getDB } from './client';
 import { CATEGORIAS_PADRAO, seedCategorias, hasCategories } from './seed';
 import { seedTags, hasTags } from './seed-tags';
+import { seedCenarioBase } from './seed-planejamento';
 
 const INIT_FLAG_KEY = 'cortex-cash-initialized';
 
@@ -61,6 +62,10 @@ export async function initializeDatabase(): Promise<void> {
       console.log(`🔄 Criando tags padrão...`);
       await seedTags(db);
     }
+
+    // Seed de cenário base de planejamento
+    console.log(`🔄 Criando cenário base de planejamento...`);
+    await seedCenarioBase();
 
     markAsInitialized();
     console.log('✅ Banco inicializado com sucesso!');

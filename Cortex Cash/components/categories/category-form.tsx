@@ -52,6 +52,31 @@ const TIPO_OPTIONS = [
   { value: "transferencia", label: "Transferência" },
 ];
 
+/**
+ * Deriva uma cor mais clara (para subcategoria) a partir da cor base
+ * Aumenta o brilho em aproximadamente 20%
+ */
+function derivarCorSubcategoria(corBase: string): string {
+  // Remove o # se existir
+  const hex = corBase.replace('#', '');
+
+  // Converte hex para RGB
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+
+  // Aumenta o brilho misturando com branco (20% branco)
+  const lighten = (c: number) => Math.min(255, Math.round(c + (255 - c) * 0.2));
+
+  const newR = lighten(r);
+  const newG = lighten(g);
+  const newB = lighten(b);
+
+  // Converte de volta para hex
+  const toHex = (n: number) => n.toString(16).padStart(2, '0');
+  return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+}
+
 export function CategoryForm({
   categoria,
   categoriaPai,
@@ -62,6 +87,13 @@ export function CategoryForm({
   const [icone, setIcone] = React.useState(categoria?.icone || "📁");
   const [submitting, setSubmitting] = React.useState(false);
 
+  // Derivar cor da categoria pai se estiver criando subcategoria
+  const corPadrao = React.useMemo(() => {
+    if (categoria?.cor) return categoria.cor;
+    if (categoriaPai?.cor) return derivarCorSubcategoria(categoriaPai.cor);
+    return "#2d9b9b";
+  }, [categoria?.cor, categoriaPai?.cor]);
+
   const methods = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
@@ -69,7 +101,7 @@ export function CategoryForm({
       tipo: categoria?.tipo || categoriaPai?.tipo || "despesa",
       grupo: categoria?.grupo || "",
       icone: categoria?.icone || "📁",
-      cor: categoria?.cor || "#2d9b9b",
+      cor: corPadrao,
     },
   });
 
@@ -118,7 +150,7 @@ export function CategoryForm({
         {/* Informação de subcategoria */}
         {categoriaPai && (
           <div
-            className="p-3 rounded-lg"
+            className="p-3 rounded-lg space-y-2"
             style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
           >
             <p className="text-sm text-white/70">
@@ -127,6 +159,21 @@ export function CategoryForm({
                 {categoriaPai.icone} {categoriaPai.nome}
               </span>
             </p>
+            {categoriaPai.cor && (
+              <p className="text-xs text-white/60 flex items-center gap-2">
+                <span
+                  className="w-4 h-4 rounded border border-white/20"
+                  style={{ backgroundColor: categoriaPai.cor }}
+                />
+                Cor base da categoria
+                <span className="mx-1">→</span>
+                <span
+                  className="w-4 h-4 rounded border border-white/20"
+                  style={{ backgroundColor: corPadrao }}
+                />
+                Cor derivada (mais clara)
+              </p>
+            )}
           </div>
         )}
 
@@ -180,7 +227,7 @@ export function CategoryForm({
 
           {/* Seletor de Ícone */}
           <div className="space-y-3">
-            <Label className="text-white text-sm font-medium">Ícone</Label>
+            <Label className="text-white text-sm font-medium" style={{ color: '#ffffff' }}>Ícone</Label>
             <div className="grid grid-cols-9 gap-2">
               {ICONES_COMUNS.map((i) => (
                 <button
@@ -197,6 +244,10 @@ export function CategoryForm({
                       icone === i
                         ? "rgba(24, 176, 164, 0.2)"
                         : "rgba(255, 255, 255, 0.05)",
+                    borderColor:
+                      icone === i
+                        ? "#18B0A4"
+                        : "rgba(255, 255, 255, 0.2)",
                   }}
                 >
                   {i}
@@ -205,7 +256,13 @@ export function CategoryForm({
             </div>
 
             {/* Input customizado para emoji */}
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-[#1e293b] border border-white/20">
+            <div
+              className="flex items-center gap-3 p-3 rounded-lg bg-[#1e293b] border border-white/20"
+              style={{
+                backgroundColor: '#1e293b',
+                borderColor: 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
               <span className="text-3xl">{icone}</span>
               <input
                 type="text"
@@ -214,9 +271,13 @@ export function CategoryForm({
                 placeholder="Ou digite um emoji..."
                 maxLength={10}
                 className="flex-1 bg-transparent text-white placeholder:text-white/50 outline-none text-sm"
+                style={{
+                  backgroundColor: 'transparent',
+                  color: '#ffffff',
+                }}
               />
             </div>
-            <p className="text-xs text-white/60">
+            <p className="text-xs text-white/60" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
               Selecione um ícone ou digite qualquer emoji
             </p>
           </div>

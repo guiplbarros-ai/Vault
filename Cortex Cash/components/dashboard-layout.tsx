@@ -2,10 +2,10 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useDatabase } from "@/hooks/use-database"
+import { useState } from "react"
+import { useDB } from "@/app/providers/db-provider"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, ArrowLeftRight, Wallet, PieChart, CreditCard, Settings, Upload, Menu, X, FolderTree, Hash, TrendingUp, FileText, Brain } from "lucide-react"
+import { LayoutDashboard, ArrowLeftRight, Wallet, PieChart, CreditCard, Settings, Upload, Menu, X, FolderTree, Hash, TrendingUp, FileText, Target } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -14,6 +14,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { FinancialAlertsProvider } from "@/components/financial-alerts-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { GlobalErrorHandler } from "@/components/global-error-handler"
+import { DemoModeBanner } from "@/components/demo/demo-mode-banner"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -23,8 +24,8 @@ const navigation = [
   { name: "Contas", href: "/accounts", icon: Wallet },
   { name: "Cartões de Crédito", href: "/credit-cards", icon: CreditCard },
   { name: "Orçamentos", href: "/budgets", icon: PieChart },
+  { name: "Planejamento", href: "/planejamento", icon: Target },
   { name: "Evolução Patrimonial", href: "/wealth", icon: TrendingUp },
-  { name: "Analytics de IA", href: "/analytics", icon: Brain },
   { name: "Imposto de Renda", href: "/tax", icon: FileText },
   { name: "Importar", href: "/import", icon: Upload },
   { name: "Configurações", href: "/settings", icon: Settings },
@@ -33,19 +34,7 @@ const navigation = [
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
-  const { isInitialized, isLoading, error } = useDatabase()
-
-  // Mostra loading enquanto inicializa o banco
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Inicializando sistema...</p>
-        </div>
-      </div>
-    )
-  }
+  const { isInitialized, error } = useDB()
 
   // Mostra erro se houver
   if (error) {
@@ -63,6 +52,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <ErrorBoundary>
       <GlobalErrorHandler />
       <FinancialAlertsProvider enabled={isInitialized}>
+        <DemoModeBanner />
         <div className="min-h-screen">
         {/* Mobile sidebar backdrop */}
         {sidebarOpen && (

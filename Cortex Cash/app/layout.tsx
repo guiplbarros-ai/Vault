@@ -6,6 +6,7 @@ import { DBProvider } from "./providers/db-provider"
 import { SettingsProvider } from "./providers/settings-provider"
 import { ThemeInitializer } from "@/components/theme-initializer"
 import { ServiceWorkerUpdatePrompt } from "@/components/service-worker-update-prompt"
+import { OnboardingCheck } from "@/components/onboarding-check"
 
 const inter = Inter({ subsets: ["latin"] })
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] })
@@ -53,7 +54,9 @@ export default function RootLayout({
         <SettingsProvider>
           <ThemeInitializer />
           <DBProvider>
-            {children}
+            <OnboardingCheck>
+              {children}
+            </OnboardingCheck>
             <ServiceWorkerUpdatePrompt />
           </DBProvider>
         </SettingsProvider>

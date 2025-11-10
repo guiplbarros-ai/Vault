@@ -33,23 +33,37 @@ export function ColorPicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            'w-full justify-start text-left font-normal',
-            !value && 'text-muted-foreground',
+            'w-full justify-start text-left font-normal text-white',
             className
           )}
+          style={{
+            color: '#ffffff',
+            backgroundColor: '#1e293b',
+            borderColor: 'rgba(255, 255, 255, 0.2)'
+          }}
         >
           <div className="flex items-center gap-2">
             {value && (
               <div
                 className="h-4 w-4 rounded-full border"
-                style={{ backgroundColor: value }}
+                style={{
+                  backgroundColor: value,
+                  borderColor: 'rgba(255, 255, 255, 0.3)'
+                }}
               />
             )}
-            <span>{value || 'Selecione uma cor'}</span>
+            <span style={{ color: '#ffffff' }}>{value || 'Selecione uma cor'}</span>
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-3" align="start">
+      <PopoverContent
+        className="w-64 p-3"
+        align="start"
+        style={{
+          backgroundColor: '#1e293b',
+          borderColor: 'rgba(255, 255, 255, 0.2)'
+        }}
+      >
         <div className="grid grid-cols-6 gap-2">
           {colors.map((color) => (
             <button
@@ -58,9 +72,12 @@ export function ColorPicker({
               onClick={() => onChange?.(color)}
               className={cn(
                 'h-8 w-8 rounded-md border-2 transition-all hover:scale-110',
-                value === color ? 'border-foreground' : 'border-transparent'
+                value === color ? 'border-white' : 'border-transparent'
               )}
-              style={{ backgroundColor: color }}
+              style={{
+                backgroundColor: color,
+                borderColor: value === color ? '#ffffff' : 'transparent'
+              }}
             >
               {value === color && (
                 <Check className="h-4 w-4 text-white drop-shadow-md mx-auto" />

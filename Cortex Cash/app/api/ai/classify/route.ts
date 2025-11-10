@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!descricao || !valor || !tipo) {
+    if (!descricao || valor === undefined || valor === null || !tipo) {
       return NextResponse.json(
         { error: 'Missing required fields: descricao, valor, tipo' },
         { status: 400 }

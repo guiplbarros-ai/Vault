@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, ChevronRight, ChevronDown, MoreVertical, Edit, Trash2, Merge, Plus } from "lucide-react";
+import { GripVertical, ChevronRight, ChevronDown, MoreVertical, Edit, Trash2, Merge, Plus, BarChart3 } from "lucide-react";
 import { Categoria } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +67,7 @@ export interface SortableCategoryItemProps {
   onMerge?: (categoria: Categoria) => void;
   onAddSubcategoria?: (categoria: Categoria) => void;
   onSelect?: (categoria: Categoria) => void;
+  onViewAnalytics?: (categoria: Categoria) => void;
 }
 
 export function SortableCategoryItem({
@@ -80,6 +81,7 @@ export function SortableCategoryItem({
   onMerge,
   onAddSubcategoria,
   onSelect,
+  onViewAnalytics,
 }: SortableCategoryItemProps) {
   const {
     attributes,
@@ -226,6 +228,19 @@ export function SortableCategoryItem({
             >
               <Edit className="mr-2 h-4 w-4" />
               Editar
+            </DropdownMenuItem>
+          )}
+          {onViewAnalytics && categoria.tipo === 'despesa' && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewAnalytics(categoria);
+              }}
+              className="text-white hover:!bg-white/10 focus:!bg-white/10 cursor-pointer"
+              style={{ color: '#ffffff' }}
+            >
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Ver Análise
             </DropdownMenuItem>
           )}
           {onAddSubcategoria && !categoria.pai_id && (

@@ -102,7 +102,7 @@ export function AssetAllocationChart() {
         }}
       >
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
             Alocação de Ativos
           </CardTitle>
         </CardHeader>
@@ -126,7 +126,7 @@ export function AssetAllocationChart() {
         }}
       >
         <CardHeader>
-          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
             Alocação de Ativos
           </CardTitle>
           <CardDescription className={isDark ? 'text-white/70' : 'text-gray-600'}>
@@ -158,7 +158,7 @@ export function AssetAllocationChart() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Wallet className={isDark ? 'h-5 w-5 text-[#1AD4C4]' : 'h-5 w-5 text-[#18B0A4]'} />
-          <CardTitle className={isDark ? 'text-white' : 'text-gray-900'}>
+          <CardTitle className={isDark ? 'text-white' : 'text-white'}>
             Alocação de Ativos
           </CardTitle>
         </div>
@@ -198,10 +198,10 @@ export function AssetAllocationChart() {
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}
                 />
-                <span className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <span className={`text-sm ${isDark ? 'text-white' : 'text-white'}`}>
                   {entry.name}
                 </span>
-                <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-white'}`}>
                   {entry.percentual.toFixed(1)}%
                 </span>
               </div>
@@ -219,7 +219,7 @@ export function AssetAllocationChart() {
                   Total em Contas
                 </span>
               </div>
-              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-white'}`}>
                 {formatCurrency(data.contas)}
               </span>
             </div>
@@ -230,15 +230,15 @@ export function AssetAllocationChart() {
                   Total em Investimentos
                 </span>
               </div>
-              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-white'}`}>
                 {formatCurrency(data.investimentos)}
               </span>
             </div>
             <div className="flex items-center justify-between border-t border-white/10 pt-3">
-              <span className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`text-base font-semibold ${isDark ? 'text-white' : 'text-white'}`}>
                 Patrimônio Total
               </span>
-              <span className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`text-base font-semibold ${isDark ? 'text-white' : 'text-white'}`}>
                 {formatCurrency(data.contas + data.investimentos)}
               </span>
             </div>

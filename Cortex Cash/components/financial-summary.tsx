@@ -271,3 +271,6 @@ export function FinancialSummary() {
     </div>
   )
 }
+
+// ✅ Default export para dynamic import
+export default FinancialSummary

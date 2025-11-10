@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { memo } from 'react'
 import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
@@ -25,7 +26,8 @@ export interface StatCardProps {
   bottomBarColor?: string
 }
 
-export function StatCard({
+// ✅ Memoizar StatCard para evitar re-renders desnecessários
+export const StatCard = memo(function StatCard({
   title,
   value,
   icon: Icon,
@@ -146,4 +148,4 @@ export function StatCard({
   }
 
   return cardElement
-}
+})

@@ -53,6 +53,8 @@ const getAccountIcon = (type: string) => {
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Conta[]>([])
+  const [filteredAccounts, setFilteredAccounts] = useState<Conta[]>([])
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all')
   const [loading, setLoading] = useState(true)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [accountToDelete, setAccountToDelete] = useState<string | null>(null)
@@ -70,6 +72,15 @@ export default function AccountsPage() {
   useEffect(() => {
     loadAccounts()
   }, [])
+
+  // Aplica filtros quando accounts ou selectedTypeFilter mudam
+  useEffect(() => {
+    if (selectedTypeFilter === 'all') {
+      setFilteredAccounts(accounts)
+    } else {
+      setFilteredAccounts(accounts.filter(acc => acc.tipo === selectedTypeFilter))
+    }
+  }, [accounts, selectedTypeFilter])
 
   const loadAccounts = async () => {
     try {
@@ -198,6 +209,14 @@ export default function AccountsPage() {
 
   const totalBalance = accounts.reduce((sum, account) => sum + (account.saldo_atual || 0), 0)
 
+  const typeFilters = [
+    { value: 'all', label: 'Todas', icon: Wallet },
+    { value: 'corrente', label: 'Corrente', icon: Building2 },
+    { value: 'poupanca', label: 'Poupança', icon: PiggyBank },
+    { value: 'investimento', label: 'Investimento', icon: TrendingUp },
+    { value: 'carteira', label: 'Carteira', icon: Wallet },
+  ]
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -254,9 +273,60 @@ export default function AccountsPage() {
           </CardContent>
         </Card>
 
+        {/* Type Filters */}
+        <div className="flex gap-2 flex-wrap">
+          {typeFilters.map((filter) => {
+            const Icon = filter.icon
+            const isActive = selectedTypeFilter === filter.value
+            const count = filter.value === 'all'
+              ? accounts.length
+              : accounts.filter(a => a.tipo === filter.value).length
+
+            return (
+              <button
+                key={filter.value}
+                onClick={() => setSelectedTypeFilter(filter.value)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                  isActive
+                    ? 'text-white shadow-lg'
+                    : 'text-white/70 border-white/20 hover:bg-white/5'
+                }`}
+                style={
+                  isActive
+                    ? {
+                        background: 'linear-gradient(135deg, #18B0A4 0%, #16a89d 100%)',
+                        backgroundColor: '#18B0A4',
+                        borderColor: '#18B0A4'
+                      }
+                    : undefined
+                }
+              >
+                <Icon className="h-4 w-4" />
+                <span className="text-sm font-medium">{filter.label}</span>
+                <Badge
+                  variant="secondary"
+                  className={`ml-1 ${
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-white/10 text-white/70'
+                  }`}
+                >
+                  {count}
+                </Badge>
+              </button>
+            )
+          })}
+        </div>
+
         {/* Accounts Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account) => {
+          {filteredAccounts.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <Wallet className="h-12 w-12 text-white/30 mx-auto mb-4" />
+              <p className="text-white/70">Nenhuma conta encontrada para este filtro.</p>
+            </div>
+          ) : (
+            filteredAccounts.map((account) => {
             const Icon = getAccountIcon(account.tipo)
             const formType = mapDBAccountTypeToFormType(account.tipo)
             return (
@@ -365,7 +435,8 @@ export default function AccountsPage() {
                 </CardContent>
               </Card>
             )
-          })}
+          })
+          )}
         </div>
 
         {/* Form Dialog for Create/Edit */}

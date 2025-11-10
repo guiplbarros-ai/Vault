@@ -139,3 +139,6 @@ export function RecentTransactions() {
     </Card>
   )
 }
+
+// ✅ Default export para dynamic import
+export default RecentTransactions

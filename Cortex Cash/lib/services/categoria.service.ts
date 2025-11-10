@@ -11,6 +11,31 @@ import type { ICategoriaService } from './interfaces';
 import { validateDTO, createCategoriaSchema } from '../validations/dtos';
 import { NotFoundError, ValidationError, DatabaseError } from '../errors';
 
+/**
+ * Deriva uma cor mais clara (para subcategoria) a partir da cor base
+ * Aumenta o brilho em aproximadamente 20%
+ */
+function derivarCorSubcategoria(corBase: string): string {
+  // Remove o # se existir
+  const hex = corBase.replace('#', '');
+
+  // Converte hex para RGB
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+
+  // Aumenta o brilho misturando com branco (20% branco)
+  const lighten = (c: number) => Math.min(255, Math.round(c + (255 - c) * 0.2));
+
+  const newR = lighten(r);
+  const newG = lighten(g);
+  const newB = lighten(b);
+
+  // Converte de volta para hex
+  const toHex = (n: number) => n.toString(16).padStart(2, '0');
+  return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+}
+
 export class CategoriaService implements ICategoriaService {
   async listCategorias(options?: {
     tipo?: string;
@@ -87,27 +112,43 @@ export class CategoriaService implements ICategoriaService {
 
       const db = getDB();
 
-    const id = crypto.randomUUID();
-    const now = new Date();
+      // Se tem pai_id, buscar a categoria pai
+      let categoriaPai: Categoria | undefined;
+      if (validatedData.pai_id) {
+        categoriaPai = await db.categorias.get(validatedData.pai_id);
+        if (!categoriaPai) {
+          throw new NotFoundError('Categoria pai', validatedData.pai_id);
+        }
+      }
 
-    const categoria: Categoria = {
-      id,
-      nome: validatedData.nome,
-      tipo: validatedData.tipo,
-      grupo: validatedData.grupo,
-      icone: validatedData.icone,
-      cor: validatedData.cor,
-      ordem: validatedData.ordem || 0,
-      ativa: true,
-      created_at: now,
-      updated_at: now,
-    };
+      // Derivar cor da categoria pai se não foi fornecida
+      let cor = validatedData.cor;
+      if (!cor && categoriaPai?.cor) {
+        cor = derivarCorSubcategoria(categoriaPai.cor);
+      }
+
+      const id = crypto.randomUUID();
+      const now = new Date();
+
+      const categoria: Categoria = {
+        id,
+        nome: validatedData.nome,
+        tipo: validatedData.tipo,
+        grupo: validatedData.grupo,
+        pai_id: validatedData.pai_id || undefined,
+        icone: validatedData.icone,
+        cor: cor,
+        ordem: validatedData.ordem || 0,
+        ativa: true,
+        created_at: now,
+        updated_at: now,
+      };
 
       await db.categorias.add(categoria);
 
       return categoria;
     } catch (error) {
-      if (error instanceof ValidationError) {
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
         throw error;
       }
       throw new DatabaseError('Erro ao criar categoria', error as Error);
@@ -123,8 +164,14 @@ export class CategoriaService implements ICategoriaService {
         throw new NotFoundError('Categoria', id);
       }
 
+      // Filtrar valores null para undefined (Dexie não aceita null)
+      const updateData: any = { ...data };
+      if (updateData.pai_id === null) {
+        updateData.pai_id = undefined;
+      }
+
       await db.categorias.update(id, {
-        ...data,
+        ...updateData,
         updated_at: new Date(),
       });
 

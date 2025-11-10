@@ -11,7 +11,7 @@ import type { ITransacaoService } from './interfaces';
 import { generateTransactionHash } from '../import/dedupe';
 import { generateHash } from '../utils/format';
 import { validateDTO, createTransacaoSchema } from '../validations/dtos';
-import { NotFoundError, ValidationError, DatabaseError } from '../errors';
+import { NotFoundError, ValidationError, DatabaseError, DuplicateError } from '../errors';
 import { contaService } from './conta.service';
 import { orcamentoService } from './orcamento.service';
 import { format } from 'date-fns';
@@ -141,8 +141,32 @@ export class TransacaoService implements ITransacaoService {
   }): Promise<Transacao[]> {
     const db = getDB();
 
-    // Buscar todas as transações
-    let transacoes = await db.transacoes.toArray();
+    // Buscar transações de forma eficiente usando índices quando possível
+    let transacoes: Transacao[];
+    try {
+      // Tenta reduzir o universo usando um índice adequado quando filtros permitem
+      if (filters?.dataInicio || filters?.dataFim) {
+        // Intervalo por data
+        const start = filters.dataInicio ? (filters.dataInicio instanceof Date ? filters.dataInicio : new Date(filters.dataInicio)) : new Date(0);
+        const end = filters.dataFim ? (filters.dataFim instanceof Date ? filters.dataFim : new Date(filters.dataFim)) : new Date(8640000000000000);
+        transacoes = await db.transacoes.where('data').between(start, end, true, true).toArray();
+      } else if (filters?.contaId) {
+        // Filtro por conta
+        transacoes = await db.transacoes.where('conta_id').equals(filters.contaId).toArray();
+      } else if (filters?.categoriaId) {
+        // Filtro por categoria
+        transacoes = await db.transacoes.where('categoria_id').equals(filters.categoriaId).toArray();
+      } else if (filters?.tipo) {
+        // Filtro por tipo
+        transacoes = await db.transacoes.where('tipo').equals(filters.tipo).toArray();
+      } else {
+        // Sem filtros primários: carrega todas
+        transacoes = await db.transacoes.toArray();
+      }
+    } catch {
+      // Fallback seguro caso algum índice falhe
+      transacoes = await db.transacoes.toArray();
+    }
 
     // Aplicar filtros
     if (filters?.contaId) {
@@ -250,6 +274,12 @@ export class TransacaoService implements ITransacaoService {
       valor: validatedData.valor,
     }, validatedData.conta_id);
 
+    // Verifica duplicidade antes de inserir
+    const duplicates = await db.transacoes.where('hash').equals(canonicalHash).count();
+    if (duplicates > 0) {
+      throw new DuplicateError('Transação', 'hash');
+    }
+
     const transacao: Transacao = {
       id,
       conta_id: validatedData.conta_id,
@@ -324,6 +354,40 @@ export class TransacaoService implements ITransacaoService {
     if (data.data !== undefined) {
       updated.data = typeof data.data === 'string' ? new Date(data.data) : data.data;
     }
+
+      // Recalcula hash se algum dos campos que o compõem mudou
+      const nextContaId = updated.conta_id ?? existing.conta_id;
+      const nextData =
+        updated.data !== undefined
+          ? (updated.data instanceof Date ? updated.data : new Date(updated.data))
+          : (existing.data instanceof Date ? existing.data : new Date(existing.data));
+      const nextDescricao = updated.descricao ?? existing.descricao;
+      const nextValor = updated.valor ?? existing.valor;
+
+      const hashRelevantChanged =
+        nextContaId !== existing.conta_id ||
+        nextDescricao !== existing.descricao ||
+        nextValor !== existing.valor ||
+        nextData.getTime() !== (existing.data instanceof Date ? existing.data.getTime() : new Date(existing.data).getTime());
+
+      if (hashRelevantChanged) {
+        const newHash = await generateTransactionHash(
+          {
+            data: nextData,
+            descricao: nextDescricao,
+            valor: nextValor,
+          },
+          nextContaId
+        );
+
+        if (newHash !== existing.hash) {
+          const other = await db.transacoes.where('hash').equals(newHash).first();
+          if (other && other.id !== id) {
+            throw new DuplicateError('Transação', 'hash');
+          }
+          updated.hash = newHash;
+        }
+      }
 
       await db.transacoes.update(id, updated);
 

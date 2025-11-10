@@ -1,28 +1,67 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { useSettings, useLocalizationSettings } from '@/app/providers/settings-provider'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
-import { CashFlowChart } from "@/components/cash-flow-chart"
-import { RecentTransactions } from "@/components/recent-transactions"
-import { BudgetOverview } from "@/components/budget-overview"
-import { ExpenseDistributionChart } from "@/components/expense-distribution-chart"
-import { ExpenseTrendsChart } from "@/components/expense-trends-chart"
-import { IncomeTrendsChart } from "@/components/income-trends-chart"
-import { PopularTagsWidget } from "@/components/popular-tags-widget"
-import { PopularCategoriesWidget } from "@/components/popular-categories-widget"
-import { AccuracyWidget } from "@/components/classification/accuracy-widget"
-import { AIUsageCard } from "@/components/ai-usage-card"
-import { WealthEvolutionChart } from "@/components/wealth-evolution-chart"
-import { FinancialSummary } from "@/components/financial-summary"
 import { MonthPicker } from "@/components/ui/month-picker"
 import { transacaoService } from '@/lib/services/transacao.service'
 import { contaService } from '@/lib/services/conta.service'
-import { startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns'
+import { startOfMonth, endOfMonth } from 'date-fns'
 import type { Transacao, Conta } from '@/lib/types'
-import { Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, Loader2 } from 'lucide-react'
+
+// ✅ Lazy load heavy Recharts components com default exports
+const CashFlowChart = dynamic(() => import('@/components/cash-flow-chart'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false
+})
+const ExpenseDistributionChart = dynamic(() => import('@/components/expense-distribution-chart'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false
+})
+const ExpenseTrendsChart = dynamic(() => import('@/components/expense-trends-chart'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false
+})
+const IncomeTrendsChart = dynamic(() => import('@/components/income-trends-chart'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false
+})
+const WealthEvolutionChart = dynamic(() => import('@/components/wealth-evolution-chart'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false
+})
+
+// ✅ Lazy load other heavy components
+const BudgetOverview = dynamic(() => import('@/components/budget-overview'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false
+})
+const RecentTransactions = dynamic(() => import('@/components/recent-transactions'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false
+})
+const FinancialSummary = dynamic(() => import('@/components/financial-summary'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false
+})
+
+// Lightweight components (não precisa lazy load)
+import { PopularTagsWidget } from "@/components/popular-tags-widget"
+import { PopularCategoriesWidget } from "@/components/popular-categories-widget"
+import { AccuracyWidget } from "@/components/classification/accuracy-widget"
+
+// ✅ Skeleton para charts durante carregamento
+function ChartSkeleton() {
+  return (
+    <div className="h-[400px] w-full rounded-xl border bg-card p-6 flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  )
+}
 
 interface DashboardStats {
   totalBalance: number
@@ -51,10 +90,14 @@ export default function DashboardPage() {
       try {
         setLoading(true)
 
-        // Carrega todas as contas e transações
+        // Define intervalo do mês selecionado ANTES de buscar para reduzir IO
+        const monthStart = startOfMonth(selectedMonth)
+        const monthEnd = endOfMonth(selectedMonth)
+
+        // Carrega contas e apenas transações do mês atual (via índice)
         const [contas, transacoes] = await Promise.all([
           contaService.listContas(),
-          transacaoService.listTransacoes(),
+          transacaoService.listTransacoes({ dataInicio: monthStart, dataFim: monthEnd }),
         ])
 
         if (!mounted) return
@@ -65,14 +108,8 @@ export default function DashboardPage() {
           return acc + saldo
         }, 0)
 
-        // Filtra transações do mês selecionado
-        const monthStart = startOfMonth(selectedMonth)
-        const monthEnd = endOfMonth(selectedMonth)
-
-        const currentMonthTransactions = transacoes.filter(t => {
-          const transactionDate = t.data instanceof Date ? t.data : new Date(t.data)
-          return transactionDate >= monthStart && transactionDate <= monthEnd
-        })
+        // Já buscamos transações do mês; evita refiltrar aqui
+        const currentMonthTransactions = transacoes
 
         // Calcula receitas e despesas do mês
         const monthlyIncome = currentMonthTransactions
@@ -126,7 +163,8 @@ export default function DashboardPage() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   }, [theme])
 
-  const statsCards = [
+  // ✅ Memoizar statsCards para evitar recriação a cada render
+  const statsCards = useMemo(() => [
     {
       title: "Saldo Total",
       value: loading ? "Carregando..." : formatCurrency(stats.totalBalance),
@@ -194,7 +232,7 @@ export default function DashboardPage() {
         ? (isDark ? '#4ADE80' : '#22C55E') // Verde para Saving
         : (isDark ? '#FA6B6B' : '#EF4444'), // Vermelho para Queima
     },
-  ]
+  ], [stats, loading, isDark, formatCurrency])
 
   return (
     <DashboardLayout>
@@ -219,11 +257,6 @@ export default function DashboardPage() {
           {statsCards.map((stat) => (
             <StatCard key={stat.title} {...stat} />
           ))}
-        </div>
-
-        {/* AI Usage Card */}
-        <div className="max-w-md">
-          <AIUsageCard />
         </div>
 
         {/* Charts and Recent Data */}
