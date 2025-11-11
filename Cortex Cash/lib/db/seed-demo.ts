@@ -16,6 +16,11 @@ import type { Instituicao, Conta, Transacao, Categoria, TipoConta } from '../typ
  * Seed de dados demo completo
  */
 export async function seedDemoData() {
+  // Verificação: só funciona no browser
+  if (typeof window === 'undefined') {
+    throw new Error('seedDemoData só pode ser executado no navegador');
+  }
+
   console.log('[DEMO SEED] Iniciando seed de dados demo...');
 
   try {

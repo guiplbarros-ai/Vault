@@ -157,40 +157,49 @@ export default function DashboardPage() {
 
   // Função para popular dados de demo
   const handlePopulateDemo = async () => {
+    // Verificação de segurança: só executa no cliente
+    if (typeof window === 'undefined') {
+      console.error('seedDemoData só pode ser executado no cliente')
+      return
+    }
+
     setPopulatingDemo(true)
     try {
       console.log('Iniciando população de dados demo...')
 
-      // Chamar API endpoint
-      const response = await fetch('/api/demo/populate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
+      // Importação dinâmica (lazy load)
+      const seedModule = await import('@/lib/db/seed-demo')
+      console.log('Módulo seed-demo importado')
 
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || result.message || 'Erro desconhecido')
-      }
-
-      console.log('Resultado do seed:', result.data)
+      // Executar seed
+      const result = await seedModule.seedDemoData()
+      console.log('Seed concluído:', result)
 
       toast.success('Dados demo carregados!', {
-        description: `${result.data.contas} contas e ${result.data.transacoes} transações criadas.`,
+        description: `${result.contas} contas e ${result.transacoes} transações criadas.`,
+        duration: 3000,
       })
 
-      // Recarregar dados
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Aguardar um pouco antes de recarregar
+      await new Promise(resolve => setTimeout(resolve, 1500))
+
+      // Recarregar página
       window.location.reload()
     } catch (error) {
-      console.error('Erro ao popular dados demo:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      console.error('Erro detalhado ao popular dados demo:', error)
+
+      // Extrair mensagem de erro
+      let errorMessage = 'Erro desconhecido'
+      if (error instanceof Error) {
+        errorMessage = error.message
+        console.error('Stack trace:', error.stack)
+      }
+
       toast.error('Erro ao carregar dados demo', {
         description: errorMessage,
+        duration: 5000,
       })
-    } finally {
+
       setPopulatingDemo(false)
     }
   }
