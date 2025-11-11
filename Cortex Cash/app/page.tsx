@@ -160,15 +160,25 @@ export default function DashboardPage() {
     setPopulatingDemo(true)
     try {
       console.log('Iniciando população de dados demo...')
-      const { seedDemoData } = await import('@/lib/db/seed-demo')
 
-      console.log('Executando seedDemoData...')
-      const result = await seedDemoData()
+      // Chamar API endpoint
+      const response = await fetch('/api/demo/populate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-      console.log('Resultado do seed:', result)
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || result.message || 'Erro desconhecido')
+      }
+
+      console.log('Resultado do seed:', result.data)
 
       toast.success('Dados demo carregados!', {
-        description: `${result.contas} contas e ${result.transacoes} transações criadas.`,
+        description: `${result.data.contas} contas e ${result.data.transacoes} transações criadas.`,
       })
 
       // Recarregar dados
