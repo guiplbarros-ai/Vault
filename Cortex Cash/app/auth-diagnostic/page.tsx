@@ -40,11 +40,15 @@ export default function AuthDiagnosticPage() {
         const categorias = await db.categorias.toArray();
 
         for (const conta of contas) {
-          contasPorUsuario[conta.usuario_id] = (contasPorUsuario[conta.usuario_id] || 0) + 1;
+          if (conta.usuario_id) {
+            contasPorUsuario[conta.usuario_id] = (contasPorUsuario[conta.usuario_id] || 0) + 1;
+          }
         }
 
         for (const transacao of transacoes) {
-          transacoesPorUsuario[transacao.usuario_id] = (transacoesPorUsuario[transacao.usuario_id] || 0) + 1;
+          if (transacao.usuario_id) {
+            transacoesPorUsuario[transacao.usuario_id] = (transacoesPorUsuario[transacao.usuario_id] || 0) + 1;
+          }
         }
 
         for (const categoria of categorias) {

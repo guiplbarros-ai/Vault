@@ -88,8 +88,10 @@ export function MonthPicker({
         onClick={handlePreviousMonth}
         variant="default"
         className="h-10 w-10 rounded-lg"
+        aria-label="Mês anterior"
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-5 w-5" />
+        <span className="sr-only">Mês anterior</span>
       </Button>
 
       <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -115,8 +117,10 @@ export function MonthPicker({
                 size="icon"
                 onClick={handlePreviousYear}
                 className="h-10 w-10 rounded-lg"
+                aria-label="Ano anterior"
               >
                 <ChevronLeft className="h-5 w-5" />
+                <span className="sr-only">Ano anterior</span>
               </Button>
               <div className="text-2xl font-bold">
                 {calendarYear}
@@ -126,8 +130,10 @@ export function MonthPicker({
                 size="icon"
                 onClick={handleNextYear}
                 className="h-10 w-10 rounded-lg"
+                aria-label="Próximo ano"
               >
                 <ChevronRight className="h-5 w-5" />
+                <span className="sr-only">Próximo ano</span>
               </Button>
             </div>
           </div>
@@ -176,8 +182,10 @@ export function MonthPicker({
         onClick={handleNextMonth}
         variant="default"
         className="h-10 w-10 rounded-lg"
+        aria-label="Próximo mês"
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-5 w-5" />
+        <span className="sr-only">Próximo mês</span>
       </Button>
     </div>
   )

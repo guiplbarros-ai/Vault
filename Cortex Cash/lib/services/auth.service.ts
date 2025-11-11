@@ -141,8 +141,17 @@ export class AuthService {
         expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 dias
       };
 
+      console.log('[AUTH] login: Sessão criada:', {
+        userId: session.userId,
+        email: session.email,
+        expiresAt: new Date(session.expiresAt).toISOString(),
+        validFor: '30 dias'
+      });
+
       // Salvar no localStorage
       this.saveSession(session);
+
+      console.log('[AUTH] login: Sessão salva no localStorage');
 
       return session;
     } catch (error) {
@@ -169,26 +178,37 @@ export class AuthService {
    */
   getSession(): AuthSession | null {
     if (typeof window === 'undefined') {
+      console.log('[AUTH] getSession: Executando no servidor (SSR)');
       return null;
     }
 
     try {
       const sessionStr = localStorage.getItem(AUTH_STORAGE_KEY);
       if (!sessionStr) {
+        console.log('[AUTH] getSession: Nenhuma sessão encontrada no localStorage');
         return null;
       }
 
       const session: AuthSession = JSON.parse(sessionStr);
+      console.log('[AUTH] getSession: Sessão encontrada:', {
+        userId: session.userId,
+        email: session.email,
+        expiresAt: new Date(session.expiresAt).toISOString(),
+        now: new Date().toISOString(),
+        timeLeft: `${Math.round((session.expiresAt - Date.now()) / (60 * 60 * 1000))} horas`
+      });
 
       // Verificar se sessão expirou
       if (session.expiresAt < Date.now()) {
+        console.warn('[AUTH] getSession: Sessão expirada! Fazendo logout...');
         this.logout();
         return null;
       }
 
+      console.log('[AUTH] getSession: Sessão válida');
       return session;
     } catch (error) {
-      console.error('Erro ao recuperar sessão:', error);
+      console.error('[AUTH] Erro ao recuperar sessão:', error);
       this.logout();
       return null;
     }
@@ -213,17 +233,36 @@ export class AuthService {
    * Retorna o usuário autenticado completo
    */
   async getCurrentUser(): Promise<Usuario | null> {
+    console.log('[AUTH] getCurrentUser: Iniciando...');
+
     const session = this.getSession();
     if (!session) {
+      console.log('[AUTH] getCurrentUser: Nenhuma sessão válida');
       return null;
     }
 
     try {
       const db = getDB();
+      console.log('[AUTH] getCurrentUser: Buscando usuário no banco com ID:', session.userId);
+
       const usuario = await db.usuarios.get(session.userId);
-      return usuario || null;
+
+      if (!usuario) {
+        console.warn('[AUTH] getCurrentUser: Usuário não encontrado no banco! ID:', session.userId);
+        return null;
+      }
+
+      console.log('[AUTH] getCurrentUser: Usuário encontrado:', {
+        id: usuario.id,
+        email: usuario.email,
+        nome: usuario.nome,
+        role: usuario.role,
+        ativo: usuario.ativo
+      });
+
+      return usuario;
     } catch (error) {
-      console.error('Erro ao buscar usuário atual:', error);
+      console.error('[AUTH] getCurrentUser: Erro ao buscar usuário:', error);
       return null;
     }
   }

@@ -597,35 +597,27 @@ export default function TransactionsPage() {
 
         {/* Abas para reduzir quebras e consolidar funcionalidades */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-          <TabsList className="w-full md:w-auto">
-            <TabsTrigger value="filters">
+          <TabsList className="grid w-full max-w-md grid-cols-3 glass-header p-1">
+            <TabsTrigger value="filters" className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground">
               Filtros
             </TabsTrigger>
-            <TabsTrigger value="ai">
+            <TabsTrigger value="ai" className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground">
               Modo AI
             </TabsTrigger>
-            <TabsTrigger value="import">
+            <TabsTrigger value="import" className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground">
               Importar
             </TabsTrigger>
           </TabsList>
 
           {/* Lista de Transações + Filtros */}
           <TabsContent value="filters" className="space-y-6">
-            {/* Card Unificado de Filtros (TEMA.md: superfície sólida) */}
-            <Card
-              style={{
-                backgroundColor: '#18332C',
-                borderColor: '#2A4942',
-                borderWidth: '1px',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-1)',
-              }}
-            >
+            {/* Card Unificado de Filtros */}
+            <Card className="glass-card-3d">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <CardTitle className="text-base" style={{ color: '#F2F7F5' }}>Filtros</CardTitle>
-                  <CardDescription className="text-xs" style={{ color: '#B2BDB9' }}>
+                  <CardTitle className="text-base text-foreground">Filtros</CardTitle>
+                  <CardDescription className="text-xs text-secondary">
                     Filtre as transações por categoria, tag ou período
                   </CardDescription>
                 </div>
@@ -651,20 +643,13 @@ export default function TransactionsPage() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent
-                    className="max-w-2xl max-h-[90vh] overflow-y-auto"
-                    style={{
-                      backgroundColor: '#18332C',
-                      borderColor: '#2A4942',
-                      borderWidth: '1px',
-                      borderRadius: 'var(--radius-md)',
-                      boxShadow: 'var(--shadow-2)',
-                    }}
+                    className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border-border"
                   >
                     <DialogHeader>
-                      <DialogTitle style={{ color: '#F2F7F5' }}>
+                      <DialogTitle className="text-foreground">
                         {editMode ? 'Editar Transação' : 'Nova Transação Manual'}
                       </DialogTitle>
-                      <DialogDescription style={{ color: '#B2BDB9' }}>
+                      <DialogDescription className="text-secondary">
                         {editMode
                           ? 'Edite os dados da transação selecionada.'
                           : 'Adicione manualmente uma nova transação ao seu histórico financeiro.'}
@@ -694,13 +679,52 @@ export default function TransactionsPage() {
                 </Dialog>
               </div>
             </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* Filtros rápidos pré-definidos */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={selectedCategory === 'all' && selectedTag === 'all' && selectedSubcategory === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      setSelectedCategory('all')
+                      setSelectedTag('all')
+                      setSelectedSubcategory('all')
+                    }}
+                  >
+                    Todas
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const receitaCategorias = categorias.filter(c => c.tipo === 'receita')
+                      if (receitaCategorias.length > 0) {
+                        setSelectedCategory(receitaCategorias[0].id)
+                      }
+                    }}
+                  >
+                    Receitas
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const despesaCategorias = categorias.filter(c => c.tipo === 'despesa')
+                      if (despesaCategorias.length > 0) {
+                        setSelectedCategory(despesaCategorias[0].id)
+                      }
+                    }}
+                  >
+                    Despesas
+                  </Button>
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-3 items-end">
 
                   {/* Filtro de Categoria */}
                   {categorias.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium" style={{ color: '#B2BDB9' }}>Categoria</Label>
+                      <Label className="text-sm font-medium text-secondary">Categoria</Label>
                       <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                         <SelectTrigger className="w-full text-sm">
                           <SelectValue placeholder="Todas as categorias" />
@@ -729,7 +753,7 @@ export default function TransactionsPage() {
                   {/* Filtro de Subcategoria */}
                   {categorias.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium" style={{ color: '#B2BDB9' }}>Subcategoria</Label>
+                      <Label className="text-sm font-medium text-secondary">Subcategoria</Label>
                       <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
                         <SelectTrigger className="w-full text-sm">
                           <SelectValue placeholder="Todas as subcategorias" />
@@ -760,7 +784,7 @@ export default function TransactionsPage() {
                   {/* Filtro de Tag */}
                   {tags.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium" style={{ color: '#B2BDB9' }}>Tag</Label>
+                      <Label className="text-sm font-medium text-secondary">Tag</Label>
                       <Select value={selectedTag} onValueChange={setSelectedTag}>
                         <SelectTrigger className="w-full text-sm">
                           <SelectValue placeholder="Todas as tags" />
@@ -823,10 +847,10 @@ export default function TransactionsPage() {
                   )}
                 </div>
 
-                {/* Indicador de resultados (TEMA.md: divider e fg-muted) */}
-                {(selectedCategory !== 'all' || selectedTag !== 'all') && (
-                  <div className="mt-4 pt-4" style={{ borderTop: '1px solid #213A34' }}>
-                    <p className="text-sm" style={{ color: '#8CA39C' }}>
+                {/* Indicador de resultados */}
+                {(selectedCategory !== 'all' || selectedTag !== 'all' || selectedSubcategory !== 'all') && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <p className="text-sm text-secondary">
                       Mostrando {filteredTransactions.length} de {transactions.length} transações
                     </p>
                   </div>
@@ -882,20 +906,11 @@ export default function TransactionsPage() {
           onConfirm={handleDelete}
         />
 
-        {/* Dialog de Visualização (TEMA.md: superfície sólida) */}
+        {/* Dialog de Visualização */}
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-          <DialogContent
-            className="max-w-lg"
-            style={{
-              backgroundColor: '#18332C',
-              borderColor: '#2A4942',
-              borderWidth: '1px',
-              borderRadius: 'var(--radius-md)',
-              boxShadow: 'var(--shadow-2)',
-            }}
-          >
+          <DialogContent className="max-w-lg bg-card border-border">
             <DialogHeader>
-              <DialogTitle style={{ color: '#F2F7F5' }}>
+              <DialogTitle className="text-foreground">
                 Detalhes da Transação
               </DialogTitle>
             </DialogHeader>
@@ -903,8 +918,8 @@ export default function TransactionsPage() {
               <div className="space-y-4">
                 {/* Data */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Data:</span>
-                  <span className="col-span-2 text-sm" style={{ color: '#F2F7F5' }}>
+                  <span className="text-sm font-medium text-secondary">Data:</span>
+                  <span className="col-span-2 text-sm text-foreground">
                     {(transactionToView.data instanceof Date
                       ? transactionToView.data
                       : new Date(transactionToView.data)
@@ -918,24 +933,24 @@ export default function TransactionsPage() {
 
                 {/* Tipo */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Tipo:</span>
+                  <span className="text-sm font-medium text-secondary">Tipo:</span>
                   <div className="col-span-2 flex items-center gap-2">
                     {transactionToView.tipo === 'receita' && (
                       <>
                         <ArrowUpCircle className="h-4 w-4 text-success" />
-                        <span className="text-sm" style={{ color: '#F2F7F5' }}>Receita</span>
+                        <span className="text-sm text-foreground">Receita</span>
                       </>
                     )}
                     {transactionToView.tipo === 'despesa' && (
                       <>
                         <ArrowDownCircle className="h-4 w-4 text-destructive" />
-                        <span className="text-sm" style={{ color: '#F2F7F5' }}>Despesa</span>
+                        <span className="text-sm text-foreground">Despesa</span>
                       </>
                     )}
                     {transactionToView.tipo === 'transferencia' && (
                       <>
                         <ArrowUpCircle className="h-4 w-4 text-secondary" />
-                        <span className="text-sm" style={{ color: '#F2F7F5' }}>Transferência</span>
+                        <span className="text-sm text-foreground">Transferência</span>
                       </>
                     )}
                   </div>
@@ -943,14 +958,14 @@ export default function TransactionsPage() {
 
                 {/* Descrição */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Descrição:</span>
-                  <span className="col-span-2 text-sm" style={{ color: '#F2F7F5' }}>{transactionToView.descricao}</span>
+                  <span className="text-sm font-medium text-secondary">Descrição:</span>
+                  <span className="col-span-2 text-sm text-foreground">{transactionToView.descricao}</span>
                 </div>
 
                 {/* Valor */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Valor:</span>
-                  <span className="col-span-2 text-sm font-semibold" style={{ color: '#D4AF37' }}>
+                  <span className="text-sm font-medium text-secondary">Valor:</span>
+                  <span className="col-span-2 text-sm font-semibold text-gold">
                     {new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL',
@@ -960,25 +975,25 @@ export default function TransactionsPage() {
 
                 {/* Categoria */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Categoria:</span>
+                  <span className="text-sm font-medium text-secondary">Categoria:</span>
                   <div className="col-span-2 flex items-center gap-2">
                     {transactionToView.categoria_id ? (
                       <>
                         {getCategoriaById(transactionToView.categoria_id)?.icone && (
                           <span className="text-lg">{getCategoriaById(transactionToView.categoria_id)?.icone}</span>
                         )}
-                        <span className="text-sm" style={{ color: '#F2F7F5' }}>{getCategoriaById(transactionToView.categoria_id)?.nome || '-'}</span>
+                        <span className="text-sm text-foreground">{getCategoriaById(transactionToView.categoria_id)?.nome || '-'}</span>
                       </>
                     ) : (
-                      <span className="text-sm" style={{ color: '#F2F7F5' }}>-</span>
+                      <span className="text-sm text-foreground">-</span>
                     )}
                   </div>
                 </div>
 
                 {/* Conta */}
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Conta:</span>
-                  <span className="col-span-2 text-sm" style={{ color: '#F2F7F5' }}>
+                  <span className="text-sm font-medium text-secondary">Conta:</span>
+                  <span className="col-span-2 text-sm text-foreground">
                     {transactionToView.conta_id
                       ? getContaById(transactionToView.conta_id)?.nome || '-'
                       : '-'
@@ -994,7 +1009,7 @@ export default function TransactionsPage() {
 
                   return (
                     <div className="grid grid-cols-3 gap-2">
-                      <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Tags:</span>
+                      <span className="text-sm font-medium text-secondary">Tags:</span>
                       <div className="col-span-2 flex flex-wrap gap-1">
                         {tagArray.map((tagName) => {
                           const tag = getTagByName(tagName)
@@ -1015,8 +1030,8 @@ export default function TransactionsPage() {
                 {/* Observações */}
                 {transactionToView.observacoes && (
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-sm font-medium" style={{ color: '#8CA39C' }}>Observações:</span>
-                    <span className="col-span-2 text-sm" style={{ color: '#F2F7F5' }}>{transactionToView.observacoes}</span>
+                    <span className="text-sm font-medium text-secondary">Observações:</span>
+                    <span className="col-span-2 text-sm text-foreground">{transactionToView.observacoes}</span>
                   </div>
                 )}
               </div>

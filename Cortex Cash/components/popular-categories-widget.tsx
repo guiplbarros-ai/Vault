@@ -90,7 +90,7 @@ export function PopularCategoriesWidget() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="glass-card-3d">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
@@ -104,7 +104,7 @@ export function PopularCategoriesWidget() {
 
   if (popularCategories.length === 0) {
     return (
-      <Card>
+      <Card className="glass-card-3d">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
@@ -119,7 +119,7 @@ export function PopularCategoriesWidget() {
   }
 
   return (
-    <Card>
+    <Card className="glass-card-3d" style={{ minHeight: '380px' }}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>

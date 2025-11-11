@@ -576,8 +576,6 @@ describe('OrcamentoService', () => {
         data: new Date('2025-11-15'),
         centro_custo_id: centroCustoId,
         conta_id: 'test-conta-id',
-        parcelado: false,
-        classificacao_confirmada: false,
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -779,8 +777,6 @@ describe('OrcamentoService', () => {
         data: new Date('2025-11-15'),
         centro_custo_id: centroCustoId,
         conta_id: 'test-conta-id',
-        parcelado: false,
-        classificacao_confirmada: false,
         created_at: new Date(),
         updated_at: new Date(),
       };

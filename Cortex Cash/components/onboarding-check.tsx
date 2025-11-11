@@ -34,6 +34,14 @@ export function OnboardingCheck({ children }: OnboardingCheckProps) {
     checkOnboardingStatus();
   }, [pathname, isInitialized, user]);
 
+  // Evita tela em branco ao navegar para páginas que devem ignorar verificação
+  useEffect(() => {
+    const skip = ['/onboarding', '/setup', '/login', '/register'];
+    if (skip.includes(pathname) && shouldRedirect) {
+      setShouldRedirect(false);
+    }
+  }, [pathname, shouldRedirect]);
+
   const checkOnboardingStatus = async () => {
     // Páginas que não precisam de verificação
     const skipPaths = ['/onboarding', '/setup', '/login', '/register'];
@@ -85,23 +93,36 @@ export function OnboardingCheck({ children }: OnboardingCheckProps) {
     }
   };
 
-  // Se o DB não está inicializado, não mostra nada (DBProvider já está mostrando loading)
+  // Se o DB não está inicializado, o DBProvider já está mostrando loading
+  // Então podemos retornar null aqui sem problemas
   if (!isInitialized) {
     return null;
   }
 
-  if (checking) {
+  // Páginas que não precisam de verificação
+  const skipPaths = ['/onboarding', '/setup', '/login', '/register'];
+
+  // Se estamos verificando e não estamos na página de onboarding/setup/login,
+  // mostrar loading para evitar flash de conteúdo
+  if (checking && !skipPaths.includes(pathname)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          background: 'radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%)',
+          backgroundAttachment: 'fixed',
+        }}
+      >
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-teal-400 mx-auto mb-4" />
-          <p className="text-white/70">Verificando configuração...</p>
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: '#3A8F6E' }} />
+          <p style={{ color: '#BBC5C2' }}>Verificando configuração...</p>
         </div>
       </div>
     );
   }
 
-  if (shouldRedirect) {
+  // Se está redirecionando, não mostrar nada
+  if (shouldRedirect && !skipPaths.includes(pathname)) {
     return null;
   }
 

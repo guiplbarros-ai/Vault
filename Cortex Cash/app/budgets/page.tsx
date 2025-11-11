@@ -188,8 +188,10 @@ export default function BudgetsPage() {
                 onClick={handleMesAnterior}
                 style={{ color: '#F2F7F5' }}
                 className="hover:bg-[#1D3A34]"
+                aria-label="Mês anterior"
               >
                 <ChevronLeft className="h-5 w-5" />
+                <span className="sr-only">Mês anterior</span>
               </Button>
 
               <div className="flex items-center gap-2">
@@ -203,8 +205,10 @@ export default function BudgetsPage() {
                 onClick={handleProximoMes}
                 style={{ color: '#F2F7F5' }}
                 className="hover:bg-[#1D3A34]"
+                aria-label="Próximo mês"
               >
                 <ChevronRight className="h-5 w-5" />
+                <span className="sr-only">Próximo mês</span>
               </Button>
             </div>
           </CardContent>

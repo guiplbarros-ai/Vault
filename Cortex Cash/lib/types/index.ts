@@ -56,7 +56,7 @@ export interface Conta {
   icone?: string;
   observacoes?: string;
   conta_pai_id?: string; // FK para conta pai (para contas vinculadas - poupança, investimento, cartões)
-  usuario_id: string; // FK para usuário (multi-tenant)
+  usuario_id?: string; // FK para usuário (multi-tenant) - opcional por enquanto
   created_at: Date;
   updated_at: Date;
 }
@@ -71,7 +71,7 @@ export interface Categoria {
   cor?: string;
   ordem: number;
   ativa: boolean;
-  is_sistema: boolean; // true = categoria padrão do sistema, false = customizada pelo usuário
+  is_sistema?: boolean; // true = categoria padrão do sistema, false = customizada pelo usuário - opcional com default false
   usuario_id?: string; // FK para usuário (null = sistema, preenchido = user custom)
   created_at: Date;
   updated_at: Date;
@@ -126,16 +126,16 @@ export interface Transacao {
   tags?: string; // JSON array
   transferencia_id?: string;
   conta_destino_id?: string;
-  parcelado: boolean;
+  parcelado?: boolean; // opcional com default false
   parcela_numero?: number;
   parcela_total?: number;
   grupo_parcelamento_id?: string;
-  classificacao_confirmada: boolean;
+  classificacao_confirmada?: boolean; // opcional com default false
   classificacao_origem?: OrigemClassificacao;
   classificacao_confianca?: number;
   hash?: string;
   origem_arquivo?: string;
-  usuario_id: string; // FK para usuário (multi-tenant)
+  usuario_id?: string; // FK para usuário (multi-tenant) - opcional por enquanto
   origem_linha?: number;
   created_at: Date;
   updated_at: Date;
@@ -154,8 +154,8 @@ export interface TemplateImportacao {
   separador_decimal?: string;
   ultima_utilizacao?: Date;
   contador_uso: number;
-  is_favorite: boolean; // Flag para templates favoritados pelo usuário
-  usuario_id: string; // FK para usuário (multi-tenant)
+  is_favorite?: boolean; // Flag para templates favoritados pelo usuário - opcional com default false
+  usuario_id?: string; // FK para usuário (multi-tenant) - opcional por enquanto
   created_at: Date;
   updated_at: Date;
 }
@@ -175,7 +175,7 @@ export interface RegraClassificacao {
   total_confirmacoes: number;  // Vezes que usuário manteve a classificação
   total_rejeicoes: number;     // Vezes que usuário mudou a classificação
 
-  usuario_id: string; // FK para usuário (multi-tenant)
+  usuario_id?: string; // FK para usuário (multi-tenant) - opcional por enquanto
   created_at: Date;
   updated_at: Date;
 }
@@ -208,7 +208,7 @@ export interface CartaoConfig {
   dia_vencimento: number;
   ativo: boolean;
   cor?: string;
-  usuario_id: string; // FK para usuário (multi-tenant)
+  usuario_id?: string; // FK para usuário (multi-tenant) - opcional por enquanto
   created_at: Date;
   updated_at: Date;
 }
@@ -220,10 +220,10 @@ export interface Fatura {
   data_fechamento: Date;
   data_vencimento: Date;
   valor_total: number;
-  valor_minimo: number;
-  valor_pago: number;
+  valor_minimo?: number;
+  valor_pago?: number;
   status: StatusFatura;
-  fechada_automaticamente: boolean;
+  fechada_automaticamente?: boolean;
   data_pagamento?: Date;
   transacao_pagamento_id?: string;
   created_at: Date;
@@ -244,6 +244,7 @@ export interface FaturaLancamento {
   taxa_cambio?: number;
   categoria_id?: string;
   created_at: Date;
+  updated_at?: Date;
 }
 
 export interface CentroCusto {
@@ -253,7 +254,7 @@ export interface CentroCusto {
   cor?: string;
   icone?: string;
   ativo: boolean;
-  usuario_id: string; // FK para usuário (multi-tenant)
+  usuario_id?: string; // FK para usuário (multi-tenant) - opcional por enquanto
   created_at: Date;
   updated_at: Date;
 }
@@ -271,7 +272,7 @@ export interface Orcamento {
   alerta_100: boolean;
   alerta_80_enviado: boolean;
   alerta_100_enviado: boolean;
-  usuario_id: string; // FK para usuário (multi-tenant)
+  usuario_id?: string; // FK para usuário (multi-tenant) - opcional por enquanto
   created_at: Date;
   updated_at: Date;
 }
@@ -294,7 +295,7 @@ export interface Investimento {
   conta_origem_id?: string; // Conta que originou o investimento
   observacoes?: string;
   cor?: string;
-  usuario_id: string; // FK para usuário (multi-tenant)
+  usuario_id?: string; // FK para usuário (multi-tenant) - opcional por enquanto
   created_at: Date;
   updated_at: Date;
 }

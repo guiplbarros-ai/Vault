@@ -3,24 +3,33 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 function Card({ className, ...props }: React.ComponentProps<'div'>) {
+  const isGlassCard = className?.includes('glass-card-3d')
+
   return (
     <div
       data-slot="card"
       className={cn(
         // TEMA.md: Cards com bg-card, border, radius-lg e shadow-1
-        'bg-card text-card-foreground',
+        // EXCETO quando é glass card (tem seu próprio background)
+        !isGlassCard && 'bg-card',
+        'text-card-foreground',
         'flex flex-col gap-6 rounded-[18px]',
         // Garante opacidade total (regra do TEMA.md)
-        'dark:bg-opacity-100 dark:backdrop-blur-none',
+        // EXCETO quando é glass card (precisa de transparência)
+        !isGlassCard && 'dark:bg-opacity-100 dark:backdrop-blur-none',
         // Borda: 1px solid var(--border) conforme TEMA.md
-        'border border-border',
+        // Glass cards têm suas próprias bordas
+        !isGlassCard && 'border border-border',
         // Shadow-1 do TEMA.md
-        'shadow-[0_1px_0_rgba(0,0,0,.35),0_6px_12px_rgba(0,0,0,.25)]',
+        // Glass cards têm suas próprias sombras
+        !isGlassCard && 'shadow-[0_1px_0_rgba(0,0,0,.35),0_6px_12px_rgba(0,0,0,.25)]',
         // Hover: mantém elevação
-        'hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]',
+        !isGlassCard && 'hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]',
         // Transição suave
         'transition-all duration-300',
-        'relative py-6',
+        // Padding vertical apenas para cards normais (glass cards aplicam seu próprio padding)
+        !isGlassCard && 'py-6',
+        'relative',
         className,
       )}
       {...props}

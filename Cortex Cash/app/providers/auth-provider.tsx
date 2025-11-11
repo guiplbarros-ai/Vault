@@ -28,15 +28,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Carrega usuário da sessão
   const loadUser = useCallback(async () => {
+    console.log('[AuthProvider] loadUser: Iniciando...');
     try {
       setIsLoading(true);
       const usuario = await authService.getCurrentUser();
-      setUser(usuario);
+
+      if (usuario) {
+        console.log('[AuthProvider] loadUser: Usuário carregado com sucesso:', usuario.email);
+        setUser(usuario);
+      } else {
+        console.log('[AuthProvider] loadUser: Nenhum usuário encontrado, setando como null');
+        setUser(null);
+      }
     } catch (error) {
-      console.error('Erro ao carregar usuário:', error);
+      console.error('[AuthProvider] loadUser: Erro ao carregar usuário:', error);
       setUser(null);
     } finally {
       setIsLoading(false);
+      console.log('[AuthProvider] loadUser: Concluído');
     }
   }, []);
 

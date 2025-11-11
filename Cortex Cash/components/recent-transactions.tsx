@@ -68,7 +68,7 @@ export function RecentTransactions() {
   }
 
   return (
-    <Card className="p-6 shadow-md">
+    <Card className="glass-card-3d p-6" style={{ minHeight: '420px' }}>
       <div className="mb-6">
         <h3 className="text-lg font-bold text-card-foreground">Transações Recentes</h3>
         <p className="text-sm text-secondary">Sua atividade financeira mais recente</p>

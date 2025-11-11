@@ -216,8 +216,10 @@ export function CategoryAnalyticsDashboard({
                 variant="outline"
                 size="sm"
                 onClick={handleMesAnterior}
+                aria-label="Mês anterior"
               >
                 <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Mês anterior</span>
               </Button>
 
               <Button
@@ -235,8 +237,10 @@ export function CategoryAnalyticsDashboard({
                 onClick={handleProximoMes}
                 disabled={mesReferencia.getMonth() === new Date().getMonth() &&
                           mesReferencia.getFullYear() === new Date().getFullYear()}
+                aria-label="Próximo mês"
               >
                 <ChevronRight className="h-4 w-4" />
+                <span className="sr-only">Próximo mês</span>
               </Button>
             </div>
           </div>

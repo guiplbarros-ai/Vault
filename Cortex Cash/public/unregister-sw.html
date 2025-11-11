@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desregistrar Service Worker - Cortex Cash</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%);
+            background-attachment: fixed;
+            color: #F2F7F5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            background: #1a362f;
+            border: 1px solid #2d5247;
+            border-radius: 18px;
+            padding: 32px;
+            box-shadow: 0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3);
+        }
+        h1 {
+            margin-top: 0;
+            color: #F2F7F5;
+        }
+        .status {
+            padding: 16px;
+            border-radius: 12px;
+            margin: 20px 0;
+            background: #152b26;
+            border: 1px solid #2d5247;
+        }
+        .success {
+            background: #1a3329;
+            border-color: #3A8F6E;
+            color: #5FC883;
+        }
+        .error {
+            background: #3d1f1f;
+            border-color: #8b3a3a;
+            color: #F07167;
+        }
+        button {
+            background: #3A8F6E;
+            color: #F2F7F5;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            width: 100%;
+            margin-top: 16px;
+        }
+        button:hover {
+            background: #2E7D6B;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .info {
+            color: #B2BDB9;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 16px 0;
+        }
+        pre {
+            background: #0a1512;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+            color: #8CA39C;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Desregistrar Service Worker</h1>
+
+        <div class="info">
+            Esta página irá desregistrar o Service Worker do Cortex Cash que está causando o redirecionamento para a página offline.
+        </div>
+
+        <div id="status" class="status" style="display: none;"></div>
+
+        <button onclick="unregisterServiceWorker()">Desregistrar Service Worker</button>
+
+        <div id="details" style="display: none; margin-top: 20px;">
+            <h3>Detalhes Técnicos:</h3>
+            <pre id="detailsContent"></pre>
+        </div>
+
+        <div class="info" style="margin-top: 24px; font-size: 13px; color: #8CA39C;">
+            <strong>O que isso faz?</strong><br>
+            Remove o Service Worker registrado no navegador que está interceptando as requisições HTTP.
+        </div>
+    </div>
+
+    <script>
+        async function unregisterServiceWorker() {
+            const statusEl = document.getElementById('status');
+            const detailsEl = document.getElementById('details');
+            const detailsContent = document.getElementById('detailsContent');
+
+            statusEl.style.display = 'block';
+            statusEl.className = 'status';
+            statusEl.textContent = '⏳ Verificando Service Workers...';
+
+            try {
+                if (!('serviceWorker' in navigator)) {
+                    statusEl.className = 'status error';
+                    statusEl.textContent = '❌ Service Workers não são suportados neste navegador.';
+                    return;
+                }
+
+                const registrations = await navigator.serviceWorker.getRegistrations();
+
+                if (registrations.length === 0) {
+                    statusEl.className = 'status success';
+                    statusEl.textContent = '✅ Nenhum Service Worker registrado encontrado.';
+                    detailsContent.textContent = 'Nenhum Service Worker ativo no momento.';
+                    detailsEl.style.display = 'block';
+                    return;
+                }
+
+                let details = `Encontrados ${registrations.length} Service Worker(s):\n\n`;
+
+                for (const registration of registrations) {
+                    details += `Scope: ${registration.scope}\n`;
+                    const unregistered = await registration.unregister();
+                    details += `Desregistrado: ${unregistered ? 'Sim ✅' : 'Não ❌'}\n\n`;
+                }
+
+                statusEl.className = 'status success';
+                statusEl.innerHTML = `✅ Service Worker(s) desregistrado(s) com sucesso!<br><br>
+                    <strong>Próximos passos:</strong><br>
+                    1. Feche TODAS as abas do Cortex Cash<br>
+                    2. Aguarde 5 segundos<br>
+                    3. Abra uma nova aba e acesse <a href="/" style="color: #5FC883;">http://localhost:3000</a>`;
+
+                detailsContent.textContent = details;
+                detailsEl.style.display = 'block';
+
+                // Limpar cache também
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    for (const cacheName of cacheNames) {
+                        await caches.delete(cacheName);
+                        details += `Cache deletado: ${cacheName}\n`;
+                    }
+                    detailsContent.textContent = details;
+                }
+
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = `❌ Erro: ${error.message}`;
+                detailsContent.textContent = error.stack || error.message;
+                detailsEl.style.display = 'block';
+            }
+        }
+
+        // Auto-executar quando a página carregar
+        window.addEventListener('load', () => {
+            // Aguardar 1 segundo antes de executar automaticamente
+            setTimeout(unregisterServiceWorker, 1000);
+        });
+    </script>
+</body>
+</html>

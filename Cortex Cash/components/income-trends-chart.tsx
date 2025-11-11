@@ -140,7 +140,7 @@ export function IncomeTrendsChart() {
   }
 
   return (
-    <Card className="p-6 shadow-md border-border flex flex-col h-full bg-gradient-to-br from-card to-background" style={{
+    <Card className="glass-card-3d p-6 flex flex-col h-full" style={{
       minHeight: '420px'
     }}>
       <div className="mb-6 flex-shrink-0">

@@ -37,7 +37,8 @@ describe('RelatorioService', () => {
       instituicao_id: instituicaoId,
       nome: 'Conta Teste',
       tipo: 'corrente',
-      saldo_inicial: 1000,
+      saldo_referencia:1000,
+      data_referencia: new Date(),
       saldo_atual: 1000,
       ativa: true,
       created_at: new Date(),
@@ -581,10 +582,10 @@ describe('RelatorioService', () => {
 
       // Janeiro
       await db.transacoes.bulkAdd([
-        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T1', valor: -100, tipo: 'despesa', categoria_id: cat1, created_at: new Date(), updated_at: new Date() },
-        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T2', valor: -100, tipo: 'despesa', categoria_id: cat2, created_at: new Date(), updated_at: new Date() },
-        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T3', valor: -100, tipo: 'despesa', categoria_id: cat3, created_at: new Date(), updated_at: new Date() },
-        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T4', valor: -100, tipo: 'despesa', categoria_id: cat4, created_at: new Date(), updated_at: new Date() },
+        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T1', valor: -100, tipo: 'despesa', categoria_id: cat1, parcelado: false, classificacao_confirmada: false, created_at: new Date(), updated_at: new Date() },
+        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T2', valor: -100, tipo: 'despesa', categoria_id: cat2, parcelado: false, classificacao_confirmada: false, created_at: new Date(), updated_at: new Date() },
+        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T3', valor: -100, tipo: 'despesa', categoria_id: cat3, parcelado: false, classificacao_confirmada: false, created_at: new Date(), updated_at: new Date() },
+        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T4', valor: -100, tipo: 'despesa', categoria_id: cat4, parcelado: false, classificacao_confirmada: false, created_at: new Date(), updated_at: new Date() },
       ]);
 
       // Fevereiro (aumentos diferentes)
@@ -616,14 +617,14 @@ describe('RelatorioService', () => {
 
       // Janeiro
       await db.transacoes.bulkAdd([
-        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T1', valor: -500, tipo: 'despesa', categoria_id: cat1, created_at: new Date(), updated_at: new Date() },
-        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T2', valor: -300, tipo: 'despesa', categoria_id: cat2, created_at: new Date(), updated_at: new Date() },
+        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T1', valor: -500, tipo: 'despesa', categoria_id: cat1, parcelado: false, classificacao_confirmada: false, created_at: new Date(), updated_at: new Date() },
+        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-01-15'), descricao: 'T2', valor: -300, tipo: 'despesa', categoria_id: cat2, parcelado: false, classificacao_confirmada: false, created_at: new Date(), updated_at: new Date() },
       ]);
 
       // Fevereiro (reduções)
       await db.transacoes.bulkAdd([
-        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-02-15'), descricao: 'T1', valor: -100, tipo: 'despesa', categoria_id: cat1, created_at: new Date(), updated_at: new Date() }, // -400
-        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-02-15'), descricao: 'T2', valor: -150, tipo: 'despesa', categoria_id: cat2, created_at: new Date(), updated_at: new Date() }, // -150
+        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-02-15'), descricao: 'T1', valor: -100, tipo: 'despesa', categoria_id: cat1, parcelado: false, classificacao_confirmada: false, created_at: new Date(), updated_at: new Date() }, // -400
+        { id: crypto.randomUUID(), conta_id: contaId, data: new Date('2024-02-15'), descricao: 'T2', valor: -150, tipo: 'despesa', categoria_id: cat2, parcelado: false, classificacao_confirmada: false, created_at: new Date(), updated_at: new Date() }, // -150
       ]);
 
       const comparativo = await relatorioService.gerarRelatorioComparativo('2024-02');

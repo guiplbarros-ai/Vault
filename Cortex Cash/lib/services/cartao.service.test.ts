@@ -40,7 +40,8 @@ describe('CartaoService', () => {
       instituicao_id: instituicaoId,
       nome: 'Conta Corrente',
       tipo: 'corrente',
-      saldo_inicial: 1000,
+      saldo_referencia: 1000,
+      data_referencia: new Date(),
       saldo_atual: 1000,
       ativa: true,
       created_at: new Date(),
@@ -802,7 +803,7 @@ describe('CartaoService', () => {
       await expect(
         service.pagarFatura({
           fatura_id: faturaId,
-          conta_id: contaId,
+          conta_pagamento_id: contaId,
           valor_pago: 2000, // Maior que valor_total
           data_pagamento: new Date(),
         })

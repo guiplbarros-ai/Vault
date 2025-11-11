@@ -48,16 +48,9 @@ export const StatCard = memo(function StatCard({
   return (
     <Card
       className={cn(
-        'relative overflow-hidden transition-all duration-200',
+        'glass-card-3d-intense relative overflow-hidden',
         className
       )}
-      style={{
-        backgroundColor: cardBgColor,
-        borderColor: 'var(--border)',
-        borderWidth: '1px',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-1)',
-      }}
     >
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">

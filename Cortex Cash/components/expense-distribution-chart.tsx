@@ -162,24 +162,24 @@ export function ExpenseDistributionChart() {
     )
   }
 
-  // Custom tooltip com melhor contraste e design compacto (TEMA.md)
+  // Custom tooltip com melhor contraste e design compacto
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
         <div
           style={{
-            backgroundColor: '#142A25',
-            border: '1px solid #2A4942',
+            backgroundColor: 'hsl(var(--bg-card-2))',
+            border: `1px solid hsl(var(--border))`,
             borderRadius: 'var(--radius-md)',
             padding: '6px 10px',
             boxShadow: 'var(--shadow-2)',
           }}
         >
-          <p style={{ color: '#F2F7F5', fontSize: '11px', fontWeight: 600, margin: 0, marginBottom: '2px' }}>
+          <p style={{ color: 'hsl(var(--fg-primary))', fontSize: '11px', fontWeight: 600, margin: 0, marginBottom: '2px' }}>
             {data.name}
           </p>
-          <p style={{ color: '#B2BDB9', fontSize: '10px', margin: 0 }}>
+          <p style={{ color: 'hsl(var(--fg-secondary))', fontSize: '10px', margin: 0 }}>
             {formatCurrency(data.value)}
           </p>
         </div>
@@ -190,21 +190,16 @@ export function ExpenseDistributionChart() {
 
   return (
     <Card
-      className="p-6 overflow-hidden flex flex-col h-full"
+      className="glass-card-3d p-6 overflow-hidden flex flex-col h-full"
       style={{
         minHeight: '420px',
-        backgroundColor: '#18322C',
-        borderColor: '#2A4942',
-        borderWidth: '1px',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-1)',
       }}
     >
       <div className="mb-6 flex-shrink-0">
-        <h3 className="text-lg font-bold" style={{ color: '#F2F7F5' }}>
+        <h3 className="text-lg font-bold text-foreground">
           Distribuição de Despesas
         </h3>
-        <p className="text-sm" style={{ color: '#B2BDB9' }}>
+        <p className="text-sm text-secondary">
           Todas as categorias do mês
         </p>
       </div>

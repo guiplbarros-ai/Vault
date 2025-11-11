@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useDB } from '@/app/providers/db-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +35,7 @@ type OnboardingStep = 'welcome' | 'choose-mode' | 'create-account' | 'demo-confi
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { isInitialized } = useDB();
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [selectedMode, setSelectedMode] = useState<'demo' | 'real' | null>(null);
   const [loading, setLoading] = useState(false);
@@ -41,8 +43,16 @@ export default function OnboardingPage() {
 
   // Verificar se já existe onboarding completo
   useEffect(() => {
-    checkOnboardingStatus();
-  }, []);
+    // Só verificar quando o DB estiver realmente pronto
+    if (!isInitialized) return;
+
+    // Aguardar um pouco para garantir que o DB está totalmente inicializado
+    const timer = setTimeout(() => {
+      checkOnboardingStatus();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [isInitialized]);
 
   const checkOnboardingStatus = async () => {
     try {
@@ -70,6 +80,7 @@ export default function OnboardingPage() {
       setChecking(false);
     } catch (error) {
       console.error('Erro ao verificar status do onboarding:', error);
+      // Se houver erro, mostrar a tela de qualquer forma
       setChecking(false);
     }
   };
@@ -168,7 +179,8 @@ export default function OnboardingPage() {
     router.push('/');
   };
 
-  if (checking) {
+  // Mostrar loading enquanto o DB não estiver pronto ou enquanto estiver verificando
+  if (!isInitialized || checking) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
@@ -179,7 +191,9 @@ export default function OnboardingPage() {
       >
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: '#3A8F6E' }} />
-          <p style={{ color: '#BBC5C2' }}>Verificando configuração inicial...</p>
+          <p style={{ color: '#BBC5C2' }}>
+            {!isInitialized ? 'Inicializando banco de dados...' : 'Verificando configuração inicial...'}
+          </p>
         </div>
       </div>
     );
@@ -266,7 +280,7 @@ export default function OnboardingPage() {
                   onClick={() => router.push('/login')}
                   size="lg"
                   variant="outline"
-                  className="px-8"
+                  className="px-12 justify-center items-center"
                   style={{
                     backgroundColor: '#152b26',
                     border: '1px solid #2d5247',
@@ -279,7 +293,7 @@ export default function OnboardingPage() {
                 <Button
                   onClick={() => setStep('choose-mode')}
                   size="lg"
-                  className="px-8"
+                  className="px-12"
                   style={{
                     backgroundColor: '#3A8F6E',
                     color: '#F7FAF9',
@@ -288,7 +302,7 @@ export default function OnboardingPage() {
                   }}
                 >
                   Começar
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="w-5 h-5" style={{ color: '#F7FAF9', stroke: '#F7FAF9' }} />
                 </Button>
               </div>
             </CardContent>
@@ -483,8 +497,10 @@ export default function OnboardingPage() {
               <div className="flex gap-3 justify-center">
                 <Button
                   variant="outline"
+                  size="lg"
                   onClick={() => setStep('choose-mode')}
                   disabled={loading}
+                  className="px-8"
                   style={{
                     backgroundColor: '#152b26',
                     border: '1px solid #2d5247',
@@ -508,13 +524,13 @@ export default function OnboardingPage() {
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" style={{ stroke: '#F7FAF9' }} />
                       Criando dados...
                     </>
                   ) : (
                     <>
                       Confirmar e Popular
-                      <ArrowRight className="ml-2 h-5 w-5" />
+                      <ArrowRight className="ml-2 h-5 w-5" style={{ stroke: '#F7FAF9' }} />
                     </>
                   )}
                 </Button>
@@ -602,7 +618,7 @@ export default function OnboardingPage() {
                   }}
                 >
                   Ir para o Dashboard
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-5 w-5" style={{ stroke: '#F7FAF9' }} />
                 </Button>
               </div>
             </CardContent>

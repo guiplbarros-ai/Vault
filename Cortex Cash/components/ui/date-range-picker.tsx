@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { DateRange } from 'react-day-picker'
@@ -74,6 +74,15 @@ export function DateRangePicker({
 
     if (!range.to) {
       return format(range.from, 'dd/MM/yyyy', { locale: ptBR })
+    }
+
+    // Verifica se o range é um mês completo
+    const monthStart = startOfMonth(range.from)
+    const monthEnd = endOfMonth(range.from)
+
+    if (isSameDay(range.from, monthStart) && isSameDay(range.to, monthEnd)) {
+      // É um mês completo, exibe no formato "Mês - Ano"
+      return format(range.from, 'MMMM - yyyy', { locale: ptBR })
     }
 
     return `${format(range.from, 'dd/MM/yyyy', { locale: ptBR })} - ${format(range.to, 'dd/MM/yyyy', { locale: ptBR })}`

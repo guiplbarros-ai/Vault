@@ -5,6 +5,8 @@
   "scripts": {
     "build": "next build",
     "dev": "NODE_OPTIONS='--no-warnings' next dev",
+    "dev:clean": "rm -rf .next && npm run dev",
+    "dev:kill": "pkill -f 'next dev' || true && pkill -f 'next-server' || true && rm -rf .next && npm run dev",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "start": "next start",

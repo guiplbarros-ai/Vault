@@ -138,7 +138,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border text-foreground transform transition-transform duration-200 ease-in-out lg:translate-x-0",
+          "glass-sidebar fixed inset-y-0 left-0 z-50 w-64 text-foreground transform transition-transform duration-200 ease-in-out lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -249,7 +249,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 px-6 bg-card border-b border-border text-foreground">
+        <header className="glass-header sticky top-0 z-30 flex h-16 items-center gap-4 px-6 text-foreground">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>

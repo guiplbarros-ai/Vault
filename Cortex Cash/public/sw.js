@@ -4,7 +4,7 @@
  * Provides offline functionality and caching strategies
  */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = `cortex-cash-${CACHE_VERSION}`;
 
 // Assets to cache on install
@@ -14,7 +14,7 @@ const PRECACHE_ASSETS = [
 ];
 
 // Routes that should work offline
-const OFFLINE_ROUTES = [
+const _OFFLINE_ROUTES = [
   '/',
   '/transactions',
   '/accounts',
@@ -78,6 +78,12 @@ self.addEventListener('fetch', (event) => {
 
   // Skip non-GET requests
   if (request.method !== 'GET') {
+    return;
+  }
+
+  // Next.js build assets: prefer network to get new versions quickly
+  if (url.pathname.startsWith('/_next/')) {
+    event.respondWith(networkFirst(request));
     return;
   }
 

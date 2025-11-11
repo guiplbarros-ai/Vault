@@ -4,6 +4,165 @@
 /* Habilita variante dark baseada em classe (.dark) no Tailwind v4 */
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================================
+   3D GLASS EFFECT - Cards com Glassmorphism e Profundidade 3D
+   IMPORTANTE: Deve vir ANTES dos estilos forçados para ter prioridade
+   ============================================================================ */
+
+/* Classe base para efeito 3D glass */
+.glass-card-3d {
+  /* Glassmorphism - fundo semi-transparente com blur */
+  background: rgba(26, 54, 47, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+
+  /* Bordas sutis com brilho interno */
+  border: 1px solid rgba(58, 143, 110, 0.3) !important;
+
+  /* Sombras em múltiplas camadas para profundidade 3D */
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2),
+    0 10px 15px -3px rgba(0, 0, 0, 0.25),
+    0 20px 25px -5px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 20px 0 rgba(58, 143, 110, 0.03) !important;
+
+  /* Transform 3D inicial */
+  transform: perspective(1000px) rotateX(0deg) translateZ(0px);
+  transform-style: preserve-3d;
+
+  /* Transição suave */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Garante que o conteúdo fique visível */
+  opacity: 1 !important;
+}
+
+.glass-card-3d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  opacity: 0.5;
+}
+
+.glass-card-3d:hover {
+  /* Elevação no hover */
+  transform: perspective(1000px) rotateX(1.5deg) translateZ(10px) scale(1.01);
+
+  /* Sombra mais pronunciada no hover */
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.4),
+    0 4px 6px -2px rgba(0, 0, 0, 0.25),
+    0 20px 25px -5px rgba(0, 0, 0, 0.3),
+    0 30px 35px -7px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 30px 0 rgba(58, 143, 110, 0.05),
+    0 0 40px -10px rgba(58, 143, 110, 0.15) !important;
+
+  /* Aumenta o blur levemente */
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+
+  /* Fundo mais opaco */
+  background: rgba(26, 54, 47, 0.8) !important;
+
+  /* Border mais visível */
+  border: 1px solid rgba(58, 143, 110, 0.5) !important;
+}
+
+/* Variante com efeito mais intenso para cards importantes */
+.glass-card-3d-intense {
+  /* Herda da base */
+  background: rgba(31, 61, 54, 0.75) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+
+  border: 1px solid rgba(58, 143, 110, 0.4) !important;
+
+  box-shadow:
+    0 8px 10px -2px rgba(0, 0, 0, 0.35),
+    0 4px 6px -1px rgba(0, 0, 0, 0.25),
+    0 15px 20px -5px rgba(0, 0, 0, 0.3),
+    0 25px 30px -7px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 25px 0 rgba(58, 143, 110, 0.05),
+    0 0 30px -5px rgba(58, 143, 110, 0.1) !important;
+
+  transform: perspective(1000px) rotateX(0deg) translateZ(0px);
+  transform-style: preserve-3d;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1 !important;
+}
+
+.glass-card-3d-intense::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(58, 143, 110, 0.3) 50%,
+    transparent 100%
+  );
+  opacity: 0.7;
+}
+
+.glass-card-3d-intense:hover {
+  transform: perspective(1000px) rotateX(2deg) translateZ(14px) scale(1.02);
+  background: rgba(31, 61, 54, 0.85) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+
+  border: 1px solid rgba(58, 143, 110, 0.6) !important;
+
+  box-shadow:
+    0 12px 18px -4px rgba(0, 0, 0, 0.45),
+    0 6px 8px -2px rgba(0, 0, 0, 0.3),
+    0 25px 30px -7px rgba(0, 0, 0, 0.35),
+    0 35px 40px -10px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 35px 0 rgba(58, 143, 110, 0.08),
+    0 0 50px -8px rgba(58, 143, 110, 0.2) !important;
+}
+
+/* Wrapper para garantir que o conteúdo interno fique correto */
+.glass-card-3d > *,
+.glass-card-3d-intense > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Efeito glass para header/topbar */
+.glass-header {
+  background: rgba(26, 54, 47, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(58, 143, 110, 0.3) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Efeito glass para sidebar */
+.glass-sidebar {
+  background: rgba(14, 24, 20, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-right: 1px solid rgba(58, 143, 110, 0.3) !important;
+}
+
+
 /* ==========================================================================
    FORÇA CORES VERDE ESCURO (CORES.md) - SEM AFETAR LAYOUT
    ========================================================================== */
@@ -38,35 +197,44 @@ body[class] {
 }
 
 /* Força opacidade total em cards e containers (sem translucência) */
-[data-slot="card"],
-.card,
-.bg-card,
+/* EXCETO quando tem efeito glass 3D */
+[data-slot="card"]:not(.glass-card-3d):not(.glass-card-3d-intense),
+.card:not(.glass-card-3d):not(.glass-card-3d-intense),
+.bg-card:not(.glass-card-3d):not(.glass-card-3d-intense),
 aside,
 header,
-main,
-[class*="card"] {
+main {
   opacity: 1 !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
 /* Força background sólido em cards — NOVO: Melhor contraste */
-[data-slot="card"],
-.card,
-.bg-card {
+/* EXCETO quando tem efeito glass 3D */
+[data-slot="card"]:not(.glass-card-3d):not(.glass-card-3d-intense),
+.card:not(.glass-card-3d):not(.glass-card-3d-intense),
+.bg-card:not(.glass-card-3d):not(.glass-card-3d-intense) {
   background-color: #1a362f !important;
   border-color: #2d5247 !important;
 }
 
-/* Sidebar com background sólido */
+/* Sidebar com gradiente azul-verde */
 aside {
-  background-color: #0e1814 !important;
+  background: linear-gradient(180deg,
+    #0e1814 0%,
+    #0f1a1f 50%,
+    #0e1814 100%
+  ) !important;
   border-right: 1px solid #2d5247 !important;
 }
 
-/* Header com background sólido */
+/* Header com gradiente sutil */
 header {
-  background-color: #1a362f !important;
+  background: linear-gradient(90deg,
+    #1a362f 0%,
+    #1a2e36 50%,
+    #1a362f 100%
+  ) !important;
   border-bottom: 1px solid #2d5247 !important;
 }
 
@@ -1060,3 +1228,144 @@ canvas {
   box-shadow: 0 2px 8px rgba(0,0,0,.4) !important;
 }
 
+/* ============================================================================
+   OPÇÃO 2: GRADIENTES COLORIDOS (Moderada)
+   Cards com glow colorido e backgrounds tintados
+   ============================================================================ */
+
+/* Cards principais com glow colorido no hover */
+.card-highlight:hover,
+.card-glow:hover {
+  box-shadow:
+    0 0 20px rgba(95, 200, 131, 0.15),
+    0 4px 6px rgba(0,0,0,.3) !important;
+  transition: all 0.3s ease;
+}
+
+/* Cards de receita com background tintado e glow verde */
+.card-income,
+[data-type="income"] {
+  background: linear-gradient(135deg, #1a3329 0%, #1f3d36 100%) !important;
+  border-left: 4px solid #5FC883 !important;
+}
+
+.card-income:hover,
+[data-type="income"]:hover {
+  box-shadow:
+    0 0 20px rgba(95, 200, 131, 0.2),
+    0 4px 6px rgba(0,0,0,.3) !important;
+}
+
+/* Cards de despesa com background tintado e glow vermelho */
+.card-expense,
+[data-type="expense"] {
+  background: linear-gradient(135deg, #2e1f1f 0%, #3a2525 100%) !important;
+  border-left: 4px solid #F07167 !important;
+}
+
+.card-expense:hover,
+[data-type="expense"]:hover {
+  box-shadow:
+    0 0 20px rgba(240, 113, 103, 0.2),
+    0 4px 6px rgba(0,0,0,.3) !important;
+}
+
+/* Cards de saldo/balance com background tintado e glow azul */
+.card-balance,
+[data-type="balance"] {
+  background: linear-gradient(135deg, #1a262e 0%, #1f3239 100%) !important;
+  border-left: 4px solid #7AA6BF !important;
+}
+
+.card-balance:hover,
+[data-type="balance"]:hover {
+  box-shadow:
+    0 0 20px rgba(122, 166, 191, 0.2),
+    0 4px 6px rgba(0,0,0,.3) !important;
+}
+
+/* Áreas de gráficos com background tintado */
+.chart-container-income {
+  background: radial-gradient(ellipse at top,
+    rgba(95, 200, 131, 0.05) 0%,
+    transparent 70%
+  ) !important;
+}
+
+.chart-container-expense {
+  background: radial-gradient(ellipse at top,
+    rgba(240, 113, 103, 0.05) 0%,
+    transparent 70%
+  ) !important;
+}
+
+.chart-container-balance {
+  background: radial-gradient(ellipse at top,
+    rgba(122, 166, 191, 0.05) 0%,
+    transparent 70%
+  ) !important;
+}
+
+/* Badges com cores mais vibrantes e gradientes */
+.badge-success {
+  background: linear-gradient(135deg, #5FC883 0%, #4fb070 100%) !important;
+  border: 1px solid #5FC883 !important;
+  color: #0e1814 !important;
+  font-weight: 600;
+}
+
+.badge-error,
+.badge-danger {
+  background: linear-gradient(135deg, #F07167 0%, #d96159 100%) !important;
+  border: 1px solid #F07167 !important;
+  color: #0e1814 !important;
+  font-weight: 600;
+}
+
+.badge-warning {
+  background: linear-gradient(135deg, #E0B257 0%, #c99a45 100%) !important;
+  border: 1px solid #E0B257 !important;
+  color: #0e1814 !important;
+  font-weight: 600;
+}
+
+.badge-info {
+  background: linear-gradient(135deg, #7AA6BF 0%, #6891aa 100%) !important;
+  border: 1px solid #7AA6BF !important;
+  color: #0e1814 !important;
+  font-weight: 600;
+}
+
+/* Botões com gradiente sutil */
+button[data-slot="button"]:not([class*="outline"]):not([class*="ghost"]),
+.btn-primary {
+  background: linear-gradient(135deg, #3A8F6E 0%, #2E7D6B 100%) !important;
+}
+
+button[data-slot="button"]:hover:not([class*="outline"]):not([class*="ghost"]),
+.btn-primary:hover {
+  background: linear-gradient(135deg, #48a080 0%, #3A8F6E 100%) !important;
+}
+
+/* Progress bars com gradiente colorido */
+[role="progressbar"] > div {
+  background: linear-gradient(90deg, #3A8F6E 0%, #5FC883 100%) !important;
+}
+
+/* Gráficos com cores mais saturadas */
+:root {
+  --chart-1: hsl(140, 55%, 65%) !important;  /* Verde mais saturado */
+  --chart-2: hsl(4, 85%, 70%) !important;    /* Vermelho mais saturado */
+  --chart-3: hsl(42, 70%, 65%) !important;   /* Amarelo mais saturado */
+  --chart-4: hsl(200, 35%, 65%) !important;  /* Azul mais saturado */
+  --chart-5: hsl(30, 40%, 62%) !important;   /* Laranja mais saturado */
+  --chart-6: hsl(200, 18%, 68%) !important;  /* Cinza com mais vida */
+}
+
+
+/* ============================================================================
+   3D GLASS EFFECT - Cards com Glassmorphism e Profundidade 3D
+   Adicionar no final do globals.css
+   ============================================================================ */
+
+/* Classe base para efeito 3D glass */

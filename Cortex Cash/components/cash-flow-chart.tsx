@@ -123,19 +123,14 @@ export function CashFlowChart() {
 
   return (
     <Card
-      className="p-6 overflow-hidden flex flex-col h-full"
+      className="glass-card-3d p-6 overflow-hidden flex flex-col h-full"
       style={{
         minHeight: '520px',
-        backgroundColor: THEME_COLORS.bgCard,
-        borderColor: THEME_COLORS.border,
-        borderWidth: '1px',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-1)',
       }}
     >
       <div className="mb-4 flex-shrink-0">
-        <h3 className="text-lg font-bold" style={{ color: THEME_COLORS.fgPrimary }}>Fluxo de Caixa</h3>
-        <p className="text-sm" style={{ color: THEME_COLORS.fgSecondary }}>Receitas vs Despesas vs Investimentos (Últimos 6 meses)</p>
+        <h3 className="text-lg font-bold text-foreground">Fluxo de Caixa</h3>
+        <p className="text-sm text-secondary">Receitas vs Despesas vs Investimentos (Últimos 6 meses)</p>
       </div>
 
       {loading ? (

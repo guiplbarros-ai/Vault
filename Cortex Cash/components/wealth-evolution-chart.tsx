@@ -137,7 +137,7 @@ export function WealthEvolutionChart() {
   }
 
   return (
-    <Card style={CHART_THEME.card}>
+    <Card className="glass-card-3d" style={{ minHeight: '420px' }}>
       <CardHeader className="pb-4">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5" style={{ color: '#D4AF37' }} />

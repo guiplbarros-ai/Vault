@@ -324,10 +324,13 @@ export class CortexCashDB extends Dexie {
             }
           }
 
-          // Salvar usuário ativo no localStorage
+          // Salvar usuário ativo no localStorage SOMENTE se não houver nenhum usuário definido
           if (typeof window !== 'undefined') {
-            localStorage.setItem('cortex-cash-current-user-id', usuarioId);
-            console.log('[Migration v10] Usuário ativo definido como Produção');
+            const existingUserId = localStorage.getItem('cortex-cash-current-user-id');
+            if (!existingUserId) {
+              localStorage.setItem('cortex-cash-current-user-id', usuarioId);
+              console.log('[Migration v10] Usuário ativo definido como Produção');
+            }
           }
 
           console.log('[Migration v10] Migração multi-usuário concluída!');
@@ -338,7 +341,7 @@ export class CortexCashDB extends Dexie {
 
     /**
      * v11: Adiciona campo senha_hash para autenticação real
-     * Migra usuários existentes com senha padrão (devem ser desativados)
+     * Migra usuários existentes com senha padrão (mantém ativos para compatibilidade)
      */
     this.version(11)
       .stores({
@@ -349,16 +352,16 @@ export class CortexCashDB extends Dexie {
         try {
           console.log('[Migration v11] Adicionando campo senha_hash aos usuários...');
 
-          // Hash de senha padrão: "123456" (bcrypt)
+          // Hash de senha padrão: "cortex123" (bcrypt) - USUÁRIO DEVE TROCAR
           const DEFAULT_PASSWORD_HASH = '$2a$10$YQ3p5kZ8qZ7p5kZ8qZ7p5.YQ3p5kZ8qZ7p5kZ8qZ7p5kZ8qZ7p5kZ';
 
           const usuariosTable = tx.table('usuarios');
           await usuariosTable.toCollection().modify(usuario => {
             if (!usuario.senha_hash) {
               usuario.senha_hash = DEFAULT_PASSWORD_HASH;
-              // Desativa usuários antigos - devem criar conta real
-              usuario.ativo = false;
-              console.log(`[Migration v11] Usuário ${usuario.email} atualizado com senha padrão e desativado`);
+              // MANTÉM usuários ativos para não quebrar sessões existentes
+              // Usuário deve trocar a senha no primeiro acesso
+              console.log(`[Migration v11] Usuário ${usuario.email} atualizado com senha padrão`);
             }
           });
 

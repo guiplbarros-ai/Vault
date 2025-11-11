@@ -502,7 +502,7 @@ export default function CreditCardsPage() {
                             mes_referencia={fatura.mes_referencia}
                             data_vencimento={fatura.data_vencimento}
                             valor_total={fatura.valor_total}
-                            valor_pago={fatura.valor_pago}
+                            valor_pago={fatura.valor_pago || 0}
                             status={fatura.status}
                             cartao_nome={cartao.nome}
                             onViewDetails={(faturaId) => {

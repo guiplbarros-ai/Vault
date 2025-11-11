@@ -152,7 +152,13 @@ export function useServiceWorker() {
   }, []);
 
   // Auto-register on mount (adiado para tempo ocioso para não disputar thread de UI)
+  // Desabilitado em desenvolvimento para evitar problemas de cache
   useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[SW] Service Worker disabled in development');
+      return;
+    }
+
     if (state.isSupported && !state.isRegistered) {
       const schedule = () => register();
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {

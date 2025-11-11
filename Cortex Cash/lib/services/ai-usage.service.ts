@@ -22,6 +22,10 @@ const PRICING = {
     input: 10.00,
     output: 30.00,
   },
+  'gpt-3.5-turbo': {
+    input: 0.50,   // $0.50 / 1M tokens
+    output: 1.50,  // $1.50 / 1M tokens
+  },
 } as const;
 
 export interface AIUsageLog {

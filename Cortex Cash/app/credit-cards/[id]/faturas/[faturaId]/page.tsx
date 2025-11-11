@@ -207,9 +207,9 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
   }
 
   // Calcular estatísticas
-  const valorPendente = fatura ? fatura.valor_total - fatura.valor_pago : 0
+  const valorPendente = fatura ? fatura.valor_total - (fatura.valor_pago || 0) : 0
   const percentualPago = fatura && fatura.valor_total > 0
-    ? (fatura.valor_pago / fatura.valor_total) * 100
+    ? ((fatura.valor_pago || 0) / fatura.valor_total) * 100
     : 0
 
   // Agrupar lançamentos por categoria
@@ -330,7 +330,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
             <CardHeader className="pb-3">
               <CardDescription className="text-white/70">Valor Pago</CardDescription>
               <CardTitle className="text-3xl text-green-400">
-                {formatCurrency(fatura.valor_pago)}
+                {formatCurrency(fatura.valor_pago || 0)}
               </CardTitle>
             </CardHeader>
             <CardContent>
