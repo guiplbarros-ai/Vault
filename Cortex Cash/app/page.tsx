@@ -245,11 +245,36 @@ export default function DashboardPage() {
             title="Dashboard"
             description="Visão geral consolidada das suas finanças"
           />
-          <MonthPicker
-            value={selectedMonth}
-            onChange={setSelectedMonth}
-            className="sm:ml-auto"
-          />
+          <div className="flex items-center gap-3">
+            {!hasData && (
+              <Button
+                onClick={handlePopulateDemo}
+                disabled={populatingDemo}
+                size="sm"
+                style={{
+                  backgroundColor: 'hsl(var(--primary))',
+                  color: '#F7FAF9',
+                }}
+              >
+                {populatingDemo ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Carregando...
+                  </>
+                ) : (
+                  <>
+                    <Database className="mr-2 h-4 w-4" />
+                    Popular Demo
+                  </>
+                )}
+              </Button>
+            )}
+            <MonthPicker
+              value={selectedMonth}
+              onChange={setSelectedMonth}
+              className="sm:ml-auto"
+            />
+          </div>
         </div>
 
         {/* Stats Overview Detalhado */}
