@@ -99,8 +99,8 @@ export default function DashboardPage() {
 
         if (!mounted) return
 
-        // Verifica se há dados (contas e transações)
-        setHasData(contas.length > 0 && transacoes.length > 0)
+        // Verifica se há dados (se tem contas, considera como tendo dados)
+        setHasData(contas.length > 0)
 
         // Calcula saldo total de todas as contas
         const totalBalance = contas.reduce((acc, conta) => {
