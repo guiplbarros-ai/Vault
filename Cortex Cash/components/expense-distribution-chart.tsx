@@ -216,7 +216,7 @@ export function ExpenseDistributionChart() {
         </div>
       ) : (
         <div className="flex-1 flex items-center min-h-0">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minHeight={300}>
               <PieChart>
                 <Pie
                   data={data}

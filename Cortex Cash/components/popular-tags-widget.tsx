@@ -112,13 +112,13 @@ export function PopularTagsWidget() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="glass-card-3d">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            Tags Mais Usadas
-          </CardTitle>
-          <CardDescription>Carregando...</CardDescription>
+            <CardTitle className="text-base">Tags Mais Usadas</CardTitle>
+          </div>
+          <CardDescription className="mt-1">Carregando...</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -126,13 +126,13 @@ export function PopularTagsWidget() {
 
   if (popularTags.length === 0) {
     return (
-      <Card>
+      <Card className="glass-card-3d">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            Tags Mais Usadas
-          </CardTitle>
-          <CardDescription>
+            <CardTitle className="text-base">Tags Mais Usadas</CardTitle>
+          </div>
+          <CardDescription className="mt-1">
             Nenhuma tag utilizada ainda. Adicione tags às suas transações!
           </CardDescription>
         </CardHeader>
@@ -141,15 +141,15 @@ export function PopularTagsWidget() {
   }
 
   return (
-    <Card>
+    <Card className="glass-card-3d">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex-1">
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Tags Mais Usadas
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="mt-1">
               {metric === 'count' ? 'Por número de transações' : 'Por volume financeiro'}
             </CardDescription>
           </div>
@@ -168,7 +168,7 @@ export function PopularTagsWidget() {
           </Select>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <div className="space-y-3">
           {popularTags.map(({ tag, count, volume }, index) => (
             <div

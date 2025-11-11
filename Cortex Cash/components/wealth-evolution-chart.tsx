@@ -115,16 +115,17 @@ export function WealthEvolutionChart() {
 
   if (loading) {
     return (
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground">
-            Evolução Patrimonial
-          </CardTitle>
-          <CardDescription className="text-secondary">
+      <Card className="glass-card-3d">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-gold" />
+            <CardTitle className="text-base">Evolução Patrimonial</CardTitle>
+          </div>
+          <CardDescription className="mt-1">
             Acompanhe o crescimento do seu patrimônio
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="flex h-[300px] items-center justify-center">
             <div className="text-center">
               <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
@@ -137,20 +138,20 @@ export function WealthEvolutionChart() {
   }
 
   return (
-    <Card className="glass-card-3d" style={{ minHeight: '420px' }}>
-      <CardHeader className="pb-4">
+    <Card className="glass-card-3d flex flex-col h-full" style={{ minHeight: '420px' }}>
+      <CardHeader className="pb-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5" style={{ color: '#D4AF37' }} />
-          <CardTitle style={CHART_THEME.title}>
+          <CardTitle style={{ color: 'hsl(var(--fg-primary))' }}>
             Evolução Patrimonial
           </CardTitle>
         </div>
-        <CardDescription style={CHART_THEME.subtitle}>
+        <CardDescription style={{ color: 'hsl(var(--fg-secondary))' }} className="mt-1">
           Acompanhe o crescimento do seu patrimônio nos últimos 6 meses
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+      <CardContent className="flex-1 flex flex-col h-full p-6">
+        <ResponsiveContainer width="100%" height="100%" minHeight={300}>
           <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
             <CartesianGrid {...CHART_THEME.grid} />
             <XAxis

@@ -92,11 +92,11 @@ export function PopularCategoriesWidget() {
     return (
       <Card className="glass-card-3d">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            Categorias Mais Usadas
-          </CardTitle>
-          <CardDescription>Carregando...</CardDescription>
+            <CardTitle className="text-base">Categorias Mais Usadas</CardTitle>
+          </div>
+          <CardDescription className="mt-1">Carregando...</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -106,11 +106,11 @@ export function PopularCategoriesWidget() {
     return (
       <Card className="glass-card-3d">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            Categorias Mais Usadas
-          </CardTitle>
-          <CardDescription>
+            <CardTitle className="text-base">Categorias Mais Usadas</CardTitle>
+          </div>
+          <CardDescription className="mt-1">
             Nenhuma transação categorizada ainda. Comece adicionando transações!
           </CardDescription>
         </CardHeader>
@@ -119,17 +119,17 @@ export function PopularCategoriesWidget() {
   }
 
   return (
-    <Card className="glass-card-3d p-6" style={{ minHeight: '380px' }}>
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+    <Card className="glass-card-3d">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
               Categorias Mais Usadas
-            </h3>
-            <p className="text-sm text-secondary mt-1">
+            </CardTitle>
+            <CardDescription className="mt-1">
               {metric === 'count' ? 'Por número de transações' : 'Por volume financeiro'}
-            </p>
+            </CardDescription>
           </div>
           <Select value={metric} onValueChange={(value) => setMetric(value as MetricType)}>
             <SelectTrigger className="w-[140px] h-8 text-xs font-medium">
@@ -145,9 +145,9 @@ export function PopularCategoriesWidget() {
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      <div className="space-y-3">
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-3">
         {popularCategories.map(({ categoria, count, volume }, index) => (
           <div
             key={categoria.id}
@@ -195,7 +195,8 @@ export function PopularCategoriesWidget() {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      </CardContent>
     </Card>
   )
 }
