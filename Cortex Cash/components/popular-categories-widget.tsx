@@ -119,17 +119,17 @@ export function PopularCategoriesWidget() {
   }
 
   return (
-    <Card className="glass-card-3d" style={{ minHeight: '380px' }}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+    <Card className="glass-card-3d p-6" style={{ minHeight: '380px' }}>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
           <div>
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
+            <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
               Categorias Mais Usadas
-            </CardTitle>
-            <CardDescription>
+            </h3>
+            <p className="text-sm text-secondary mt-1">
               {metric === 'count' ? 'Por número de transações' : 'Por volume financeiro'}
-            </CardDescription>
+            </p>
           </div>
           <Select value={metric} onValueChange={(value) => setMetric(value as MetricType)}>
             <SelectTrigger className="w-[140px] h-8 text-xs font-medium">
@@ -145,58 +145,57 @@ export function PopularCategoriesWidget() {
             </SelectContent>
           </Select>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {popularCategories.map(({ categoria, count, volume }, index) => (
-            <div
-              key={categoria.id}
-              className="flex items-center justify-between gap-3 pb-3 border-b last:border-0 last:pb-0"
-            >
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className="text-sm font-medium text-secondary w-5 flex-shrink-0">
-                  #{index + 1}
-                </span>
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <span className="text-lg flex-shrink-0">{categoria.icone || "📁"}</span>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-sm font-medium text-card-foreground truncate">{categoria.nome}</span>
-                    {categoria.grupo && (
-                      <span className="text-xs text-secondary truncate">
-                        {categoria.grupo}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <span
-                  className={cn(
-                    "text-xs px-2 py-0.5 rounded flex-shrink-0",
-                    categoria.tipo === "receita" && "bg-success/10 text-success",
-                    categoria.tipo === "despesa" && "bg-destructive/10 text-destructive",
-                    categoria.tipo === "transferencia" && "bg-primary/10 text-primary"
-                  )}
-                >
-                  {categoria.tipo === "receita" && "R"}
-                  {categoria.tipo === "despesa" && "D"}
-                  {categoria.tipo === "transferencia" && "T"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {metric === 'count' ? (
-                  <>
-                    <span className="text-sm font-medium text-card-foreground">{count}</span>
-                    <span className="text-xs text-secondary">
-                      {count === 1 ? "transação" : "transações"}
+      </div>
+
+      <div className="space-y-3">
+        {popularCategories.map(({ categoria, count, volume }, index) => (
+          <div
+            key={categoria.id}
+            className="flex items-center justify-between gap-3 pb-3 border-b last:border-0 last:pb-0"
+          >
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <span className="text-sm font-medium text-secondary w-5 flex-shrink-0">
+                #{index + 1}
+              </span>
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <span className="text-lg flex-shrink-0">{categoria.icone || "📁"}</span>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-sm font-medium text-card-foreground truncate">{categoria.nome}</span>
+                  {categoria.grupo && (
+                    <span className="text-xs text-secondary truncate">
+                      {categoria.grupo}
                     </span>
-                  </>
-                ) : (
-                  <span className="text-sm font-medium text-gold">{formatCurrency(volume)}</span>
-                )}
+                  )}
+                </div>
               </div>
+              <span
+                className={cn(
+                  "text-xs px-2 py-0.5 rounded flex-shrink-0 font-medium",
+                  categoria.tipo === "receita" && "bg-success/10 text-success",
+                  categoria.tipo === "despesa" && "bg-destructive/10 text-destructive",
+                  categoria.tipo === "transferencia" && "bg-primary/10 text-primary"
+                )}
+              >
+                {categoria.tipo === "receita" && "Receita"}
+                {categoria.tipo === "despesa" && "Despesa"}
+                {categoria.tipo === "transferencia" && "Transfer."}
+              </span>
             </div>
-          ))}
-        </div>
-      </CardContent>
+            <div className="flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
+              {metric === 'count' ? (
+                <>
+                  <span className="text-sm font-medium text-card-foreground">{count}</span>
+                  <span className="text-xs text-secondary">
+                    {count === 1 ? "tx" : "txa"}
+                  </span>
+                </>
+              ) : (
+                <span className="text-sm font-medium text-gold">{formatCurrency(volume)}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </Card>
   )
 }
