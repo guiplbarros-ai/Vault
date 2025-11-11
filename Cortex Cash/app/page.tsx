@@ -11,8 +11,11 @@ import { transacaoService } from '@/lib/services/transacao.service'
 import { contaService } from '@/lib/services/conta.service'
 import { startOfMonth, endOfMonth } from 'date-fns'
 import type { Transacao, Conta } from '@/lib/types'
-import { Wallet, TrendingUp, TrendingDown, PiggyBank, Loader2 } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, Loader2, Database } from 'lucide-react'
 import { THEME_COLORS } from '@/lib/constants/colors'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { toast } from 'sonner'
 
 // ✅ Lazy load heavy Recharts components com default exports
 const CashFlowChart = dynamic(() => import('@/components/cash-flow-chart'), {
@@ -71,6 +74,8 @@ export default function DashboardPage() {
     monthlyResult: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [hasData, setHasData] = useState(false)
+  const [populatingDemo, setPopulatingDemo] = useState(false)
   const { getSetting } = useSettings()
   const { formatCurrency } = useLocalizationSettings()
   const theme = getSetting<'light' | 'dark' | 'auto'>('appearance.theme')
@@ -93,6 +98,9 @@ export default function DashboardPage() {
         ])
 
         if (!mounted) return
+
+        // Verifica se há dados (contas e transações)
+        setHasData(contas.length > 0 && transacoes.length > 0)
 
         // Calcula saldo total de todas as contas
         const totalBalance = contas.reduce((acc, conta) => {
@@ -146,6 +154,30 @@ export default function DashboardPage() {
       mounted = false
     }
   }, [selectedMonth])
+
+  // Função para popular dados de demo
+  const handlePopulateDemo = async () => {
+    setPopulatingDemo(true)
+    try {
+      const { seedDemoData } = await import('@/lib/db/seed-demo')
+      await seedDemoData()
+
+      toast.success('Dados demo carregados!', {
+        description: 'Seu dashboard está pronto para explorar.',
+      })
+
+      // Recarregar dados
+      await new Promise(resolve => setTimeout(resolve, 500))
+      window.location.reload()
+    } catch (error) {
+      console.error('Erro ao popular dados demo:', error)
+      toast.error('Erro ao carregar dados demo', {
+        description: 'Tente novamente mais tarde.',
+      })
+    } finally {
+      setPopulatingDemo(false)
+    }
+  }
 
   // Detecta se está em dark mode (reativo a mudanças de tema)
   const isDark = useMemo(() => {
@@ -228,7 +260,48 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts and Recent Data */}
-        {!loading && (
+        {!loading && !hasData && (
+          <Card className="glass-card-3d">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="rounded-lg p-4 mb-6" style={{ backgroundColor: 'hsl(var(--bg-card-2))' }}>
+                <Database className="h-12 w-12 text-foreground" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-2">Nenhum dado encontrado</h3>
+              <p className="text-secondary text-center mb-6 max-w-md">
+                Para ver os gráficos e análises do dashboard, você precisa adicionar contas e transações.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={handlePopulateDemo}
+                  disabled={populatingDemo}
+                  size="lg"
+                  style={{
+                    backgroundColor: 'hsl(var(--primary))',
+                    color: '#F7FAF9',
+                    borderRadius: '8px',
+                  }}
+                >
+                  {populatingDemo ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Carregando dados...
+                    </>
+                  ) : (
+                    <>
+                      <Database className="mr-2 h-5 w-5" />
+                      Popular com Dados Demo
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-secondary text-center mt-2">
+                  ou crie sua primeira conta em Contas
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!loading && hasData && (
           <>
             {/* Fluxo de Caixa (full width) */}
             <CashFlowChart />
