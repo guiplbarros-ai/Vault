@@ -314,40 +314,40 @@ export class TransacaoService implements ITransacaoService {
       const db = getDB();
       const currentUserId = getCurrentUserId();
 
-    const id = crypto.randomUUID();
-    const now = new Date();
+      const id = crypto.randomUUID();
+      const now = new Date();
 
-    // Gera hash canônico para deduplicação (conta_id + data(YYYY-MM-DD) + descrição normalizada + valor fixado)
-    const canonicalHash = await generateTransactionHash({
-      data: typeof validatedData.data === 'string' ? new Date(validatedData.data) : validatedData.data,
-      descricao: validatedData.descricao,
-      valor: validatedData.valor,
-    }, validatedData.conta_id);
+      // Gera hash canônico para deduplicação (conta_id + data(YYYY-MM-DD) + descrição normalizada + valor fixado)
+      const canonicalHash = await generateTransactionHash({
+        data: typeof validatedData.data === 'string' ? new Date(validatedData.data) : validatedData.data,
+        descricao: validatedData.descricao,
+        valor: validatedData.valor,
+      }, validatedData.conta_id);
 
-    // Verifica duplicidade antes de inserir
-    const duplicates = await db.transacoes.where('hash').equals(canonicalHash).count();
-    if (duplicates > 0) {
-      throw new DuplicateError('Transação', 'hash');
-    }
+      // Verifica duplicidade antes de inserir
+      const duplicates = await db.transacoes.where('hash').equals(canonicalHash).count();
+      if (duplicates > 0) {
+        throw new DuplicateError('Transação', 'hash');
+      }
 
-    const transacao: Transacao = {
-      id,
-      conta_id: validatedData.conta_id,
-      categoria_id: validatedData.categoria_id,
-      data: typeof validatedData.data === 'string' ? new Date(validatedData.data) : validatedData.data,
-      descricao: validatedData.descricao,
-      valor: validatedData.valor,
-      tipo: validatedData.tipo,
-      observacoes: validatedData.observacoes,
-      tags: validatedData.tags ? JSON.stringify(validatedData.tags) : undefined,
-      parcelado: false,
-      classificacao_confirmada: !!validatedData.categoria_id,
-      classificacao_origem: validatedData.categoria_id ? 'manual' : undefined,
-      usuario_id: currentUserId, // Pertence ao usuário atual
-      hash: canonicalHash,
-      created_at: now,
-      updated_at: now,
-    };
+      const transacao: Transacao = {
+        id,
+        conta_id: validatedData.conta_id,
+        categoria_id: validatedData.categoria_id,
+        data: typeof validatedData.data === 'string' ? new Date(validatedData.data) : validatedData.data,
+        descricao: validatedData.descricao,
+        valor: validatedData.valor,
+        tipo: validatedData.tipo,
+        observacoes: validatedData.observacoes,
+        tags: validatedData.tags ? JSON.stringify(validatedData.tags) : undefined,
+        parcelado: false,
+        classificacao_confirmada: !!validatedData.categoria_id,
+        classificacao_origem: validatedData.categoria_id ? 'manual' : undefined,
+        usuario_id: currentUserId, // Pertence ao usuário atual
+        hash: canonicalHash,
+        created_at: now,
+        updated_at: now,
+      };
 
       await db.transacoes.add(transacao);
 

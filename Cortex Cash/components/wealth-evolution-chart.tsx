@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useSettings } from '@/app/providers/settings-provider'
 import { patrimonioService } from '@/lib/services/patrimonio.service'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { TrendingUp } from 'lucide-react'
+import { TrendingUp, Loader2 } from 'lucide-react'
 import { CHART_THEME } from '@/lib/utils/chart-theme'
 
 interface WealthDataPoint {
@@ -115,42 +115,25 @@ export function WealthEvolutionChart() {
 
   if (loading) {
     return (
-      <Card className="glass-card-3d">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-gold" />
-            <CardTitle className="text-base">Evolução Patrimonial</CardTitle>
-          </div>
-          <CardDescription className="mt-1">
-            Acompanhe o crescimento do seu patrimônio
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex h-[300px] items-center justify-center">
-            <div className="text-center">
-              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
-              <p className="text-secondary">Carregando dados...</p>
-            </div>
-          </div>
-        </CardContent>
+      <Card className="glass-card-3d p-6 flex flex-col h-full" style={{ minHeight: '420px' }}>
+        <div className="mb-6 flex-shrink-0">
+          <h3 className="text-lg font-bold text-foreground">Evolução Patrimonial</h3>
+          <p className="text-sm text-secondary">Carregando dados...</p>
+        </div>
+        <div className="flex items-center justify-center flex-1 min-h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+        </div>
       </Card>
     )
   }
 
   return (
-    <Card className="glass-card-3d flex flex-col h-full" style={{ minHeight: '420px' }}>
-      <CardHeader className="pb-4 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" style={{ color: '#D4AF37' }} />
-          <CardTitle style={{ color: 'hsl(var(--fg-primary))' }}>
-            Evolução Patrimonial
-          </CardTitle>
-        </div>
-        <CardDescription style={{ color: 'hsl(var(--fg-secondary))' }} className="mt-1">
-          Acompanhe o crescimento do seu patrimônio nos últimos 6 meses
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col h-full p-6">
+    <Card className="glass-card-3d p-6 flex flex-col h-full" style={{ minHeight: '420px' }}>
+      <div className="mb-6 flex-shrink-0">
+        <h3 className="text-lg font-bold text-foreground">Evolução Patrimonial</h3>
+        <p className="text-sm text-secondary">Acompanhe o crescimento do seu patrimônio nos últimos 6 meses</p>
+      </div>
+      <div className="flex-1 flex items-center min-h-0">
         <ResponsiveContainer width="100%" height="100%" minHeight={300}>
           <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
             <CartesianGrid {...CHART_THEME.grid} />
@@ -195,7 +178,7 @@ export function WealthEvolutionChart() {
             />
           </LineChart>
         </ResponsiveContainer>
-      </CardContent>
+      </div>
     </Card>
   )
 }

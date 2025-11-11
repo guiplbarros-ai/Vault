@@ -1,21 +1,30 @@
 'use client'
 
 import * as React from 'react'
-import { format, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns'
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, addDays, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export interface MonthPickerProps {
   value?: Date
   onChange?: (date: Date) => void
   className?: string
+  mode?: 'day' | 'month'
 }
 
 const MONTHS = [
@@ -28,24 +37,26 @@ export function MonthPicker({
   value = new Date(),
   onChange,
   className,
+  mode = 'month',
 }: MonthPickerProps) {
   const [selectedDate, setSelectedDate] = React.useState(value)
   const [calendarYear, setCalendarYear] = React.useState(selectedDate.getFullYear())
   const [isOpen, setIsOpen] = React.useState(false)
+  const [viewMode, setViewMode] = React.useState<'day' | 'month'>(mode)
 
   React.useEffect(() => {
     setSelectedDate(value)
     setCalendarYear(value.getFullYear())
   }, [value])
 
-  const handlePreviousMonth = () => {
-    const newDate = subMonths(selectedDate, 1)
+  const handlePrevious = () => {
+    const newDate = viewMode === 'day' ? subDays(selectedDate, 1) : subMonths(selectedDate, 1)
     setSelectedDate(newDate)
     onChange?.(newDate)
   }
 
-  const handleNextMonth = () => {
-    const newDate = addMonths(selectedDate, 1)
+  const handleNext = () => {
+    const newDate = viewMode === 'day' ? addDays(selectedDate, 1) : addMonths(selectedDate, 1)
     setSelectedDate(newDate)
     onChange?.(newDate)
   }
@@ -57,7 +68,14 @@ export function MonthPicker({
     setIsOpen(false)
   }
 
-  const handleCurrentMonth = () => {
+  const handleDaySelect = (date: Date | undefined) => {
+    if (!date) return
+    setSelectedDate(date)
+    onChange?.(date)
+    setIsOpen(false)
+  }
+
+  const handleToday = () => {
     const now = new Date()
     setSelectedDate(now)
     setCalendarYear(now.getFullYear())
@@ -78,114 +96,166 @@ export function MonthPicker({
   }
 
   const currentMonth = selectedDate.getMonth()
-  const isCurrentMonth = (monthIndex: number) => 
+  const isCurrentMonth = (monthIndex: number) =>
     monthIndex === currentMonth && calendarYear === selectedDate.getFullYear()
+
+  const getDisplayText = () => {
+    if (viewMode === 'day') {
+      return format(selectedDate, "dd 'de' MMMM", { locale: ptBR })
+    }
+    return format(selectedDate, 'MMMM', { locale: ptBR })
+  }
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <Button
         size="icon"
-        onClick={handlePreviousMonth}
-        variant="default"
+        onClick={handlePrevious}
+        variant="outline"
         className="h-10 w-10 rounded-lg"
-        aria-label="Mês anterior"
+        aria-label={viewMode === 'day' ? 'Dia anterior' : 'Mês anterior'}
       >
-        <ChevronLeft className="h-5 w-5" />
-        <span className="sr-only">Mês anterior</span>
+        <ChevronLeft className="h-5 w-5 text-foreground" />
+        <span className="sr-only">{viewMode === 'day' ? 'Dia anterior' : 'Mês anterior'}</span>
       </Button>
 
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button
             className={cn(
-              "h-10 w-[160px] justify-center font-medium capitalize",
+              "h-10 min-w-[180px] justify-center font-medium capitalize gap-2",
               "rounded-lg text-sm"
             )}
             variant="default"
           >
-            {format(selectedDate, 'MMMM', { locale: ptBR })}
+            <CalendarIcon className="h-4 w-4" />
+            {getDisplayText()}
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[340px] p-0 rounded-2xl bg-popover text-popover-foreground border border-border"
+          className="w-auto p-0 rounded-2xl bg-popover text-popover-foreground border border-border"
           align="center"
         >
           <div className="bg-gradient-to-br from-primary/30 to-primary/20 text-foreground p-4 rounded-t-2xl border-b border-border">
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handlePreviousYear}
-                className="h-10 w-10 rounded-lg"
-                aria-label="Ano anterior"
-              >
-                <ChevronLeft className="h-5 w-5" />
-                <span className="sr-only">Ano anterior</span>
-              </Button>
-              <div className="text-2xl font-bold">
-                {calendarYear}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleNextYear}
-                className="h-10 w-10 rounded-lg"
-                aria-label="Próximo ano"
-              >
-                <ChevronRight className="h-5 w-5" />
-                <span className="sr-only">Próximo ano</span>
-              </Button>
+            <div className="flex items-center justify-between mb-3">
+              <Select value={viewMode} onValueChange={(v) => setViewMode(v as 'day' | 'month')}>
+                <SelectTrigger className="w-[140px] h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">Selecionar Dia</SelectItem>
+                  <SelectItem value="month">Selecionar Mês</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            {viewMode === 'month' && (
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handlePreviousYear}
+                  className="h-10 w-10 rounded-lg"
+                  aria-label="Ano anterior"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                  <span className="sr-only">Ano anterior</span>
+                </Button>
+                <div className="text-2xl font-bold">
+                  {calendarYear}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleNextYear}
+                  className="h-10 w-10 rounded-lg"
+                  aria-label="Próximo ano"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                  <span className="sr-only">Próximo ano</span>
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="p-6 bg-popover rounded-b-2xl">
-            <div className="grid grid-cols-4 gap-3 mb-6">
-              {MONTHS.map((month, index) => (
-                <button
-                  key={month}
-                  onClick={() => handleMonthSelect(index)}
-                  className={cn(
-                    "h-12 rounded-lg font-medium text-sm transition-all",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    isCurrentMonth(index)
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {month}
-                </button>
-              ))}
-            </div>
+            {viewMode === 'month' ? (
+              <>
+                <div className="grid grid-cols-4 gap-3 mb-6">
+                  {MONTHS.map((month, index) => (
+                    <button
+                      key={month}
+                      onClick={() => handleMonthSelect(index)}
+                      className={cn(
+                        "h-12 rounded-lg font-medium text-sm transition-all",
+                        "hover:bg-accent hover:text-accent-foreground",
+                        isCurrentMonth(index)
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {month}
+                    </button>
+                  ))}
+                </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-border gap-3">
-              <Button
-                variant="ghost"
-                onClick={handleCancel}
-                className="flex-1 font-semibold rounded-lg h-10"
-              >
-                CANCELAR
-              </Button>
-              <Button
-                onClick={handleCurrentMonth}
-                className="flex-1 font-semibold rounded-lg h-10"
-                variant="default"
-              >
-                MÊS ATUAL
-              </Button>
-            </div>
+                <div className="flex items-center justify-between pt-4 border-t border-border gap-3">
+                  <Button
+                    variant="ghost"
+                    onClick={handleCancel}
+                    className="flex-1 font-semibold rounded-lg h-10"
+                  >
+                    CANCELAR
+                  </Button>
+                  <Button
+                    onClick={handleToday}
+                    className="flex-1 font-semibold rounded-lg h-10"
+                    variant="default"
+                  >
+                    HOJE
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDaySelect}
+                  locale={ptBR}
+                  defaultMonth={selectedDate}
+                  initialFocus
+                />
+                <div className="flex items-center justify-between pt-4 border-t border-border gap-3 mt-4">
+                  <Button
+                    variant="ghost"
+                    onClick={handleCancel}
+                    className="flex-1 font-semibold rounded-lg h-10"
+                  >
+                    CANCELAR
+                  </Button>
+                  <Button
+                    onClick={handleToday}
+                    className="flex-1 font-semibold rounded-lg h-10"
+                    variant="default"
+                  >
+                    HOJE
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </PopoverContent>
       </Popover>
 
       <Button
         size="icon"
-        onClick={handleNextMonth}
-        variant="default"
+        onClick={handleNext}
+        variant="outline"
         className="h-10 w-10 rounded-lg"
-        aria-label="Próximo mês"
+        aria-label={viewMode === 'day' ? 'Próximo dia' : 'Próximo mês'}
       >
-        <ChevronRight className="h-5 w-5" />
-        <span className="sr-only">Próximo mês</span>
+        <ChevronRight className="h-5 w-5 text-foreground" />
+        <span className="sr-only">{viewMode === 'day' ? 'Próximo dia' : 'Próximo mês'}</span>
       </Button>
     </div>
   )

@@ -112,46 +112,37 @@ export function PopularTagsWidget() {
 
   if (loading) {
     return (
-      <Card className="glass-card-3d">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            <CardTitle className="text-base">Tags Mais Usadas</CardTitle>
-          </div>
-          <CardDescription className="mt-1">Carregando...</CardDescription>
-        </CardHeader>
+      <Card className="glass-card-3d p-6" style={{ minHeight: '380px' }}>
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-foreground">Tags Mais Usadas</h3>
+          <p className="text-sm text-secondary">Carregando...</p>
+        </div>
       </Card>
     )
   }
 
   if (popularTags.length === 0) {
     return (
-      <Card className="glass-card-3d">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            <CardTitle className="text-base">Tags Mais Usadas</CardTitle>
-          </div>
-          <CardDescription className="mt-1">
+      <Card className="glass-card-3d p-6" style={{ minHeight: '380px' }}>
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-foreground">Tags Mais Usadas</h3>
+          <p className="text-sm text-secondary">
             Nenhuma tag utilizada ainda. Adicione tags às suas transações!
-          </CardDescription>
-        </CardHeader>
+          </p>
+        </div>
       </Card>
     )
   }
 
   return (
-    <Card className="glass-card-3d">
-      <CardHeader className="pb-3">
+    <Card className="glass-card-3d p-6" style={{ minHeight: '380px' }}>
+      <div className="mb-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Tags Mais Usadas
-            </CardTitle>
-            <CardDescription className="mt-1">
+            <h3 className="text-lg font-bold text-foreground">Tags Mais Usadas</h3>
+            <p className="text-sm text-secondary">
               {metric === 'count' ? 'Por número de transações' : 'Por volume financeiro'}
-            </CardDescription>
+            </p>
           </div>
           <Select value={metric} onValueChange={(value) => setMetric(value as MetricType)}>
             <SelectTrigger className="w-[140px] h-8 text-xs font-medium">
@@ -167,9 +158,8 @@ export function PopularTagsWidget() {
             </SelectContent>
           </Select>
         </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-3">
+      </div>
+      <div className="space-y-3">
           {popularTags.map(({ tag, count, volume }, index) => (
             <div
               key={tag.id}
@@ -195,8 +185,7 @@ export function PopularTagsWidget() {
               </div>
             </div>
           ))}
-        </div>
-      </CardContent>
+      </div>
     </Card>
   )
 }

@@ -159,20 +159,26 @@ export default function DashboardPage() {
   const handlePopulateDemo = async () => {
     setPopulatingDemo(true)
     try {
+      console.log('Iniciando população de dados demo...')
       const { seedDemoData } = await import('@/lib/db/seed-demo')
-      await seedDemoData()
+
+      console.log('Executando seedDemoData...')
+      const result = await seedDemoData()
+
+      console.log('Resultado do seed:', result)
 
       toast.success('Dados demo carregados!', {
-        description: 'Seu dashboard está pronto para explorar.',
+        description: `${result.contas} contas e ${result.transacoes} transações criadas.`,
       })
 
       // Recarregar dados
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, 1000))
       window.location.reload()
     } catch (error) {
       console.error('Erro ao popular dados demo:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
       toast.error('Erro ao carregar dados demo', {
-        description: 'Tente novamente mais tarde.',
+        description: errorMessage,
       })
     } finally {
       setPopulatingDemo(false)
@@ -272,6 +278,7 @@ export default function DashboardPage() {
             <MonthPicker
               value={selectedMonth}
               onChange={setSelectedMonth}
+              mode="day"
               className="sm:ml-auto"
             />
           </div>

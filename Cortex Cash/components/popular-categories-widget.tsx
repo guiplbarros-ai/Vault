@@ -90,46 +90,37 @@ export function PopularCategoriesWidget() {
 
   if (loading) {
     return (
-      <Card className="glass-card-3d">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            <CardTitle className="text-base">Categorias Mais Usadas</CardTitle>
-          </div>
-          <CardDescription className="mt-1">Carregando...</CardDescription>
-        </CardHeader>
+      <Card className="glass-card-3d p-6" style={{ minHeight: '380px' }}>
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-foreground">Categorias Mais Usadas</h3>
+          <p className="text-sm text-secondary">Carregando...</p>
+        </div>
       </Card>
     )
   }
 
   if (popularCategories.length === 0) {
     return (
-      <Card className="glass-card-3d">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            <CardTitle className="text-base">Categorias Mais Usadas</CardTitle>
-          </div>
-          <CardDescription className="mt-1">
+      <Card className="glass-card-3d p-6" style={{ minHeight: '380px' }}>
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-foreground">Categorias Mais Usadas</h3>
+          <p className="text-sm text-secondary">
             Nenhuma transação categorizada ainda. Comece adicionando transações!
-          </CardDescription>
-        </CardHeader>
+          </p>
+        </div>
       </Card>
     )
   }
 
   return (
-    <Card className="glass-card-3d">
-      <CardHeader className="pb-3">
+    <Card className="glass-card-3d p-6" style={{ minHeight: '380px' }}>
+      <div className="mb-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Categorias Mais Usadas
-            </CardTitle>
-            <CardDescription className="mt-1">
+            <h3 className="text-lg font-bold text-foreground">Categorias Mais Usadas</h3>
+            <p className="text-sm text-secondary">
               {metric === 'count' ? 'Por número de transações' : 'Por volume financeiro'}
-            </CardDescription>
+            </p>
           </div>
           <Select value={metric} onValueChange={(value) => setMetric(value as MetricType)}>
             <SelectTrigger className="w-[140px] h-8 text-xs font-medium">
@@ -145,9 +136,8 @@ export function PopularCategoriesWidget() {
             </SelectContent>
           </Select>
         </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-3">
+      </div>
+      <div className="space-y-3">
         {popularCategories.map(({ categoria, count, volume }, index) => (
           <div
             key={categoria.id}
@@ -195,8 +185,7 @@ export function PopularCategoriesWidget() {
             </div>
           </div>
         ))}
-        </div>
-      </CardContent>
+      </div>
     </Card>
   )
 }
