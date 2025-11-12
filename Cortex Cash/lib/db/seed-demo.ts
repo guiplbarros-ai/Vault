@@ -25,35 +25,46 @@ export async function seedDemoData() {
 
   try {
     // 1. Verificar se já existem dados
+    console.log('[DEMO SEED] Passo 1: Verificando dados existentes...');
     const existingContas = await contaService.listContas();
+    console.log(`[DEMO SEED] Encontradas ${existingContas.length} contas`);
+
     if (existingContas.length > 0) {
       console.log('[DEMO SEED] Dados já existem. Limpando antes de popular...');
       await clearAllData();
+      console.log('[DEMO SEED] Dados limpos com sucesso');
     }
 
     // 2. Criar instituições
+    console.log('[DEMO SEED] Passo 2: Criando instituições...');
     const instituicoes = await seedInstituicoes();
-    console.log(`[DEMO SEED] ${instituicoes.length} instituições criadas`);
+    console.log(`[DEMO SEED] ✅ ${instituicoes.length} instituições criadas`);
 
     // 3. Criar contas
+    console.log('[DEMO SEED] Passo 3: Criando contas...');
     const contas = await seedContas(instituicoes);
-    console.log(`[DEMO SEED] ${contas.length} contas criadas`);
+    console.log(`[DEMO SEED] ✅ ${contas.length} contas criadas`);
 
     // 4. Verificar categorias (devem existir do seed inicial)
+    console.log('[DEMO SEED] Passo 4: Verificando categorias...');
     const categorias = await categoriaService.listCategorias();
-    console.log(`[DEMO SEED] ${categorias.length} categorias encontradas`);
+    console.log(`[DEMO SEED] ✅ ${categorias.length} categorias encontradas`);
 
     // 5. Criar transações
+    console.log('[DEMO SEED] Passo 5: Criando transações (isso pode demorar)...');
     const transacoes = await seedTransacoes(contas, categorias);
-    console.log(`[DEMO SEED] ${transacoes.length} transações criadas`);
+    console.log(`[DEMO SEED] ✅ ${transacoes.length} transações criadas`);
 
     // 6. Recalcular saldos de todas as contas
-    for (const conta of contas) {
+    console.log('[DEMO SEED] Passo 6: Recalculando saldos...');
+    for (let i = 0; i < contas.length; i++) {
+      const conta = contas[i];
+      console.log(`[DEMO SEED] Recalculando saldo da conta ${i + 1}/${contas.length}: ${conta.nome}`);
       await contaService.recalcularESalvarSaldo(conta.id);
     }
-    console.log('[DEMO SEED] Saldos recalculados');
+    console.log('[DEMO SEED] ✅ Saldos recalculados');
 
-    console.log('[DEMO SEED] ✅ Seed de dados demo concluído com sucesso!');
+    console.log('[DEMO SEED] ✅✅✅ Seed de dados demo concluído com sucesso!');
 
     return {
       instituicoes: instituicoes.length,
@@ -62,7 +73,11 @@ export async function seedDemoData() {
       transacoes: transacoes.length,
     };
   } catch (error) {
-    console.error('[DEMO SEED] ❌ Erro ao popular dados demo:', error);
+    console.error('[DEMO SEED] ❌❌❌ Erro ao popular dados demo:', error);
+    if (error instanceof Error) {
+      console.error('[DEMO SEED] Mensagem:', error.message);
+      console.error('[DEMO SEED] Stack:', error.stack);
+    }
     throw error;
   }
 }
