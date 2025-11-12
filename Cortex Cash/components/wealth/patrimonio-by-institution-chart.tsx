@@ -61,16 +61,26 @@ export function PatrimonioByInstitutionChart() {
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="rounded-lg border border-border p-3 shadow-lg bg-card">
-          <p className="mb-2 font-semibold text-foreground">
+        <div
+          style={{
+            backgroundColor: 'rgba(18, 50, 44, 0.99)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '2px solid hsl(var(--border))',
+            borderRadius: 'var(--radius-md)',
+            padding: '14px',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+          }}
+        >
+          <p style={{ marginBottom: '8px', fontWeight: 600, color: 'hsl(var(--fg-primary))', fontSize: '12px' }}>
             {payload[0].payload.name}
           </p>
           {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
+            <p key={index} style={{ fontSize: '11px', color: entry.color, marginBottom: '2px' }}>
               {entry.name}: {formatCurrency(entry.value)}
             </p>
           ))}
-          <p className="mt-2 text-sm font-semibold text-foreground">
+          <p style={{ marginTop: '8px', fontSize: '11px', fontWeight: 600, color: 'hsl(var(--fg-primary))' }}>
             Total: {formatCurrency(payload[0].payload.total)}
           </p>
         </div>

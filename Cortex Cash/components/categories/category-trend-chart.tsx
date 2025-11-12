@@ -197,11 +197,16 @@ export function CategoryTrendChart({ categoriaId, categoriaNome, categoriaIcone 
                 formatter={(value: number) => formatCurrency(value)}
                 labelFormatter={(label) => `Mês: ${label}`}
                 contentStyle={{
-                  backgroundColor: 'rgb(30, 41, 59)',
-                  border: '1px solid rgb(51, 65, 85)',
-                  borderRadius: '6px',
-                  color: 'white',
+                  backgroundColor: 'rgba(18, 50, 44, 0.99)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  border: '2px solid hsl(var(--border))',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'hsl(var(--fg-primary))',
+                  boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+                  padding: '14px',
                 }}
+                labelStyle={{ color: 'hsl(var(--fg-primary))', fontWeight: 600 }}
               />
               <Legend wrapperStyle={{ color: 'white' }} />
               <Line

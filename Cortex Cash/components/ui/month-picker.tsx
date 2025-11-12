@@ -151,11 +151,11 @@ export function MonthPicker({
           <Button
             className={cn(
               "h-10 min-w-[180px] justify-center font-medium capitalize gap-2",
-              "rounded-lg text-sm [&>svg]:!text-white"
+              "rounded-lg text-sm [&>svg]:stroke-white"
             )}
             variant="default"
           >
-            <CalendarIcon className="h-4 w-4" />
+            <CalendarIcon className="h-4 w-4 stroke-white" style={{ strokeWidth: 2 }} />
             {getDisplayText()}
           </Button>
         </PopoverTrigger>

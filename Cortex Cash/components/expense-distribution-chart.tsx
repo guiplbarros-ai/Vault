@@ -59,21 +59,27 @@ export function ExpenseDistributionChart() {
         return (
           transactionDate >= monthStart &&
           transactionDate <= monthEnd &&
-          t.tipo === 'despesa' &&
-          t.categoria_id // Ignora transações sem categoria
+          t.tipo === 'despesa'
         )
       })
 
       // Agrupa por categoria PAI (nunca subcategorias)
       const categoryMap = new Map<string, number>()
       monthExpenses.forEach(t => {
-        if (!t.categoria_id) return
+        let categoriaPrincipalId: string
 
-        const categoria = categorias.find(c => c.id === t.categoria_id)
-        if (!categoria) return
-
-        // Se tem pai_id, agrupa na categoria pai; senão, usa a própria categoria
-        const categoriaPrincipalId = categoria.pai_id || categoria.id
+        if (!t.categoria_id) {
+          // Transações sem categoria
+          categoriaPrincipalId = 'sem-categoria'
+        } else {
+          const categoria = categorias.find(c => c.id === t.categoria_id)
+          if (!categoria) {
+            categoriaPrincipalId = 'sem-categoria'
+          } else {
+            // Se tem pai_id, agrupa na categoria pai; senão, usa a própria categoria
+            categoriaPrincipalId = categoria.pai_id || categoria.id
+          }
+        }
 
         const current = categoryMap.get(categoriaPrincipalId) || 0
         const valor = Number(t.valor) || 0
@@ -89,6 +95,15 @@ export function ExpenseDistributionChart() {
 
       // Mapeia para dados do gráfico (sempre categorias principais)
       const chartData = sorted.map(([categoriaId, value], index) => {
+        if (categoriaId === 'sem-categoria') {
+          return {
+            name: 'Sem Categoria',
+            value: Math.round(value),
+            color: COLORS[index % COLORS.length],
+            percentage: Math.round((value / total) * 100),
+          }
+        }
+
         const categoria = categorias.find(c => c.id === categoriaId)
         return {
           name: categoria?.nome || 'Sem categoria',
@@ -128,16 +143,20 @@ export function ExpenseDistributionChart() {
     const RADIAN = Math.PI / 180
     const percentValue = percent * 100
 
-    // Tamanho de fonte progressivo baseado no percentual
-    let fontSize = 9 // Base mínima
-    if (percentValue >= 20) fontSize = 12
-    else if (percentValue >= 10) fontSize = 11
-    else if (percentValue >= 5) fontSize = 10
+    // Oculta labels de fatias muito pequenas (< 3%) para evitar poluição visual
+    if (percentValue < 3) return null
 
-    // Distância reduzida: mantém as legendas mais próximas das linhas
-    let radiusOffset = 18
-    if (percentValue < 5) radiusOffset = 25 // Fatias pequenas um pouco mais afastadas
-    else if (percentValue < 10) radiusOffset = 22
+    // Tamanho de fonte progressivo baseado no percentual
+    let fontSize = 10 // Base mínima
+    if (percentValue >= 20) fontSize = 13
+    else if (percentValue >= 10) fontSize = 12
+    else if (percentValue >= 5) fontSize = 11
+
+    // Distância otimizada: balanceia proximidade e legibilidade
+    let radiusOffset = 25
+    if (percentValue < 5) radiusOffset = 30 // Fatias pequenas mais afastadas
+    else if (percentValue < 10) radiusOffset = 28
+    else if (percentValue >= 20) radiusOffset = 22 // Fatias grandes mais próximas
 
     const radius = outerRadius + radiusOffset
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
@@ -148,13 +167,14 @@ export function ExpenseDistributionChart() {
       <text
         x={x}
         y={y}
-        className="fill-foreground"
+        fill="#FFFFFF" // Branco puro para máximo contraste
         textAnchor={textAnchor}
         dominantBaseline="central"
         style={{
           fontSize: `${fontSize}px`,
-          fontWeight: 600,
+          fontWeight: 700, // Extra bold para melhor legibilidade
           pointerEvents: 'none',
+          textShadow: '0px 1px 3px rgba(0, 0, 0, 0.8), 0px 0px 8px rgba(0, 0, 0, 0.6)', // Sombra para contraste em fundos claros
         }}
       >
         {`${name}: ${percentValue.toFixed(0)}%`}
@@ -169,17 +189,19 @@ export function ExpenseDistributionChart() {
       return (
         <div
           style={{
-            backgroundColor: 'hsl(var(--bg-card-2))',
-            border: `1px solid hsl(var(--border))`,
+            backgroundColor: 'rgba(18, 50, 44, 0.99)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: `2px solid hsl(var(--border))`,
             borderRadius: 'var(--radius-md)',
-            padding: '6px 10px',
-            boxShadow: 'var(--shadow-2)',
+            padding: '14px',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
           }}
         >
-          <p style={{ color: 'hsl(var(--fg-primary))', fontSize: '11px', fontWeight: 600, margin: 0, marginBottom: '2px' }}>
+          <p style={{ color: 'hsl(var(--fg-primary))', fontSize: '12px', fontWeight: 600, margin: 0, marginBottom: '4px' }}>
             {data.name}
           </p>
-          <p style={{ color: 'hsl(var(--fg-secondary))', fontSize: '10px', margin: 0 }}>
+          <p style={{ color: 'hsl(var(--fg-secondary))', fontSize: '11px', margin: 0 }}>
             {formatCurrency(data.value)}
           </p>
         </div>
@@ -223,8 +245,9 @@ export function ExpenseDistributionChart() {
                   cx="50%"
                   cy="50%"
                   labelLine={{
-                    className: "stroke-border",
-                    strokeWidth: 1,
+                    stroke: "#FFFFFF", // Linhas brancas para máxima visibilidade
+                    strokeWidth: 2, // Mais grossas para melhor clareza
+                    strokeOpacity: 0.8,
                   }}
                   label={renderCustomLabel}
                   outerRadius={70}

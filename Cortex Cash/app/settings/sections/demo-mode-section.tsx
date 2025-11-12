@@ -18,6 +18,8 @@ import { Loader2, Database, Trash2, AlertCircle, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { contaService } from '@/lib/services/conta.service';
 import { transacaoService } from '@/lib/services/transacao.service';
+import { categoriaService } from '@/lib/services/categoria.service';
+import { tagService } from '@/lib/services/tag.service';
 
 interface DemoModeSettings {
   enabled: boolean;
@@ -31,6 +33,8 @@ export function DemoModeSection() {
   const [clearing, setClearing] = useState(false);
   const [accountCount, setAccountCount] = useState(0);
   const [transactionCount, setTransactionCount] = useState(0);
+  const [categoryCount, setCategoryCount] = useState(0);
+  const [tagCount, setTagCount] = useState(0);
 
   // Carregar configurações do localStorage
   useEffect(() => {
@@ -47,10 +51,28 @@ export function DemoModeSection() {
 
   const loadStats = async () => {
     try {
-      const contas = await contaService.listContas({ incluirInativas: true });
-      const transacoes = await transacaoService.listTransacoes({ limit: 10000 });
+      const [contas, transacoes, categorias, tags] = await Promise.all([
+        contaService.listContas({ incluirInativas: true }).catch(err => {
+          console.error('Erro ao carregar contas:', err);
+          return [];
+        }),
+        transacaoService.listTransacoes({ limit: 10000 }).catch(err => {
+          console.error('Erro ao carregar transações:', err);
+          return [];
+        }),
+        categoriaService.listCategorias().catch(err => {
+          console.error('Erro ao carregar categorias:', err);
+          return [];
+        }),
+        tagService.listTags().catch(err => {
+          console.error('Erro ao carregar tags:', err);
+          return [];
+        }),
+      ]);
       setAccountCount(contas.length);
       setTransactionCount(transacoes.length);
+      setCategoryCount(categorias.length);
+      setTagCount(tags.length);
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
     }
@@ -199,7 +221,7 @@ export function DemoModeSection() {
       </div>
 
       {/* Database Stats */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-white/20 bg-white/5">
           <div className="p-4">
             <p className="text-sm font-medium text-white/70">Contas</p>
@@ -210,6 +232,18 @@ export function DemoModeSection() {
           <div className="p-4">
             <p className="text-sm font-medium text-white/70">Transações</p>
             <p className="text-2xl font-bold text-white mt-2">{transactionCount}</p>
+          </div>
+        </Card>
+        <Card className="border-white/20 bg-white/5">
+          <div className="p-4">
+            <p className="text-sm font-medium text-white/70">Categorias</p>
+            <p className="text-2xl font-bold text-white mt-2">{categoryCount}</p>
+          </div>
+        </Card>
+        <Card className="border-white/20 bg-white/5">
+          <div className="p-4">
+            <p className="text-sm font-medium text-white/70">Tags</p>
+            <p className="text-2xl font-bold text-white mt-2">{tagCount}</p>
           </div>
         </Card>
       </div>

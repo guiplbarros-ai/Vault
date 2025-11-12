@@ -275,11 +275,16 @@ export function CategoryAnalyticsDashboard({
                 <Tooltip
                   formatter={(value: number) => formatCurrency(value)}
                   contentStyle={{
-                    backgroundColor: 'hsl(var(--popover))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '6px',
-                    color: 'hsl(var(--popover-foreground))',
+                    backgroundColor: 'rgba(18, 50, 44, 0.99)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    border: '2px solid hsl(var(--border))',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'hsl(var(--fg-primary))',
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+                    padding: '14px',
                   }}
+                  labelStyle={{ color: 'hsl(var(--fg-primary))', fontWeight: 600 }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -371,11 +376,16 @@ export function CategoryAnalyticsDashboard({
                   <Tooltip
                     formatter={(value: number) => formatCurrency(value)}
                     contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px',
-                      color: 'hsl(var(--popover-foreground))',
+                      backgroundColor: 'rgba(18, 50, 44, 0.99)',
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
+                      border: '2px solid hsl(var(--border))',
+                      borderRadius: 'var(--radius-md)',
+                      color: 'hsl(var(--fg-primary))',
+                      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+                      padding: '14px',
                     }}
+                    labelStyle={{ color: 'hsl(var(--fg-primary))', fontWeight: 600 }}
                   />
                   <Legend />
                   <Bar dataKey="anterior" name="Mês Anterior" fill="#6B7280" />

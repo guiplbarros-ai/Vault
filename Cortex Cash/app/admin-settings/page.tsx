@@ -131,7 +131,7 @@ export default function AdminSettingsPage() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <ShieldCheck className="w-8 h-8" style={{ color: '#18B0A4' }} />
-              <h1 className="text-3xl font-bold text-white">Configurações Admin</h1>
+              <h1 className="text-3xl font-bold text-white">Admin</h1>
             </div>
             <p className="text-white/70">
               Configurações exclusivas para administradores do sistema

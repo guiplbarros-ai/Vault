@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { useSetting } from '@/app/providers/settings-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -22,6 +22,7 @@ export function PopularCategoriesWidget() {
   const [popularCategories, setPopularCategories] = useState<CategoriaWithMetric[]>([])
   const [loading, setLoading] = useState(true)
   const [metric, setMetric] = useState<MetricType>('count')
+  const [isChanging, setIsChanging] = useState(false)
   const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme')
 
   // Detecta se está em dark mode
@@ -32,52 +33,81 @@ export function PopularCategoriesWidget() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   }, [theme])
 
-  useEffect(() => {
-    async function loadPopularCategories() {
-      try {
-        setLoading(true)
+  const loadPopularCategories = useCallback(async () => {
+    try {
+      setLoading(true)
 
-        // Buscar todas as transações e categorias
-        const [transacoes, categorias] = await Promise.all([
-          transacaoService.listTransacoes(),
-          categoriaService.listCategorias({ ativas: true })
-        ])
+      // Buscar todas as transações e categorias
+      const [transacoes, categorias] = await Promise.all([
+        transacaoService.listTransacoes(),
+        categoriaService.listCategorias({ ativas: true })
+      ])
 
         // Mapear categorias com contagem e volume
         const categoryMap = new Map<string, { categoria: Categoria, count: number, volume: number }>()
 
-        for (const transacao of transacoes) {
-          if (transacao.categoria_id) {
-            const categoria = categorias.find(c => c.id === transacao.categoria_id)
-            if (categoria) {
-              const current = categoryMap.get(categoria.id) || { categoria, count: 0, volume: 0 }
-              current.count += 1
-              current.volume += Math.abs(Number(transacao.valor) || 0)
-              categoryMap.set(categoria.id, current)
-            }
-          }
+        // Categoria fictícia para transações sem categoria
+        const semCategoria: Categoria = {
+          id: 'sem-categoria',
+          nome: 'Sem Categoria',
+          tipo: 'despesa',
+          icone: '📁',
+          cor: '#8CA39C',
+          ativa: true,
+          ordem: 999,
+          created_at: new Date(),
+          updated_at: new Date(),
         }
 
-        // Converter para array e ordenar pela métrica selecionada
-        const categoriesArray = Array.from(categoryMap.values())
-          .sort((a, b) => {
-            if (metric === 'count') {
-              return b.count - a.count
-            } else {
-              return b.volume - a.volume
-            }
-          })
-          .slice(0, 5)
+        for (const transacao of transacoes) {
+          let categoria: Categoria
+          let categoriaId: string
 
+          if (!transacao.categoria_id) {
+            categoria = semCategoria
+            categoriaId = 'sem-categoria'
+          } else {
+            const foundCategoria = categorias.find(c => c.id === transacao.categoria_id)
+            if (!foundCategoria) {
+              categoria = semCategoria
+              categoriaId = 'sem-categoria'
+            } else {
+              categoria = foundCategoria
+              categoriaId = foundCategoria.id
+            }
+          }
+
+          const current = categoryMap.get(categoriaId) || { categoria, count: 0, volume: 0 }
+          current.count += 1
+          current.volume += Math.abs(Number(transacao.valor) || 0)
+          categoryMap.set(categoriaId, current)
+        }
+
+      // Converter para array e ordenar pela métrica selecionada
+      const categoriesArray = Array.from(categoryMap.values())
+        .sort((a, b) => {
+          if (metric === 'count') {
+            return b.count - a.count
+          } else {
+            return b.volume - a.volume
+          }
+        })
+        .slice(0, 5)
+
+      // Usar requestAnimationFrame para evitar ResizeObserver loop
+      requestAnimationFrame(() => {
         setPopularCategories(categoriesArray)
-      } catch (error) {
-        console.error("Erro ao carregar categorias populares:", error)
-      } finally {
-        setLoading(false)
-      }
+      })
+    } catch (error) {
+      console.error("Erro ao carregar categorias populares:", error)
+    } finally {
+      setLoading(false)
     }
-    loadPopularCategories()
   }, [metric])
+
+  useEffect(() => {
+    loadPopularCategories()
+  }, [loadPopularCategories])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -86,6 +116,15 @@ export function PopularCategoriesWidget() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value)
+  }
+
+  const handleMetricChange = (value: MetricType) => {
+    setIsChanging(true)
+    // Pequeno delay para evitar ResizeObserver loop
+    setTimeout(() => {
+      setMetric(value)
+      setIsChanging(false)
+    }, 50)
   }
 
   if (loading) {
@@ -122,8 +161,8 @@ export function PopularCategoriesWidget() {
               {metric === 'count' ? 'Por número de transações' : 'Por volume financeiro'}
             </p>
           </div>
-          <Select value={metric} onValueChange={(value) => setMetric(value as MetricType)}>
-            <SelectTrigger className="w-[140px] h-8 text-xs font-medium">
+          <Select value={metric} onValueChange={(value) => handleMetricChange(value as MetricType)}>
+            <SelectTrigger className="w-[140px] h-8 text-xs font-medium" disabled={isChanging}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

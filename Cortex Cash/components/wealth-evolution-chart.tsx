@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useSettings } from '@/app/providers/settings-provider'
+import { Card } from '@/components/ui/card'
+import { useSetting } from '@/app/providers/settings-provider'
 import { patrimonioService } from '@/lib/services/patrimonio.service'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { TrendingUp, Loader2 } from 'lucide-react'
-import { CHART_THEME } from '@/lib/utils/chart-theme'
+import { Loader2 } from 'lucide-react'
+import { THEME_COLORS } from '@/lib/constants/colors'
 
 interface WealthDataPoint {
   month: string
@@ -18,8 +18,7 @@ interface WealthDataPoint {
 export function WealthEvolutionChart() {
   const [data, setData] = useState<WealthDataPoint[]>([])
   const [loading, setLoading] = useState(true)
-  const { getSetting } = useSettings()
-  const theme = getSetting<'light' | 'dark' | 'auto'>('appearance.theme')
+  const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme')
 
   const isDark = useMemo(() => {
     if (typeof window === 'undefined') return false
@@ -98,8 +97,18 @@ export function WealthEvolutionChart() {
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div style={CHART_THEME.tooltip.contentStyle}>
-          <p style={{ ...CHART_THEME.tooltip.labelStyle, marginBottom: '8px' }}>
+        <div
+          style={{
+            backgroundColor: 'rgba(18, 50, 44, 0.99)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: `2px solid ${THEME_COLORS.border}`,
+            borderRadius: 'var(--radius-md)',
+            padding: '14px',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+          }}
+        >
+          <p style={{ color: THEME_COLORS.fgPrimary, fontWeight: 600, marginBottom: '10px', fontSize: '0.875rem' }}>
             {payload[0].payload.month}
           </p>
           {payload.map((entry: any, index: number) => (
@@ -136,19 +145,37 @@ export function WealthEvolutionChart() {
       <div className="flex-1 flex items-center min-h-0">
         <ResponsiveContainer width="100%" height="100%" minHeight={300}>
           <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-            <CartesianGrid {...CHART_THEME.grid} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={THEME_COLORS.border}
+              vertical={true}
+              horizontal={true}
+            />
             <XAxis
               dataKey="month"
-              {...CHART_THEME.axis}
-              tick={CHART_THEME.axis.tick}
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              tick={{ fill: THEME_COLORS.fgSecondary }}
             />
             <YAxis
-              {...CHART_THEME.axis}
-              tick={CHART_THEME.axis.tick}
+              fontSize={12}
               tickFormatter={formatCurrency}
+              tickLine={false}
+              axisLine={false}
+              tick={{ fill: THEME_COLORS.fgSecondary }}
             />
-            <Tooltip content={<CustomTooltip />} cursor={CHART_THEME.tooltip.cursor} />
-            <Legend {...CHART_THEME.legend} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: THEME_COLORS.hover, opacity: 0.3 }} />
+            <Legend
+              wrapperStyle={{
+                paddingTop: '15px',
+                color: THEME_COLORS.fgPrimary
+              }}
+              iconType="line"
+              formatter={(value: string) => (
+                <span style={{ color: THEME_COLORS.fgPrimary }}>{value}</span>
+              )}
+            />
             <Line
               type="monotone"
               dataKey="patrimonio"

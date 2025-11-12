@@ -8,6 +8,7 @@ import { AuthProvider } from "./providers/auth-provider"
 import { ThemeInitializer } from "@/components/theme-initializer"
 import { OnboardingCheck } from "@/components/onboarding-check"
 import { ServiceWorkerUpdatePrompt } from "@/components/service-worker-update-prompt"
+import { ResizeObserverErrorSuppressor } from "@/components/resize-observer-error-suppressor"
 
 const inter = Inter({ subsets: ["latin"] })
 const pressStart2P = Press_Start_2P({
@@ -51,6 +52,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={`${inter.className} ${pressStart2P.variable} text-foreground`}>
+        <ResizeObserverErrorSuppressor />
         <SettingsProvider>
           <ThemeInitializer />
           <DBProvider>

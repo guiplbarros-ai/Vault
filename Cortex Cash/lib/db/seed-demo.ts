@@ -10,6 +10,8 @@ import { contaService } from '../services/conta.service';
 import { instituicaoService } from '../services/instituicao.service';
 import { transacaoService } from '../services/transacao.service';
 import { categoriaService } from '../services/categoria.service';
+import { tagService } from '../services/tag.service';
+import { seedCategorias } from './seed';
 import type { Instituicao, Conta, Transacao, Categoria, TipoConta } from '../types';
 
 /**
@@ -45,18 +47,29 @@ export async function seedDemoData() {
     const contas = await seedContas(instituicoes);
     console.log(`[DEMO SEED] ✅ ${contas.length} contas criadas`);
 
-    // 4. Verificar categorias (devem existir do seed inicial)
-    console.log('[DEMO SEED] Passo 4: Verificando categorias...');
+    // 4. Criar categorias padrão (se não existirem)
+    console.log('[DEMO SEED] Passo 4: Criando categorias padrão...');
+    const db = getDB();
+    await seedCategorias(db);
+    console.log('[DEMO SEED] ✅ Categorias padrão criadas');
+
+    // 5. Criar tags padrão
+    console.log('[DEMO SEED] Passo 5: Criando tags padrão...');
+    await seedTags();
+    console.log('[DEMO SEED] ✅ Tags padrão criadas');
+
+    // 6. Verificar categorias
+    console.log('[DEMO SEED] Passo 6: Verificando categorias...');
     const categorias = await categoriaService.listCategorias();
     console.log(`[DEMO SEED] ✅ ${categorias.length} categorias encontradas`);
 
-    // 5. Criar transações
-    console.log('[DEMO SEED] Passo 5: Criando transações (isso pode demorar)...');
+    // 7. Criar transações
+    console.log('[DEMO SEED] Passo 7: Criando transações (isso pode demorar)...');
     const transacoes = await seedTransacoes(contas, categorias);
     console.log(`[DEMO SEED] ✅ ${transacoes.length} transações criadas`);
 
-    // 6. Recalcular saldos de todas as contas
-    console.log('[DEMO SEED] Passo 6: Recalculando saldos...');
+    // 8. Recalcular saldos de todas as contas
+    console.log('[DEMO SEED] Passo 8: Recalculando saldos...');
     for (let i = 0; i < contas.length; i++) {
       const conta = contas[i];
       console.log(`[DEMO SEED] Recalculando saldo da conta ${i + 1}/${contas.length}: ${conta.nome}`);
@@ -223,19 +236,90 @@ async function seedContas(instituicoes: Instituicao[]): Promise<Conta[]> {
 }
 
 /**
+ * Cria tags padrão
+ */
+async function seedTags(): Promise<void> {
+  const tagsPadrao = [
+    { nome: 'fixo', cor: '#4A90E2' },
+    { nome: 'variável', cor: '#F5A623' },
+    { nome: 'mensal', cor: '#7ED321' },
+    { nome: 'anual', cor: '#50E3C2' },
+    { nome: 'salário', cor: '#8B572A' },
+    { nome: 'freelance', cor: '#9013FE' },
+    { nome: 'extra', cor: '#BD10E0' },
+    { nome: 'design', cor: '#4A4A4A' },
+    { nome: 'moradia', cor: '#D0021B' },
+    { nome: 'alimentação', cor: '#F8E71C' },
+    { nome: 'transporte', cor: '#417505' },
+    { nome: 'uber', cor: '#000000' },
+    { nome: 'restaurante', cor: '#FF6B6B' },
+    { nome: 'internet', cor: '#4ECDC4' },
+    { nome: 'energia', cor: '#FFD93D' },
+    { nome: 'saúde', cor: '#6BCF7F' },
+    { nome: 'academia', cor: '#FF8B94' },
+    { nome: 'lazer', cor: '#C44569' },
+    { nome: 'entretenimento', cor: '#A8E6CF' },
+    { nome: 'educação', cor: '#3498DB' },
+    { nome: 'livros', cor: '#9B59B6' },
+    { nome: 'streaming', cor: '#E74C3C' },
+    { nome: 'música', cor: '#1DB954' },
+  ];
+
+  const existingTags = await tagService.listTags();
+  const existingTagNames = new Set(existingTags.map(t => t.nome.toLowerCase()));
+
+  for (const tagData of tagsPadrao) {
+    if (!existingTagNames.has(tagData.nome.toLowerCase())) {
+      try {
+        await tagService.createTag(tagData);
+        console.log(`[SEED] Tag criada: ${tagData.nome}`);
+      } catch (error) {
+        console.warn(`[SEED] Erro ao criar tag ${tagData.nome}:`, error);
+      }
+    } else {
+      console.log(`[SEED] Tag já existe: ${tagData.nome}`);
+    }
+  }
+}
+
+/**
  * Cria transações de exemplo para os últimos 3 meses
  */
 async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise<Transacao[]> {
   const transacoes: Transacao[] = [];
 
-  // Categorias comuns
-  const catSalario = categorias.find(c => c.nome.toLowerCase().includes('salário'));
-  const catAlimentacao = categorias.find(c => c.nome.toLowerCase().includes('alimentação'));
-  const catTransporte = categorias.find(c => c.nome.toLowerCase().includes('transporte'));
-  const catMoradia = categorias.find(c => c.nome.toLowerCase().includes('moradia'));
-  const catLazer = categorias.find(c => c.nome.toLowerCase().includes('lazer'));
-  const catSaude = categorias.find(c => c.nome.toLowerCase().includes('saúde'));
-  const catEducacao = categorias.find(c => c.nome.toLowerCase().includes('educação'));
+  // Categorias comuns - busca por tipo também
+  console.log('[SEED] Categorias disponíveis:', categorias.map(c => `${c.nome} (${c.tipo})`).join(', '));
+
+  const catSalario = categorias.find(c => c.tipo === 'receita' && c.nome.toLowerCase().includes('salário'))
+    || categorias.find(c => c.tipo === 'receita');
+  const catAlimentacao = categorias.find(c => c.tipo === 'despesa' && c.nome.toLowerCase().includes('alimentação'))
+    || categorias.find(c => c.tipo === 'despesa');
+  const catTransporte = categorias.find(c => c.tipo === 'despesa' && c.nome.toLowerCase().includes('transporte'))
+    || categorias.find(c => c.tipo === 'despesa');
+  const catMoradia = categorias.find(c => c.tipo === 'despesa' && (c.nome.toLowerCase().includes('moradia') || c.nome.toLowerCase().includes('casa')))
+    || categorias.find(c => c.tipo === 'despesa');
+  const catLazer = categorias.find(c => c.tipo === 'despesa' && c.nome.toLowerCase().includes('lazer'))
+    || categorias.find(c => c.tipo === 'despesa');
+  const catSaude = categorias.find(c => c.tipo === 'despesa' && c.nome.toLowerCase().includes('saúde'))
+    || categorias.find(c => c.tipo === 'despesa');
+  const catEducacao = categorias.find(c => c.tipo === 'despesa' && c.nome.toLowerCase().includes('educação'))
+    || categorias.find(c => c.tipo === 'despesa');
+
+  console.log('[SEED] Categorias selecionadas:');
+  console.log('  - Salário:', catSalario?.nome || '❌ NÃO ENCONTRADA');
+  console.log('  - Alimentação:', catAlimentacao?.nome || '❌ NÃO ENCONTRADA');
+  console.log('  - Transporte:', catTransporte?.nome || '❌ NÃO ENCONTRADA');
+  console.log('  - Moradia:', catMoradia?.nome || '❌ NÃO ENCONTRADA');
+  console.log('  - Lazer:', catLazer?.nome || '❌ NÃO ENCONTRADA');
+  console.log('  - Saúde:', catSaude?.nome || '❌ NÃO ENCONTRADA');
+  console.log('  - Educação:', catEducacao?.nome || '❌ NÃO ENCONTRADA');
+
+  // Verificar se alguma categoria essencial não foi encontrada
+  if (!catSalario || !catAlimentacao || !catTransporte || !catMoradia) {
+    console.warn('[SEED] ⚠️ ATENÇÃO: Algumas categorias essenciais não foram encontradas!');
+    console.warn('[SEED] As transações podem ficar sem categoria. Execute o seed inicial de categorias primeiro.');
+  }
 
   // Contas
   const contaCorrente = contas.find(c => c.tipo === 'corrente');
@@ -255,6 +339,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
     descricao: string;
     valor: number;
     tipo: 'receita' | 'despesa';
+    tags?: string[];
   }> = [];
 
   // RECEITAS (mensal) - 6 meses
@@ -270,6 +355,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       descricao: 'Salário Mensal',
       valor: 8500.00,
       tipo: 'receita',
+      tags: ['salário', 'fixo', 'mensal'],
     });
 
     transacoesData.push({
@@ -279,6 +365,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       descricao: 'Freela Design',
       valor: 1200.00,
       tipo: 'receita',
+      tags: ['freelance', 'extra', 'design'],
     });
   }
 
@@ -295,6 +382,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       descricao: 'Aluguel',
       valor: 2200.00,
       tipo: 'despesa',
+      tags: ['fixo', 'mensal', 'moradia'],
     });
 
     // Condomínio
@@ -305,6 +393,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       descricao: 'Condomínio',
       valor: 450.00,
       tipo: 'despesa',
+      tags: ['fixo', 'mensal'],
     });
 
     // Internet
@@ -315,6 +404,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       descricao: 'Internet Fibra',
       valor: 119.90,
       tipo: 'despesa',
+      tags: ['fixo', 'internet', 'mensal'],
     });
 
     // Energia
@@ -325,6 +415,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       descricao: 'Conta de Luz',
       valor: 280.50,
       tipo: 'despesa',
+      tags: ['fixo', 'energia', 'mensal'],
     });
   }
 
@@ -341,6 +432,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       descricao: 'Supermercado',
       valor: Math.random() * 300 + 200, // R$ 200-500
       tipo: 'despesa',
+      tags: ['alimentação', 'variável'],
     });
 
     // Uber/Transporte
@@ -351,6 +443,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       descricao: 'Uber',
       valor: Math.random() * 40 + 20, // R$ 20-60
       tipo: 'despesa',
+      tags: ['transporte', 'variável', 'uber'],
     });
 
     // Almoço/Jantar fora
@@ -361,6 +454,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       descricao: 'Restaurante',
       valor: Math.random() * 80 + 40, // R$ 40-120
       tipo: 'despesa',
+      tags: ['alimentação', 'restaurante', 'variável'],
     });
   }
 
@@ -371,36 +465,42 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       valor: 149.90,
       categoria_id: catSaude?.id,
       dias_atras: 10,
+      tags: ['saúde', 'fixo', 'academia'],
     },
     {
       descricao: 'Farmácia',
       valor: 87.50,
       categoria_id: catSaude?.id,
       dias_atras: 15,
+      tags: ['saúde', 'variável'],
     },
     {
       descricao: 'Cinema',
       valor: 68.00,
       categoria_id: catLazer?.id,
       dias_atras: 20,
+      tags: ['lazer', 'entretenimento', 'variável'],
     },
     {
       descricao: 'Livros',
       valor: 125.00,
       categoria_id: catEducacao?.id,
       dias_atras: 25,
+      tags: ['educação', 'livros', 'variável'],
     },
     {
       descricao: 'Streaming (Netflix)',
       valor: 55.90,
       categoria_id: catLazer?.id,
       dias_atras: 5,
+      tags: ['streaming', 'fixo', 'mensal'],
     },
     {
       descricao: 'Spotify Premium',
       valor: 21.90,
       categoria_id: catLazer?.id,
       dias_atras: 7,
+      tags: ['streaming', 'música', 'fixo'],
     },
   ];
 
@@ -415,6 +515,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
       descricao: despesa.descricao,
       valor: despesa.valor,
       tipo: 'despesa',
+      tags: despesa.tags,
     });
   }
 

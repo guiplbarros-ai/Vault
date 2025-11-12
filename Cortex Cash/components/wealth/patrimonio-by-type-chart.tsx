@@ -66,17 +66,78 @@ export function PatrimonioByTypeChart() {
 
   const CHART_COLORS = useMemo(() => getChartColors(), [])
 
+  const renderCustomLabel = ({
+    cx,
+    cy,
+    midAngle,
+    innerRadius,
+    outerRadius,
+    percent,
+    name,
+  }: any) => {
+    const RADIAN = Math.PI / 180
+    const percentValue = percent * 100
+
+    // Oculta labels muito pequenas
+    if (percentValue < 3) return null
+
+    // Tamanho de fonte progressivo
+    let fontSize = 10
+    if (percentValue >= 20) fontSize = 13
+    else if (percentValue >= 10) fontSize = 12
+    else if (percentValue >= 5) fontSize = 11
+
+    // Distância otimizada
+    let radiusOffset = 25
+    if (percentValue < 5) radiusOffset = 30
+    else if (percentValue < 10) radiusOffset = 28
+    else if (percentValue >= 20) radiusOffset = 22
+
+    const radius = outerRadius + radiusOffset
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+    const textAnchor = x > cx ? 'start' : 'end'
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#FFFFFF"
+        textAnchor={textAnchor}
+        dominantBaseline="central"
+        style={{
+          fontSize: `${fontSize}px`,
+          fontWeight: 700,
+          pointerEvents: 'none',
+          textShadow: '0px 1px 3px rgba(0, 0, 0, 0.8), 0px 0px 8px rgba(0, 0, 0, 0.6)',
+        }}
+      >
+        {`${name}: ${percentValue.toFixed(1)}%`}
+      </text>
+    )
+  }
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="rounded-lg border border-border p-3 shadow-lg bg-card">
-          <p className="mb-2 font-semibold text-foreground">
+        <div
+          style={{
+            backgroundColor: 'rgba(18, 50, 44, 0.99)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '2px solid hsl(var(--border))',
+            borderRadius: 'var(--radius-md)',
+            padding: '14px',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+          }}
+        >
+          <p style={{ marginBottom: '8px', fontWeight: 600, color: 'hsl(var(--fg-primary))', fontSize: '12px' }}>
             {payload[0].name}
           </p>
-          <p className="text-sm" style={{ color: payload[0].payload.fill }}>
+          <p style={{ fontSize: '11px', color: payload[0].payload.fill, marginBottom: '2px' }}>
             Valor: {formatCurrency(payload[0].value)}
           </p>
-          <p className="text-sm text-success">
+          <p style={{ fontSize: '11px', color: '#6CCB8C' }}>
             Rentabilidade: {payload[0].payload.percentual >= 0 ? '+' : ''}
             {payload[0].payload.percentual.toFixed(2)}%
           </p>
@@ -145,8 +206,12 @@ export function PatrimonioByTypeChart() {
               data={chartData}
               cx="50%"
               cy="50%"
-              labelLine={false}
-              label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(1)}%`}
+              labelLine={{
+                stroke: "#FFFFFF",
+                strokeWidth: 2,
+                strokeOpacity: 0.8,
+              }}
+              label={renderCustomLabel}
               outerRadius={80}
               fill="#8884d8"
               dataKey="value"

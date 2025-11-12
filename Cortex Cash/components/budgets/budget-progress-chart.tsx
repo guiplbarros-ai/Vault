@@ -42,18 +42,26 @@ export function BudgetProgressChart({ orcamentos }: BudgetProgressChartProps) {
       const data = payload[0].payload
       return (
         <div
-          className="rounded-lg p-3 shadow-lg border bg-card border-border"
+          style={{
+            backgroundColor: 'rgba(18, 50, 44, 0.99)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '2px solid hsl(var(--border))',
+            borderRadius: 'var(--radius-md)',
+            padding: '14px',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+          }}
         >
-          <p className="font-semibold text-foreground mb-1">
+          <p style={{ fontWeight: 600, color: 'hsl(var(--fg-primary))', marginBottom: '6px', fontSize: '12px' }}>
             {data.icone} {data.nome}
           </p>
-          <p className="text-sm text-success">
+          <p style={{ fontSize: '11px', color: '#6CCB8C', marginBottom: '2px' }}>
             Realizado: {formatCurrency(data.realizado)}
           </p>
-          <p className="text-sm text-secondary">
+          <p style={{ fontSize: '11px', color: 'hsl(var(--fg-secondary))', marginBottom: '2px' }}>
             Planejado: {formatCurrency(data.planejado)}
           </p>
-          <p className="text-sm text-gold mt-1">
+          <p style={{ fontSize: '11px', color: '#D4AF37', marginTop: '4px' }}>
             {data.percentual.toFixed(1)}% usado
           </p>
         </div>

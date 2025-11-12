@@ -20,11 +20,34 @@ import { toast } from 'sonner'
  */
 export function GlobalErrorHandler() {
   useEffect(() => {
+    // Armazenar referência ao console.error original para evitar loops
+    const originalConsoleError = console.error
+
+    // Flag para prevenir recursão infinita
+    let isHandlingError = false
+
     // Handler para erros JavaScript não capturados
     const handleError = (event: ErrorEvent) => {
-      event.preventDefault()
+      // Prevenir recursão
+      if (isHandlingError) {
+        return
+      }
 
-      console.error('[GlobalErrorHandler] Uncaught error:', {
+      // Ignorar erros benignos do ResizeObserver (comum em gráficos/recharts)
+      if (event.message?.includes('ResizeObserver loop')) {
+        return
+      }
+
+      // Ignorar erros do próprio GlobalErrorHandler para evitar loops
+      if (event.message?.includes('[GlobalErrorHandler]')) {
+        return
+      }
+
+      event.preventDefault()
+      isHandlingError = true
+
+      // Usar console.error original para evitar triggerar o handler novamente
+      originalConsoleError('[GlobalErrorHandler] Uncaught error:', {
         message: event.message,
         filename: event.filename,
         lineno: event.lineno,
@@ -50,13 +73,22 @@ export function GlobalErrorHandler() {
         stack: event.error?.stack,
         timestamp: new Date().toISOString(),
       })
+
+      isHandlingError = false
     }
 
     // Handler para Promises rejeitadas não tratadas
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      event.preventDefault()
+      // Prevenir recursão
+      if (isHandlingError) {
+        return
+      }
 
-      console.error('[GlobalErrorHandler] Unhandled promise rejection:', {
+      event.preventDefault()
+      isHandlingError = true
+
+      // Usar console.error original para evitar triggerar o handler novamente
+      originalConsoleError('[GlobalErrorHandler] Unhandled promise rejection:', {
         reason: event.reason,
         promise: event.promise,
       })
@@ -83,6 +115,8 @@ export function GlobalErrorHandler() {
         stack: event.reason?.stack,
         timestamp: new Date().toISOString(),
       })
+
+      isHandlingError = false
     }
 
     // Registrar handlers

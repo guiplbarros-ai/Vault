@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { useSettings, useLocalizationSettings } from '@/app/providers/settings-provider'
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
@@ -12,11 +13,10 @@ import { contaService } from '@/lib/services/conta.service'
 import { startOfMonth, endOfMonth } from 'date-fns'
 import type { Transacao, Conta } from '@/lib/types'
 import type { DateRange } from 'react-day-picker'
-import { Wallet, TrendingUp, TrendingDown, PiggyBank, Loader2, Database } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, Loader2, Database, ShieldCheck, ArrowRight } from 'lucide-react'
 import { THEME_COLORS } from '@/lib/constants/colors'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { toast } from 'sonner'
 
 // ✅ Lazy load heavy Recharts components com default exports
 const CashFlowChart = dynamic(() => import('@/components/cash-flow-chart'), {
@@ -42,6 +42,10 @@ const WealthEvolutionChart = dynamic(() => import('@/components/wealth-evolution
 
 // ✅ Lazy load other heavy components
 const RecentTransactions = dynamic(() => import('@/components/recent-transactions'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false
+})
+const FinancialCalendar = dynamic(() => import('@/components/financial-calendar'), {
   loading: () => <ChartSkeleton />,
   ssr: false
 })
@@ -77,7 +81,6 @@ export default function DashboardPage() {
   })
   const [loading, setLoading] = useState(true)
   const [hasData, setHasData] = useState(false)
-  const [populatingDemo, setPopulatingDemo] = useState(false)
   const { getSetting } = useSettings()
   const { formatCurrency } = useLocalizationSettings()
   const theme = getSetting<'light' | 'dark' | 'auto'>('appearance.theme')
@@ -165,55 +168,6 @@ export default function DashboardPage() {
     }
   }, [selectedMonth, dateRange])
 
-  // Função para popular dados de demo
-  const handlePopulateDemo = async () => {
-    // Verificação de segurança: só executa no cliente
-    if (typeof window === 'undefined') {
-      console.error('seedDemoData só pode ser executado no cliente')
-      return
-    }
-
-    setPopulatingDemo(true)
-    try {
-      console.log('Iniciando população de dados demo...')
-
-      // Importação dinâmica (lazy load)
-      const seedModule = await import('@/lib/db/seed-demo')
-      console.log('Módulo seed-demo importado')
-
-      // Executar seed
-      const result = await seedModule.seedDemoData()
-      console.log('Seed concluído:', result)
-
-      toast.success('Dados demo carregados!', {
-        description: `${result.contas} contas e ${result.transacoes} transações criadas.`,
-        duration: 3000,
-      })
-
-      // Aguardar um pouco antes de recarregar
-      await new Promise(resolve => setTimeout(resolve, 1500))
-
-      // Recarregar página
-      window.location.reload()
-    } catch (error) {
-      console.error('Erro detalhado ao popular dados demo:', error)
-
-      // Extrair mensagem de erro
-      let errorMessage = 'Erro desconhecido'
-      if (error instanceof Error) {
-        errorMessage = error.message
-        console.error('Stack trace:', error.stack)
-      }
-
-      toast.error('Erro ao carregar dados demo', {
-        description: errorMessage,
-        duration: 5000,
-      })
-
-      setPopulatingDemo(false)
-    }
-  }
-
   // Detecta se está em dark mode (reativo a mudanças de tema)
   const isDark = useMemo(() => {
     if (typeof window === 'undefined') return false
@@ -280,38 +234,13 @@ export default function DashboardPage() {
             title="Dashboard"
             description="Visão geral consolidada das suas finanças"
           />
-          <div className="flex items-center gap-3">
-            {!hasData && (
-              <Button
-                onClick={handlePopulateDemo}
-                disabled={populatingDemo}
-                size="sm"
-                style={{
-                  backgroundColor: 'hsl(var(--primary))',
-                  color: '#F7FAF9',
-                }}
-              >
-                {populatingDemo ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Carregando...
-                  </>
-                ) : (
-                  <>
-                    <Database className="mr-2 h-4 w-4" />
-                    Popular Demo
-                  </>
-                )}
-              </Button>
-            )}
-            <MonthPicker
-              value={selectedMonth}
-              onChange={setSelectedMonth}
-              onRangeChange={setDateRange}
-              mode="range"
-              className="sm:ml-auto"
-            />
-          </div>
+          <MonthPicker
+            value={selectedMonth}
+            onChange={setSelectedMonth}
+            onRangeChange={setDateRange}
+            mode="range"
+            className="sm:ml-auto"
+          />
         </div>
 
         {/* Stats Overview Detalhado */}
@@ -332,31 +261,23 @@ export default function DashboardPage() {
               <p className="text-secondary text-center mb-6 max-w-md">
                 Para ver os gráficos e análises do dashboard, você precisa adicionar contas e transações.
               </p>
-              <div className="flex flex-col gap-3">
-                <Button
-                  onClick={handlePopulateDemo}
-                  disabled={populatingDemo}
-                  size="lg"
-                  style={{
-                    backgroundColor: 'hsl(var(--primary))',
-                    color: '#F7FAF9',
-                    borderRadius: '8px',
-                  }}
-                >
-                  {populatingDemo ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Carregando dados...
-                    </>
-                  ) : (
-                    <>
-                      <Database className="mr-2 h-5 w-5" />
-                      Popular com Dados Demo
-                    </>
-                  )}
-                </Button>
-                <p className="text-xs text-secondary text-center mt-2">
-                  ou crie sua primeira conta em Contas
+              <div className="flex flex-col gap-3 items-center">
+                <Link href="/admin-settings?tab=demoMode">
+                  <Button
+                    size="lg"
+                    style={{
+                      backgroundColor: 'hsl(var(--primary))',
+                      color: '#F7FAF9',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <ShieldCheck className="mr-2 h-5 w-5" />
+                    Ir para Admin → Modo Demo
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <p className="text-xs text-secondary text-center">
+                  Popular com dados de exemplo ou criar contas manualmente
                 </p>
               </div>
             </CardContent>
@@ -375,15 +296,19 @@ export default function DashboardPage() {
               <ExpenseDistributionChart />
             </div>
 
+            {/* Evolução Patrimonial (full width) */}
+            <WealthEvolutionChart />
+
+            {/* Calendário Financeiro (full width) */}
+            <FinancialCalendar />
+
             {/* Tags e Categorias (2 colunas) */}
             <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
               <PopularTagsWidget />
               <PopularCategoriesWidget />
             </div>
 
-            {/* Evolução Patrimonial (full width) */}
-            <WealthEvolutionChart />
-
+            {/* Transações Recentes (full width) */}
             <RecentTransactions />
           </>
         )}

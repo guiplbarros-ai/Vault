@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { useSetting } from '@/app/providers/settings-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { TagBadge } from "@/components/ui/tag-badge"
@@ -23,6 +23,7 @@ export function PopularTagsWidget() {
   const [popularTags, setPopularTags] = useState<TagWithMetric[]>([])
   const [loading, setLoading] = useState(true)
   const [metric, setMetric] = useState<MetricType>('count')
+  const [isChanging, setIsChanging] = useState(false)
   const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme')
 
   // Detecta se está em dark mode
@@ -33,16 +34,20 @@ export function PopularTagsWidget() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   }, [theme])
 
-  useEffect(() => {
-    async function loadPopularTags() {
-      try {
-        setLoading(true)
+  const loadPopularTags = useCallback(async () => {
+    try {
+      setLoading(true)
 
-        // Buscar todas as tags e transações
-        const [allTags, transacoes] = await Promise.all([
-          tagService.listTags(),
-          transacaoService.listTransacoes()
-        ])
+      // Buscar todas as tags e transações
+      const [allTags, transacoes] = await Promise.all([
+        tagService.listTags(),
+        transacaoService.listTransacoes()
+      ])
+
+        console.log('[PopularTagsWidget] ========== DEBUG ==========')
+        console.log('[PopularTagsWidget] Tags no banco:', allTags.length)
+        console.log('[PopularTagsWidget] Tags:', allTags.map(t => t.nome).join(', '))
+        console.log('[PopularTagsWidget] Total de transações:', transacoes.length)
 
         // Criar mapa de tags por nome para lookup rápido
         const tagByName = new Map<string, Tag>()
@@ -51,6 +56,7 @@ export function PopularTagsWidget() {
         // Mapear tags com contagem e volume
         const tagMap = new Map<string, { tag: Tag, count: number, volume: number }>()
 
+        let transacoesComTags = 0
         for (const transacao of transacoes) {
           // Tags são armazenadas como array de nomes de tags
           let tagsArray: string[] = []
@@ -67,10 +73,15 @@ export function PopularTagsWidget() {
           }
 
           if (tagsArray && tagsArray.length > 0) {
+            transacoesComTags++
+            console.log(`[PopularTagsWidget] Transação "${transacao.descricao}": tags =`, tagsArray)
             for (const tagNome of tagsArray) {
               // Buscar tag pelo nome
               const tag = tagByName.get(tagNome.toLowerCase())
-              if (!tag) continue
+              if (!tag) {
+                console.warn(`[PopularTagsWidget] Tag "${tagNome}" não encontrada no banco!`)
+                continue
+              }
 
               const current = tagMap.get(tag.id) || { tag: tag, count: 0, volume: 0 }
               current.count += 1
@@ -79,6 +90,9 @@ export function PopularTagsWidget() {
             }
           }
         }
+
+        console.log(`[PopularTagsWidget] Transações com tags: ${transacoesComTags}/${transacoes.length}`)
+        console.log('[PopularTagsWidget] Tags processadas:', Array.from(tagMap.values()).map(t => `${t.tag.nome} (${t.count})`).join(', '))
 
         // Converter para array e ordenar pela métrica selecionada
         const tagsArray = Array.from(tagMap.values())
@@ -91,15 +105,22 @@ export function PopularTagsWidget() {
           })
           .slice(0, 5)
 
+      console.log('[PopularTagsWidget] Top 5 tags:', tagsArray.map(t => `${t.tag.nome} (${t.count})`).join(', '))
+
+      // Usar requestAnimationFrame para evitar ResizeObserver loop
+      requestAnimationFrame(() => {
         setPopularTags(tagsArray)
-      } catch (error) {
-        console.error("Erro ao carregar tags populares:", error)
-      } finally {
-        setLoading(false)
-      }
+      })
+    } catch (error) {
+      console.error("Erro ao carregar tags populares:", error)
+    } finally {
+      setLoading(false)
     }
-    loadPopularTags()
   }, [metric])
+
+  useEffect(() => {
+    loadPopularTags()
+  }, [loadPopularTags])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -108,6 +129,15 @@ export function PopularTagsWidget() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value)
+  }
+
+  const handleMetricChange = (value: MetricType) => {
+    setIsChanging(true)
+    // Pequeno delay para evitar ResizeObserver loop
+    setTimeout(() => {
+      setMetric(value)
+      setIsChanging(false)
+    }, 50)
   }
 
   if (loading) {
@@ -144,8 +174,8 @@ export function PopularTagsWidget() {
               {metric === 'count' ? 'Por número de transações' : 'Por volume financeiro'}
             </p>
           </div>
-          <Select value={metric} onValueChange={(value) => setMetric(value as MetricType)}>
-            <SelectTrigger className="w-[140px] h-8 text-xs font-medium">
+          <Select value={metric} onValueChange={(value) => handleMetricChange(value as MetricType)}>
+            <SelectTrigger className="w-[140px] h-8 text-xs font-medium" disabled={isChanging}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

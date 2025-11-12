@@ -48,6 +48,7 @@ export function ExpenseTrendsChart() {
         categoriaService.listCategorias(),
       ])
 
+      console.log('[ExpenseTrendsChart] ========== INÍCIO ==========')
       console.log('[ExpenseTrendsChart] Total de transações:', transacoes.length)
       console.log('[ExpenseTrendsChart] Total de categorias:', categorias.length)
 
@@ -59,7 +60,18 @@ export function ExpenseTrendsChart() {
 
       const recentExpenses = transacoes.filter(t => {
         const transactionDate = t.data instanceof Date ? t.data : new Date(t.data)
-        return transactionDate >= sixMonthsAgo && t.tipo === 'despesa'
+        const isDespesa = t.tipo === 'despesa'
+        const inPeriod = transactionDate >= sixMonthsAgo
+        if (isDespesa) {
+          console.log('[ExpenseTrendsChart] Despesa encontrada:', {
+            descricao: t.descricao,
+            valor: t.valor,
+            data: transactionDate.toLocaleDateString(),
+            categoria_id: t.categoria_id,
+            inPeriod
+          })
+        }
+        return inPeriod && isDespesa
       })
 
       console.log('[ExpenseTrendsChart] Despesas dos últimos 6 meses:', recentExpenses.length)
@@ -67,10 +79,11 @@ export function ExpenseTrendsChart() {
       // Agrupa por categoria para encontrar as top 3
       const categoryTotals = new Map<string, number>()
       recentExpenses.forEach(t => {
-        if (!t.categoria_id) return; // Ignora transações sem categoria
-        const current = categoryTotals.get(t.categoria_id) || 0
+        // Se não tem categoria, agrupa como "sem-categoria"
+        const catId = t.categoria_id || 'sem-categoria'
+        const current = categoryTotals.get(catId) || 0
         const valor = Number(t.valor) || 0
-        categoryTotals.set(t.categoria_id, current + Math.abs(valor))
+        categoryTotals.set(catId, current + Math.abs(valor))
       })
 
       const topCategories = Array.from(categoryTotals.entries())
@@ -88,10 +101,15 @@ export function ExpenseTrendsChart() {
       const colors: Record<string, string> = {}
 
       topCategories.forEach((catId, index) => {
-        const categoria = categorias.find(c => c.id === catId)
-        const name = categoria?.nome || 'Sem categoria'
-        names.push(name)
-        colors[name] = categoria?.cor || COLORS[index]
+        if (catId === 'sem-categoria') {
+          names.push('Sem Categoria')
+          colors['Sem Categoria'] = COLORS[index]
+        } else {
+          const categoria = categorias.find(c => c.id === catId)
+          const name = categoria?.nome || 'Sem categoria'
+          names.push(name)
+          colors[name] = categoria?.cor || COLORS[index]
+        }
       })
 
       setCategoryNames(names)
@@ -111,16 +129,20 @@ export function ExpenseTrendsChart() {
 
         // Para cada categoria top, calcula o gasto do mês
         topCategories.forEach((catId) => {
-          const categoria = categorias.find(c => c.id === catId)
-          const categoryName = categoria?.nome || 'Sem categoria'
+          const categoria = catId === 'sem-categoria' ? null : categorias.find(c => c.id === catId)
+          const categoryName = categoria?.nome || 'Sem Categoria'
 
           const monthCategoryExpenses = transacoes.filter(t => {
             const transactionDate = t.data instanceof Date ? t.data : new Date(t.data)
+            const matchesCategory = catId === 'sem-categoria'
+              ? !t.categoria_id
+              : t.categoria_id === catId
+
             return (
               transactionDate >= monthStart &&
               transactionDate <= monthEnd &&
               t.tipo === 'despesa' &&
-              t.categoria_id === catId
+              matchesCategory
             )
           })
 
@@ -151,6 +173,34 @@ export function ExpenseTrendsChart() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value)
+  }
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          style={{
+            backgroundColor: 'rgba(18, 50, 44, 0.99)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: `2px solid ${THEME_COLORS.border}`,
+            borderRadius: 'var(--radius-md)',
+            padding: '14px',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+          }}
+        >
+          <p style={{ color: THEME_COLORS.fgPrimary, fontWeight: 600, marginBottom: '10px', fontSize: '13px' }}>
+            {label}
+          </p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ fontSize: '12px', color: entry.color, marginBottom: '4px', fontWeight: 500 }}>
+              {entry.name}: {formatCurrency(entry.value)}
+            </p>
+          ))}
+        </div>
+      )
+    }
+    return null
   }
 
   return (
@@ -185,34 +235,27 @@ export function ExpenseTrendsChart() {
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: THEME_COLORS.secondary }}
+              tick={{ fill: THEME_COLORS.fgSecondary }}
             />
             <YAxis
               fontSize={12}
               tickFormatter={formatCurrency}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: THEME_COLORS.secondary }}
+              tick={{ fill: THEME_COLORS.fgSecondary }}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: THEME_COLORS.card,
-                border: `1px solid ${THEME_COLORS.border}`,
-                borderRadius: '0.75rem',
-                color: THEME_COLORS.foreground,
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
-              }}
-              formatter={(value: number) => formatCurrency(value)}
-              labelStyle={{ color: THEME_COLORS.foreground, fontWeight: 600 }}
+              content={<CustomTooltip />}
+              cursor={{ fill: THEME_COLORS.hover, opacity: 0.3 }}
             />
             <Legend
               wrapperStyle={{
-                paddingTop: '20px',
-                color: THEME_COLORS.foreground
+                paddingTop: '15px',
+                color: THEME_COLORS.fgPrimary
               }}
               iconType="line"
               formatter={(value: string) => (
-                <span style={{ color: THEME_COLORS.foreground }}>{value}</span>
+                <span style={{ color: THEME_COLORS.fgPrimary }}>{value}</span>
               )}
             />
             {categoryNames.map((name, index) => (

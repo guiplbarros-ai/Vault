@@ -37,10 +37,10 @@ export function CashFlowChart() {
 
   // ✅ Compute colors from new color scheme
   const colors = useMemo(() => ({
-    income: THEME_COLORS.success,
-    expenses: THEME_COLORS.destructive,
-    investments: THEME_COLORS.primary,
-    result: THEME_COLORS.gold,
+    income: '#6CCB8C',      // Verde (Receitas)
+    expenses: '#F07167',    // Vermelho (Despesas)
+    investments: '#4A90E2', // Azul (Investimentos)
+    result: '#E0B257',      // Amarelo (Resultado)
   }), [])
 
   useEffect(() => {
@@ -121,6 +121,34 @@ export function CashFlowChart() {
     return formatCurrencyWithSettings(value)
   }
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          style={{
+            backgroundColor: 'rgba(18, 50, 44, 0.99)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: `2px solid ${THEME_COLORS.border}`,
+            borderRadius: 'var(--radius-md)',
+            padding: '14px',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+          }}
+        >
+          <p style={{ color: THEME_COLORS.fgPrimary, fontWeight: 600, marginBottom: '10px', fontSize: '13px' }}>
+            {label}
+          </p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ fontSize: '12px', color: entry.color, marginBottom: '4px', fontWeight: 500 }}>
+              {entry.name}: {formatCurrency(entry.value)}
+            </p>
+          ))}
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
     <Card
       className="glass-card-3d p-6 overflow-hidden flex flex-col h-full"
@@ -128,7 +156,7 @@ export function CashFlowChart() {
         minHeight: '520px',
       }}
     >
-      <div className="mb-4 flex-shrink-0">
+      <div className="mb-6 flex-shrink-0">
         <h3 className="text-lg font-bold text-foreground">Fluxo de Caixa</h3>
         <p className="text-sm text-secondary">Receitas vs Despesas vs Investimentos (Últimos 6 meses)</p>
       </div>
@@ -186,16 +214,8 @@ export function CashFlowChart() {
               strokeDasharray="5 5"
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: THEME_COLORS.bgCard2,
-                border: `1px solid ${THEME_COLORS.border}`,
-                borderRadius: 'var(--radius-md)',
-                color: THEME_COLORS.fgPrimary,
-                boxShadow: 'var(--shadow-2)',
-              }}
-              formatter={(value: number) => formatCurrency(value)}
+              content={<CustomTooltip />}
               cursor={{ fill: THEME_COLORS.hover, opacity: 0.3 }}
-              labelStyle={{ color: THEME_COLORS.fgPrimary, fontWeight: 600 }}
             />
             <Legend
               wrapperStyle={{

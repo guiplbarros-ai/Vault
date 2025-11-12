@@ -40,20 +40,81 @@ export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartP
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="rounded-lg p-3 shadow-lg border bg-card border-border">
-          <p className="font-semibold text-foreground mb-1">
+        <div
+          style={{
+            backgroundColor: 'rgba(18, 50, 44, 0.99)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '2px solid hsl(var(--border))',
+            borderRadius: 'var(--radius-md)',
+            padding: '14px',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+          }}
+        >
+          <p style={{ fontWeight: 600, color: 'hsl(var(--fg-primary))', marginBottom: '6px', fontSize: '12px' }}>
             {data.icone} {data.name}
           </p>
-          <p className="text-sm text-success">
+          <p style={{ fontSize: '11px', color: '#6CCB8C', marginBottom: '2px' }}>
             Realizado: {formatCurrency(data.value)}
           </p>
-          <p className="text-sm text-gold">
+          <p style={{ fontSize: '11px', color: '#D4AF37' }}>
             {data.percentual.toFixed(1)}% do total
           </p>
         </div>
       )
     }
     return null
+  }
+
+  const renderCustomLabel = ({
+    cx,
+    cy,
+    midAngle,
+    innerRadius,
+    outerRadius,
+    percent,
+    name,
+  }: any) => {
+    const RADIAN = Math.PI / 180
+    const percentValue = percent * 100
+
+    // Oculta labels muito pequenas
+    if (percentValue < 3) return null
+
+    // Tamanho de fonte progressivo
+    let fontSize = 10
+    if (percentValue >= 20) fontSize = 13
+    else if (percentValue >= 10) fontSize = 12
+    else if (percentValue >= 5) fontSize = 11
+
+    // Distância otimizada
+    let radiusOffset = 25
+    if (percentValue < 5) radiusOffset = 30
+    else if (percentValue < 10) radiusOffset = 28
+    else if (percentValue >= 20) radiusOffset = 22
+
+    const radius = outerRadius + radiusOffset
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+    const textAnchor = x > cx ? 'start' : 'end'
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#FFFFFF"
+        textAnchor={textAnchor}
+        dominantBaseline="central"
+        style={{
+          fontSize: `${fontSize}px`,
+          fontWeight: 700,
+          pointerEvents: 'none',
+          textShadow: '0px 1px 3px rgba(0, 0, 0, 0.8), 0px 0px 8px rgba(0, 0, 0, 0.6)',
+        }}
+      >
+        {`${percentValue.toFixed(0)}%`}
+      </text>
+    )
   }
 
   const CustomLegend = ({ payload }: any) => {
@@ -65,7 +126,7 @@ export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartP
               className="h-3 w-3 rounded flex-shrink-0"
               style={{ backgroundColor: entry.color }}
             ></div>
-            <span className="text-xs text-secondary truncate">
+            <span className="text-xs text-foreground font-medium truncate">
               {entry.payload.icone} {entry.value}
             </span>
           </div>
@@ -115,8 +176,12 @@ export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartP
               data={chartData}
               cx="50%"
               cy="50%"
-              labelLine={false}
-              label={(entry: any) => `${entry.percentual.toFixed(0)}%`}
+              labelLine={{
+                stroke: "#FFFFFF",
+                strokeWidth: 2,
+                strokeOpacity: 0.8,
+              }}
+              label={renderCustomLabel}
               outerRadius={100}
               fill="#8884d8"
               dataKey="value"
