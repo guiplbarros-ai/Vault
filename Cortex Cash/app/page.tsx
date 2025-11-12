@@ -11,6 +11,7 @@ import { transacaoService } from '@/lib/services/transacao.service'
 import { contaService } from '@/lib/services/conta.service'
 import { startOfMonth, endOfMonth } from 'date-fns'
 import type { Transacao, Conta } from '@/lib/types'
+import type { DateRange } from 'react-day-picker'
 import { Wallet, TrendingUp, TrendingDown, PiggyBank, Loader2, Database } from 'lucide-react'
 import { THEME_COLORS } from '@/lib/constants/colors'
 import { Button } from '@/components/ui/button'
@@ -67,6 +68,7 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date())
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [stats, setStats] = useState<DashboardStats>({
     totalBalance: 0,
     monthlyIncome: 0,
@@ -87,11 +89,19 @@ export default function DashboardPage() {
       try {
         setLoading(true)
 
-        // Define intervalo do mês selecionado ANTES de buscar para reduzir IO
-        const monthStart = startOfMonth(selectedMonth)
-        const monthEnd = endOfMonth(selectedMonth)
+        // Define intervalo baseado no range ou no mês selecionado
+        let monthStart: Date
+        let monthEnd: Date
 
-        // Carrega contas e apenas transações do mês atual (via índice)
+        if (dateRange?.from && dateRange?.to) {
+          monthStart = dateRange.from
+          monthEnd = dateRange.to
+        } else {
+          monthStart = startOfMonth(selectedMonth)
+          monthEnd = endOfMonth(selectedMonth)
+        }
+
+        // Carrega contas e apenas transações do período (via índice)
         const [contas, transacoes] = await Promise.all([
           contaService.listContas(),
           transacaoService.listTransacoes({ dataInicio: monthStart, dataFim: monthEnd }),
@@ -153,7 +163,7 @@ export default function DashboardPage() {
     return () => {
       mounted = false
     }
-  }, [selectedMonth])
+  }, [selectedMonth, dateRange])
 
   // Função para popular dados de demo
   const handlePopulateDemo = async () => {
@@ -297,7 +307,8 @@ export default function DashboardPage() {
             <MonthPicker
               value={selectedMonth}
               onChange={setSelectedMonth}
-              mode="day"
+              onRangeChange={setDateRange}
+              mode="range"
               className="sm:ml-auto"
             />
           </div>

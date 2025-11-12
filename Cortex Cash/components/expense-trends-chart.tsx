@@ -48,14 +48,21 @@ export function ExpenseTrendsChart() {
         categoriaService.listCategorias(),
       ])
 
+      console.log('[ExpenseTrendsChart] Total de transações:', transacoes.length)
+      console.log('[ExpenseTrendsChart] Total de categorias:', categorias.length)
+
       // Encontra as top 3 categorias de despesa (últimos 6 meses)
       const now = new Date()
       const sixMonthsAgo = subMonths(now, 6)
+
+      console.log('[ExpenseTrendsChart] Período:', sixMonthsAgo.toLocaleDateString(), 'até', now.toLocaleDateString())
 
       const recentExpenses = transacoes.filter(t => {
         const transactionDate = t.data instanceof Date ? t.data : new Date(t.data)
         return transactionDate >= sixMonthsAgo && t.tipo === 'despesa'
       })
+
+      console.log('[ExpenseTrendsChart] Despesas dos últimos 6 meses:', recentExpenses.length)
 
       // Agrupa por categoria para encontrar as top 3
       const categoryTotals = new Map<string, number>()
@@ -70,6 +77,11 @@ export function ExpenseTrendsChart() {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
         .map(([id]) => id)
+
+      console.log('[ExpenseTrendsChart] Top 3 categorias de despesa:', topCategories.map(id => {
+        const cat = categorias.find(c => c.id === id)
+        return `${cat?.nome} (R$ ${categoryTotals.get(id)?.toFixed(2)})`
+      }))
 
       // Mapeia nomes e cores
       const names: string[] = []
@@ -121,6 +133,8 @@ export function ExpenseTrendsChart() {
 
         months.push(monthData)
       }
+
+      console.log('[ExpenseTrendsChart] Dados dos 6 meses:', months)
 
       setData(months)
     } catch (error) {

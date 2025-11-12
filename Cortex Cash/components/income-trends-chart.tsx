@@ -48,14 +48,21 @@ export function IncomeTrendsChart() {
         categoriaService.listCategorias(),
       ])
 
+      console.log('[IncomeTrendsChart] Total de transações:', transacoes.length)
+      console.log('[IncomeTrendsChart] Total de categorias:', categorias.length)
+
       // Encontra as top 3 categorias de receita (últimos 6 meses)
       const now = new Date()
       const sixMonthsAgo = subMonths(now, 6)
+
+      console.log('[IncomeTrendsChart] Período:', sixMonthsAgo.toLocaleDateString(), 'até', now.toLocaleDateString())
 
       const recentIncome = transacoes.filter(t => {
         const transactionDate = t.data instanceof Date ? t.data : new Date(t.data)
         return transactionDate >= sixMonthsAgo && t.tipo === 'receita'
       })
+
+      console.log('[IncomeTrendsChart] Receitas dos últimos 6 meses:', recentIncome.length)
 
       // Agrupa por categoria para encontrar as top 3
       const categoryTotals = new Map<string, number>()
@@ -70,6 +77,11 @@ export function IncomeTrendsChart() {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
         .map(([id]) => id)
+
+      console.log('[IncomeTrendsChart] Top 3 categorias de receita:', topCategories.map(id => {
+        const cat = categorias.find(c => c.id === id)
+        return `${cat?.nome} (R$ ${categoryTotals.get(id)?.toFixed(2)})`
+      }))
 
       // Mapeia nomes e cores
       const names: string[] = []
@@ -121,6 +133,8 @@ export function IncomeTrendsChart() {
 
         months.push(monthData)
       }
+
+      console.log('[IncomeTrendsChart] Dados dos 6 meses:', months)
 
       setData(months)
     } catch (error) {

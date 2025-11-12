@@ -38,13 +38,15 @@ const MONTHS = [
 export function MonthPicker({
   value = new Date(),
   onChange,
+  onRangeChange,
   className,
   mode = 'month',
 }: MonthPickerProps) {
   const [selectedDate, setSelectedDate] = React.useState(value)
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined)
   const [calendarYear, setCalendarYear] = React.useState(selectedDate.getFullYear())
   const [isOpen, setIsOpen] = React.useState(false)
-  const [viewMode, setViewMode] = React.useState<'day' | 'month'>(mode)
+  const [viewMode, setViewMode] = React.useState<'day' | 'month' | 'range'>(mode)
 
   React.useEffect(() => {
     setSelectedDate(value)
@@ -77,11 +79,28 @@ export function MonthPicker({
     setIsOpen(false)
   }
 
+  const handleRangeSelect = (range: DateRange | undefined) => {
+    setDateRange(range)
+    onRangeChange?.(range)
+    // Só fecha quando ambas as datas estiverem selecionadas
+    if (range?.from && range?.to) {
+      setIsOpen(false)
+    }
+  }
+
   const handleToday = () => {
     const now = new Date()
     setSelectedDate(now)
     setCalendarYear(now.getFullYear())
-    onChange?.(now)
+
+    if (viewMode === 'range') {
+      // Para range, define início do mês até hoje
+      const range = { from: startOfMonth(now), to: now }
+      setDateRange(range)
+      onRangeChange?.(range)
+    } else {
+      onChange?.(now)
+    }
     setIsOpen(false)
   }
 
@@ -102,6 +121,12 @@ export function MonthPicker({
     monthIndex === currentMonth && calendarYear === selectedDate.getFullYear()
 
   const getDisplayText = () => {
+    if (viewMode === 'range' && dateRange?.from) {
+      if (!dateRange.to) {
+        return format(dateRange.from, "dd 'de' MMM", { locale: ptBR })
+      }
+      return `${format(dateRange.from, 'dd/MM', { locale: ptBR })} - ${format(dateRange.to, 'dd/MM', { locale: ptBR })}`
+    }
     if (viewMode === 'day') {
       return format(selectedDate, "dd 'de' MMMM", { locale: ptBR })
     }
@@ -126,11 +151,11 @@ export function MonthPicker({
           <Button
             className={cn(
               "h-10 min-w-[180px] justify-center font-medium capitalize gap-2",
-              "rounded-lg text-sm"
+              "rounded-lg text-sm [&>svg]:!text-white"
             )}
             variant="default"
           >
-            <CalendarIcon className="h-4 w-4 text-primary-foreground" />
+            <CalendarIcon className="h-4 w-4" />
             {getDisplayText()}
           </Button>
         </PopoverTrigger>
@@ -140,13 +165,14 @@ export function MonthPicker({
         >
           <div className="bg-gradient-to-br from-primary/30 to-primary/20 text-foreground p-4 rounded-t-2xl border-b border-border">
             <div className="flex items-center justify-between mb-3">
-              <Select value={viewMode} onValueChange={(v) => setViewMode(v as 'day' | 'month')}>
+              <Select value={viewMode} onValueChange={(v) => setViewMode(v as 'day' | 'month' | 'range')}>
                 <SelectTrigger className="w-[140px] h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="day">Selecionar Dia</SelectItem>
-                  <SelectItem value="month">Selecionar Mês</SelectItem>
+                  <SelectItem value="range">Período</SelectItem>
+                  <SelectItem value="day">Dia Específico</SelectItem>
+                  <SelectItem value="month">Mês Inteiro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -214,6 +240,34 @@ export function MonthPicker({
                     variant="default"
                   >
                     HOJE
+                  </Button>
+                </div>
+              </>
+            ) : viewMode === 'range' ? (
+              <>
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={handleRangeSelect}
+                  locale={ptBR}
+                  defaultMonth={selectedDate}
+                  initialFocus
+                  numberOfMonths={2}
+                />
+                <div className="flex items-center justify-between pt-4 border-t border-border gap-3 mt-4">
+                  <Button
+                    variant="ghost"
+                    onClick={handleCancel}
+                    className="flex-1 font-semibold rounded-lg h-10"
+                  >
+                    CANCELAR
+                  </Button>
+                  <Button
+                    onClick={handleToday}
+                    className="flex-1 font-semibold rounded-lg h-10"
+                    variant="default"
+                  >
+                    MÊS ATÉ HOJE
                   </Button>
                 </div>
               </>
