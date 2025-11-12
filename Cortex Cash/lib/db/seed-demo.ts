@@ -246,7 +246,7 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
     throw new Error('Conta corrente não encontrada');
   }
 
-  // Gerar transações dos últimos 90 dias
+  // Gerar transações dos últimos 6 meses (180 dias)
   const hoje = new Date();
   const transacoesData: Array<{
     conta_id: string;
@@ -257,8 +257,8 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
     tipo: 'receita' | 'despesa';
   }> = [];
 
-  // RECEITAS (mensal)
-  for (let mes = 0; mes < 3; mes++) {
+  // RECEITAS (mensal) - 6 meses
+  for (let mes = 0; mes < 6; mes++) {
     const dataSalario = new Date(hoje);
     dataSalario.setMonth(dataSalario.getMonth() - mes);
     dataSalario.setDate(5); // Dia 5 de cada mês
@@ -282,8 +282,8 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
     });
   }
 
-  // DESPESAS FIXAS (mensal)
-  for (let mes = 0; mes < 3; mes++) {
+  // DESPESAS FIXAS (mensal) - 6 meses
+  for (let mes = 0; mes < 6; mes++) {
     const dataBase = new Date(hoje);
     dataBase.setMonth(dataBase.getMonth() - mes);
 
@@ -328,8 +328,8 @@ async function seedTransacoes(contas: Conta[], categorias: Categoria[]): Promise
     });
   }
 
-  // DESPESAS VARIÁVEIS (semanais)
-  for (let semana = 0; semana < 12; semana++) {
+  // DESPESAS VARIÁVEIS (semanais) - 6 meses = 24 semanas
+  for (let semana = 0; semana < 24; semana++) {
     const dataSemana = new Date(hoje);
     dataSemana.setDate(dataSemana.getDate() - (semana * 7));
 

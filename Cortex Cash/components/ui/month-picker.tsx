@@ -19,12 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import type { DateRange } from 'react-day-picker'
 
 export interface MonthPickerProps {
   value?: Date
   onChange?: (date: Date) => void
+  onRangeChange?: (range: DateRange | undefined) => void
   className?: string
-  mode?: 'day' | 'month'
+  mode?: 'day' | 'month' | 'range'
 }
 
 const MONTHS = [
@@ -128,7 +130,7 @@ export function MonthPicker({
             )}
             variant="default"
           >
-            <CalendarIcon className="h-4 w-4" />
+            <CalendarIcon className="h-4 w-4 text-primary-foreground" />
             {getDisplayText()}
           </Button>
         </PopoverTrigger>

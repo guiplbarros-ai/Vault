@@ -40,6 +40,17 @@ const nextConfig = {
       },
     ]
   },
+  
+  // Corrige 404 do favicon redirecionando para o logo existente
+  async redirects() {
+    return [
+      {
+        source: '/favicon.ico',
+        destination: '/logo.png',
+        permanent: false,
+      },
+    ]
+  },
 }
 
 export default nextConfig
