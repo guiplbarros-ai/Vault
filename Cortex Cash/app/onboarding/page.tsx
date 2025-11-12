@@ -182,16 +182,10 @@ export default function OnboardingPage() {
   // Mostrar loading enquanto o DB não estiver pronto ou enquanto estiver verificando
   if (!isInitialized || checking) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{
-          background: 'radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%)',
-          backgroundAttachment: 'fixed',
-        }}
-      >
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: '#3A8F6E' }} />
-          <p style={{ color: '#BBC5C2' }}>
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-secondary">
             {!isInitialized ? 'Inicializando banco de dados...' : 'Verificando configuração inicial...'}
           </p>
         </div>
@@ -200,25 +194,11 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background: 'radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%)',
-        backgroundAttachment: 'fixed',
-      }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="w-full max-w-4xl">
         {/* Welcome Step */}
         {step === 'welcome' && (
-          <Card
-            className="overflow-hidden"
-            style={{
-              backgroundColor: '#1a362f',
-              border: '1px solid #2d5247',
-              borderRadius: '18px',
-              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
-            }}
-          >
+          <Card className="overflow-hidden glass-card-3d">
             <CardHeader className="text-center pb-8">
               <div
                 className="mx-auto mb-6 w-20 h-20 rounded-full flex items-center justify-center"
@@ -311,14 +291,7 @@ export default function OnboardingPage() {
 
         {/* Choose Mode Step */}
         {step === 'choose-mode' && (
-          <Card
-            style={{
-              backgroundColor: '#1a362f',
-              border: '1px solid #2d5247',
-              borderRadius: '18px',
-              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
-            }}
-          >
+          <Card className="glass-card-3d">
             <CardHeader className="text-center">
               <CardTitle className="text-3xl font-bold mb-2" style={{ color: '#F7FAF9' }}>
                 Como você quer começar?
@@ -429,14 +402,7 @@ export default function OnboardingPage() {
 
         {/* Demo Confirm Step */}
         {step === 'demo-confirm' && (
-          <Card
-            style={{
-              backgroundColor: '#1a362f',
-              border: '1px solid #2d5247',
-              borderRadius: '18px',
-              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
-            }}
-          >
+          <Card className="glass-card-3d">
             <CardHeader className="text-center">
               <div
                 className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
@@ -541,14 +507,7 @@ export default function OnboardingPage() {
 
         {/* Create Account Step */}
         {step === 'create-account' && (
-          <Card
-            style={{
-              backgroundColor: '#1a362f',
-              border: '1px solid #2d5247',
-              borderRadius: '18px',
-              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
-            }}
-          >
+          <Card className="glass-card-3d">
             <CardHeader className="text-center">
               <div
                 className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
@@ -576,14 +535,7 @@ export default function OnboardingPage() {
 
         {/* Complete Step */}
         {step === 'complete' && (
-          <Card
-            style={{
-              backgroundColor: '#1a362f',
-              border: '1px solid #2d5247',
-              borderRadius: '18px',
-              boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
-            }}
-          >
+          <Card className="glass-card-3d">
             <CardHeader className="text-center pb-8">
               <div
                 className="mx-auto mb-6 w-20 h-20 rounded-full flex items-center justify-center"
