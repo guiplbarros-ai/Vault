@@ -156,7 +156,7 @@
 
 /* Efeito glass para sidebar */
 .glass-sidebar {
-  background: rgba(14, 24, 20, 0.8) !important;
+  background: rgba(26, 54, 47, 0.7) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border-right: 1px solid rgba(58, 143, 110, 0.3) !important;
@@ -218,12 +218,12 @@ main {
   border-color: #2d5247 !important;
 }
 
-/* Sidebar com gradiente azul-verde */
+/* Sidebar com mesmo padrão do header */
 aside {
   background: linear-gradient(180deg,
-    #0e1814 0%,
-    #0f1a1f 50%,
-    #0e1814 100%
+    #1a362f 0%,
+    #1a2e36 50%,
+    #1a362f 100%
   ) !important;
   border-right: 1px solid #2d5247 !important;
 }
