@@ -4,7 +4,7 @@
  * Provides offline functionality and caching strategies
  */
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `cortex-cash-${CACHE_VERSION}`;
 
 // Assets to cache on install
