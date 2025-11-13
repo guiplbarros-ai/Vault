@@ -1,4 +1,4 @@
-# 🤖 IA no Cortex Cash - Configuração Necessária
+claude# 🤖 IA no Cortex Cash - Configuração Necessária
 
 ## ⚠️ API Key da OpenAI Não Configurada
 

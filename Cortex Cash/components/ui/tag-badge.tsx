@@ -72,7 +72,7 @@ const TagBadge = React.forwardRef<HTMLDivElement, TagBadgeProps>(
             className="hover:opacity-70 transition-opacity"
             aria-label={`Remover tag ${label}`}
           >
-            <X className="h-3 w-3" />
+            <X className="h-3 w-3 text-foreground" />
           </button>
         )}
       </div>

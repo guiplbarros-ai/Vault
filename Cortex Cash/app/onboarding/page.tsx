@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useDB } from '@/app/providers/db-provider';
 import { Button } from '@/components/ui/button';
@@ -194,26 +195,30 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-4xl">
+    <div className="min-h-screen flex items-center justify-center p-4 pt-20 pb-32 bg-background">
+      <div className="w-full max-w-4xl space-y-8">
         {/* Welcome Step */}
         {step === 'welcome' && (
           <Card className="overflow-hidden glass-card-3d">
-            <CardHeader className="text-center pb-8">
-              <div
-                className="mx-auto mb-6 w-20 h-20 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: '#3A8F6E' }}
-              >
-                <Sparkles className="h-10 w-10" style={{ color: '#F7FAF9' }} />
+            <CardHeader className="text-center pb-12 pt-12">
+              <div className="mb-8">
+                <Image
+                  src="/logo.png"
+                  alt="Cortex Cash Logo"
+                  width={120}
+                  height={120}
+                  className="mx-auto"
+                  priority
+                />
               </div>
-              <CardTitle className="text-4xl font-bold mb-3" style={{ color: '#F7FAF9' }}>
+              <CardTitle className="text-4xl font-bold mb-3" style={{ color: '#E0B257' }}>
                 Bem-vindo ao Cortex Cash
               </CardTitle>
               <CardDescription className="text-lg" style={{ color: '#BBC5C2' }}>
                 Seu assistente financeiro inteligente com IA
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pb-12">
               <div className="grid md:grid-cols-3 gap-4">
                 <div
                   className="text-center p-6 rounded-lg"
@@ -260,7 +265,7 @@ export default function OnboardingPage() {
                   onClick={() => router.push('/login')}
                   size="lg"
                   variant="outline"
-                  className="px-12 justify-center items-center"
+                  className="flex-1 justify-center items-center"
                   style={{
                     backgroundColor: '#152b26',
                     border: '1px solid #2d5247',
@@ -273,7 +278,7 @@ export default function OnboardingPage() {
                 <Button
                   onClick={() => setStep('choose-mode')}
                   size="lg"
-                  className="px-12"
+                  className="flex-1 justify-center items-center"
                   style={{
                     backgroundColor: '#3A8F6E',
                     color: '#F7FAF9',
@@ -282,7 +287,7 @@ export default function OnboardingPage() {
                   }}
                 >
                   Começar
-                  <ArrowRight className="w-5 h-5" style={{ color: '#F7FAF9', stroke: '#F7FAF9' }} />
+                  <ArrowRight className="w-5 h-5 ml-2" style={{ color: '#F7FAF9', stroke: '#F7FAF9' }} />
                 </Button>
               </div>
             </CardContent>
@@ -292,15 +297,15 @@ export default function OnboardingPage() {
         {/* Choose Mode Step */}
         {step === 'choose-mode' && (
           <Card className="glass-card-3d">
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold mb-2" style={{ color: '#F7FAF9' }}>
+            <CardHeader className="text-center py-12">
+              <CardTitle className="text-3xl font-bold mb-2" style={{ color: '#E0B257' }}>
                 Como você quer começar?
               </CardTitle>
               <CardDescription style={{ color: '#BBC5C2' }}>
                 Escolha entre explorar com dados de exemplo ou criar sua primeira conta real
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-12">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Demo Mode */}
                 <button
@@ -402,22 +407,22 @@ export default function OnboardingPage() {
 
         {/* Demo Confirm Step */}
         {step === 'demo-confirm' && (
-          <Card className="glass-card-3d">
-            <CardHeader className="text-center">
+          <Card className="glass-card-3d" style={{ willChange: 'auto' }}>
+            <CardHeader className="text-center py-12">
               <div
                 className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: '#152b26' }}
               >
                 <Database className="h-8 w-8" style={{ color: '#3A8F6E' }} />
               </div>
-              <CardTitle className="text-3xl font-bold mb-2" style={{ color: '#F7FAF9' }}>
+              <CardTitle className="text-3xl font-bold mb-2" style={{ color: '#E0B257' }}>
                 Popular com Dados Demo
               </CardTitle>
               <CardDescription style={{ color: '#BBC5C2' }}>
                 Vamos criar contas e transações de exemplo para você explorar
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pb-12">
               <div
                 className="rounded-lg p-6"
                 style={{
@@ -466,7 +471,7 @@ export default function OnboardingPage() {
                   size="lg"
                   onClick={() => setStep('choose-mode')}
                   disabled={loading}
-                  className="px-8"
+                  className="flex-1 justify-center items-center"
                   style={{
                     backgroundColor: '#152b26',
                     border: '1px solid #2d5247',
@@ -480,7 +485,7 @@ export default function OnboardingPage() {
                   onClick={handleDemoConfirm}
                   disabled={loading}
                   size="lg"
-                  className="px-8"
+                  className="flex-1 justify-center items-center"
                   style={{
                     backgroundColor: '#3A8F6E',
                     color: '#F7FAF9',
@@ -508,21 +513,21 @@ export default function OnboardingPage() {
         {/* Create Account Step */}
         {step === 'create-account' && (
           <Card className="glass-card-3d">
-            <CardHeader className="text-center">
+            <CardHeader className="text-center py-12">
               <div
                 className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: '#152b26' }}
               >
                 <Wallet className="h-8 w-8" style={{ color: '#F7FAF9' }} />
               </div>
-              <CardTitle className="text-3xl font-bold mb-2" style={{ color: '#F7FAF9' }}>
+              <CardTitle className="text-3xl font-bold mb-2" style={{ color: '#E0B257' }}>
                 Criar Primeira Conta
               </CardTitle>
               <CardDescription style={{ color: '#BBC5C2' }}>
                 Configure sua primeira conta bancária ou cartão
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-12">
               <AccountForm
                 onSubmit={handleAccountCreate}
                 onCancel={() => setStep('choose-mode')}
@@ -535,29 +540,31 @@ export default function OnboardingPage() {
 
         {/* Complete Step */}
         {step === 'complete' && (
-          <Card className="glass-card-3d">
-            <CardHeader className="text-center pb-8">
+          <Card className="glass-card-3d" style={{ willChange: 'auto' }}>
+            <CardHeader className="text-center pb-12 pt-12">
               <div
                 className="mx-auto mb-6 w-20 h-20 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: '#5FC883' }}
               >
                 <CheckCircle2 className="h-10 w-10" style={{ color: '#F7FAF9' }} />
               </div>
-              <CardTitle className="text-4xl font-bold mb-3" style={{ color: '#F7FAF9' }}>
+              <CardTitle className="text-4xl font-bold mb-3" style={{ color: '#E0B257' }}>
                 Tudo Pronto!
               </CardTitle>
               <CardDescription className="text-lg" style={{ color: '#BBC5C2' }}>
                 Seu Cortex Cash está configurado e pronto para usar
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="flex flex-col justify-between min-h-48 pb-12">
               <div className="text-center space-y-4">
                 <p style={{ color: '#BBC5C2' }}>
                   {selectedMode === 'demo'
                     ? 'Explore o dashboard com dados de exemplo e conheça todas as funcionalidades.'
                     : 'Comece a adicionar transações e acompanhe suas finanças em tempo real.'}
                 </p>
+              </div>
 
+              <div className="flex justify-center">
                 <Button
                   onClick={handleComplete}
                   size="lg"

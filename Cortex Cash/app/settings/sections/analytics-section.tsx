@@ -231,7 +231,7 @@ export function AnalyticsSection() {
             'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
             timeRange === '3m'
               ? 'bg-[#18B0A4] text-white'
-              : 'bg-white/10 text-white/60 hover:bg-white/20'
+              : 'bg-white/10 text-white hover:bg-white/20 border border-white/30'
           )}
         >
           3 meses
@@ -242,7 +242,7 @@ export function AnalyticsSection() {
             'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
             timeRange === '6m'
               ? 'bg-[#18B0A4] text-white'
-              : 'bg-white/10 text-white/60 hover:bg-white/20'
+              : 'bg-white/10 text-white hover:bg-white/20 border border-white/30'
           )}
         >
           6 meses
@@ -253,7 +253,7 @@ export function AnalyticsSection() {
             'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
             timeRange === '12m'
               ? 'bg-[#18B0A4] text-white'
-              : 'bg-white/10 text-white/60 hover:bg-white/20'
+              : 'bg-white/10 text-white hover:bg-white/20 border border-white/30'
           )}
         >
           12 meses
