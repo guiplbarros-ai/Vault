@@ -146,13 +146,38 @@ export function ImportWizard({
         setProgress(80);
 
         if (result.erros.length > 0) {
-          toast.warning(`${result.erros.length} erros encontrados`, {
-            description: result.erros[0].mensagem,
+          // Agrupa erros por tipo
+          const errosPorTipo = new Map<string, number>();
+          result.erros.forEach(e => {
+            const tipo = e.campo || 'outro';
+            errosPorTipo.set(tipo, (errosPorTipo.get(tipo) || 0) + 1);
           });
+
+          const detalhesErros = Array.from(errosPorTipo.entries())
+            .map(([tipo, qtd]) => {
+              if (tipo === 'data') return `${qtd} linhas com datas inválidas`;
+              if (tipo === 'valor') return `${qtd} linhas com valores inválidos`;
+              if (tipo === 'outro') return `${qtd} linhas com campos faltando`;
+              return `${qtd} erros no campo "${tipo}"`;
+            })
+            .join('; ');
+
+          toast.warning(`${result.erros.length} erros encontrados`, {
+            description: detalhesErros,
+            duration: 5000,
+          });
+
+          // Log dos primeiros 3 erros para debug
+          console.error('Primeiros erros encontrados:', result.erros.slice(0, 3));
         }
 
         if (result.transacoes.length === 0) {
-          toast.error("Nenhuma transação válida encontrada");
+          toast.error("Nenhuma transação válida encontrada", {
+            description: result.erros.length > 0
+              ? `Verifique: ${result.erros[0].mensagem}`
+              : 'Verifique o mapeamento de colunas e o formato do arquivo',
+            duration: 5000,
+          });
           setLoading(false);
           setProcessingStage(null);
           return;

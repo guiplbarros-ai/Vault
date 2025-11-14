@@ -26,7 +26,7 @@ export class ImportService {
    * Detecta o formato do arquivo baseado no conteúdo
    */
   async detectFormat(fileContent: string): Promise<FileFormat> {
-    const lines = fileContent.split('\n').slice(0, 5); // Primeiras 5 linhas
+    const lines = fileContent.split('\n').filter(l => l.trim()).slice(0, 10); // Primeiras 10 linhas não-vazias
     const firstLine = lines[0]?.trim() || '';
 
     // Detectar OFX
@@ -40,16 +40,26 @@ export class ImportService {
       };
     }
 
-    // Detectar CSV
-    const separadores = [',', ';', '\t', '|'];
+    // Detectar CSV - com validação mais robusta
+    const separadores = [';', ',', '\t', '|']; // Prioridade: ; (Brasil)
     let melhorSeparador = ',';
     let maxColunas = 0;
+    const colunasCount = new Map<string, number[]>();
 
+    // Verifica todas as linhas para consistência
     for (const sep of separadores) {
-      const colunas = firstLine.split(sep).length;
-      if (colunas > maxColunas) {
-        maxColunas = colunas;
-        melhorSeparador = sep;
+      const counts = lines.map(line => line.split(sep).length);
+      colunasCount.set(sep, counts);
+
+      // Prefere separador com contagem consistente de colunas
+      const contagemModa = Math.max(...counts);
+      const consistencia = counts.filter(c => c === contagemModa).length / counts.length;
+
+      if (contagemModa >= 3 && consistencia >= 0.7) {
+        if (contagemModa > maxColunas || (contagemModa === maxColunas && sep === ';')) {
+          maxColunas = contagemModa;
+          melhorSeparador = sep;
+        }
       }
     }
 
@@ -58,10 +68,10 @@ export class ImportService {
 
       return {
         tipo: 'csv',
-        confianca: 0.85,
+        confianca: 0.9,
         detectado: {
           separador: melhorSeparador,
-          encoding: 'utf-8',
+          encoding: 'utf-8', // Será corrigido no upload se needed
           headers,
         },
       };
