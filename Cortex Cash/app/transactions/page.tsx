@@ -639,13 +639,13 @@ export default function TransactionsPage() {
                   }}>
                     <DialogTrigger asChild>
                       <Button
-                        className="h-10 font-medium"
+                        className="h-10 font-medium gap-2"
                         onClick={() => {
                           setEditMode(false)
                           setTransactionToEdit(null)
                         }}
                       >
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="h-4 w-4 flex-shrink-0" />
                         Nova Transação Manual
                       </Button>
                     </DialogTrigger>
