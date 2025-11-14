@@ -261,7 +261,7 @@ export function BudgetOverview() {
           return (
             <div
               key={budget.categoria_id}
-              className="group relative hover:scale-[1.01] transition-transform duration-200"
+              className="group relative hover:scale-[1.005] transition-transform duration-200"
             >
               {/* Header com categoria e valores */}
               <div className="flex items-center justify-between mb-3">

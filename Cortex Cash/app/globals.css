@@ -57,7 +57,7 @@
 
 .glass-card-3d:hover {
   /* Leve aumento com escala suave - text-rendering mantém nitidez */
-  transform: scale(1.02);
+  transform: scale(1.005);
 
   /* Força renderização nítida do texto durante transformação */
   -webkit-font-smoothing: antialiased;
@@ -127,7 +127,7 @@
 
 .glass-card-3d-intense:hover {
   /* Leve aumento com escala suave - text-rendering mantém nitidez */
-  transform: scale(1.03);
+  transform: scale(1.01);
 
   /* Força renderização nítida do texto durante transformação */
   -webkit-font-smoothing: antialiased;

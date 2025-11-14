@@ -234,11 +234,11 @@ export function CategoryForm({
                   key={i}
                   type="button"
                   onClick={() => setIcone(i)}
-                  className="p-2 text-2xl rounded-lg border-2 transition-all hover:scale-105"
+                  className="p-2 text-2xl rounded-lg border-2 transition-all hover:scale-[1.03]"
                   style={{
                     backgroundColor: icone === i ? "#213A34" : "#142A25",
                     borderColor: icone === i ? "#3A8F6E" : "#2A4942",
-                    transform: icone === i ? "scale(1.05)" : "scale(1)",
+                    transform: icone === i ? "scale(1.03)" : "scale(1)",
                   }}
                 >
                   {i}
