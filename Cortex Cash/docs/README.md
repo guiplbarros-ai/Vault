@@ -3,8 +3,7 @@
 Este índice consolida e organiza a documentação por categorias. Use-o como ponto de partida.
 
 ## Status
-- Status dos agentes (CORE, UI, FINANCE): [STATUS_AGENTES.md](./STATUS_AGENTES.md)
-- Índice de status: [status/](./status/README.md)
+- Status do projeto (canônico): [status/](./status/README.md)
 
 ## Changelogs
 - Changelog em `docs`: [CHANGELOG.md](./CHANGELOG.md)
@@ -31,6 +30,9 @@ Este índice consolida e organiza a documentação por categorias. Use-o como po
 - PRD: [Cortex Cash PRD.md](./Cortex Cash PRD.md)
 - Índice de planejamento: [planning/](./planning/README.md)
 
+## Produto
+- Índice de produto: [product/](./product/README.md)
+
 ## Arquitetura e Guias
 - Arquitetura: [architecture/](./architecture)
 - Data Architecture: [data-architecture/](./data-architecture)
@@ -54,7 +56,7 @@ Este índice consolida e organiza a documentação por categorias. Use-o como po
 
 Dica: Ao adicionar novos documentos, vincule-os no índice da categoria correspondente para manter a organização.
 # Documentação - Cortex Cash
-**v0.4 | Última atualização: 05 de Novembro de 2025**
+**v0.5.0-dev | Última atualização: 14 de Novembro de 2025**
 
 ## 📚 Índice Rápido
 
@@ -78,7 +80,6 @@ Dica: Ao adicionar novos documentos, vincule-os no índice da categoria correspo
 - **[Tema](./features/TEMA.md)** - Orientação de UI (Dark, sólido)
 
 ### 📋 Outros
-- **[Agents Architecture](./guides/AGENTES_IA.md)** - Arquitetura de 3 agentes
 - **[Roadmap Summary](./ROADMAP_SUMMARY.md)** - Visão geral do roadmap
 - **[Cortex Cash PRD](./Cortex%20Cash%20PRD.md)** - Documento mestre do produto
 
@@ -93,7 +94,6 @@ docs/
 ├── 📋 guides/                     # Guias de uso
 │   ├── GETTING_STARTED.md        # Setup inicial (5min)
 │   ├── DEVELOPMENT.md            # Convenções de código
-│   └── AGENTES_IA.md             # Arquitetura de 3 agentes
 │
 ├── 🏗️ architecture/               # Arquitetura técnica
 │   ├── DATA_MODEL.md             # Schema completo
@@ -127,7 +127,7 @@ docs/
 ### Para Desenvolvedores Novos
 
 1. **Setup rápido:** [Getting Started](./guides/GETTING_STARTED.md) (5 minutos)
-2. **Entenda a arquitetura:** [Agents](./guides/AGENTES_IA.md)
+2. **Entenda a arquitetura:** [Versioning Strategy](./architecture/VERSIONING_STRATEGY.md) e [Data Model](./architecture/DATA_MODEL.md)
 3. **Convenções:** [Development Guide](./guides/DEVELOPMENT.md)
 4. **Explore o código:** Leia os services em `lib/services/`
 
@@ -154,7 +154,7 @@ docs/
 
 ## 📊 Status do Projeto
 
-### ✅ Versão Atual: v0.4
+### ✅ Versão Atual: v0.5 (em desenvolvimento)
 
 **Completo:**
 - ✅ Setup inicial (Next.js 16 + Dexie.js)
@@ -227,7 +227,7 @@ Conteúdo...
 ---
 
 **Última atualização:** DD/MMM/AAAA
-**Agent responsável:** Agent X
+**Responsável:** Guilherme Barros
 ```
 
 ### Links
@@ -246,7 +246,7 @@ Conteúdo...
 → [AI Guide](./ai/AI_GUIDE.md)
 
 ### Dúvidas sobre Arquitetura
-→ [Data Model](./architecture/DATA_MODEL.md) ou [Agents](./guides/AGENTES_IA.md)
+→ [Data Model](./architecture/DATA_MODEL.md) e [Versioning Strategy](./architecture/VERSIONING_STRATEGY.md)
 
 ### Bugs ou Issues
 → Abra issue no GitHub: https://github.com/seu-usuario/cortex-cash/issues
@@ -289,11 +289,6 @@ Conteúdo...
 ---
 
 ## 🏆 Contribuidores
-
-**Agents de IA:**
-- Agent CORE - Arquitetura e infraestrutura
-- Agent DATA - Importação e classificação IA
-- Agent APP - Interface e UX
 
 **Desenvolvedor Principal:**
 - Guilherme Barros

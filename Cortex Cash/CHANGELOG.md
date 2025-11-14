@@ -5,6 +5,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [0.5.0] - Em desenvolvimento
+
+Para o changelog detalhado e atualizações diárias desta versão, consulte `docs/CHANGELOG.md`.
+
 ## [0.4.0] - 2025-11-02
 
 ### Adicionado
@@ -95,7 +99,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Documentação
 - `PWA_ICONS_README.md` - Guia para gerar ícones PWA
 - `BACKUP_TESTING_GUIDE.md` - Guia completo de testes de backup
-- `STATUS_AGENTES.md` atualizado com v0.4 completa
+- Status consolidado atualizado em `docs/status/README.md`
 - `CHANGELOG.md` criado
 
 ### Técnico
@@ -208,8 +212,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ### Documentação
 - `DEXIE_EXAMPLES.md` - Guia completo de uso do Dexie
-- `STATUS_AGENTES.md` - Status de desenvolvimento por agente
-- `AGENTES_IA_3_AGENTS.md` - Arquitetura de 3 agentes
+- `docs/status/README.md` - Status do projeto (canônico)
 
 ### Técnico
 - 0 mock data - 100% dados reais do Dexie
@@ -221,7 +224,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## Versões Futuras
 
-### [0.5.0] - Planejado
+### [0.5.0] - Em desenvolvimento
 - Motor de regras de classificação
 - Integração OpenAI para classificação automática
 - Batch processing de transações
@@ -267,8 +270,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ## Links
 
 - [Roadmap Completo](docs/ROADMAP_SUMMARY.md)
-- [Status de Desenvolvimento](docs/STATUS_AGENTES.md)
-- [Arquitetura de Agentes](docs/AGENTES_IA_3_AGENTS.md)
+- [Status do Projeto](docs/status/README.md)
 - [Guia de Contribuição](CONTRIBUTING.md) (a criar)
 
 ---

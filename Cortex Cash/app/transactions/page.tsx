@@ -595,53 +595,60 @@ export default function TransactionsPage() {
           }
         />
 
-        {/* Abas para reduzir quebras e consolidar funcionalidades */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3 glass-header p-1">
-            <TabsTrigger value="filters" className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground">
-              Filtros
-            </TabsTrigger>
-            <TabsTrigger value="ai" className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground">
-              Modo AI
-            </TabsTrigger>
-            <TabsTrigger value="import" className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground">
-              Importar
-            </TabsTrigger>
-          </TabsList>
+        {/* Card Unificado - Filtros, IA e Importação */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full space-y-0">
+          {/* TabsList como header do card */}
+          <Card className="glass-card-3d border-b-0 rounded-b-none">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Gerenciamento de Transações</h2>
+                <p className="text-xs text-secondary mt-1">Filtros, regras de IA e importação</p>
+              </div>
+              <TabsList className="grid grid-cols-3 gap-2">
+                <TabsTrigger value="filters" className="text-sm">
+                  Filtros
+                </TabsTrigger>
+                <TabsTrigger value="ai" className="text-sm">
+                  Modo IA
+                </TabsTrigger>
+                <TabsTrigger value="import" className="text-sm">
+                  Importar
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </Card>
 
-          {/* Lista de Transações + Filtros */}
-          <TabsContent value="filters" className="space-y-6">
-            {/* Card Unificado de Filtros */}
-            <Card className="glass-card-3d">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <CardTitle className="text-base text-foreground">Filtros</CardTitle>
-                  <CardDescription className="text-xs text-secondary">
-                    Filtre as transações por categoria, tag ou período
-                  </CardDescription>
-                </div>
-                {/* Nova Transação Manual (no topo do quadro) */}
-                <Dialog open={formDialogOpen} onOpenChange={(open) => {
-                  setFormDialogOpen(open)
-                  if (!open) {
-                    // Limpa estados ao fechar
-                    setEditMode(false)
-                    setTransactionToEdit(null)
-                  }
-                }}>
-                  <DialogTrigger asChild>
-                    <Button
-                      className="h-10 font-medium"
-                      onClick={() => {
-                        setEditMode(false)
-                        setTransactionToEdit(null)
-                      }}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Nova Transação Manual
-                    </Button>
-                  </DialogTrigger>
+          {/* Conteúdo das abas dentro do card */}
+          <Card className="glass-card-3d rounded-t-none border-t-0">
+            <CardContent className="pt-6">
+              {/* Lista de Transações + Filtros */}
+              <TabsContent value="filters" className="space-y-6 m-0">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium text-foreground">Filtros</h3>
+                    <p className="text-xs text-secondary mt-0.5">Filtre as transações por categoria, tag ou período</p>
+                  </div>
+                  {/* Nova Transação Manual (no topo) */}
+                  <Dialog open={formDialogOpen} onOpenChange={(open) => {
+                    setFormDialogOpen(open)
+                    if (!open) {
+                      // Limpa estados ao fechar
+                      setEditMode(false)
+                      setTransactionToEdit(null)
+                    }
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button
+                        className="h-10 font-medium"
+                        onClick={() => {
+                          setEditMode(false)
+                          setTransactionToEdit(null)
+                        }}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nova Transação Manual
+                      </Button>
+                    </DialogTrigger>
                   <DialogContent
                     className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border-border"
                   >
@@ -676,10 +683,9 @@ export default function TransactionsPage() {
                       } : undefined}
                     />
                   </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-              <CardContent className="space-y-4">
+                  </Dialog>
+                </div>
+
                 {/* Filtros rápidos pré-definidos */}
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -855,12 +861,10 @@ export default function TransactionsPage() {
                     </p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
 
-            {/* Bulk Actions */}
-            {selectedTransactionIds.length > 0 && (
-              <div className="space-y-4">
+                {/* Bulk Actions */}
+                {selectedTransactionIds.length > 0 && (
+                  <div className="space-y-4 mt-6 pt-6 border-t border-border">
                 {/* Bulk Category Assignment */}
                 <BulkCategoryAssign
                   selectedTransactionIds={selectedTransactionIds}
@@ -868,32 +872,36 @@ export default function TransactionsPage() {
                   onCancel={() => setSelectedTransactionIds([])}
                 />
 
-                {/* Bulk AI Classification */}
-                <BulkAIClassify
-                  selectedTransactionIds={selectedTransactionIds}
-                  onSuccess={handleBulkSuccess}
-                  onCancel={() => setSelectedTransactionIds([])}
-                />
-              </div>
-            )}
+                    {/* Bulk AI Classification */}
+                    <BulkAIClassify
+                      selectedTransactionIds={selectedTransactionIds}
+                      onSuccess={handleBulkSuccess}
+                      onCancel={() => setSelectedTransactionIds([])}
+                    />
+                  </div>
+                )}
 
-            <DataTable
-              data={filteredTransactions}
-              columns={columns}
-              searchable={false}
-            />
-          </TabsContent>
+                <div className="mt-6">
+                  <DataTable
+                    data={filteredTransactions}
+                    columns={columns}
+                    searchable={false}
+                  />
+                </div>
+              </TabsContent>
 
-          {/* Regras + Assistente em uma única aba para reduzir quebras */}
-          <TabsContent value="ai" className="space-y-6">
-            <ClassificationRules />
-            <RuleAssistant />
-          </TabsContent>
+              {/* Regras + Assistente em uma única aba para reduzir quebras */}
+              <TabsContent value="ai" className="space-y-6 m-0">
+                <ClassificationRules />
+                <RuleAssistant />
+              </TabsContent>
 
-          {/* Importação embutida */}
-          <TabsContent value="import" className="space-y-6">
-            <ImportWizard redirectOnComplete={false} showClassificationRules={false} />
-          </TabsContent>
+              {/* Importação embutida */}
+              <TabsContent value="import" className="space-y-6 m-0">
+                <ImportWizard redirectOnComplete={false} showClassificationRules={false} />
+              </TabsContent>
+            </CardContent>
+          </Card>
         </Tabs>
 
         <ConfirmationDialog

@@ -1,10 +1,10 @@
 # Cortex Cash — Product Requirements Document (PRD) v1
 
 > **Status:** Draft final - Estrutura de versionamento definida
-> **Versão Atual em Desenvolvimento:** **v0.1 - MVP Local**
+> **Versão Atual em Desenvolvimento:** **v0.5 - Regras e IA (em desenvolvimento)**
 > **Data-alvo v0.1:** 4 semanas
 > **Responsável:** Guilherme (PO)
-> **Time de execução:** Guilherme + Claude Code (3–4 terminais) dentro do Cursor
+> **Time:** Guilherme (PO)
 > **Nome do produto:** **Cortex Cash**
 >
 > **Arquitetura Evolutiva:**
@@ -689,7 +689,7 @@ Orientação consolidada em um único documento. Consulte:
     /ui               # componentes compartilhados (tabela, chips, chart wrappers)
 ```
 
-### 10.3 Terminais (Cursor + Claude Code)
+### 10.3 Fluxo de trabalho (opcional)
 - **Terminal 1 – UI**: servidor Next.js (dev)  
 - **Terminal 2 – API/Serviços**: watch + testes unitários de classificação/dedupe  
 - **Terminal 3 – DB/Migrações**: gerar e aplicar migrações (Drizzle)  
@@ -1042,7 +1042,7 @@ if exists(hash):
 
 ---
 
-## 20. Guia de Execução (Cursor + Claude Code)
+## 20. Guia de Execução (Dev)
 
 ### 20.1 Setup inicial
 1. Criar monorepo `cortex-cash` com `apps/web` (Next) e `packages/{db,services,etl,ui}`.
@@ -1050,7 +1050,7 @@ if exists(hash):
 3. Criar base de UI (sidebar/header), tema, tokens de cor e tipografia.
 4. Implementar tela de **Importação** com upload, detecção de header+sep, preview e salvamento de **template**.
 
-### 20.2 Terminais
+### 20.2 Fluxo de trabalho sugerido
 - **T1 (UI)**: `pnpm dev --filter @cortex/web`  
 - **T2 (Serviços)**: `pnpm --filter @cortex/services test --watch`  
 - **T3 (DB)**: `pnpm --filter @cortex/db drizzle:generate && drizzle:push`  

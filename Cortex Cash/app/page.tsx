@@ -53,6 +53,7 @@ const FinancialCalendar = dynamic(() => import('@/components/financial-calendar'
 // Lightweight components (não precisa lazy load)
 import { PopularTagsWidget } from "@/components/popular-tags-widget"
 import { PopularCategoriesWidget } from "@/components/popular-categories-widget"
+import { AccuracyWidget } from "@/components/classification/accuracy-widget"
 
 // ✅ Skeleton para charts durante carregamento
 function ChartSkeleton() {
@@ -302,10 +303,11 @@ export default function DashboardPage() {
             {/* Calendário Financeiro (full width) */}
             <FinancialCalendar />
 
-            {/* Tags e Categorias (2 colunas) */}
-            <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
+            {/* Tags, Categorias e Classificação IA (3 colunas) */}
+            <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-3 md:items-stretch">
               <PopularTagsWidget />
               <PopularCategoriesWidget />
+              <AccuracyWidget />
             </div>
 
             {/* Transações Recentes (full width) */}

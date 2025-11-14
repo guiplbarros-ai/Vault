@@ -34,7 +34,7 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-### Sistema de Importação Completo (Agent DATA)
+### Sistema de Importação Completo
 
 #### ✨ Funcionalidades Adicionadas
 
@@ -209,7 +209,7 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Sistema de Classificação Automática + Infraestrutura
 
-#### ✨ Backend (Agent DATA)
+#### ✨ Backend
 
 **Sistema de Classificação Automática**
 - Motor híbrido (cache → regras → OpenAI)
@@ -223,7 +223,7 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   - `GET /api/ai/usage` - Estatísticas de uso
   - `GET /api/ai/config` - Configuração do sistema
 
-#### 🏗️ Infraestrutura (Agent CORE)
+#### 🏗️ Infraestrutura
 
 **Error Handling Global**
 - ErrorBoundary component para captura de erros React
@@ -263,7 +263,7 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Clear all data (danger zone)
 - Interface em `/settings/backup`
 
-#### 🎨 Frontend (Agent APP)
+#### 🎨 Frontend
 
 **Gestão de Regras**
 - Página `/settings/classification-rules`
@@ -294,7 +294,7 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Sistema de Orçamentos e Cartões
 
-#### ✨ Agent FINANCE
+#### ✨ Financeiro
 
 **Sistema de Orçamentos**
 - OrcamentoService completo (CRUD + tracking + alertas)
@@ -312,7 +312,7 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Hook de alertas de limite
 - Monitoramento automático com thresholds
 
-#### 🎨 Agent UI
+#### 🎨 Frontend
 
 **Página de Orçamentos** (`/budgets`)
 - CRUD completo de orçamentos
@@ -341,7 +341,7 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### UI Completa + Integração com DB
 
-#### ✨ Agent UI
+#### ✨ Frontend
 
 **Páginas CRUD**
 - Dashboard Home com dados reais
@@ -378,7 +378,7 @@ e este projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Setup Inicial e Migração Dexie.js
 
-#### 🏗️ Agent CORE
+#### 🏗️ Infraestrutura
 
 **Setup do Projeto**
 - Next.js 16 + TypeScript configurado
@@ -447,5 +447,5 @@ Closes #123
 
 ---
 
-**Última atualização**: 05 de Novembro de 2025
-**Versão atual**: v0.5 (em desenvolvimento)
+**Última atualização**: 14 de Novembro de 2025
+**Versão atual**: v0.5.0-dev (em desenvolvimento)

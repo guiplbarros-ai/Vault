@@ -13,11 +13,12 @@ import { transacaoService } from '@/lib/services/transacao.service';
 import { categoriaService } from '@/lib/services/categoria.service';
 import { useSetting } from '@/app/providers/settings-provider';
 import { toast } from 'sonner';
-import { Brain, Loader2, CheckCircle, XCircle, AlertTriangle, FolderX, Power } from 'lucide-react';
+import { Brain, Loader2, CheckCircle, XCircle, AlertTriangle, FolderX, Power, Pause, Play } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { brandNavyAlpha } from '@/lib/constants/colors';
+import { Progress } from '@/components/ui/progress';
 
 interface BulkAIClassifyProps {
   selectedTransactionIds: string[];
@@ -31,6 +32,8 @@ export function BulkAIClassify({
   onCancel
 }: BulkAIClassifyProps) {
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [paused, setPaused] = useState(false);
   const [results, setResults] = useState<{
     success: number;
     failed: number;
@@ -70,6 +73,8 @@ export function BulkAIClassify({
     try {
       setLoading(true);
       setResults(null);
+      setProgress(0);
+      setPaused(false);
 
       // Busca transações selecionadas
       const allTransactions = await transacaoService.listTransacoes();
@@ -81,8 +86,15 @@ export function BulkAIClassify({
       let successCount = 0;
       let failedCount = 0;
 
-      // Processa cada transação
-      for (const transaction of selectedTransactions) {
+      // Processa cada transação com tracking de progresso
+      for (let i = 0; i < selectedTransactions.length; i++) {
+        const transaction = selectedTransactions[i];
+
+        // Aguarda se pausado
+        while (paused) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
         try {
           const response = await fetch('/api/ai/classify', {
             method: 'POST',
@@ -140,6 +152,10 @@ export function BulkAIClassify({
           });
           failedCount++;
         }
+
+        // Atualiza progresso
+        const progressPercent = ((i + 1) / selectedTransactions.length) * 100;
+        setProgress(progressPercent);
       }
 
       setResults({
@@ -233,6 +249,11 @@ export function BulkAIClassify({
             <span className="text-white font-medium">
               {selectedTransactionIds.length} {selectedTransactionIds.length === 1 ? 'transação selecionada' : 'transações selecionadas'}
             </span>
+            {loading && (
+              <span className="text-xs text-white/60 ml-2">
+                {Math.round(progress)}%
+              </span>
+            )}
           </div>
 
           <div className="flex gap-2">
@@ -257,6 +278,27 @@ export function BulkAIClassify({
               )}
             </Button>
 
+            {loading && (
+              <Button
+                onClick={() => setPaused(!paused)}
+                variant="outline"
+                style={{
+                  borderColor: 'rgb(71, 85, 105)',
+                  color: 'white',
+                }}
+              >
+                {paused ? (
+                  <>
+                    <Play className="w-4 h-4" />
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-4 h-4" />
+                  </>
+                )}
+              </Button>
+            )}
+
             {onCancel && (
               <Button
                 onClick={onCancel}
@@ -272,6 +314,16 @@ export function BulkAIClassify({
             )}
           </div>
         </div>
+
+        {/* Progress Bar */}
+        {loading && (
+          <div className="space-y-1">
+            <Progress value={progress} className="h-2" />
+            <p className="text-xs text-white/60 text-right">
+              {Math.round(progress)}% completo
+            </p>
+          </div>
+        )}
 
         {/* Results */}
         {results && (

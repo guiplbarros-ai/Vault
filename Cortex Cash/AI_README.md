@@ -38,10 +38,11 @@ npm run dev
 
 ## 📖 Documentação Completa
 
-- **Quick Start:** `docs/AI_QUICK_START.md`
-- **Setup Detalhado:** `OPENAI_SETUP.md`
-- **Integração Técnica:** `docs/AI_INTEGRATION_V2.md`
-- **Arquitetura de Agentes (3 agentes):** `docs/AGENTES_IA_3_AGENTS.md`
+- **Índice Geral da Documentação:** `docs/README.md`
+- **Getting Started (IA - setup rápido):** `docs/guides/GETTING_STARTED.md#setup-de-ia-opcional`
+- **Setup Detalhado de OpenAI:** `OPENAI_SETUP.md`
+- **Guia de Integração de IA:** `docs/ai/AI_GUIDE.md`
+- **Referência de Endpoints de IA:** `docs/ai/AI_ENDPOINTS.md`
 
 ---
 
@@ -62,4 +63,4 @@ Execute: `npm run ai:test` para diagnóstico completo
 
 ---
 
-**Agent IA: Owner**
+**Contato:** abra uma issue com detalhes do problema e logs do `npm run ai:test`.
