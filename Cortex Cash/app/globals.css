@@ -1032,7 +1032,7 @@ button {
 .card-3d-success:hover,
 .card-3d-danger:hover,
 .card-3d-warning:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

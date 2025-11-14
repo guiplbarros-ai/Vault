@@ -79,7 +79,7 @@ export function ColorPicker({
               onClick={() => handleColorSelect(color)}
               title={getColorName(color)}
               className={cn(
-                'h-8 w-8 rounded-md border-2 transition-all hover:scale-[1.04]',
+                'h-8 w-8 rounded-md border-2 transition-all hover:scale-[1.02]',
                 value === color ? 'border-white' : 'border-transparent'
               )}
               style={{

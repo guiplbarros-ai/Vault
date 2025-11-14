@@ -354,7 +354,7 @@ export default function CreditCardsPage() {
                       return (
                         <Card
                           key={cartao.id}
-                          className="relative overflow-hidden border-l-4 transition-all hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)] bg-card border-border"
+                          className="relative overflow-hidden border-l-4 transition-all hover:shadow-[0_1px_0_rgba(0,0,0,.35),0_8px_14px_rgba(0,0,0,.25)] bg-card border-border"
                           style={{
                             borderLeftColor: cartao.cor || 'hsl(var(--primary))'
                           }}

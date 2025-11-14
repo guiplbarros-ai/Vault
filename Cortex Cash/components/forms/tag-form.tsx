@@ -111,7 +111,7 @@ export function TagForm({ tag, onSubmit, onCancel }: TagFormProps) {
               key={cor}
               type="button"
               onClick={() => setSelectedColor(cor)}
-              className={`w-10 h-10 rounded-md transition-all hover:scale-[1.04] ${
+              className={`w-10 h-10 rounded-md transition-all hover:scale-[1.02] ${
                 selectedColor === cor
                   ? "ring-2 ring-primary ring-offset-2"
                   : ""

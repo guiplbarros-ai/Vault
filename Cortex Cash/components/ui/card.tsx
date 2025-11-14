@@ -24,7 +24,7 @@ function Card({ className, ...props }: React.ComponentProps<'div'>) {
         // Glass cards têm suas próprias sombras
         !isGlassCard && 'shadow-[0_1px_0_rgba(0,0,0,.35),0_6px_12px_rgba(0,0,0,.25)]',
         // Hover: mantém elevação
-        !isGlassCard && 'hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)]',
+        !isGlassCard && 'hover:shadow-[0_1px_0_rgba(0,0,0,.35),0_8px_14px_rgba(0,0,0,.25)]',
         // Transição suave
         'transition-all duration-300',
         // Padding vertical apenas para cards normais (glass cards aplicam seu próprio padding)

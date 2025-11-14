@@ -62,7 +62,7 @@ export function FaturaCard({
   const isPaga = status === 'paga'
 
   return (
-    <Card className="overflow-hidden hover:shadow-[0_1px_0_rgba(0,0,0,.4),0_10px_18px_rgba(0,0,0,.28)] transition-all bg-card border-border">
+    <Card className="overflow-hidden hover:shadow-[0_1px_0_rgba(0,0,0,.35),0_8px_14px_rgba(0,0,0,.25)] transition-all bg-card border-border">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
