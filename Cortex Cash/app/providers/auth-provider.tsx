@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Erro ao atualizar usuário:', error);
       throw error;
     }
-  }, [user]);
+  }, [user?.id]); // Usa apenas o ID do usuário, que é mais estável
 
   // Altera senha
   const changePassword = useCallback(async (senhaAtual: string, novaSenha: string) => {

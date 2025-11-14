@@ -54,6 +54,8 @@ export function DBProvider({ children }: DBProviderProps) {
     let timeoutId: ReturnType<typeof setTimeout>;
     let longOpenId: ReturnType<typeof setTimeout>;
 
+    let timedOut = false;
+
     async function initialize() {
       try {
         console.log('🔄 Inicializando banco de dados Dexie...');
@@ -61,6 +63,7 @@ export function DBProvider({ children }: DBProviderProps) {
         // Timeout de 10 segundos para detectar travamentos
         timeoutId = setTimeout(() => {
           console.error('❌ Timeout na inicialização do banco de dados');
+          timedOut = true;
           setError('Timeout ao inicializar banco de dados. Tente recarregar a página.');
           setIsLoading(false);
         }, 10000);
@@ -101,10 +104,13 @@ export function DBProvider({ children }: DBProviderProps) {
         // Cancela o timeout
         clearTimeout(timeoutId);
 
-        // Libera a UI IMEDIATAMENTE
-        setDb(dbInstance);
-        setIsInitialized(true);
-        setIsLoading(false);
+        // Só atualiza state se não tiver dado timeout
+        if (!timedOut) {
+          // Libera a UI IMEDIATAMENTE
+          setDb(dbInstance);
+          setIsInitialized(true);
+          setIsLoading(false);
+        }
 
         console.log('✅ Cortex Cash pronto para uso!');
 
@@ -123,8 +129,11 @@ export function DBProvider({ children }: DBProviderProps) {
       } catch (err) {
         console.error('❌ Erro ao inicializar banco de dados:', err);
         clearTimeout(timeoutId);
-        setError(err instanceof Error ? err.message : 'Erro desconhecido');
-        setIsLoading(false);
+        // Só atualiza state se não tiver dado timeout
+        if (!timedOut) {
+          setError(err instanceof Error ? err.message : 'Erro desconhecido');
+          setIsLoading(false);
+        }
       }
     }
 

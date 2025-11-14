@@ -17,6 +17,41 @@ import type {
 } from '@/lib/types/settings';
 
 // ============================================================================
+// Utility Functions
+// ============================================================================
+
+/**
+ * Comparação profunda eficiente para objetos Settings
+ * Evita usar JSON.stringify que é custoso
+ */
+function deepEqual(obj1: any, obj2: any): boolean {
+  if (obj1 === obj2) return true;
+  if (!obj1 || !obj2 || typeof obj1 !== 'object' || typeof obj2 !== 'object') {
+    return false;
+  }
+
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+
+  if (keys1.length !== keys2.length) return false;
+
+  for (const key of keys1) {
+    if (!keys2.includes(key)) return false;
+
+    const val1 = obj1[key];
+    const val2 = obj2[key];
+
+    if (typeof val1 === 'object' && typeof val2 === 'object') {
+      if (!deepEqual(val1, val2)) return false;
+    } else if (val1 !== val2) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// ============================================================================
 // Context Types
 // ============================================================================
 
@@ -52,8 +87,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       // Usa função de atualização para garantir que sempre temos o estado mais recente
       setSettings(prevSettings => {
         const newSettings = settingsService.getAll();
-        // Só atualiza se realmente mudou (comparação profunda)
-        if (JSON.stringify(prevSettings) !== JSON.stringify(newSettings)) {
+        // Só atualiza se realmente mudou (comparação profunda eficiente)
+        if (!deepEqual(prevSettings, newSettings)) {
           return newSettings;
         }
         return prevSettings;
@@ -153,14 +188,16 @@ export function useSetting<T = any>(path: string) {
   const { getSetting, setSetting, subscribe } = useSettings();
   const [value, setValue] = useState<T>(() => getSetting<T>(path));
 
+  // Memoiza o callback de subscription para evitar re-subscriptions
+  const handleValueChange = useCallback((newValue: T) => {
+    setValue(newValue);
+  }, []);
+
   // Subscribe to changes on this specific path
   useEffect(() => {
-    const unsubscribe = subscribe(path, (newValue) => {
-      setValue(newValue);
-    });
-
+    const unsubscribe = subscribe(path, handleValueChange);
     return unsubscribe;
-  }, [path, subscribe]);
+  }, [path, subscribe, handleValueChange]);
 
   const updateValue = useCallback(
     async (newValue: T) => {
@@ -184,18 +221,22 @@ export function useSettingsCategory<K extends SettingsCategory>(
     settingsService.getAll()[category]
   );
 
+  // Memoiza o callback para evitar re-subscriptions
+  const handleCategoryChange = useCallback((_: any, event: SettingsChangeEvent) => {
+    // Verifica se o path começa com a categoria (ex: "appearance.theme" começa com "appearance")
+    if (event.path.startsWith(category + '.') || event.path === '*') {
+      const newCategorySettings = settingsService.getAll()[category];
+      setCategorySettings(newCategorySettings);
+    }
+  }, [category]);
+
   useEffect(() => {
     // Subscribe a TODAS as mudanças (*) e filtra apenas a categoria desejada
-    const unsubscribe = subscribe('*', (_, event) => {
-      // Verifica se o path começa com a categoria (ex: "appearance.theme" começa com "appearance")
-      if (event.path.startsWith(category + '.') || event.path === '*') {
-        const newCategorySettings = settingsService.getAll()[category];
-        setCategorySettings(newCategorySettings);
-      }
-    });
-
+    // Nota: Idealmente subscriberíamos apenas ao prefixo "category.*", mas o
+    // settingsService não oferece essa funcionalidade, então subscribemos a todas
+    const unsubscribe = subscribe('*', handleCategoryChange);
     return unsubscribe;
-  }, [category, subscribe]);
+  }, [category, subscribe, handleCategoryChange]);
 
   return categorySettings;
 }
@@ -217,42 +258,34 @@ export function useSettingsChange(
 
 /**
  * Hook para aplicar configurações de aparência (theme, density, etc)
+ * Consolidado em um único useEffect para reduzir cascata de subscriptions
  */
 export function useAppearanceSettings() {
-  // Usa useSetting para cada propriedade individualmente para garantir re-renders
-  const [theme] = useSetting<'light' | 'dark' | 'auto'>('appearance.theme');
-  const [density] = useSetting<'comfortable' | 'compact'>('appearance.density');
-  const [fontSize] = useSetting<number>('appearance.fontSize');
-  const [pixelArtMode] = useSetting<boolean>('appearance.pixelArtMode');
+  // Usa useSettingsCategory para obter todas as configurações de aparência de uma vez
+  const appearanceSettings = useSettingsCategory('appearance');
 
-  // Apply theme - FORÇADO PARA SEMPRE DARK (esquema verde CORES.md)
+  // Consolida aplicação de temas e estilos em um único useEffect
   useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
 
-    // Remove any existing theme classes
+    // Apply theme - FORÇADO PARA SEMPRE DARK (esquema verde CORES.md)
     root.classList.remove('dark', 'light');
     body.classList.remove('dark', 'light');
-
-    // SEMPRE aplica dark mode (esquema verde)
     root.classList.add('dark');
     body.classList.add('dark');
-  }, [theme]);
 
-  // Apply density, fontSize, pixelArtMode
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute('data-density', density);
-    root.style.fontSize = `${fontSize}%`;
+    // Apply density e fontSize
+    root.setAttribute('data-density', appearanceSettings.density);
+    root.style.fontSize = `${appearanceSettings.fontSize}%`;
 
-    if (pixelArtMode) {
+    // Apply pixel art mode
+    if (appearanceSettings.pixelArtMode) {
       root.classList.add('pixel-art-mode');
     } else {
       root.classList.remove('pixel-art-mode');
     }
-  }, [density, fontSize, pixelArtMode]);
-
-  return { theme, density, fontSize, pixelArtMode };
+  }, [appearanceSettings]);
 }
 
 /**

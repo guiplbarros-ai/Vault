@@ -32,11 +32,11 @@ export function OnboardingCheck({ children }: OnboardingCheckProps) {
     if (!isInitialized) return;
 
     checkOnboardingStatus();
-  }, [pathname, isInitialized, user]);
+  }, [pathname, isInitialized, user, router]);
 
   // Evita tela em branco ao navegar para páginas que devem ignorar verificação
   useEffect(() => {
-    const skip = ['/onboarding', '/setup', '/login', '/register'];
+    const skip = ['/onboarding', '/setup', '/login', '/register', '/offline'];
     if (skip.includes(pathname) && shouldRedirect) {
       setShouldRedirect(false);
     }
@@ -44,7 +44,7 @@ export function OnboardingCheck({ children }: OnboardingCheckProps) {
 
   const checkOnboardingStatus = async () => {
     // Páginas que não precisam de verificação
-    const skipPaths = ['/onboarding', '/setup', '/login', '/register'];
+    const skipPaths = ['/onboarding', '/setup', '/login', '/register', '/offline'];
     if (skipPaths.includes(pathname)) {
       setChecking(false);
       return;
@@ -100,7 +100,7 @@ export function OnboardingCheck({ children }: OnboardingCheckProps) {
   }
 
   // Páginas que não precisam de verificação
-  const skipPaths = ['/onboarding', '/setup', '/login', '/register'];
+  const skipPaths = ['/onboarding', '/setup', '/login', '/register', '/offline'];
 
   // Se estamos verificando e não estamos na página de onboarding/setup/login,
   // mostrar loading para evitar flash de conteúdo
