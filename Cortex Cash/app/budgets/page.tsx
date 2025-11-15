@@ -32,6 +32,21 @@ import type { OrcamentoComProgresso } from '@/lib/services/orcamento.service';
 import { format, subMonths, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import dynamic from 'next/dynamic';
+
+// Lazy load budget components
+const BudgetComparisonCard = dynamic(() => import('@/components/budget/budget-comparison-card'), {
+  loading: () => <div className="h-[400px] bg-secondary rounded-lg animate-pulse" />
+});
+const BudgetProjectionChart = dynamic(() => import('@/components/budget/budget-projection-chart'), {
+  loading: () => <div className="h-[350px] bg-secondary rounded-lg animate-pulse" />
+});
+const BudgetHistoryTable = dynamic(() => import('@/components/budget/budget-history-table'), {
+  loading: () => <div className="h-[400px] bg-secondary rounded-lg animate-pulse" />
+});
+const SmartSuggestions = dynamic(() => import('@/components/budget/smart-suggestions'), {
+  loading: () => <div className="h-[300px] bg-secondary rounded-lg animate-pulse" />
+});
 
 export default function BudgetsPage() {
   const [mesReferencia, setMesReferencia] = useState(() => {
@@ -436,6 +451,18 @@ export default function BudgetsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* New Budget Analytics Components */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 md:items-stretch">
+          <BudgetComparisonCard mesReferencia={mesReferencia} />
+          <BudgetProjectionChart mesReferencia={mesReferencia} />
+        </div>
+
+        {/* Smart Suggestions */}
+        <SmartSuggestions mesReferencia={mesReferencia} />
+
+        {/* Budget History */}
+        <BudgetHistoryTable mesReferencia={mesReferencia} />
       </div>
     </DashboardLayout>
   );
