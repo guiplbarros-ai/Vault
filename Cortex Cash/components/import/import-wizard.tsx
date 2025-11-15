@@ -138,6 +138,7 @@ export function ImportWizard({
         // Parse direto com template
         const result = await importService.parseCSV(content, mapeamento, {
           separador,
+          encoding: templateSelecionado.encoding,
           pular_linhas: templateSelecionado.pular_linhas,
           formato_data: templateSelecionado.formato_data,
           separador_decimal: templateSelecionado.separador_decimal as "," | "." | undefined,

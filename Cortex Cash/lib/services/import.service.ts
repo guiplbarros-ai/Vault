@@ -120,7 +120,23 @@ export class ImportService {
 
           const dataStr = colunas[mapeamento.data]?.trim();
           const descricao = colunas[mapeamento.descricao]?.trim();
-          const valorStr = colunas[mapeamento.valor]?.trim();
+
+          // Suportar tanto mapeamento.valor (coluna única) quanto credito/débito (colunas separadas)
+          let valorStr: string | undefined;
+          if (mapeamento.valor !== undefined) {
+            valorStr = colunas[mapeamento.valor]?.trim();
+          } else if (mapeamento.credito !== undefined && mapeamento.debito !== undefined) {
+            // Para bancos como Bradesco que têm colunas separadas de crédito/débito
+            const creditoStr = colunas[mapeamento.credito]?.trim();
+            const debitoStr = colunas[mapeamento.debito]?.trim();
+
+            // Usa whichever tem valor (crédito positivo, débito negativo)
+            if (creditoStr && creditoStr !== '' && creditoStr !== '0') {
+              valorStr = creditoStr;
+            } else if (debitoStr && debitoStr !== '' && debitoStr !== '0') {
+              valorStr = '-' + debitoStr; // Negativo para débito
+            }
+          }
 
           if (!dataStr || !descricao || !valorStr) {
             erros.push({

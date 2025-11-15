@@ -492,10 +492,13 @@ export interface ParseError {
 export interface MapeamentoColunas {
   data: number;
   descricao: number;
-  valor: number;
+  valor?: number;
   tipo?: number;
   categoria?: number;
   observacoes?: number;
+  // Para bancos com colunas separadas de crédito/débito (ex: Bradesco)
+  credito?: number;
+  debito?: number;
 }
 
 export interface FileFormat {

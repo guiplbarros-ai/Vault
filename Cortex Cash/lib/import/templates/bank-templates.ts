@@ -59,7 +59,10 @@ export const INTER_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | 'upd
 /**
  * Template para Bradesco
  * Formato: CSV com ponto-e-vírgula, ISO-8859-1
- * Colunas: Data;Histórico;Número do Documento;Valor;Saldo
+ * Colunas: Data;Histórico;Número do Documento;Crédito (R$);Débito (R$);Saldo (R$)
+ *
+ * IMPORTANTE: Bradesco exporta com colunas separadas de Crédito e Débito
+ * Usamos credito e debito (não valor) para capturar ambas transações
  */
 export const BRADESCO_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | 'updated_at'> = {
   nome: 'Bradesco - Extrato de Conta Corrente',
@@ -71,8 +74,9 @@ export const BRADESCO_TEMPLATE: Omit<TemplateImportacao, 'id' | 'created_at' | '
     data: 0,        // Coluna "Data"
     descricao: 1,   // Coluna "Histórico"
     // Número do Documento na coluna 2 (ignorado)
-    valor: 3,       // Coluna "Valor"
-    // Saldo na coluna 4 (ignorado)
+    credito: 3,     // Coluna "Crédito (R$)"
+    debito: 4,      // Coluna "Débito (R$)"
+    // Saldo na coluna 5 (ignorado)
   }),
   formato_data: 'dd/MM/yyyy',
   separador_decimal: ',',
