@@ -134,7 +134,8 @@ export class ImportService {
             if (creditoStr && creditoStr !== '' && creditoStr !== '0') {
               valorStr = creditoStr;
             } else if (debitoStr && debitoStr !== '' && debitoStr !== '0') {
-              valorStr = '-' + debitoStr; // Negativo para débito
+              // Débito pode já ter sinal negativo no arquivo
+              valorStr = debitoStr.startsWith('-') ? debitoStr : '-' + debitoStr;
             }
           }
 
