@@ -251,6 +251,21 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* Analytics Button */}
+        {!loading && hasData && (
+          <div className="flex justify-end">
+            <Link href="/analytics">
+              <Button
+                variant="outline"
+                size="sm"
+              >
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Análise Detalhada
+              </Button>
+            </Link>
+          </div>
+        )}
+
         {/* Charts and Recent Data */}
         {!loading && !hasData && (
           <Card className="glass-card-3d">
