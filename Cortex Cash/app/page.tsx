@@ -238,10 +238,10 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3 sm:ml-auto">
             {/* Analytics Button */}
             {!loading && hasData && (
-              <Link href="/analytics">
+              <Link href="/analytics" className="h-10">
                 <Button
                   variant="outline"
-                  size="sm"
+                  className="h-10"
                 >
                   <TrendingUp className="mr-2 h-4 w-4" />
                   Análise Detalhada
