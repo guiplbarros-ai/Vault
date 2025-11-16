@@ -168,8 +168,10 @@ export default function TagsPage() {
           actions={
             <Button
               onClick={handleCreate}
+              size="lg"
+              className="gap-2"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="h-5 w-5" />
               Nova Tag
             </Button>
           }
