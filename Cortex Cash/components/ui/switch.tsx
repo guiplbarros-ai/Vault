@@ -30,7 +30,7 @@ function Switch({
       >
         <span className={cn(
           "text-xs font-bold transition-colors",
-          isChecked ? "text-primary" : "text-slate-600"
+          isChecked ? "text-green-400" : "text-slate-500"
         )}>
           {isChecked ? "on" : "off"}
         </span>
