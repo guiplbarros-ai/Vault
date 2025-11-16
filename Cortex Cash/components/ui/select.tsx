@@ -37,10 +37,9 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-primary focus-visible:shadow-[0_0_0_2px_rgba(58,143,110,0.15)] aria-invalid:border-destructive aria-invalid:shadow-[0_0_0_2px_rgba(240,113,103,0.15)] bg-muted text-foreground hover:bg-accent hover:text-accent-foreground flex w-fit items-center justify-between gap-2 rounded-[10px] border px-3 py-2 text-sm whitespace-nowrap transition-all outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-10 data-[size=sm]:h-9 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-primary focus-visible:shadow-[0_0_0_2px_rgba(58,143,110,0.15)] aria-invalid:border-destructive aria-invalid:shadow-[0_0_0_2px_rgba(240,113,103,0.15)] bg-muted text-foreground hover:bg-accent hover:text-accent-foreground flex w-fit items-center justify-between gap-2 rounded-[10px] border !border-[#3a4a43] px-3 py-2 text-sm whitespace-nowrap transition-all outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-10 data-[size=sm]:h-9 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
-      style={{ borderColor: 'var(--input-border)' }}
       {...props}
     >
       {children}
