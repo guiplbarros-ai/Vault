@@ -639,7 +639,8 @@ export default function TransactionsPage() {
                   }}>
                     <DialogTrigger asChild>
                       <Button
-                        className="h-10 font-medium gap-2"
+                        className="h-10 font-medium gap-2 text-white"
+                        style={{ backgroundColor: '#1a402f' }}
                         onClick={() => {
                           setEditMode(false)
                           setTransactionToEdit(null)
