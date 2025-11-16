@@ -506,6 +506,8 @@ button {
 
   html {
     @apply text-foreground;
+    /* Cor customizada para inputs e selects */
+    --input-border: #3a4a43;
     /* Background com imagem customizada + overlay verde escuro */
     background-image:
       radial-gradient(
