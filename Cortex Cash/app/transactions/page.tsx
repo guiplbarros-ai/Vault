@@ -118,6 +118,9 @@ export default function TransactionsPage() {
 
   const loadTransactions = async () => {
     try {
+      // Sincronizar tags das transações automaticamente
+      await tagService.syncTagsFromTransactions()
+
       const from = dateRange?.from ? new Date(dateRange.from) : startOfMonth(new Date())
       const to = dateRange?.to ? new Date(dateRange.to) : endOfMonth(new Date())
       const data = await transacaoService.listTransacoes({ dataInicio: from, dataFim: to })
