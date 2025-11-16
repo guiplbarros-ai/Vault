@@ -11,7 +11,8 @@ import { instituicaoService } from '../services/instituicao.service';
 import { transacaoService } from '../services/transacao.service';
 import { categoriaService } from '../services/categoria.service';
 import { tagService } from '../services/tag.service';
-import { seedCategorias } from './seed';
+import { seedCategorias, hasCategories } from './seed';
+import { hasTags } from './seed-tags';
 import type { Instituicao, Conta, Transacao, Categoria, TipoConta } from '../types';
 
 /**
@@ -50,13 +51,23 @@ export async function seedDemoData() {
     // 4. Criar categorias padrão (se não existirem)
     console.log('[DEMO SEED] Passo 4: Criando categorias padrão...');
     const db = getDB();
-    await seedCategorias(db);
-    console.log('[DEMO SEED] ✅ Categorias padrão criadas');
+    const alreadyHasCategories = await hasCategories(db);
+    if (!alreadyHasCategories) {
+      await seedCategorias(db);
+      console.log('[DEMO SEED] ✅ Categorias padrão criadas');
+    } else {
+      console.log('[DEMO SEED] ✅ Categorias já existem, pulando seed');
+    }
 
     // 5. Criar tags padrão
     console.log('[DEMO SEED] Passo 5: Criando tags padrão...');
-    await seedTags();
-    console.log('[DEMO SEED] ✅ Tags padrão criadas');
+    const alreadyHasTags = await hasTags(db);
+    if (!alreadyHasTags) {
+      await seedTags();
+      console.log('[DEMO SEED] ✅ Tags padrão criadas');
+    } else {
+      console.log('[DEMO SEED] ✅ Tags já existem, pulando seed');
+    }
 
     // 6. Verificar categorias
     console.log('[DEMO SEED] Passo 6: Verificando categorias...');
