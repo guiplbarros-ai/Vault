@@ -23,18 +23,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Hash, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { Plus, Hash, Pencil, Trash2, Palette } from "lucide-react"
 import { TagBadge } from "@/components/ui/tag-badge"
 import { TagForm } from "@/components/forms/tag-form"
 import { tagService } from "@/lib/services/tag.service"
 import type { Tag } from "@/lib/types"
 import { toast } from "sonner"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
 export default function TagsPage() {
   const [tags, setTags] = useState<Tag[]>([])
@@ -303,29 +297,35 @@ export default function TagsPage() {
                           </td>
                           <td className="px-4 py-3 text-right">
                             {!isSistema && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="hover:bg-accent">
-                                    <MoreHorizontal className="h-4 w-4 text-foreground" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => handleEdit(tag)}
-                                    className="cursor-pointer"
-                                  >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Editar
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleDelete(tag)}
-                                    className="cursor-pointer text-destructive"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Deletar
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Editar cor"
+                                  onClick={() => handleEdit(tag)}
+                                  className="hover:bg-accent hover:text-primary"
+                                >
+                                  <Palette className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Editar nome"
+                                  onClick={() => handleEdit(tag)}
+                                  className="hover:bg-accent"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Deletar"
+                                  onClick={() => handleDelete(tag)}
+                                  className="hover:bg-destructive/20 hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
                           </td>
                         </tr>
