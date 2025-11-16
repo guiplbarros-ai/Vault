@@ -504,11 +504,14 @@ button {
     @apply border-border outline-ring/50;
   }
 
-  /* Remove border-border dos inputs e selects para permitir cor customizada */
+  /* Force cor #3a4a43 em inputs, textareas e selects */
   input[data-slot="input"],
   textarea[data-slot="textarea"],
-  div[data-slot="select-trigger"] {
-    @apply !border-[#3a4a43];
+  [data-slot="select-trigger"],
+  input,
+  textarea,
+  select {
+    border-color: #3a4a43 !important;
   }
 
   html {
