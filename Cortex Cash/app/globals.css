@@ -512,6 +512,8 @@ button {
   textarea,
   select {
     border-color: #3a4a43 !important;
+    border-width: 2px !important;
+    background-color: #0f1f1c !important;
   }
 
   html {
