@@ -23,12 +23,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Hash } from "lucide-react"
+import { Plus, Hash, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { TagBadge } from "@/components/ui/tag-badge"
 import { TagForm } from "@/components/forms/tag-form"
 import { tagService } from "@/lib/services/tag.service"
 import type { Tag } from "@/lib/types"
 import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function TagsPage() {
   const [tags, setTags] = useState<Tag[]>([])
@@ -222,14 +228,14 @@ export default function TagsPage() {
           </Card>
         </div>
 
-        {/* Tags Grid */}
+        {/* Tags Table */}
         <Card className="bg-card border-border">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle className="text-foreground">Lista de Tags</CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  Clique em uma tag para editá-la (apenas tags customizadas)
+                  Gerencie suas tags customizadas
                 </CardDescription>
               </div>
               <Tabs value={tipoFiltro} onValueChange={(v) => setTipoFiltro(v as any)} className="w-auto">
@@ -257,54 +263,76 @@ export default function TagsPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredTags.map((tag) => {
-                  const usage = tagUsage.get(tag.id) || 0
-                  const isSistema = tag.tipo === 'sistema'
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Nome</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Tipo</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Uso</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-foreground">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTags.map((tag) => {
+                      const usage = tagUsage.get(tag.id) || 0
+                      const isSistema = tag.tipo === 'sistema'
 
-                  return (
-                    <Card
-                      key={tag.id}
-                      className={`cursor-pointer transition-all hover:shadow-[0_1px_0_rgba(0,0,0,.35),0_8px_14px_rgba(0,0,0,.25)] bg-card border-border ${
-                        isSistema ? '' : 'hover:border-primary/50'
-                      }`}
-                      onClick={() => handleEdit(tag)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex flex-col space-y-2">
-                          <div className="flex items-center justify-between gap-2">
+                      return (
+                        <tr key={tag.id} className="border-b border-border hover:bg-accent/50 transition-colors">
+                          <td className="px-4 py-3">
                             <TagBadge
                               label={tag.nome}
                               cor={tag.cor}
                               size="sm"
                             />
-                            {isSistema && (
-                              <span className="text-xs px-2 py-0.5 rounded-full border bg-secondary/20 text-secondary border-secondary/30">
+                          </td>
+                          <td className="px-4 py-3 text-sm text-foreground">
+                            {isSistema ? (
+                              <span className="text-xs px-2 py-1 rounded-full border bg-secondary/20 text-secondary border-secondary/30">
                                 Sistema
                               </span>
+                            ) : (
+                              <span className="text-xs px-2 py-1 rounded-full border bg-primary/20 text-primary border-primary/30">
+                                Customizada
+                              </span>
                             )}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
+                          </td>
+                          <td className="px-4 py-3 text-sm text-foreground">
                             {usage} {usage === 1 ? 'transação' : 'transações'}
-                          </div>
-                          {!isSistema && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs w-full mt-1 text-destructive hover:text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleDelete(tag)
-                              }}
-                            >
-                              Deletar
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {!isSistema && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="hover:bg-accent">
+                                    <MoreHorizontal className="h-4 w-4 text-foreground" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleEdit(tag)}
+                                    className="cursor-pointer"
+                                  >
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(tag)}
+                                    className="cursor-pointer text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Deletar
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
