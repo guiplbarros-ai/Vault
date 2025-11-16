@@ -504,6 +504,13 @@ button {
     @apply border-border outline-ring/50;
   }
 
+  /* Remove border-border dos inputs e selects para permitir cor customizada */
+  input[data-slot="input"],
+  textarea[data-slot="textarea"],
+  div[data-slot="select-trigger"] {
+    @apply !border-[#3a4a43];
+  }
+
   html {
     @apply text-foreground;
     /* Cor customizada para inputs e selects */
