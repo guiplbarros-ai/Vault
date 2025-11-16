@@ -696,6 +696,7 @@ export default function TransactionsPage() {
                       setSelectedTag('all')
                       setSelectedSubcategory('all')
                     }}
+                    style={{ backgroundColor: '#1a402f' }}
                   >
                     Todas
                   </Button>
@@ -708,6 +709,7 @@ export default function TransactionsPage() {
                         setSelectedCategory(receitaCategorias[0].id)
                       }
                     }}
+                    style={{ backgroundColor: '#1a402f' }}
                   >
                     Receitas
                   </Button>
@@ -720,6 +722,7 @@ export default function TransactionsPage() {
                         setSelectedCategory(despesaCategorias[0].id)
                       }
                     }}
+                    style={{ backgroundColor: '#1a402f' }}
                   >
                     Despesas
                   </Button>
