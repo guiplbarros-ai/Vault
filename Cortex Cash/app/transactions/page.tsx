@@ -645,7 +645,7 @@ export default function TransactionsPage() {
                           setTransactionToEdit(null)
                         }}
                       >
-                        <Plus className="h-4 w-4 flex-shrink-0" />
+                        <Plus className="h-4 w-4 flex-shrink-0 text-white" />
                         Nova Transação Manual
                       </Button>
                     </DialogTrigger>
