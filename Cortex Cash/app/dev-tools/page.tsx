@@ -38,6 +38,14 @@ interface DevTool {
 const DEV_TOOLS: DevTool[] = [
   // Database Tools
   {
+    title: "Reset Completo do Banco",
+    description: "Limpa todos os dados e reinicializa o banco de dados",
+    href: "/dev/reset-database",
+    icon: RefreshCw,
+    category: 'database',
+    status: 'stable',
+  },
+  {
     title: "Seed Completo",
     description: "Popula o banco com dados de exemplo completos (instituições, contas, categorias, transações)",
     href: "/dev/seed",
