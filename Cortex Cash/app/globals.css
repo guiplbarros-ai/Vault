@@ -504,15 +504,13 @@ button {
     @apply border-border outline-ring/50;
   }
 
-  /* Force cor #3a4a43 em inputs, textareas e selects */
+  /* Apenas escurecer o background dos inputs */
   input[data-slot="input"],
   textarea[data-slot="textarea"],
   [data-slot="select-trigger"],
   input,
   textarea,
   select {
-    border-color: #8FCDBD !important;
-    border-width: 2px !important;
     background-color: #0f1f1c !important;
   }
 
