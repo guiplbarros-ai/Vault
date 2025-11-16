@@ -235,7 +235,7 @@ export default function DashboardPage() {
             title="Dashboard"
             description="Visão geral consolidada das suas finanças"
           />
-          <div className="flex items-center gap-3 sm:ml-auto">
+          <div className="flex items-center gap-8 sm:ml-auto">
             {/* Analytics Button */}
             {!loading && hasData && (
               <Link href="/analytics" className="h-10">
