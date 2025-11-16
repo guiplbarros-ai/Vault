@@ -504,14 +504,14 @@ button {
     @apply border-border outline-ring/50;
   }
 
-  /* Background #D0E0E8 (azul claro) para inputs, textareas e selects */
+  /* Background #3a4a43 para inputs, textareas e selects */
   input[data-slot="input"],
   textarea[data-slot="textarea"],
   [data-slot="select-trigger"],
   input,
   textarea,
   select {
-    background-color: #D0E0E8 !important;
+    background-color: #3a4a43 !important;
   }
 
   html {
