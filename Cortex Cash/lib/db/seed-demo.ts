@@ -11,8 +11,9 @@ import { instituicaoService } from '../services/instituicao.service';
 import { transacaoService } from '../services/transacao.service';
 import { categoriaService } from '../services/categoria.service';
 import { tagService } from '../services/tag.service';
-import { seedCategorias, hasCategories } from './seed';
+import { seedCategorias, hasCategories, seedInvestimentos, seedCartoes } from './seed';
 import { hasTags } from './seed-tags';
+import { seedCenarioBase } from './seed-planejamento';
 import type { Instituicao, Conta, Transacao, Categoria, TipoConta } from '../types';
 
 /**
@@ -88,13 +89,71 @@ export async function seedDemoData() {
     }
     console.log('[DEMO SEED] ✅ Saldos recalculados');
 
+    // 9. Criar cartões de crédito
+    console.log('[DEMO SEED] Passo 9: Criando cartões de crédito...');
+    try {
+      await seedCartoes(db);
+      const cartoes = await db.cartoes_config.toArray();
+      console.log(`[DEMO SEED] ✅ ${cartoes.length} cartões criados`);
+    } catch (error) {
+      console.warn('[DEMO SEED] ⚠️ Erro ao criar cartões (não crítico):', error);
+    }
+
+    // 10. Criar investimentos
+    console.log('[DEMO SEED] Passo 10: Criando investimentos...');
+    try {
+      await seedInvestimentos(db);
+      const investimentos = await db.investimentos.toArray();
+      console.log(`[DEMO SEED] ✅ ${investimentos.length} investimentos criados`);
+    } catch (error) {
+      console.warn('[DEMO SEED] ⚠️ Erro ao criar investimentos (não crítico):', error);
+    }
+
+    // 11. Criar cenário base de planejamento
+    console.log('[DEMO SEED] Passo 11: Criando cenário base de planejamento...');
+    try {
+      await seedCenarioBase();
+      const cenarios = await db.cenarios.toArray();
+      console.log(`[DEMO SEED] ✅ ${cenarios.length} cenários criados`);
+    } catch (error) {
+      console.warn('[DEMO SEED] ⚠️ Erro ao criar cenários (não crítico):', error);
+    }
+
+    // 12. Estatísticas finais
+    console.log('[DEMO SEED] Passo 12: Coletando estatísticas finais...');
+    const stats = await Promise.all([
+      db.instituicoes.count(),
+      db.contas.count(),
+      db.categorias.count(),
+      db.transacoes.count(),
+      db.tags.count(),
+      db.cartoes_config.count(),
+      db.investimentos.count(),
+      db.historico_investimentos.count(),
+      db.cenarios.count(),
+    ]);
+
     console.log('[DEMO SEED] ✅✅✅ Seed de dados demo concluído com sucesso!');
+    console.log('[DEMO SEED] Resumo final:');
+    console.log(`  - Instituições: ${stats[0]}`);
+    console.log(`  - Contas: ${stats[1]}`);
+    console.log(`  - Categorias: ${stats[2]}`);
+    console.log(`  - Transações: ${stats[3]}`);
+    console.log(`  - Tags: ${stats[4]}`);
+    console.log(`  - Cartões de Crédito: ${stats[5]}`);
+    console.log(`  - Investimentos: ${stats[6]}`);
+    console.log(`  - Histórico de Investimentos: ${stats[7]}`);
+    console.log(`  - Cenários de Planejamento: ${stats[8]}`);
 
     return {
       instituicoes: instituicoes.length,
       contas: contas.length,
       categorias: categorias.length,
       transacoes: transacoes.length,
+      tags: stats[4],
+      cartoes: stats[5],
+      investimentos: stats[6],
+      cenarios: stats[8],
     };
   } catch (error) {
     console.error('[DEMO SEED] ❌❌❌ Erro ao popular dados demo:', error);
@@ -116,13 +175,23 @@ async function clearAllData() {
     db.transacoes,
     db.contas,
     db.instituicoes,
+    db.cartoes_config,
+    db.faturas,
+    db.faturas_lancamentos,
+    db.investimentos,
+    db.historico_investimentos,
   ], async () => {
     await db.transacoes.clear();
     await db.contas.clear();
     await db.instituicoes.clear();
+    await db.cartoes_config.clear();
+    await db.faturas.clear();
+    await db.faturas_lancamentos.clear();
+    await db.investimentos.clear();
+    await db.historico_investimentos.clear();
   });
 
-  console.log('[DEMO SEED] Dados limpos');
+  console.log('[DEMO SEED] Dados limpos com sucesso');
 }
 
 /**
