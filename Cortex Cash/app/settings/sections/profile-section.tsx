@@ -189,9 +189,8 @@ export function ProfileSection() {
               className="hidden"
             />
             <Button
-              variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              className="bg-card border-border text-foreground hover:bg-muted"
+              className="bg-[#3a4a43] text-foreground hover:bg-[#3a4a43]/80 transition-all"
             >
               <Camera className="w-4 h-4 mr-2" />
               Alterar foto

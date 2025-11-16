@@ -159,6 +159,9 @@ export const THEME_COLORS = {
   warning: '#E0B257',      // --warning
   error: '#F07167',        // --error
 
+  // Inputs e Seleções
+  inputBorder: '#3a4a43',  // Cor para borders de input/select
+
   // Compatibilidade com código existente (aliases)
   background: '#132421',
   card: '#18322C',
