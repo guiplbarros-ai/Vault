@@ -343,147 +343,207 @@ export default function CreditCardsPage() {
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
-                {/* Credit Cards Grid */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 text-foreground">Meus Cartões</h3>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {cartoes.map((cartao) => {
-                      const limite = limites[cartao.id]
-                      const Icon = CreditCard
+                {/* Cartões Ativos */}
+                {cartoes.filter(c => c.ativo).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 text-foreground">Cartões Ativos</h3>
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {cartoes.filter(c => c.ativo).map((cartao) => {
+                        const limite = limites[cartao.id]
 
-                      return (
-                        <Card
-                          key={cartao.id}
-                          className="relative overflow-hidden border-l-4 transition-all hover:shadow-[0_1px_0_rgba(0,0,0,.35),0_8px_14px_rgba(0,0,0,.25)] bg-card border-border"
-                          style={{
-                            borderLeftColor: cartao.cor || 'hsl(var(--primary))'
-                          }}
-                        >
-                          <CardHeader className="pb-3">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                                  <Icon className="h-5 w-5 text-foreground" />
-                                </div>
+                        return (
+                          <div
+                            key={cartao.id}
+                            className="group relative overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-[0_1px_0_rgba(0,0,0,.35),0_12px_24px_rgba(0,0,0,.28)] border border-border"
+                            style={{
+                              background: `linear-gradient(135deg, ${cartao.cor || 'hsl(var(--primary))'} 0%, rgba(${parseInt(cartao.cor?.slice(1, 3) || 'aa', 16)}, ${parseInt(cartao.cor?.slice(3, 5) || 'aa', 16)}, ${parseInt(cartao.cor?.slice(5, 7) || 'aa', 16)}, 0.8) 100%)`
+                            }}
+                          >
+                            <div className="relative p-6 h-64 flex flex-col justify-between text-white">
+                              {/* Header do Cartão */}
+                              <div className="flex items-start justify-between">
                                 <div>
-                                  <CardTitle className="text-base text-foreground">{cartao.nome}</CardTitle>
-                                  <CardDescription className="text-xs text-muted-foreground">
-                                    {cartao.bandeira && BANDEIRAS[cartao.bandeira] && (
-                                      <span className="capitalize">{BANDEIRAS[cartao.bandeira]}</span>
-                                    )}
-                                    {cartao.bandeira && cartao.ultimos_digitos && ' • '}
-                                    {cartao.ultimos_digitos && <span>•••• {cartao.ultimos_digitos}</span>}
-                                  </CardDescription>
+                                  <p className="text-xs opacity-75 uppercase tracking-wider">
+                                    {cartao.bandeira && BANDEIRAS[cartao.bandeira]
+                                      ? BANDEIRAS[cartao.bandeira]
+                                      : 'Cartão'}
+                                  </p>
+                                  <h3 className="text-xl font-bold mt-1">{cartao.nome}</h3>
+                                </div>
+                                <Badge
+                                  className="bg-white/20 text-white border-white/30 text-xs"
+                                >
+                                  Ativo
+                                </Badge>
+                              </div>
+
+                              {/* Números/Info do Cartão */}
+                              <div>
+                                {cartao.ultimos_digitos && (
+                                  <p className="text-lg font-mono tracking-widest opacity-90">
+                                    •••• {cartao.ultimos_digitos}
+                                  </p>
+                                )}
+                                <p className="text-xs opacity-75 mt-2">Vence dia {cartao.dia_vencimento}</p>
+                              </div>
+
+                              {/* Footer com limite */}
+                              <div className="flex items-end justify-between">
+                                <div>
+                                  <p className="text-xs opacity-75">Limite Total</p>
+                                  <p className="text-xl font-bold">{formatCurrency(cartao.limite_total)}</p>
                                 </div>
                               </div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-foreground">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-card border-border">
-                                  <DropdownMenuItem
-                                    onClick={() => handleViewDetails(cartao)}
-                                    className="cursor-pointer text-foreground"
-                                  >
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    Ver Detalhes
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleEdit(cartao)}
-                                    className="cursor-pointer text-foreground"
-                                  >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Editar
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleToggleActive(cartao)}
-                                    className="cursor-pointer text-foreground"
-                                  >
-                                    <EyeOff className="mr-2 h-4 w-4" />
-                                    {cartao.ativo ? 'Desativar' : 'Ativar'}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="bg-border" />
-                                  <DropdownMenuItem
-                                    className="cursor-pointer text-destructive"
-                                    onClick={() => {
-                                      setCartaoToDelete(cartao.id)
-                                      setDeleteDialogOpen(true)
-                                    }}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Excluir
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+
+                              {/* Gradient overlay invisível para hover */}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
                             </div>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="flex items-baseline justify-between">
-                              <span className="text-xs text-muted-foreground">Limite Total</span>
-                              <span className="text-lg font-bold text-gold">{formatCurrency(cartao.limite_total)}</span>
-                            </div>
-                            {limite && (
-                              <>
-                                <div className="flex items-baseline justify-between text-sm">
-                                  <span className="text-muted-foreground">Usado</span>
-                                  <span className="font-semibold text-warning">
-                                    {formatCurrency(limite.limite_usado)}
-                                  </span>
-                                </div>
-                                <div className="flex items-baseline justify-between text-sm">
-                                  <span className="text-muted-foreground">Disponível</span>
-                                  <span className="font-semibold text-success">
-                                    {formatCurrency(limite.limite_disponivel)}
-                                  </span>
-                                </div>
-                              </>
-                            )}
-                            <div className="pt-2 flex items-center justify-between text-xs border-t border-border">
-                              <span className="text-muted-foreground">Vence dia {cartao.dia_vencimento}</span>
-                              <Badge
-                                variant={cartao.ativo ? 'default' : 'secondary'}
-                                className="text-xs"
-                                style={{
-                                  backgroundColor: cartao.ativo ? 'hsl(var(--primary))' : 'hsl(var(--muted))',
-                                  color: 'hsl(var(--foreground))'
-                                }}
+
+                            {/* Ações em hover */}
+                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="bg-white/20 text-white hover:bg-white/30"
+                                onClick={() => handleViewDetails(cartao)}
+                                title="Ver Detalhes"
                               >
-                                {cartao.ativo ? 'Ativo' : 'Inativo'}
-                              </Badge>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="bg-white/20 text-white hover:bg-white/30"
+                                onClick={() => handleEdit(cartao)}
+                                title="Editar"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="bg-white/20 text-white hover:bg-white/30"
+                                onClick={() => handleToggleActive(cartao)}
+                                title="Desativar"
+                              >
+                                <EyeOff className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="bg-destructive/80 text-white hover:bg-destructive"
+                                onClick={() => {
+                                  setCartaoToDelete(cartao.id)
+                                  setDeleteDialogOpen(true)
+                                }}
+                                title="Deletar"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
-                  </div>
-                </div>
 
-                {/* Credit Card Limits */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4 text-foreground">Uso de Limite</h3>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {cartoes.filter(c => c.ativo).map((cartao) => {
-                      const limite = limites[cartao.id]
-                      if (!limite) return null
-
-                      return (
-                        <CreditCardLimit
-                          key={cartao.id}
-                          nome={cartao.nome}
-                          limite_total={limite.limite_total}
-                          limite_usado={limite.limite_usado}
-                          limite_disponivel={limite.limite_disponivel}
-                          percentual_usado={limite.percentual_usado}
-                          cor={cartao.cor}
-                          bandeira={cartao.bandeira && BANDEIRAS[cartao.bandeira] ? BANDEIRAS[cartao.bandeira] : undefined}
-                          ultimos_digitos={cartao.ultimos_digitos}
-                        />
-                      )
-                    })}
+                            {/* Info em Repouso */}
+                            <div className="bg-card border-t border-border p-4 space-y-3">
+                              {limite && (
+                                <>
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Usado</span>
+                                    <span className="font-semibold text-warning">
+                                      {formatCurrency(limite.limite_usado)}
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                                    <div
+                                      className="h-full bg-gradient-to-r from-success to-warning transition-all duration-300"
+                                      style={{width: `${Math.min(limite.percentual_usado, 100)}%`}}
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Disponível</span>
+                                    <span className="font-semibold text-success">
+                                      {formatCurrency(limite.limite_disponivel)}
+                                    </span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Cartões Inativos */}
+                {cartoes.filter(c => !c.ativo).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 text-muted-foreground">Cartões Inativos</h3>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {cartoes.filter(c => !c.ativo).map((cartao) => {
+                        const limite = limites[cartao.id]
+
+                        return (
+                          <Card
+                            key={cartao.id}
+                            className="opacity-60 border-dashed transition-all hover:opacity-100"
+                          >
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                                    <CreditCard className="h-5 w-5 text-muted-foreground" />
+                                  </div>
+                                  <div>
+                                    <CardTitle className="text-base text-foreground">{cartao.nome}</CardTitle>
+                                    <CardDescription className="text-xs">
+                                      {cartao.bandeira && BANDEIRAS[cartao.bandeira] && (
+                                        <span>{BANDEIRAS[cartao.bandeira]}</span>
+                                      )}
+                                      {cartao.bandeira && cartao.ultimos_digitos && ' • '}
+                                      {cartao.ultimos_digitos && <span>•••• {cartao.ultimos_digitos}</span>}
+                                    </CardDescription>
+                                  </div>
+                                </div>
+                                <Badge variant="secondary" className="text-xs">Inativo</Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1"
+                                  onClick={() => handleToggleActive(cartao)}
+                                >
+                                  <Eye className="mr-1 h-3 w-3" />
+                                  Ativar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleEdit(cartao)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    setCartaoToDelete(cartao.id)
+                                    setDeleteDialogOpen(true)
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="faturas" className="space-y-6">
