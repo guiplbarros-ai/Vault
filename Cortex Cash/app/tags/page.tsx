@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Hash } from "lucide-react"
+import { Plus, Hash, RefreshCw } from "lucide-react"
 import { TagBadge } from "@/components/ui/tag-badge"
 import { TagForm } from "@/components/forms/tag-form"
 import { tagService } from "@/lib/services/tag.service"
@@ -34,6 +34,7 @@ export default function TagsPage() {
   const [tags, setTags] = useState<Tag[]>([])
   const [filteredTags, setFilteredTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [tipoFiltro, setTipoFiltro] = useState<'todas' | 'sistema' | 'customizada'>('todas')
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -68,6 +69,24 @@ export default function TagsPage() {
       toast.error('Erro ao carregar tags')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSyncTags = async () => {
+    try {
+      setSyncing(true)
+      const tagsAdicionadas = await tagService.syncTagsFromTransactions()
+      if (tagsAdicionadas > 0) {
+        toast.success(`${tagsAdicionadas} tag(s) sincronizada(s) com sucesso!`)
+        await loadTags()
+      } else {
+        toast.info('Nenhuma tag nova para sincronizar')
+      }
+    } catch (error) {
+      console.error('Erro ao sincronizar tags:', error)
+      toast.error('Erro ao sincronizar tags')
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -166,14 +185,25 @@ export default function TagsPage() {
           title="Tags"
           description="Gerencie tags para organizar e filtrar suas transações"
           actions={
-            <Button
-              onClick={handleCreate}
-              size="lg"
-              className="gap-2"
-            >
-              <Plus className="h-5 w-5" />
-              Nova Tag
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSyncTags}
+                disabled={syncing}
+                variant="outline"
+                className="h-10 gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Sincronizando...' : 'Sincronizar'}
+              </Button>
+              <Button
+                onClick={handleCreate}
+                className="h-10 px-16 font-medium gap-2 text-white"
+                style={{ backgroundColor: '#1a402f' }}
+              >
+                <Plus className="h-4 w-4 flex-shrink-0 text-white" />
+                Nova Tag
+              </Button>
+            </div>
           }
         />
 

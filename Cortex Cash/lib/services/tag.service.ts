@@ -291,6 +291,63 @@ export class TagService {
 
     return counts.slice(0, limit);
   }
+
+  /**
+   * Sincroniza tags das transações com a tabela de tags
+   * Cria registros de tags que estão em transações mas não existem na tabela
+   */
+  async syncTagsFromTransactions(): Promise<number> {
+    try {
+      const db = getDB();
+      const transacoes = await db.transacoes.toArray();
+      const tagsExistentes = new Set((await this.listTags()).map(t => t.nome.toLowerCase()));
+
+      let tagsAdicionadas = 0;
+      const tagsParaCriar = new Set<string>();
+
+      // Coletar todas as tags das transações
+      for (const tx of transacoes) {
+        if (tx.tags && typeof tx.tags === 'string') {
+          try {
+            const tagsArray = JSON.parse(tx.tags);
+            if (Array.isArray(tagsArray)) {
+              for (const tagNome of tagsArray) {
+                if (tagNome && !tagsExistentes.has(tagNome.toLowerCase())) {
+                  tagsParaCriar.add(tagNome);
+                }
+              }
+            }
+          } catch (e) {
+            // Ignorar erros de parse
+          }
+        }
+      }
+
+      // Criar tags que não existem
+      const currentUserId = getCurrentUserId();
+      for (const tagNome of tagsParaCriar) {
+        const id = crypto.randomUUID();
+        const now = new Date();
+
+        const tag: Tag = {
+          id,
+          nome: tagNome.trim(),
+          cor: undefined,
+          tipo: 'customizada',
+          is_sistema: false,
+          usuario_id: currentUserId,
+          created_at: now,
+        };
+
+        await db.tags.add(tag);
+        tagsAdicionadas++;
+      }
+
+      return tagsAdicionadas;
+    } catch (error) {
+      throw new DatabaseError('Erro ao sincronizar tags das transações', error as Error);
+    }
+  }
 }
 
 // Singleton instance
