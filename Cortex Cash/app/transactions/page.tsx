@@ -704,10 +704,8 @@ export default function TransactionsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const receitaCategorias = categorias.filter(c => c.tipo === 'receita')
-                      if (receitaCategorias.length > 0) {
-                        setSelectedCategory(receitaCategorias[0].id)
-                      }
+                      setSelectedCategory('all')
+                      setSelectedSubcategory('all')
                     }}
                     style={{ backgroundColor: '#1a402f' }}
                   >
@@ -717,10 +715,8 @@ export default function TransactionsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const despesaCategorias = categorias.filter(c => c.tipo === 'despesa')
-                      if (despesaCategorias.length > 0) {
-                        setSelectedCategory(despesaCategorias[0].id)
-                      }
+                      setSelectedCategory('all')
+                      setSelectedSubcategory('all')
                     }}
                     style={{ backgroundColor: '#1a402f' }}
                   >
@@ -745,7 +741,16 @@ export default function TransactionsPage() {
                           >
                             Todas as categorias
                           </SelectItem>
-                          {categorias.map((cat) => (
+                          {categorias
+                            .filter(cat => !cat.pai_id)
+                            .reduce((unique: typeof categorias, cat) => {
+                              // Remove duplicates by name - keep only first occurrence
+                              if (!unique.some(u => u.nome === cat.nome)) {
+                                unique.push(cat)
+                              }
+                              return unique
+                            }, [])
+                            .map((cat) => (
                             <SelectItem
                               key={cat.id}
                               value={cat.id}
@@ -776,6 +781,13 @@ export default function TransactionsPage() {
                           </SelectItem>
                           {categorias
                             .filter(c => c.pai_id && (selectedCategory === 'all' || c.pai_id === selectedCategory))
+                            .reduce((unique: typeof categorias, sub) => {
+                              // Remove duplicates by name - keep only first occurrence
+                              if (!unique.some(u => u.nome === sub.nome)) {
+                                unique.push(sub)
+                              }
+                              return unique
+                            }, [])
                             .map((sub) => (
                               <SelectItem
                                 key={sub.id}
