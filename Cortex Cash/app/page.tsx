@@ -235,13 +235,26 @@ export default function DashboardPage() {
             title="Dashboard"
             description="Visão geral consolidada das suas finanças"
           />
-          <MonthPicker
-            value={selectedMonth}
-            onChange={setSelectedMonth}
-            onRangeChange={setDateRange}
-            mode="range"
-            className="sm:ml-auto"
-          />
+          <div className="flex items-center gap-3 sm:ml-auto">
+            {/* Analytics Button */}
+            {!loading && hasData && (
+              <Link href="/analytics">
+                <Button
+                  variant="outline"
+                  size="sm"
+                >
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Análise Detalhada
+                </Button>
+              </Link>
+            )}
+            <MonthPicker
+              value={selectedMonth}
+              onChange={setSelectedMonth}
+              onRangeChange={setDateRange}
+              mode="range"
+            />
+          </div>
         </div>
 
         {/* Stats Overview Detalhado */}
@@ -250,21 +263,6 @@ export default function DashboardPage() {
             <StatCard key={stat.title} {...stat} />
           ))}
         </div>
-
-        {/* Analytics Button */}
-        {!loading && hasData && (
-          <div className="flex justify-end">
-            <Link href="/analytics">
-              <Button
-                variant="outline"
-                size="sm"
-              >
-                <TrendingUp className="mr-2 h-4 w-4" />
-                Análise Detalhada
-              </Button>
-            </Link>
-          </div>
-        )}
 
         {/* Charts and Recent Data */}
         {!loading && !hasData && (
