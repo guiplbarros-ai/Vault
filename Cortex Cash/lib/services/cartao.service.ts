@@ -668,6 +668,11 @@ export class CartaoService {
       throw new ValidationError('Erro de validação ao pagar fatura', errors);
     }
 
+    // Validar que o valor pago não excede o valor total da fatura
+    if (data.valor_pago > fatura.valor_total) {
+      throw new ValidationError('Valor pago não pode ser maior que o valor total da fatura');
+    }
+
     const conta = await db.contas.get(contaPagamentoId);
     if (!conta) {
       throw new NotFoundError('Conta', contaPagamentoId);

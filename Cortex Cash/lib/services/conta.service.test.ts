@@ -45,7 +45,7 @@ describe('ContaService', () => {
       expect(result.updated_at).toBeInstanceOf(Date);
     });
 
-    it('deve criar conta com saldo_referencia 0 por padrão', async () => {
+    it('deve criar conta com saldo_referencia 0 quando especificado', async () => {
       const novaConta = {
         nome: 'Conta Sem Saldo',
         tipo: 'corrente' as const,
@@ -58,7 +58,7 @@ describe('ContaService', () => {
 
       const result = await service.createConta(novaConta);
 
-      expect(result.saldo_referencia).toBeUndefined();
+      expect(result.saldo_referencia).toBe(0);
     });
   });
 
@@ -288,21 +288,25 @@ describe('ContaService', () => {
   describe('getSaldoTotal', () => {
     it('deve somar saldo_referencia + saldo das transações', async () => {
       const db = getDB();
+      // Data de referência no passado
+      const dataReferencia = new Date('2025-01-01');
+
       const conta = await service.createConta({
         nome: 'Conta Teste',
         tipo: 'corrente',
         instituicao_id: 'inst-1',
         saldo_referencia: 500,
-        data_referencia: new Date(),
+        data_referencia: dataReferencia,
         saldo_atual: 500,
         ativa: true,
       });
 
+      // Transação após data de referência
       await db.transacoes.add({
         id: 'trans-1',
         conta_id: conta.id,
         categoria_id: 'cat-1',
-        data: new Date(),
+        data: new Date('2025-01-15'),
         descricao: 'Receita',
         valor: 100,
         tipo: 'receita',

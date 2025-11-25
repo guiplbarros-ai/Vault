@@ -105,13 +105,13 @@ describe('ContaService', () => {
   describe('createConta', () => {
     it('deve criar conta com dados mínimos', async () => {
       const novaConta: Omit<Conta, 'id' | 'created_at' | 'updated_at'> = {
+        instituicao_id: 'inst-banco-brasil',
         nome: 'Nova Conta',
         tipo: 'corrente',
         saldo_referencia: 1000,
         data_referencia: new Date(),
         saldo_atual: 1000,
         ativa: true,
-        incluir_dashboard: true,
       };
 
       const result = await service.createConta(novaConta);
@@ -134,7 +134,6 @@ describe('ContaService', () => {
         data_referencia: new Date(),
         saldo_atual: 500,
         ativa: true,
-        incluir_dashboard: true,
       };
 
       const result = await service.createConta(novaConta);
@@ -144,13 +143,13 @@ describe('ContaService', () => {
 
     it('deve criar conta inativa', async () => {
       const novaConta: Omit<Conta, 'id' | 'created_at' | 'updated_at'> = {
+        instituicao_id: 'inst-banco-brasil',
         nome: 'Conta Inativa',
         tipo: 'poupanca',
         saldo_referencia: 0,
         data_referencia: new Date(),
         saldo_atual: 0,
         ativa: false,
-        incluir_dashboard: false,
       };
 
       const result = await service.createConta(novaConta);
@@ -221,13 +220,13 @@ describe('ContaService', () => {
     it('deve retornar saldo quando não há transações', async () => {
       // Criar conta sem transações
       const novaConta = await service.createConta({
+        instituicao_id: 'inst-banco-brasil',
         nome: 'Conta Vazia',
         tipo: 'corrente',
         saldo_referencia: 500,
         data_referencia: new Date(),
         saldo_atual: 500,
         ativa: true,
-        incluir_dashboard: true,
       });
 
       const result = await service.getSaldoConta(novaConta.id);
@@ -248,13 +247,13 @@ describe('ContaService', () => {
 
     it('deve calcular corretamente para contas sem transações', async () => {
       const novaConta = await service.createConta({
+        instituicao_id: 'inst-banco-brasil',
         nome: 'Conta Nova',
         tipo: 'corrente',
         saldo_referencia: 1500,
         data_referencia: new Date(),
         saldo_atual: 1500,
         ativa: true,
-        incluir_dashboard: true,
       });
 
       const result = await service.getSaldoTotal(novaConta.id);
@@ -279,12 +278,12 @@ describe('ContaService', () => {
   });
 
   describe('filtros de dashboard', () => {
-    it('deve filtrar contas ativas com incluir_dashboard', async () => {
+    it('deve filtrar contas ativas', async () => {
       const result = await service.listContas();
-      const dashboard = result.filter(c => c.incluir_dashboard === true && c.ativa === true);
+      const ativas = result.filter(c => c.ativa === true);
 
-      expect(dashboard.length).toBeGreaterThan(0);
-      expect(dashboard.every(c => c.incluir_dashboard === true)).toBe(true);
+      expect(ativas.length).toBeGreaterThan(0);
+      expect(ativas.every(c => c.ativa === true)).toBe(true);
     });
 
     it('contas inativas não aparecem na lista padrão', async () => {

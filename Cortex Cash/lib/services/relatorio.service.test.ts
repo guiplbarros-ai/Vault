@@ -53,6 +53,8 @@ describe('RelatorioService', () => {
       tipo: 'despesa',
       icone: '🍔',
       cor: '#FF5733',
+      ativa: true,
+      ordem: 0,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -64,6 +66,8 @@ describe('RelatorioService', () => {
       tipo: 'despesa',
       icone: '🚗',
       cor: '#3357FF',
+      ativa: true,
+      ordem: 1,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -75,6 +79,8 @@ describe('RelatorioService', () => {
       tipo: 'receita',
       icone: '💰',
       cor: '#33FF57',
+      ativa: true,
+      ordem: 2,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -574,10 +580,10 @@ describe('RelatorioService', () => {
       const cat4 = crypto.randomUUID();
 
       await db.categorias.bulkAdd([
-        { id: cat1, nome: 'Cat1', tipo: 'despesa', created_at: new Date(), updated_at: new Date() },
-        { id: cat2, nome: 'Cat2', tipo: 'despesa', created_at: new Date(), updated_at: new Date() },
-        { id: cat3, nome: 'Cat3', tipo: 'despesa', created_at: new Date(), updated_at: new Date() },
-        { id: cat4, nome: 'Cat4', tipo: 'despesa', created_at: new Date(), updated_at: new Date() },
+        { id: cat1, nome: 'Cat1', tipo: 'despesa', ativa: true, ordem: 0, created_at: new Date(), updated_at: new Date() },
+        { id: cat2, nome: 'Cat2', tipo: 'despesa', ativa: true, ordem: 1, created_at: new Date(), updated_at: new Date() },
+        { id: cat3, nome: 'Cat3', tipo: 'despesa', ativa: true, ordem: 2, created_at: new Date(), updated_at: new Date() },
+        { id: cat4, nome: 'Cat4', tipo: 'despesa', ativa: true, ordem: 3, created_at: new Date(), updated_at: new Date() },
       ]);
 
       // Janeiro
@@ -611,8 +617,8 @@ describe('RelatorioService', () => {
       const cat2 = crypto.randomUUID();
 
       await db.categorias.bulkAdd([
-        { id: cat1, nome: 'Cat1', tipo: 'despesa', created_at: new Date(), updated_at: new Date() },
-        { id: cat2, nome: 'Cat2', tipo: 'despesa', created_at: new Date(), updated_at: new Date() },
+        { id: cat1, nome: 'Cat1', tipo: 'despesa', ativa: true, ordem: 0, created_at: new Date(), updated_at: new Date() },
+        { id: cat2, nome: 'Cat2', tipo: 'despesa', ativa: true, ordem: 1, created_at: new Date(), updated_at: new Date() },
       ]);
 
       // Janeiro

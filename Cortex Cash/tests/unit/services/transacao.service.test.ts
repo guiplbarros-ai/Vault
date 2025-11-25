@@ -499,7 +499,8 @@ describe('TransacaoService', () => {
   describe('getTransacaoByHash', () => {
     it('deve retornar transação por hash', async () => {
       const trans = transacoes[0];
-      const result = await service.getTransacaoByHash(trans.hash);
+      // transacoes fixture sempre tem hash definido
+      const result = await service.getTransacaoByHash(trans.hash!);
 
       expect(result).toBeDefined();
       expect(result?.id).toBe(trans.id);

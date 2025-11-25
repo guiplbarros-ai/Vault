@@ -370,6 +370,7 @@ export interface CreateCategoriaDTO {
   icone?: string;
   cor?: string;
   ordem?: number;
+  ativa?: boolean; // Optional for create (defaults to true), required for toggle status
 }
 
 export interface CreateInvestimentoDTO {

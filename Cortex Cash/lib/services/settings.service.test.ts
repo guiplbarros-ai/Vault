@@ -156,12 +156,12 @@ describe('SettingsService', () => {
   describe('Reset to Defaults', () => {
     it('deve resetar categoria específica', async () => {
       await service.set('appearance.theme', 'dark');
-      await service.set('appearance.compacto', true);
+      await service.set('appearance.density', 'spacious');
 
       await service.resetToDefaults('appearance');
 
       expect(service.get('appearance.theme')).toBe(DEFAULT_SETTINGS.appearance.theme);
-      expect(service.get('appearance.compacto')).toBe(DEFAULT_SETTINGS.appearance.compacto);
+      expect(service.get('appearance.density')).toBe(DEFAULT_SETTINGS.appearance.density);
     });
 
     it('deve resetar todas configurações', async () => {
@@ -301,11 +301,11 @@ describe('SettingsService', () => {
       service.subscribe('localization', mockCallback);
       const newSettings = {
         language: 'en-US' as const,
-        dateFormat: 'MM/DD/YYYY',
+        dateFormat: 'MM/DD/YYYY' as const,
         timeFormat: '12h' as const,
-        currency: 'USD',
-        decimalSeparator: '.',
-        firstDayOfWeek: 1,
+        currency: 'USD' as const,
+        decimalSeparator: '.' as const,
+        firstDayOfWeek: 1 as const,
         hideDecimals: false,
       };
       await service.setCategory('localization', newSettings);

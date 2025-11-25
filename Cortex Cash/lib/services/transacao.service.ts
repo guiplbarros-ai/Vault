@@ -285,10 +285,14 @@ export class TransacaoService implements ITransacaoService {
     });
 
     // Aplicar paginação somente se não foi possível aplicar no nível do Dexie
-    if (filters?.limit === undefined && (filters?.offset || 0) > 0) {
-      transacoes = transacoes.slice(filters!.offset);
-    } else if (filters?.limit === undefined && (filters?.offset || 0) === 0) {
-      // Sem paginação solicitada: deixa tudo
+    // (quando usamos toArray() direto sem filtros indexados)
+    const offset = filters?.offset || 0;
+    const limit = filters?.limit;
+
+    if (offset > 0 || limit !== undefined) {
+      const start = offset;
+      const end = limit !== undefined ? start + limit : undefined;
+      transacoes = transacoes.slice(start, end);
     }
 
     return transacoes;

@@ -199,12 +199,10 @@ export class ContaService {
 
       // Se está desativando a conta, verificar se há cartões vinculados
       if (data.ativa === false && existing.ativa) {
-        const cartoes = await db.cartoes_config
-          .where('conta_pagamento_id')
-          .equals(id)
-          .toArray();
-
-        const cartoesAtivos = cartoes.filter(c => c.ativo);
+        // Usar filter em vez de where porque conta_pagamento_id não é indexado
+        const todosCartoes = await db.cartoes_config.toArray();
+        const cartoesVinculados = todosCartoes.filter(c => c.conta_pagamento_id === id);
+        const cartoesAtivos = cartoesVinculados.filter(c => c.ativo);
 
         if (cartoesAtivos.length > 0) {
           const nomesCartoes = cartoesAtivos.map(c => c.nome).join(', ');
@@ -248,12 +246,10 @@ export class ContaService {
 
       // Se está desativando a conta, verificar se há cartões vinculados
       if (conta.ativa) {
-        const cartoes = await db.cartoes_config
-          .where('conta_pagamento_id')
-          .equals(id)
-          .toArray();
-
-        const cartoesAtivos = cartoes.filter(c => c.ativo);
+        // Usar filter em vez de where porque conta_pagamento_id não é indexado
+        const todosCartoes = await db.cartoes_config.toArray();
+        const cartoesVinculados = todosCartoes.filter(c => c.conta_pagamento_id === id);
+        const cartoesAtivos = cartoesVinculados.filter(c => c.ativo);
 
         if (cartoesAtivos.length > 0) {
           const nomesCartoes = cartoesAtivos.map(c => c.nome).join(', ');
