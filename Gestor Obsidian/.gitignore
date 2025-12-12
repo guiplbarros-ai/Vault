@@ -1,0 +1,36 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+
+# Variáveis de ambiente (NUNCA commitar!)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Tokens e credenciais (salvos em ~/.obsidian-manager/)
+google-tokens.json
+*-tokens.json
+credentials.json
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Vault do Obsidian (se estiver dentro do projeto)
+vault/
+
+# Cache
+.cache/
+*.tsbuildinfo

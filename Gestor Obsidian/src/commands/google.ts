@@ -1,0 +1,156 @@
+import { Command } from 'commander';
+import { getGoogleAuthService } from '../services/google-auth.service.js';
+import { logger } from '../utils/logger.js';
+import { exec } from 'child_process';
+
+export function createGoogleCommand(): Command {
+  const google = new Command('google')
+    .description('Gerencia autenticação com Google (Calendar/Gmail)');
+
+  // Autenticar
+  google
+    .command('auth')
+    .description('Autentica com sua conta Google')
+    .action(async () => {
+      try {
+        const authService = getGoogleAuthService();
+        
+        // Verifica se já está autenticado
+        const status = authService.getAuthStatus();
+        if (status.authenticated) {
+          console.log('\n✓ Você já está autenticado com o Google!');
+          console.log(`  Token expira em: ${status.expiresAt?.toLocaleString()}`);
+          console.log('\n  Para reautenticar, execute primeiro: obsidian-manager google logout');
+          return;
+        }
+        
+        // Gera URL de autenticação
+        const authUrl = authService.getAuthUrl();
+        
+        console.log('\n🔐 Autenticação Google\n');
+        console.log('Abrindo navegador para autorização...');
+        console.log('\nSe o navegador não abrir automaticamente, acesse:');
+        console.log(authUrl);
+        console.log('\n⏳ Aguardando autorização...\n');
+        
+        // Tenta abrir o navegador automaticamente
+        openBrowser(authUrl);
+        
+        // Inicia servidor para receber callback
+        const result = await authService.startAuthServer();
+        
+        console.log(`\n✅ ${result}`);
+        console.log('\nAgora você pode usar os comandos:');
+        console.log('  • obsidian-manager calendar today');
+        console.log('  • obsidian-manager gmail unread');
+        
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro desconhecido';
+        logger.error(message);
+        console.error(`\n✗ Erro na autenticação: ${message}`);
+        process.exit(1);
+      }
+    });
+
+  // Status da autenticação
+  google
+    .command('status')
+    .description('Verifica status da autenticação')
+    .action(async () => {
+      try {
+        const authService = getGoogleAuthService();
+        const status = authService.getAuthStatus();
+        
+        console.log('\n🔐 Status da Autenticação Google:\n');
+        
+        if (status.authenticated) {
+          console.log('  ✅ Autenticado');
+          console.log(`  📅 Token expira em: ${status.expiresAt?.toLocaleString()}`);
+          
+          const now = new Date();
+          const expiresAt = status.expiresAt!;
+          const minutesLeft = Math.round((expiresAt.getTime() - now.getTime()) / 1000 / 60);
+          
+          if (minutesLeft < 10) {
+            console.log('  ⚠️  Token expirando em breve (será renovado automaticamente)');
+          }
+        } else {
+          console.log('  ❌ Não autenticado');
+          console.log('\n  Execute: obsidian-manager google auth');
+        }
+        
+      } catch (error) {
+        console.log('\n  ❌ Não autenticado (credenciais não configuradas)');
+        console.log('\n  Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env');
+      }
+    });
+
+  // Logout
+  google
+    .command('logout')
+    .description('Remove a autenticação salva')
+    .action(() => {
+      try {
+        const authService = getGoogleAuthService();
+        authService.logout();
+        
+        console.log('\n✓ Logout realizado com sucesso!');
+        console.log('  Para autenticar novamente: obsidian-manager google auth');
+        
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro desconhecido';
+        logger.error(message);
+        console.error(`\n✗ Erro: ${message}`);
+        process.exit(1);
+      }
+    });
+
+  // Refresh token manualmente
+  google
+    .command('refresh')
+    .description('Renova o token de acesso manualmente')
+    .action(async () => {
+      try {
+        const authService = getGoogleAuthService();
+        await authService.refreshAccessToken();
+        
+        const status = authService.getAuthStatus();
+        
+        console.log('\n✓ Token renovado com sucesso!');
+        console.log(`  Novo token expira em: ${status.expiresAt?.toLocaleString()}`);
+        
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro desconhecido';
+        logger.error(message);
+        console.error(`\n✗ Erro ao renovar token: ${message}`);
+        process.exit(1);
+      }
+    });
+
+  return google;
+}
+
+/**
+ * Abre URL no navegador padrão do sistema
+ */
+function openBrowser(url: string): void {
+  const platform = process.platform;
+  let command: string;
+  
+  switch (platform) {
+    case 'darwin':
+      command = `open "${url}"`;
+      break;
+    case 'win32':
+      command = `start "" "${url}"`;
+      break;
+    default:
+      command = `xdg-open "${url}"`;
+  }
+  
+  exec(command, (error) => {
+    if (error) {
+      logger.error(`Erro ao abrir navegador: ${error.message}`);
+    }
+  });
+}

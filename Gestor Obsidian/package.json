@@ -1,0 +1,50 @@
+{
+  "name": "obsidian-manager",
+  "version": "1.1.0",
+  "description": "CLI para gerenciar notas no Obsidian, tarefas no Todoist, Notion, Google Calendar e Gmail",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "obsidian-manager": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "note": "tsx src/index.ts note",
+    "calendar": "tsx src/index.ts calendar",
+    "gmail": "tsx src/index.ts gmail",
+    "google:auth": "tsx src/index.ts google auth",
+    "google:status": "tsx src/index.ts google status"
+  },
+  "keywords": [
+    "obsidian",
+    "notes",
+    "cli",
+    "second-brain"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "date-fns": "^3.6.0",
+    "dotenv": "^16.4.5",
+    "gray-matter": "^4.0.3",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^3.3.2",
+    "node-telegram-bot-api": "^0.66.0",
+    "openai": "^4.73.0"
+  },
+  "overrides": {
+    "node-telegram-bot-api": {
+      "request": "npm:@cypress/request@^3.0.0"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/node-cron": "^3.0.11",
+    "@types/node-telegram-bot-api": "^0.64.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
