@@ -28,6 +28,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Ferramentas
+.playwright-mcp/
+
 # Vault do Obsidian (se estiver dentro do projeto)
 vault/
 
