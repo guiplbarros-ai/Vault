@@ -37,7 +37,10 @@ class TelegramService {
 
     const authorizedIds = process.env.TELEGRAM_AUTHORIZED_USERS;
     this.authorizedUsers = authorizedIds 
-      ? authorizedIds.split(',').map(id => parseInt(id.trim()))
+      ? authorizedIds
+          .split(',')
+          .map(id => parseInt(id.trim(), 10))
+          .filter(n => Number.isFinite(n))
       : [];
 
     this.bot = new TelegramBot(token, { polling: true });
@@ -99,10 +102,18 @@ class TelegramService {
     return this.authorizedUsers.includes(userId);
   }
 
+  private async ensureAuthorized(msg: TelegramBot.Message): Promise<boolean> {
+    const userId = msg.from?.id;
+    if (!userId) return true;
+    if (this.isAuthorized(userId)) return true;
+    await this.bot.sendMessage(msg.chat.id, '⛔ Você não está autorizado. Use /id para ver seu ID.');
+    return false;
+  }
+
   private setupHandlers(): void {
     // /help - show commands
     this.bot.onText(/\/help/, async (msg) => {
-      if (!this.isAuthorized(msg.from!.id)) return;
+      if (!(await this.ensureAuthorized(msg))) return;
       await this.sendLongMessage(msg.chat.id, `
 🤖 *Comandos do Cortex*
 
@@ -135,10 +146,7 @@ class TelegramService {
 
     // /start - apenas boas vindas
     this.bot.onText(/\/start/, async (msg) => {
-      if (!this.isAuthorized(msg.from!.id)) {
-        await this.bot.sendMessage(msg.chat.id, '⛔ Não autorizado.');
-        return;
-      }
+      if (!(await this.ensureAuthorized(msg))) return;
 
       await this.bot.sendMessage(msg.chat.id, `
 🧠 *Cortex - Seu Segundo Cérebro*
@@ -172,7 +180,7 @@ Manda ver! 🚀
 
     // /limpar - reset conversation
     this.bot.onText(/\/limpar/, async (msg) => {
-      if (!this.isAuthorized(msg.from!.id)) return;
+      if (!(await this.ensureAuthorized(msg))) return;
       if (!this.brain) {
         await this.bot.sendMessage(msg.chat.id, '🧹 Ok! (Modo IA está desativado; nada para limpar).');
         return;
@@ -189,7 +197,7 @@ Manda ver! 🚀
     // ==================== OBSIDIAN COMMANDS ====================
 
     const saveNote = async (msg: TelegramBot.Message, type: 'inbox'|'livro'|'conceito'|'projeto'|'prof'|'pessoal'|'reuniao', text: string) => {
-      if (!this.isAuthorized(msg.from!.id)) return;
+      if (!(await this.ensureAuthorized(msg))) return;
       const content = text.trim();
       if (!content) {
         await this.bot.sendMessage(msg.chat.id, '❌ Envie o texto. Ex: /nota Minha ideia...');
@@ -240,7 +248,7 @@ Manda ver! 🚀
 
     // /buscar <termo>
     this.bot.onText(/\/buscar(?:\s+(.+))?/, async (msg, match) => {
-      if (!this.isAuthorized(msg.from!.id)) return;
+      if (!(await this.ensureAuthorized(msg))) return;
       const query = (match?.[1] || '').trim();
       if (!query) {
         await this.bot.sendMessage(msg.chat.id, '❌ Use: /buscar <termo>');
@@ -267,7 +275,7 @@ Manda ver! 🚀
 
     // /tarefas
     this.bot.onText(/\/tarefas\b/, async (msg) => {
-      if (!this.isAuthorized(msg.from!.id)) return;
+      if (!(await this.ensureAuthorized(msg))) return;
       try {
         const todoist = getTodoistService();
         const tasks = await todoist.getTasks('today | overdue');
@@ -294,7 +302,7 @@ Manda ver! 🚀
 
     // /tarefa <texto>
     this.bot.onText(/\/tarefa(?:\s+([\s\S]+))?/, async (msg, match) => {
-      if (!this.isAuthorized(msg.from!.id)) return;
+      if (!(await this.ensureAuthorized(msg))) return;
       const content = (match?.[1] || '').trim();
       if (!content) {
         await this.bot.sendMessage(msg.chat.id, '❌ Use: /tarefa <descrição>');
@@ -313,7 +321,7 @@ Manda ver! 🚀
 
     // /concluir <id>
     this.bot.onText(/\/concluir(?:\s+(\S+))?/, async (msg, match) => {
-      if (!this.isAuthorized(msg.from!.id)) return;
+      if (!(await this.ensureAuthorized(msg))) return;
       const id = (match?.[1] || '').trim();
       if (!id) {
         await this.bot.sendMessage(msg.chat.id, '❌ Use: /concluir <id>');
@@ -332,7 +340,7 @@ Manda ver! 🚀
 
     // /resumo - ativa resumo diário
     this.bot.onText(/\/resumo(?:\s+(\d{1,2})(?::(\d{2}))?)?/, async (msg, match) => {
-      if (!this.isAuthorized(msg.from!.id)) return;
+      if (!(await this.ensureAuthorized(msg))) return;
       
       const hour = match?.[1] ? parseInt(match[1]) : 7;
       const minute = match?.[2] ? parseInt(match[2]) : 0;
@@ -361,7 +369,7 @@ Manda ver! 🚀
 
     // /semresumo - desativa resumo diário
     this.bot.onText(/\/semresumo/, async (msg) => {
-      if (!this.isAuthorized(msg.from!.id)) return;
+      if (!(await this.ensureAuthorized(msg))) return;
       
       const digest = getDailyDigestService();
       digest.removeChat(msg.chat.id);
@@ -374,7 +382,7 @@ Manda ver! 🚀
 
     // /agora - envia resumo imediatamente
     this.bot.onText(/\/agora/, async (msg) => {
-      if (!this.isAuthorized(msg.from!.id)) return;
+      if (!(await this.ensureAuthorized(msg))) return;
       
       await this.bot.sendChatAction(msg.chat.id, 'typing');
       
@@ -389,12 +397,14 @@ Manda ver! 🚀
 
     // ALL messages go to Brain
     this.bot.on('message', async (msg) => {
+      if (msg.text) {
+        // log leve para diagnosticar "não responde"
+        logger.info(`Telegram msg recebida chat=${msg.chat.id} from=${msg.from?.id} text=${msg.text.startsWith('/') ? '[command]' : '[text]'}`);
+      }
+
       // Skip commands
       if (!msg.text || msg.text.startsWith('/')) return;
-      if (!this.isAuthorized(msg.from!.id)) {
-        await this.bot.sendMessage(msg.chat.id, '⛔ Você não está autorizado. Use /id para ver seu ID.');
-        return;
-      }
+      if (!(await this.ensureAuthorized(msg))) return;
 
       try {
         await this.bot.sendChatAction(msg.chat.id, 'typing');
@@ -422,7 +432,11 @@ Manda ver! 🚀
     });
 
     this.bot.on('polling_error', (error) => {
-      logger.error(`Polling error: ${error.message}`);
+      const e = error as any;
+      const code = e?.code ? `code=${e.code}` : '';
+      const status = e?.response?.statusCode ? `status=${e.response.statusCode}` : '';
+      const body = e?.response?.body ? `body=${JSON.stringify(e.response.body)}` : '';
+      logger.error(`Polling error: ${code} ${status} ${error.message} ${body}`.trim());
     });
   }
 
