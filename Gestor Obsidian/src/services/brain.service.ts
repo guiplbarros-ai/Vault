@@ -400,7 +400,7 @@ Posso prosseguir?
       state.messages.push({ role: 'assistant', content: assistantMessage });
 
       // Check if response contains EXECUTE tags (AI wants to execute now)
-      const hasExecuteTags = /\[EXECUTE:\w+\]/.test(assistantMessage);
+      const hasExecuteTags = /\[EXECUTE:\w+\]/.test(assistantMessage) || /\bEXECUTE:\w+\b/.test(assistantMessage);
       
       if (hasExecuteTags) {
         // Extract and execute actions
@@ -529,10 +529,11 @@ Posso prosseguir?
     state: ConversationState
   ): Promise<Array<{success: boolean; description: string; error?: string}>> {
     const results: Array<{success: boolean; description: string; error?: string}> = [];
+    const normalized = this.normalizeExecuteMessage(message);
     const executeRegex = /\[EXECUTE:(\w+)\]([\s\S]*?)\[\/EXECUTE\]/g;
     
     let match;
-    while ((match = executeRegex.exec(message)) !== null) {
+    while ((match = executeRegex.exec(normalized)) !== null) {
       const actionType = match[1];
       const params = this.parseParams(match[2]);
       
@@ -549,6 +550,30 @@ Posso prosseguir?
     }
     
     return results;
+  }
+
+  /**
+   * Aceita variações do formato de execução retornado pelo modelo.
+   * Ex:
+   * - EXECUTE:CALENDAR_TODAY
+   * - [EXECUTE:CALENDAR_TODAY] (sem fechamento)
+   * - [EXECUTE:CALENDAR_TODAY] ... [/EXECUTE]
+   */
+  private normalizeExecuteMessage(message: string): string {
+    let m = message;
+
+    // Converte linhas "EXECUTE:ACTION" para o bloco esperado
+    m = m.replace(
+      /(^|\n)\s*EXECUTE:(\w+)\s*(?=\n|$)/g,
+      (_all, prefix: string, action: string) => `${prefix}[EXECUTE:${action}]\n[/EXECUTE]`,
+    );
+
+    // Se houver abertura mas não houver nenhum fechamento, fecha no final
+    if (/\[EXECUTE:\w+\]/.test(m) && !/\[\/EXECUTE\]/.test(m)) {
+      m += '\n[/EXECUTE]';
+    }
+
+    return m;
   }
 
   private parseParams(content: string): Record<string, string> {
@@ -859,6 +884,9 @@ ${parsed.body.slice(0, 2000)}${parsed.body.length > 2000 ? '\n\n[...truncado]' :
   private removeExecuteTags(message: string): string {
     return message
       .replace(/\[EXECUTE:\w+\][\s\S]*?\[\/EXECUTE\]/g, '')
+      .replace(/(^|\n)\s*EXECUTE:\w+\s*(?=\n|$)/g, '$1')
+      .replace(/(^|\n)\s*\[EXECUTE:\w+\]\s*(?=\n|$)/g, '$1')
+      .replace(/(^|\n)\s*\[\/EXECUTE\]\s*(?=\n|$)/g, '$1')
       .replace(/\[DADOS DO ARQUIVO[^\]]*\]:[\s\S]*$/g, '') // Remove raw data dumps
       .replace(/✅\s*(CONTEÚDO|ARQUIVOS|Encontrei)[\s\S]*?(Outros arquivos|$)/g, '') // Remove raw outputs
       .replace(/\n{3,}/g, '\n\n')
