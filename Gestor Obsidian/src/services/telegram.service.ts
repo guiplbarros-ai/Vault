@@ -6,6 +6,8 @@ import { getDailyDigestService } from './daily-digest.service.js';
 import { noteService } from './note.service.js';
 import { getTodoistService } from './todoist.service.js';
 import { getVaultService } from './vault.service.js';
+import { getCalendarService } from './calendar.service.js';
+import { getGoogleAuthService } from './google-auth.service.js';
 import { logger } from '../utils/logger.js';
 
 config();
@@ -335,6 +337,45 @@ Manda ver! 🚀
         const err = error instanceof Error ? error.message : 'Erro';
         logger.error(`Telegram todoist complete error: ${err}`);
         await this.bot.sendMessage(msg.chat.id, `❌ Erro ao concluir: ${err}`);
+      }
+    });
+
+    // ==================== CALENDAR COMMANDS ====================
+
+    // /agenda - eventos de hoje (atalho sem IA)
+    this.bot.onText(/\/agenda\b/, async (msg) => {
+      if (!(await this.ensureAuthorized(msg))) return;
+      try {
+        const auth = getGoogleAuthService();
+        if (!auth.isAuthenticated()) {
+          await this.bot.sendMessage(msg.chat.id, '🔑 Google não autenticado. Rode no terminal: `npm run dev -- google auth`');
+          return;
+        }
+
+        const calendar = getCalendarService();
+        const events = await calendar.getTodayEvents();
+        if (events.length === 0) {
+          await this.bot.sendMessage(msg.chat.id, '📅 Hoje está livre! Nenhum compromisso. 🎉');
+          return;
+        }
+
+        const list = events
+          .slice(0, 10)
+          .map(e => {
+            const parsed = calendar.parseEvent(e);
+            const time = parsed.isAllDay
+              ? '📅 Dia inteiro'
+              : `🕐 ${parsed.start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+            const meet = parsed.meetLink ? ' 🔗' : '';
+            return `• ${time} - ${parsed.title}${meet}`;
+          })
+          .join('\n');
+
+        await this.sendLongMessage(msg.chat.id, `📅 *Agenda de hoje*\n\n${list}`);
+      } catch (error) {
+        const err = error instanceof Error ? error.message : 'Erro';
+        logger.error(`Telegram calendar error: ${err}`);
+        await this.bot.sendMessage(msg.chat.id, `❌ Erro ao buscar agenda: ${err}`);
       }
     });
 
