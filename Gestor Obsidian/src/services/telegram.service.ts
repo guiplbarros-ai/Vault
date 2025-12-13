@@ -1,8 +1,11 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { config } from 'dotenv';
-import { getBrainService } from './brain.service.js';
+import { getBrainService, type BrainService } from './brain.service.js';
 import { getNotionService } from './notion.service.js';
 import { getDailyDigestService } from './daily-digest.service.js';
+import { noteService } from './note.service.js';
+import { getTodoistService } from './todoist.service.js';
+import { getVaultService } from './vault.service.js';
 import { logger } from '../utils/logger.js';
 
 config();
@@ -23,6 +26,7 @@ export function setNotionFunctions(
 class TelegramService {
   private bot: TelegramBot;
   private authorizedUsers: number[];
+  private brain: BrainService | null = null;
 
   constructor() {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -68,16 +72,25 @@ class TelegramService {
   }
 
   private setupBrain(): void {
-    const brain = getBrainService();
-    
-    // Try to connect Notion
-    const notion = getNotionService();
-    if (notion) {
-      brain.notionSearch = (query: string) => notion.search(query);
-      brain.notionFetch = (id: string) => notion.getPage(id);
-      logger.info('Notion conectado ao Brain');
-    } else {
-      logger.info('Notion não configurado (NOTION_API_KEY ausente)');
+    try {
+      const brain = getBrainService();
+      this.brain = brain;
+      
+      // Try to connect Notion
+      const notion = getNotionService();
+      if (notion) {
+        brain.notionSearch = (query: string) => notion.search(query);
+        brain.notionFetch = (id: string) => notion.getPage(id);
+        logger.info('Notion conectado ao Brain');
+      } else {
+        logger.info('Notion não configurado (NOTION_API_KEY ausente)');
+      }
+    } catch (error) {
+      // OPENAI_API_KEY (ou outra dependência do Brain) pode não estar configurada.
+      // O bot deve continuar funcionando em "modo comandos".
+      const msg = error instanceof Error ? error.message : 'Erro ao iniciar Brain';
+      this.brain = null;
+      logger.warn(`Brain indisponível: ${msg}`);
     }
   }
 
@@ -87,6 +100,39 @@ class TelegramService {
   }
 
   private setupHandlers(): void {
+    // /help - show commands
+    this.bot.onText(/\/help/, async (msg) => {
+      if (!this.isAuthorized(msg.from!.id)) return;
+      await this.sendLongMessage(msg.chat.id, `
+🤖 *Comandos do Cortex*
+
+*Notas (Obsidian):*
+/nota <texto> - Salva no Inbox
+/livro <texto> - Nota de livro
+/conceito <texto> - Nota de conceito
+/projeto <texto> - Nota de projeto
+/prof <texto> - Nota profissional
+/pessoal <texto> - Nota pessoal
+/reuniao <texto> - Nota de reunião
+/buscar <termo> - Buscar notas no vault
+
+*Todoist:*
+/tarefas - Lista tarefas de hoje (e atrasadas)
+/tarefa <texto> - Cria uma tarefa
+/concluir <id> - Conclui uma tarefa
+
+*Resumo diário:*
+/resumo - Ativa resumo diário às 7h
+/resumo HH:MM - Ativa em horário específico
+/semresumo - Desativa
+/agora - Envia o resumo agora
+
+*Utilitários:*
+/id - Mostra seu user ID
+/limpar - Reseta a conversa (modo IA)
+      `.trim(),);
+    });
+
     // /start - apenas boas vindas
     this.bot.onText(/\/start/, async (msg) => {
       if (!this.isAuthorized(msg.from!.id)) {
@@ -127,14 +173,161 @@ Manda ver! 🚀
     // /limpar - reset conversation
     this.bot.onText(/\/limpar/, async (msg) => {
       if (!this.isAuthorized(msg.from!.id)) return;
-      const brain = getBrainService();
-      brain.clearConversation(msg.chat.id);
+      if (!this.brain) {
+        await this.bot.sendMessage(msg.chat.id, '🧹 Ok! (Modo IA está desativado; nada para limpar).');
+        return;
+      }
+      this.brain.clearConversation(msg.chat.id);
       await this.bot.sendMessage(msg.chat.id, '🧹 Conversa resetada! Começamos do zero.');
     });
 
     // /id - show user ID
     this.bot.onText(/\/id/, async (msg) => {
       await this.bot.sendMessage(msg.chat.id, `Seu ID: ${msg.from?.id}`);
+    });
+
+    // ==================== OBSIDIAN COMMANDS ====================
+
+    const saveNote = async (msg: TelegramBot.Message, type: 'inbox'|'livro'|'conceito'|'projeto'|'prof'|'pessoal'|'reuniao', text: string) => {
+      if (!this.isAuthorized(msg.from!.id)) return;
+      const content = text.trim();
+      if (!content) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Envie o texto. Ex: /nota Minha ideia...');
+        return;
+      }
+
+      try {
+        const result = await noteService.processNote({
+          content,
+          type,
+          forceInbox: type === 'inbox',
+        });
+
+        const fileName = result.filePath.split('/').pop() || result.filePath;
+        await this.bot.sendMessage(
+          msg.chat.id,
+          `✅ Salvo no Obsidian: ${fileName}`,
+        );
+      } catch (error) {
+        const err = error instanceof Error ? error.message : 'Erro';
+        logger.error(`Telegram note error: ${err}`);
+        await this.bot.sendMessage(msg.chat.id, `❌ Não consegui salvar a nota: ${err}`);
+      }
+    };
+
+    // /nota
+    this.bot.onText(/\/nota(?:\s+([\s\S]+))?/, async (msg, match) => {
+      await saveNote(msg, 'inbox', match?.[1] || '');
+    });
+    this.bot.onText(/\/livro(?:\s+([\s\S]+))?/, async (msg, match) => {
+      await saveNote(msg, 'livro', match?.[1] || '');
+    });
+    this.bot.onText(/\/conceito(?:\s+([\s\S]+))?/, async (msg, match) => {
+      await saveNote(msg, 'conceito', match?.[1] || '');
+    });
+    this.bot.onText(/\/projeto(?:\s+([\s\S]+))?/, async (msg, match) => {
+      await saveNote(msg, 'projeto', match?.[1] || '');
+    });
+    this.bot.onText(/\/prof(?:\s+([\s\S]+))?/, async (msg, match) => {
+      await saveNote(msg, 'prof', match?.[1] || '');
+    });
+    this.bot.onText(/\/pessoal(?:\s+([\s\S]+))?/, async (msg, match) => {
+      await saveNote(msg, 'pessoal', match?.[1] || '');
+    });
+    this.bot.onText(/\/reuniao(?:\s+([\s\S]+))?/, async (msg, match) => {
+      await saveNote(msg, 'reuniao', match?.[1] || '');
+    });
+
+    // /buscar <termo>
+    this.bot.onText(/\/buscar(?:\s+(.+))?/, async (msg, match) => {
+      if (!this.isAuthorized(msg.from!.id)) return;
+      const query = (match?.[1] || '').trim();
+      if (!query) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Use: /buscar <termo>');
+        return;
+      }
+
+      try {
+        const vault = getVaultService();
+        const results = this.searchVault(vault, query).slice(0, 10);
+        if (results.length === 0) {
+          await this.bot.sendMessage(msg.chat.id, `🔎 Não encontrei notas para "${query}".`);
+          return;
+        }
+        const lines = results.map(p => `• ${p}`).join('\n');
+        await this.sendLongMessage(msg.chat.id, `🔎 Encontrei ${results.length} resultado(s):\n\n${lines}`);
+      } catch (error) {
+        const err = error instanceof Error ? error.message : 'Erro';
+        logger.error(`Telegram search error: ${err}`);
+        await this.bot.sendMessage(msg.chat.id, `❌ Erro ao buscar: ${err}`);
+      }
+    });
+
+    // ==================== TODOIST COMMANDS ====================
+
+    // /tarefas
+    this.bot.onText(/\/tarefas\b/, async (msg) => {
+      if (!this.isAuthorized(msg.from!.id)) return;
+      try {
+        const todoist = getTodoistService();
+        const tasks = await todoist.getTasks('today | overdue');
+        if (tasks.length === 0) {
+          await this.bot.sendMessage(msg.chat.id, '✅ Nenhuma tarefa para hoje! 🎉');
+          return;
+        }
+        const list = tasks
+          .sort((a, b) => b.priority - a.priority)
+          .slice(0, 15)
+          .map(t => {
+            const p = t.priority > 1 ? ` [P${5 - t.priority}]` : '';
+            const d = t.due ? ` 📅 ${t.due.string}` : '';
+            return `• ${t.content}${p}${d}\n  id: ${t.id}`;
+          })
+          .join('\n');
+        await this.sendLongMessage(msg.chat.id, `📋 *Tarefas de hoje*\n\n${list}`);
+      } catch (error) {
+        const err = error instanceof Error ? error.message : 'Erro';
+        logger.error(`Telegram todoist list error: ${err}`);
+        await this.bot.sendMessage(msg.chat.id, `❌ Erro ao listar tarefas: ${err}`);
+      }
+    });
+
+    // /tarefa <texto>
+    this.bot.onText(/\/tarefa(?:\s+([\s\S]+))?/, async (msg, match) => {
+      if (!this.isAuthorized(msg.from!.id)) return;
+      const content = (match?.[1] || '').trim();
+      if (!content) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Use: /tarefa <descrição>');
+        return;
+      }
+      try {
+        const todoist = getTodoistService();
+        const task = await todoist.createTask({ content });
+        await this.bot.sendMessage(msg.chat.id, `✅ Tarefa criada: "${task.content}"\nID: ${task.id}`);
+      } catch (error) {
+        const err = error instanceof Error ? error.message : 'Erro';
+        logger.error(`Telegram todoist create error: ${err}`);
+        await this.bot.sendMessage(msg.chat.id, `❌ Erro ao criar tarefa: ${err}`);
+      }
+    });
+
+    // /concluir <id>
+    this.bot.onText(/\/concluir(?:\s+(\S+))?/, async (msg, match) => {
+      if (!this.isAuthorized(msg.from!.id)) return;
+      const id = (match?.[1] || '').trim();
+      if (!id) {
+        await this.bot.sendMessage(msg.chat.id, '❌ Use: /concluir <id>');
+        return;
+      }
+      try {
+        const todoist = getTodoistService();
+        await todoist.completeTask(id);
+        await this.bot.sendMessage(msg.chat.id, `✅ Tarefa concluída: ${id}`);
+      } catch (error) {
+        const err = error instanceof Error ? error.message : 'Erro';
+        logger.error(`Telegram todoist complete error: ${err}`);
+        await this.bot.sendMessage(msg.chat.id, `❌ Erro ao concluir: ${err}`);
+      }
     });
 
     // /resumo - ativa resumo diário
@@ -206,8 +399,15 @@ Manda ver! 🚀
       try {
         await this.bot.sendChatAction(msg.chat.id, 'typing');
 
-        const brain = getBrainService();
-        const response = await brain.chat(msg.chat.id, msg.text);
+        if (!this.brain) {
+          await this.bot.sendMessage(
+            msg.chat.id,
+            '🧠 Modo IA está desativado (OPENAI_API_KEY não configurada).\n\nUse /help para ver os comandos disponíveis.',
+          );
+          return;
+        }
+
+        const response = await this.brain.chat(msg.chat.id, msg.text);
 
         // Send response, splitting if needed
         await this.sendLongMessage(msg.chat.id, response.message);
@@ -224,6 +424,46 @@ Manda ver! 🚀
     this.bot.on('polling_error', (error) => {
       logger.error(`Polling error: ${error.message}`);
     });
+  }
+
+  private searchVault(vault: ReturnType<typeof getVaultService>, query: string): string[] {
+    const results: string[] = [];
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return results;
+    
+    const search = (folder: string) => {
+      try {
+        for (const f of vault.listFiles(folder)) {
+          const filePath = `${folder}/${f}`;
+          const fileName = f.toLowerCase();
+          
+          // Filename match (any term)
+          if (terms.some(t => fileName.includes(t))) {
+            results.push(filePath);
+            continue;
+          }
+          
+          // Content match (all terms) for .md files
+          if (f.endsWith('.md')) {
+            const content = vault.readFile(filePath);
+            if (content) {
+              const contentLower = content.toLowerCase();
+              if (terms.every(t => contentLower.includes(t))) {
+                results.push(filePath);
+              }
+            }
+          }
+        }
+        for (const sub of vault.listFolders(folder)) {
+          search(`${folder}/${sub}`);
+        }
+      } catch {
+        // ignore errors (missing folders, permission, etc.)
+      }
+    };
+    
+    ['00-INBOX', '10-AREAS', '20-RESOURCES', '30-PROJECTS'].forEach(search);
+    return results;
   }
 
   private async sendLongMessage(chatId: number, text: string): Promise<void> {
