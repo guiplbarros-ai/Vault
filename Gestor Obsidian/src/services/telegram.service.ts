@@ -70,17 +70,6 @@ class TelegramService {
     digest.setSendMessage(async (chatId: number, message: string) => {
       await this.sendLongMessage(chatId, message);
     });
-
-    // Carrega configurações salvas (se houver)
-    const savedChats = process.env.DAILY_DIGEST_CHATS;
-    if (savedChats) {
-      const chatIds = savedChats.split(',').map(id => parseInt(id.trim()));
-      for (const chatId of chatIds) {
-        if (!isNaN(chatId)) {
-          digest.addChat(chatId, 7, 0); // 7:00 por padrão
-        }
-      }
-    }
     
     // Inicia os jobs
     digest.startJobs();
@@ -147,6 +136,9 @@ class TelegramService {
 *Resumo diário:*
 /resumo - Ativa resumo diário às 7h
 /resumo HH:MM - Ativa em horário específico
+/proativo - Ativa modo proativo (07:00 e 18:00)
+/brief - Envia um briefing agora (agenda + tarefas + emails)
+/status - Mostra status do modo proativo/briefing
 /semresumo - Desativa
 /agora - Envia o resumo agora
 
@@ -416,6 +408,53 @@ Manda ver! 🚀
       );
       
       logger.info(`Daily Digest: Ativado para chat ${msg.chat.id} às ${hour}:${minute}`);
+    });
+
+    // /proativo - ativa 07:00 e 18:00 e manda brief agora
+    this.bot.onText(/\/proativo\b/, async (msg) => {
+      if (!(await this.ensureAuthorized(msg))) return;
+      const digest = getDailyDigestService();
+      digest.enableProactiveDefaults(msg.chat.id);
+      await this.bot.sendMessage(
+        msg.chat.id,
+        '✅ Modo proativo ativado! Vou te enviar briefing diário às 07:00 e 18:00.\n\nVou mandar um briefing agora.',
+      );
+      try {
+        await digest.sendNow(msg.chat.id);
+      } catch (error) {
+        const err = error instanceof Error ? error.message : 'Erro';
+        await this.bot.sendMessage(msg.chat.id, `❌ Não consegui gerar o briefing agora: ${err}`);
+      }
+    });
+
+    // /brief - envia briefing agora
+    this.bot.onText(/\/brief\b/, async (msg) => {
+      if (!(await this.ensureAuthorized(msg))) return;
+      await this.bot.sendChatAction(msg.chat.id, 'typing');
+      try {
+        const digest = getDailyDigestService();
+        await digest.sendNow(msg.chat.id);
+      } catch (error) {
+        const err = error instanceof Error ? error.message : 'Erro';
+        await this.bot.sendMessage(msg.chat.id, `❌ Erro ao gerar briefing: ${err}`);
+      }
+    });
+
+    // /status - mostra schedules
+    this.bot.onText(/\/status\b/, async (msg) => {
+      if (!(await this.ensureAuthorized(msg))) return;
+      const digest = getDailyDigestService();
+      const schedules = digest.getSchedulesForChat(msg.chat.id);
+      if (schedules.length === 0) {
+        await this.bot.sendMessage(
+          msg.chat.id,
+          'ℹ️ Nenhum modo proativo ativo neste chat.\n\nUse /proativo ou /resumo HH:MM.',
+        );
+        return;
+      }
+
+      const lines = schedules.map(s => `• ${s.cronExpression} (America/Sao_Paulo)`).join('\n');
+      await this.sendLongMessage(msg.chat.id, `🧠 *Status Proativo*\n\nAgendamentos ativos:\n${lines}\n\nUse /semresumo para desativar.`);
     });
 
     // /semresumo - desativa resumo diário

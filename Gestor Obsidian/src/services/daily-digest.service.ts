@@ -1,5 +1,8 @@
 import cron from 'node-cron';
 import { config } from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { getTodoistService } from './todoist.service.js';
 import { getCalendarService } from './calendar.service.js';
 import { getGmailService } from './gmail.service.js';
@@ -11,6 +14,7 @@ import { ptBR } from 'date-fns/locale';
 config();
 
 interface DigestConfig {
+  id: string;
   chatId: number;
   cronExpression: string; // Ex: '0 7 * * *' = 7h todos os dias
   enabled: boolean;
@@ -22,6 +26,12 @@ class DailyDigestService {
   private configs: DigestConfig[] = [];
   private jobs: cron.ScheduledTask[] = [];
   private sendMessage: SendMessageFn | null = null;
+  private configPath: string;
+
+  constructor() {
+    this.configPath = path.join(os.homedir(), '.obsidian-manager', 'daily-digest.json');
+    this.loadConfigs();
+  }
 
   /**
    * Configura a função de envio de mensagem (do Telegram)
@@ -31,16 +41,61 @@ class DailyDigestService {
     logger.info('Daily Digest: Função de envio configurada');
   }
 
+  private ensureConfigDir(): void {
+    const dir = path.dirname(this.configPath);
+    try {
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    } catch {
+      // ignore
+    }
+  }
+
+  private loadConfigs(): void {
+    try {
+      if (!fs.existsSync(this.configPath)) return;
+      const raw = fs.readFileSync(this.configPath, 'utf-8');
+      const parsed = JSON.parse(raw) as DigestConfig[];
+      if (Array.isArray(parsed)) {
+        // Basic validation
+        this.configs = parsed
+          .filter(c => typeof c?.chatId === 'number' && typeof c?.cronExpression === 'string')
+          .map(c => ({
+            id: c.id || `${c.chatId}:${c.cronExpression}`,
+            chatId: c.chatId,
+            cronExpression: c.cronExpression,
+            enabled: c.enabled !== false,
+          }));
+        logger.info(`Daily Digest: Config carregada (${this.configs.length} schedule(s))`);
+      }
+    } catch (error) {
+      logger.error(`Daily Digest: Falha ao carregar config (${error instanceof Error ? error.message : 'erro'})`);
+    }
+  }
+
+  private saveConfigs(): void {
+    try {
+      this.ensureConfigDir();
+      fs.writeFileSync(this.configPath, JSON.stringify(this.configs, null, 2), 'utf-8');
+    } catch (error) {
+      logger.error(`Daily Digest: Falha ao salvar config (${error instanceof Error ? error.message : 'erro'})`);
+    }
+  }
+
+  private makeId(chatId: number, cronExpression: string): string {
+    return `${chatId}:${cronExpression}`;
+  }
+
   /**
-   * Adiciona um chat para receber o resumo diário
+   * Define UM horário (substitui os anteriores) para um chat
    */
   addChat(chatId: number, hour: number = 7, minute: number = 0): void {
     const cronExpression = `${minute} ${hour} * * *`;
     
-    // Remove config existente se houver
+    // Remove configs existentes do chat (substitui)
     this.configs = this.configs.filter(c => c.chatId !== chatId);
     
     this.configs.push({
+      id: this.makeId(chatId, cronExpression),
       chatId,
       cronExpression,
       enabled: true,
@@ -49,7 +104,31 @@ class DailyDigestService {
     logger.info(`Daily Digest: Chat ${chatId} configurado para ${hour}:${minute.toString().padStart(2, '0')}`);
     
     // Reinicia os jobs
+    this.saveConfigs();
     this.startJobs();
+  }
+
+  /**
+   * Adiciona MAIS UM horário para um chat (sem remover os existentes)
+   */
+  addSchedule(chatId: number, hour: number, minute: number): void {
+    const cronExpression = `${minute} ${hour} * * *`;
+    const id = this.makeId(chatId, cronExpression);
+    if (this.configs.some(c => c.id === id)) return;
+
+    this.configs.push({ id, chatId, cronExpression, enabled: true });
+    this.saveConfigs();
+    this.startJobs();
+    logger.info(`Daily Digest: Schedule adicionado para chat ${chatId} - ${hour}:${minute.toString().padStart(2, '0')}`);
+  }
+
+  /**
+   * Ativa modo proativo padrão: 07:00 e 18:00
+   */
+  enableProactiveDefaults(chatId: number): void {
+    // Não remove: só garante que exista
+    this.addSchedule(chatId, 7, 0);
+    this.addSchedule(chatId, 18, 0);
   }
 
   /**
@@ -57,8 +136,16 @@ class DailyDigestService {
    */
   removeChat(chatId: number): void {
     this.configs = this.configs.filter(c => c.chatId !== chatId);
+    this.saveConfigs();
     this.startJobs();
     logger.info(`Daily Digest: Chat ${chatId} removido`);
+  }
+
+  getSchedulesForChat(chatId: number): DigestConfig[] {
+    return this.configs
+      .filter(c => c.chatId === chatId && c.enabled)
+      .slice()
+      .sort((a, b) => a.cronExpression.localeCompare(b.cronExpression));
   }
 
   /**
