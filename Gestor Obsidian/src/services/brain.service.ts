@@ -118,9 +118,9 @@ Guilherme trabalha na **Freelaw** (legaltech). Ele lidera áreas de:
 ## REGRA CRÍTICA: QUANDO NÃO TIVER CERTEZA
 
 Se você não souber EXATAMENTE o que o usuário quer ou ONDE buscar:
-1. **PERGUNTE** para clarificar antes de agir
-2. **NÃO CHUTE** - é melhor perguntar do que dar informação errada
-3. Diga algo como: "Você quer que eu busque isso no Notion da empresa ou nas suas notas do Obsidian?"
+1. **PERGUNTE NO MÁXIMO 1–2 PERGUNTAS** para clarificar
+2. **NÃO CHUTE FATOS** (não invente informação). Mas você PODE ser propositivo com hipóteses e opções.
+3. **AINDA ASSIM SEJA ÚTIL**: ofereça uma recomendação inicial baseada no que você tem, deixando claro as suposições.
 
 ## REGRA CRÍTICA: NUNCA INVENTAR INFORMAÇÕES
 
@@ -286,6 +286,18 @@ id: message_id
 5. **Cross-platform**: pode ler do Notion e criar no Obsidian/Todoist
 6. **Palavras de confirmação**: sim, pode, ok, vai, faz, isso, confirmo, por favor, manda
 7. **Palavras de negação**: não, cancela, espera, para, deixa
+
+## REGRA DE QUALIDADE (MUITO IMPORTANTE)
+
+Quando o usuário pedir **prioridades / próximos projetos / planejamento**:
+1. Busque contexto no Obsidian (SEARCH_VAULT) sobre o tema e período (ex.: Q1 2026, comunidade).
+2. Se fizer sentido, consulte tarefas (LIST_TASKS) e agenda (CALENDAR_WEEK ou CALENDAR_TODAY) para contexto de carga.
+3. Responda de forma **analítica e propositiva**, com:
+   - Contexto (o que você entendeu)
+   - Opções (2–4 caminhos) com prós/contras
+   - Recomendação (top 1–2) e por quê
+   - Próximos passos (ações concretas)
+   - Perguntas (no máximo 1–2) para refinar
 
 ## EXEMPLOS DE CONVERSA
 
@@ -624,9 +636,27 @@ Posso prosseguir?
           content:
             `Você acabou de executar ações internas e recebeu resultados.\n` +
             `- NÃO mostre dumps/raw.\n` +
-            `- Responda direto e organizado.\n` +
-            `- Se for avaliação de desempenho, responda em: Resumo (3 bullets), Evidências, Pontos fortes, Pontos a melhorar, Próximos passos.\n` +
-            `- Se a pessoa/período não estiver claro nos dados, diga que não encontrou e mostre 2-3 caminhos candidatos (sem inventar).\n\n` +
+            `- Responda direto, organizado e ÚTIL.\n` +
+            `- Seja propositivo: traga opções, trade-offs e uma recomendação.\n` +
+            `- Faça no máximo 1–2 perguntas quando necessário.\n` +
+            `\n` +
+            `FORMATO (escolha o mais apropriado):\n` +
+            `A) Avaliação de desempenho:\n` +
+            `   - Resumo (3 bullets)\n` +
+            `   - Evidências (com citação da fonte pelo PATH quando houver)\n` +
+            `   - Pontos fortes\n` +
+            `   - Pontos a melhorar\n` +
+            `   - Próximos passos (ações)\n` +
+            `   - Perguntas (0–2)\n` +
+            `B) Projetos / prioridades / planejamento:\n` +
+            `   - Contexto (1 parágrafo)\n` +
+            `   - Hipóteses (se faltar info)\n` +
+            `   - Opções (2–4) com prós/contras\n` +
+            `   - Recomendação (top 1–2) + por quê\n` +
+            `   - Próximos passos (3–6 bullets acionáveis)\n` +
+            `   - Perguntas (0–2)\n` +
+            `\n` +
+            `- Se os dados estiverem ambíguos (vários candidatos), NÃO escolha errado: pergunte e mostre 2–3 opções.\n\n` +
             `[RESULTADOS DE AÇÕES]\n${toolSummary}${dataBlock}`
         },
         {
@@ -642,6 +672,12 @@ Posso prosseguir?
 
     const msg = response.choices[0].message.content || '';
     return this.removeExecuteTags(msg);
+  }
+
+  private appendInternalData(state: ConversationState, title: string, payload: string, limit: number = 6500): void {
+    const header = `\n\n=== ${title} ===\n`;
+    const next = (state.lastNotionData || '') + header + payload;
+    state.lastNotionData = next.length > limit ? next.substring(next.length - limit) : next;
   }
 
   /**
@@ -730,8 +766,8 @@ Posso prosseguir?
         }).join('\n');
         
         // Store in state for AI context
-        state.lastNotionData = list;
-        return `Tarefas:\n${list}`;
+        this.appendInternalData(state, 'TODOIST (amostra)', list);
+        return `Tarefas carregadas (${tasks.length})`;
       }
 
       case 'COMPLETE_TASK': {
@@ -751,11 +787,13 @@ Posso prosseguir?
         // Ambiguous → do not read, ask user to choose
         if (this.isAmbiguousSearch(results)) {
           const top = results.slice(0, 6);
-          state.lastNotionData =
-            `BUSCA AMBÍGUA para "${query}".\n` +
+          this.appendInternalData(
+            state,
+            `BUSCA AMBÍGUA: ${query}`,
             `Peça ao usuário para escolher UM arquivo ou esclarecer (pessoa/quarter/projeto).\n\n` +
-            `CANDIDATOS:\n` +
-            top.map((r, i) => `${i + 1}. ${r.path} (score=${r.score}, razão=${r.reason})`).join('\n');
+              `CANDIDATOS:\n` +
+              top.map((r, i) => `${i + 1}. ${r.path}`).join('\n'),
+          );
           return `Encontrei múltiplas notas possíveis para "${query}"`;
         }
 
@@ -769,7 +807,7 @@ Posso prosseguir?
         }
 
         const cleanContent = this.cleanObsidianContent(content).substring(0, 6500);
-        state.lastNotionData = `FONTE: ${mainFile}\n\n${cleanContent}`;
+        this.appendInternalData(state, `FONTE: ${mainFile}`, cleanContent);
         return `Dados carregados do Obsidian: ${mainFile}`;
       }
 
@@ -778,21 +816,21 @@ Posso prosseguir?
         const content = vault.readFile(params.path);
         if (!content) return `Nota não encontrada: ${params.path}`;
         const cleanContent = this.cleanObsidianContent(content).substring(0, 6500);
-        state.lastNotionData = `FONTE: ${params.path}\n\n${cleanContent}`;
+        this.appendInternalData(state, `FONTE: ${params.path}`, cleanContent);
         return `Dados carregados do Obsidian: ${params.path}`;
       }
 
       case 'NOTION_SEARCH': {
         if (!this.notionSearch) return 'Notion não disponível';
         const results = await this.notionSearch(params.query);
-        state.lastNotionData = `NOTION_SEARCH("${params.query}")\n\n${results}`.substring(0, 6500);
+        this.appendInternalData(state, `NOTION_SEARCH("${params.query}")`, results.substring(0, 6500));
         return `Resultados do Notion carregados (${Math.min(results.length, 6500)} chars)`;
       }
 
       case 'NOTION_FETCH': {
         if (!this.notionFetch) return 'Notion não disponível';
         const content = await this.notionFetch(params.id);
-        state.lastNotionData = `NOTION_FETCH("${params.id}")\n\n${content}`.substring(0, 6500);
+        this.appendInternalData(state, `NOTION_FETCH("${params.id}")`, content.substring(0, 6500));
         return `Conteúdo do Notion carregado (${content.length} caracteres)`;
       }
 
@@ -812,8 +850,8 @@ Posso prosseguir?
           return `• ${time} - ${parsed.title}${meet}`;
         }).join('\n');
         
-        state.lastNotionData = list;
-        return `📅 EVENTOS DE HOJE (${events.length}):\n\n${list}`;
+        this.appendInternalData(state, 'CALENDAR_TODAY', list);
+        return `📅 Eventos de hoje carregados (${events.length})`;
       }
 
       case 'CALENDAR_WEEK': {
@@ -824,8 +862,8 @@ Posso prosseguir?
         if (events.length === 0) return 'Semana livre! Nenhum evento nos próximos 7 dias.';
         
         const formatted = calendar.formatEventList(events);
-        state.lastNotionData = formatted;
-        return `📅 EVENTOS DA SEMANA (${events.length}):\n\n${formatted}`;
+        this.appendInternalData(state, 'CALENDAR_WEEK', formatted);
+        return `📅 Eventos da semana carregados (${events.length})`;
       }
 
       case 'CALENDAR_NEXT': {
@@ -871,8 +909,8 @@ Posso prosseguir?
         }
         
         const list = messages.join('\n');
-        state.lastNotionData = list;
-        return `📬 EMAILS NÃO LIDOS (${messageRefs.length}):\n\n${list}`;
+        this.appendInternalData(state, 'GMAIL_UNREAD', list);
+        return `📬 Emails não lidos carregados (${messageRefs.length})`;
       }
 
       case 'GMAIL_IMPORTANT': {
@@ -908,8 +946,8 @@ Posso prosseguir?
           return `• ${fromName.slice(0, 20)} - ${parsed.subject.slice(0, 35)}`;
         }).join('\n');
         
-        state.lastNotionData = list;
-        return `🔍 RESULTADOS PARA "${params.query}" (${messages.length}):\n\n${list}`;
+        this.appendInternalData(state, `GMAIL_SEARCH("${params.query}")`, list);
+        return `🔍 Busca no Gmail carregada (${messages.length})`;
       }
 
       case 'GMAIL_READ': {
@@ -927,8 +965,8 @@ Data: ${parsed.date.toLocaleString('pt-BR')}
 ${parsed.body.slice(0, 2000)}${parsed.body.length > 2000 ? '\n\n[...truncado]' : ''}
         `.trim();
         
-        state.lastNotionData = content;
-        return `📧 EMAIL:\n\n${content}`;
+        this.appendInternalData(state, `GMAIL_READ("${params.id}")`, content);
+        return `📧 Email carregado`;
       }
 
       default:
