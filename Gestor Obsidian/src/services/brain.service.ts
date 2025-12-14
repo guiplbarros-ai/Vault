@@ -49,7 +49,13 @@ type NotionFetchFn = (id: string) => Promise<string>;
 
 class BrainService {
   private client: OpenAI;
-  private model: string = 'gpt-4o';
+  private model: string = process.env.CORTEX_MODEL || 'gpt-4o';
+  private baseTemperature: number = Number.isFinite(Number(process.env.CORTEX_TEMPERATURE))
+    ? Number(process.env.CORTEX_TEMPERATURE)
+    : 0.7;
+  private baseMaxTokens: number = Number.isFinite(Number(process.env.CORTEX_MAX_TOKENS))
+    ? Number(process.env.CORTEX_MAX_TOKENS)
+    : 2500;
   private conversations: Map<number, ConversationState> = new Map();
   
   // Notion functions (injected from telegram service)
@@ -377,6 +383,7 @@ Posso prosseguir?
 
   async chat(chatId: number, userMessage: string): Promise<BrainResponse> {
     const state = this.getState(chatId);
+    const deliberate = this.shouldDeliberate(userMessage);
     
     // Check if this is a confirmation/negation of pending actions
     if (state.awaitingConfirmation && state.pendingActions.length > 0) {
@@ -411,8 +418,8 @@ Posso prosseguir?
           { role: 'system', content: this.getSystemPrompt(notionAvailable) },
           ...state.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
         ],
-        temperature: 0.7,
-        max_tokens: 2500,
+        temperature: deliberate ? Math.min(0.35, this.baseTemperature) : this.baseTemperature,
+        max_tokens: deliberate ? Math.max(this.baseMaxTokens, 3200) : this.baseMaxTokens,
       });
 
       const assistantMessage = response.choices[0].message.content || '';
@@ -505,6 +512,9 @@ Posso prosseguir?
 
   private async executePendingActions(chatId: number): Promise<BrainResponse> {
     const state = this.getState(chatId);
+    const deliberate = this.shouldDeliberate(
+      state.messages.slice().reverse().find(m => m.role === 'user')?.content || ''
+    );
     state.awaitingConfirmation = false;
     
     // Ask AI to execute the proposed actions
@@ -517,8 +527,8 @@ Posso prosseguir?
           { role: 'system', content: this.getSystemPrompt(!!this.notionSearch) + '\n\nO USUÁRIO CONFIRMOU. EXECUTE AGORA usando as tags [EXECUTE:...]. NÃO peça confirmação novamente.' },
           ...state.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
         ],
-        temperature: 0.3,
-        max_tokens: 2500,
+        temperature: deliberate ? 0.2 : 0.3,
+        max_tokens: deliberate ? Math.max(this.baseMaxTokens, 3200) : this.baseMaxTokens,
       });
 
       const assistantMessage = response.choices[0].message.content || '';
@@ -617,6 +627,8 @@ Posso prosseguir?
     results: ExecutionOutcome[],
   ): Promise<string> {
     const notionAvailable = !!this.notionSearch;
+    const lastUser = state.messages.slice().reverse().find(m => m.role === 'user')?.content || '';
+    const deliberate = this.shouldDeliberate(lastUser);
     const toolSummary = results
       .map(r => (r.success ? `OK ${r.actionType}: ${r.summary}` : `ERR ${r.actionType}: ${r.error}`))
       .join('\n');
@@ -639,6 +651,12 @@ Posso prosseguir?
             `- Responda direto, organizado e ÚTIL.\n` +
             `- Seja propositivo: traga opções, trade-offs e uma recomendação.\n` +
             `- Faça no máximo 1–2 perguntas quando necessário.\n` +
+            `\n` +
+            `REGRA DE AVALIAÇÃO POR PAPEL (crítica):\n` +
+            `- Se o avaliado for CEO/C-level/VP (ex.: CEO, CFO, COO, VP), NÃO restrinja a avaliação a um único pilar.\n` +
+            `  Avalie com visão de empresa: estratégia e direção, execução e entregas, resultados (KPIs/OKRs), liderança e pessoas,\n` +
+            `  cultura, comunicação/stakeholders, qualidade de decisão, gestão de riscos e financeiro (quando aplicável).\n` +
+            `  Se faltarem dados para algum pilar, explicite e faça 1 pergunta para preencher a lacuna.\n` +
             `\n` +
             `FORMATO (escolha o mais apropriado):\n` +
             `A) Avaliação de desempenho:\n` +
@@ -666,12 +684,23 @@ Posso prosseguir?
             `Rascunho (pode ignorar se estiver ruim):\n${draftMessage}`.trim()
         }
       ],
-      temperature: 0.3,
-      max_tokens: 900,
+      temperature: deliberate ? 0.2 : 0.3,
+      max_tokens: deliberate ? 1400 : 900,
     });
 
     const msg = response.choices[0].message.content || '';
     return this.removeExecuteTags(msg);
+  }
+
+  private shouldDeliberate(userMessage: string): boolean {
+    const lower = userMessage.toLowerCase();
+    const triggers = [
+      'avali', 'avd', 'desempenho', 'performance', 'feedback',
+      'ceo', 'diret', 'vp', 'c-level',
+      'prioridad', 'projeto', 'planej', 'estrateg', 'okr', 'kr', 'q1', 'q2', 'q3', 'q4',
+      'trade-off', 'decis', 'métrica', 'metric', 'kpi',
+    ];
+    return triggers.some(t => lower.includes(t));
   }
 
   private appendInternalData(state: ConversationState, title: string, payload: string, limit: number = 6500): void {
