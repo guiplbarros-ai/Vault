@@ -28,6 +28,7 @@ interface ConversationState {
   pendingActions: PendingAction[];
   awaitingConfirmation: boolean;
   lastNotionData?: string;
+  lastPrefetchKey?: string;
 }
 
 interface BrainResponse {
@@ -317,6 +318,18 @@ Quando o usuário pedir **prioridades / próximos projetos / planejamento**:
    - Próximos passos (ações concretas)
    - Perguntas (no máximo 1–2) para refinar
 
+## ANTI-GENERICIDADE (CRÍTICO)
+
+Evite respostas com “dicas gerais” e explicações de como planejar.
+O usuário quer sugestões **direcionadas**. Regras:
+1. Antes de sugerir, use o contexto disponível (Todoist/Calendar/Obsidian).
+2. Cada sugestão deve estar ligada a **algo específico** encontrado (tarefa, evento, nota, KPI) OU ser marcada como hipótese explícita.
+3. Se faltar informação essencial, faça **1 pergunta** objetiva (no máximo 2).
+4. Para foco do mês, prefira:
+   - Top 3 focos (com “por quê” e “o que fazer na prática”)
+   - Riscos/Trade-offs
+   - 1 pergunta para calibrar (se necessário)
+
 ## EXEMPLOS DE CONVERSA
 
 **Usuário:** quero anotar sobre a reunião de hoje com financeiro
@@ -375,7 +388,8 @@ Posso prosseguir?
       this.conversations.set(chatId, {
         messages: [],
         pendingActions: [],
-        awaitingConfirmation: false
+        awaitingConfirmation: false,
+        lastPrefetchKey: undefined
       });
     }
     return this.conversations.get(chatId)!;
@@ -397,6 +411,9 @@ Posso prosseguir?
     const state = this.getState(chatId);
     const deliberate = this.shouldDeliberate(userMessage);
     const { model, temperature, maxTokens } = this.getModelConfig(deliberate);
+    
+    // Prefetch context for planning/priorities to avoid generic answers.
+    await this.prefetchContextIfHelpful(state, userMessage);
     
     // Check if this is a confirmation/negation of pending actions
     if (state.awaitingConfirmation && state.pendingActions.length > 0) {
@@ -675,6 +692,7 @@ Posso prosseguir?
             `- Responda direto, organizado e ÚTIL.\n` +
             `- Seja propositivo: traga opções, trade-offs e uma recomendação.\n` +
             `- Faça no máximo 1–2 perguntas quando necessário.\n` +
+            `- NÃO dê dicas genéricas. Faça sugestões específicas e acionáveis.\n` +
             `\n` +
             `REGRA DE AVALIAÇÃO POR PAPEL (crítica):\n` +
             `- Se o avaliado for CEO/C-level/VP (ex.: CEO, CFO, COO, VP), NÃO restrinja a avaliação a um único pilar.\n` +
@@ -768,6 +786,74 @@ Posso prosseguir?
     const header = `\n\n=== ${title} ===\n`;
     const next = (state.lastNotionData || '') + header + payload;
     state.lastNotionData = next.length > limit ? next.substring(next.length - limit) : next;
+  }
+
+  private async prefetchContextIfHelpful(state: ConversationState, userMessage: string): Promise<void> {
+    const lower = userMessage.toLowerCase();
+    const wantsPlanning =
+      /(prioridad|foco|planej|projeto|q[1-4]|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/i.test(lower);
+    if (!wantsPlanning) return;
+
+    // Avoid repeated prefetch spam for the same question
+    const key = this.normalizeText(userMessage).slice(0, 80);
+    if (state.lastPrefetchKey === key) return;
+    state.lastPrefetchKey = key;
+
+    // Keep focused context for planning
+    state.lastNotionData = '';
+
+    // Todoist context (if configured)
+    try {
+      const todoist = getTodoistService();
+      const tasks = await todoist.getTasks('overdue | today | next 14 days | p1');
+      const list = tasks
+        .sort((a, b) => b.priority - a.priority)
+        .slice(0, 12)
+        .map(t => {
+          const p = t.priority > 1 ? ` [P${5 - t.priority}]` : '';
+          const d = t.due ? ` 📅 ${t.due.string}` : '';
+          return `• ${t.content}${p}${d}`;
+        })
+        .join('\n');
+      if (list) this.appendInternalData(state, 'TODOIST (próximas/urgentes)', list);
+    } catch { /* ignore */ }
+
+    // Calendar context (if authenticated)
+    try {
+      if (this.isGoogleAvailable()) {
+        const calendar = getCalendarService();
+        const events = await calendar.getWeekEvents();
+        const list = events
+          .slice(0, 12)
+          .map(e => {
+            const parsed = calendar.parseEvent(e);
+            const time = parsed.isAllDay
+              ? 'Dia inteiro'
+              : parsed.start.toLocaleString('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+            return `• ${time} - ${parsed.title}`;
+          })
+          .join('\n');
+        if (list) this.appendInternalData(state, 'CALENDAR (semana)', list);
+      }
+    } catch { /* ignore */ }
+
+    // Vault context: search likely sources for the topic
+    try {
+      const vault = getVaultService();
+      const query = `${userMessage} Q1 2026 planejamento projetos`;
+      const ranked = this.searchVaultRanked(vault, query);
+      const top = ranked.slice(0, 3);
+      if (top.length > 0 && !this.isAmbiguousSearch(ranked)) {
+        for (const r of top) {
+          const content = vault.readFile(r.path);
+          if (!content) continue;
+          const clean = this.cleanObsidianContent(content).substring(0, 2200);
+          this.appendInternalData(state, `FONTE: ${r.path}`, clean);
+        }
+      } else if (top.length > 0) {
+        this.appendInternalData(state, 'CANDIDATOS (ambíguo)', top.map((r, i) => `${i + 1}. ${r.path}`).join('\n'));
+      }
+    } catch { /* ignore */ }
   }
 
   /**
