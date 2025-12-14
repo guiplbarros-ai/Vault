@@ -36,6 +36,13 @@ interface BrainResponse {
   pendingActions: PendingAction[];
 }
 
+interface ExecutionOutcome {
+  success: boolean;
+  actionType: string;
+  summary: string;
+  error?: string;
+}
+
 // Notion MCP integration (will be injected)
 type NotionSearchFn = (query: string) => Promise<string>;
 type NotionFetchFn = (id: string) => Promise<string>;
@@ -406,18 +413,27 @@ Posso prosseguir?
         // Extract and execute actions
         const results = await this.processExecutions(assistantMessage, state);
         const cleanMessage = this.removeExecuteTags(assistantMessage);
-        
-        // Add execution results to message
-        let finalMessage = cleanMessage;
-        if (results.length > 0) {
-          const resultText = results.map(r => 
-            r.success ? `✅ ${r.description}` : `❌ ${r.description}: ${r.error}`
-          ).join('\n');
-          finalMessage = cleanMessage + '\n\n' + resultText;
+
+        const followupNeeded = this.shouldGenerateFollowup(results, state);
+        if (followupNeeded) {
+          // Remove the "execute-tagged" assistant message from history to avoid loops.
+          state.messages.pop();
+          const finalMessage = await this.generateFollowupAnswer(state, cleanMessage, results);
+          state.messages.push({ role: 'assistant', content: finalMessage });
+          return {
+            message: finalMessage,
+            needsConfirmation: false,
+            pendingActions: []
+          };
         }
 
+        // Simple actions: append compact results
+        const resultText = results.map(r =>
+          r.success ? `✅ ${r.summary}` : `❌ ${r.actionType}: ${r.error}`
+        ).join('\n');
+
         return {
-          message: finalMessage,
+          message: (cleanMessage ? `${cleanMessage}\n\n${resultText}` : resultText).trim(),
           needsConfirmation: false,
           pendingActions: []
         };
@@ -499,17 +515,27 @@ Posso prosseguir?
 
       // Process executions
       const results = await this.processExecutions(assistantMessage, state);
-      let finalMessage = this.removeExecuteTags(assistantMessage);
-      
-      if (results.length > 0) {
-        const resultText = results.map(r => 
-          r.success ? `✅ ${r.description}` : `❌ ${r.description}: ${r.error}`
-        ).join('\n');
-        finalMessage = finalMessage + '\n\n' + resultText;
+      const cleanMessage = this.removeExecuteTags(assistantMessage);
+
+      const followupNeeded = this.shouldGenerateFollowup(results, state);
+      if (followupNeeded) {
+        // Remove the "execute-tagged" assistant message from history to avoid loops.
+        state.messages.pop();
+        const finalMessage = await this.generateFollowupAnswer(state, cleanMessage, results);
+        state.messages.push({ role: 'assistant', content: finalMessage });
+        return {
+          message: finalMessage || 'Pronto! Ações executadas.',
+          needsConfirmation: false,
+          pendingActions: []
+        };
       }
 
+      const resultText = results.map(r =>
+        r.success ? `✅ ${r.summary}` : `❌ ${r.actionType}: ${r.error}`
+      ).join('\n');
+
       return {
-        message: finalMessage || 'Pronto! Ações executadas.',
+        message: (cleanMessage ? `${cleanMessage}\n\n${resultText}` : resultText).trim() || 'Pronto! Ações executadas.',
         needsConfirmation: false,
         pendingActions: []
       };
@@ -527,8 +553,8 @@ Posso prosseguir?
   private async processExecutions(
     message: string, 
     state: ConversationState
-  ): Promise<Array<{success: boolean; description: string; error?: string}>> {
-    const results: Array<{success: boolean; description: string; error?: string}> = [];
+  ): Promise<ExecutionOutcome[]> {
+    const results: ExecutionOutcome[] = [];
     const normalized = this.normalizeExecuteMessage(message);
     const executeRegex = /\[EXECUTE:(\w+)\]([\s\S]*?)\[\/EXECUTE\]/g;
     
@@ -539,17 +565,83 @@ Posso prosseguir?
       
       try {
         const result = await this.executeAction(actionType, params, state);
-        results.push({ success: true, description: result });
+        results.push({ success: true, actionType, summary: result });
       } catch (error) {
         results.push({ 
           success: false, 
-          description: actionType,
+          actionType,
+          summary: actionType,
           error: error instanceof Error ? error.message : 'Erro desconhecido'
         });
       }
     }
     
     return results;
+  }
+
+  private shouldGenerateFollowup(results: ExecutionOutcome[], state: ConversationState): boolean {
+    // If we loaded any "data" into state or used query-style actions, generate a coherent final answer.
+    const followupActions = new Set([
+      'SEARCH_VAULT',
+      'READ_NOTE',
+      'NOTION_SEARCH',
+      'NOTION_FETCH',
+      'LIST_TASKS',
+      'CALENDAR_TODAY',
+      'CALENDAR_WEEK',
+      'CALENDAR_NEXT',
+      'GMAIL_UNREAD',
+      'GMAIL_IMPORTANT',
+      'GMAIL_SEARCH',
+      'GMAIL_READ',
+    ]);
+    if (state.lastNotionData && state.lastNotionData.trim().length > 0) return true;
+    return results.some(r => followupActions.has(r.actionType));
+  }
+
+  private async generateFollowupAnswer(
+    state: ConversationState,
+    draftMessage: string,
+    results: ExecutionOutcome[],
+  ): Promise<string> {
+    const notionAvailable = !!this.notionSearch;
+    const toolSummary = results
+      .map(r => (r.success ? `OK ${r.actionType}: ${r.summary}` : `ERR ${r.actionType}: ${r.error}`))
+      .join('\n');
+
+    const data = (state.lastNotionData || '').trim();
+    const dataBlock = data
+      ? `\n\n[DADOS INTERNOS - NÃO MOSTRAR RAW]\n${data.substring(0, 6500)}`
+      : '';
+
+    const response = await this.client.chat.completions.create({
+      model: this.model,
+      messages: [
+        { role: 'system', content: this.getSystemPrompt(notionAvailable) },
+        ...state.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+        {
+          role: 'system',
+          content:
+            `Você acabou de executar ações internas e recebeu resultados.\n` +
+            `- NÃO mostre dumps/raw.\n` +
+            `- Responda direto e organizado.\n` +
+            `- Se for avaliação de desempenho, responda em: Resumo (3 bullets), Evidências, Pontos fortes, Pontos a melhorar, Próximos passos.\n` +
+            `- Se a pessoa/período não estiver claro nos dados, diga que não encontrou e mostre 2-3 caminhos candidatos (sem inventar).\n\n` +
+            `[RESULTADOS DE AÇÕES]\n${toolSummary}${dataBlock}`
+        },
+        {
+          role: 'user',
+          content:
+            `Reescreva a resposta final ao usuário agora.\n\n` +
+            `Rascunho (pode ignorar se estiver ruim):\n${draftMessage}`.trim()
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 900,
+    });
+
+    const msg = response.choices[0].message.content || '';
+    return this.removeExecuteTags(msg);
   }
 
   /**
@@ -661,43 +753,43 @@ Posso prosseguir?
           return `Encontrei ${results.length} arquivo(s) mas não consegui ler: ${results.slice(0,3).join(', ')}`;
         }
         
-        // Store for context
-        state.lastNotionData = content;
+        // Store for context (internal use)
         
         // Clean up Obsidian-specific syntax for better AI processing
         const cleanContent = content
           .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2')  // [[path|name]] -> name
           .replace(/\[\[([^\]]+)\]\]/g, '$1')              // [[name]] -> name
           .replace(/^---[\s\S]*?---\n/m, '')               // Remove frontmatter
-          .substring(0, 5000);
-        
-        // Pass to AI for interpretation (not directly to user)
-        return `[DADOS DO ARQUIVO ${mainFile} - INTERPRETE E RESUMA PARA O USUÁRIO]:\n\n${cleanContent}`;
+          .substring(0, 6500);
+
+        state.lastNotionData = `FONTE: ${mainFile}\n\n${cleanContent}`;
+        return `Dados carregados do Obsidian: ${mainFile}`;
       }
 
       case 'READ_NOTE': {
         const vault = getVaultService();
         const content = vault.readFile(params.path);
         if (!content) return `Nota não encontrada: ${params.path}`;
-        // Return much more content so AI can extract relevant info
-        state.lastNotionData = content;
-        const preview = content.length > 6000 
-          ? content.substring(0, 6000) + '\n\n[... truncado ...]' 
-          : content;
-        return `CONTEÚDO DO ARQUIVO ${params.path}:\n\n${preview}`;
+        const cleanContent = content
+          .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2')
+          .replace(/\[\[([^\]]+)\]\]/g, '$1')
+          .replace(/^---[\s\S]*?---\n/m, '')
+          .substring(0, 6500);
+        state.lastNotionData = `FONTE: ${params.path}\n\n${cleanContent}`;
+        return `Dados carregados do Obsidian: ${params.path}`;
       }
 
       case 'NOTION_SEARCH': {
         if (!this.notionSearch) return 'Notion não disponível';
         const results = await this.notionSearch(params.query);
-        state.lastNotionData = results;
-        return `Resultados do Notion:\n${results}`;
+        state.lastNotionData = `NOTION_SEARCH("${params.query}")\n\n${results}`.substring(0, 6500);
+        return `Resultados do Notion carregados (${Math.min(results.length, 6500)} chars)`;
       }
 
       case 'NOTION_FETCH': {
         if (!this.notionFetch) return 'Notion não disponível';
         const content = await this.notionFetch(params.id);
-        state.lastNotionData = content;
+        state.lastNotionData = `NOTION_FETCH("${params.id}")\n\n${content}`.substring(0, 6500);
         return `Conteúdo do Notion carregado (${content.length} caracteres)`;
       }
 
