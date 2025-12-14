@@ -49,13 +49,25 @@ type NotionFetchFn = (id: string) => Promise<string>;
 
 class BrainService {
   private client: OpenAI;
-  private model: string = process.env.CORTEX_MODEL || 'gpt-4o';
-  private baseTemperature: number = Number.isFinite(Number(process.env.CORTEX_TEMPERATURE))
-    ? Number(process.env.CORTEX_TEMPERATURE)
-    : 0.7;
-  private baseMaxTokens: number = Number.isFinite(Number(process.env.CORTEX_MAX_TOKENS))
-    ? Number(process.env.CORTEX_MAX_TOKENS)
-    : 2500;
+  // Models
+  private fastModel: string = process.env.CORTEX_MODEL_FAST || process.env.CORTEX_MODEL || 'gpt-4o';
+  private deepModel: string = process.env.CORTEX_MODEL_DEEP || process.env.CORTEX_MODEL || 'gpt-4o';
+
+  // Tuning (fast)
+  private fastTemperature: number = Number.isFinite(Number(process.env.CORTEX_FAST_TEMPERATURE))
+    ? Number(process.env.CORTEX_FAST_TEMPERATURE)
+    : (Number.isFinite(Number(process.env.CORTEX_TEMPERATURE)) ? Number(process.env.CORTEX_TEMPERATURE) : 0.7);
+  private fastMaxTokens: number = Number.isFinite(Number(process.env.CORTEX_FAST_MAX_TOKENS))
+    ? Number(process.env.CORTEX_FAST_MAX_TOKENS)
+    : (Number.isFinite(Number(process.env.CORTEX_MAX_TOKENS)) ? Number(process.env.CORTEX_MAX_TOKENS) : 2500);
+
+  // Tuning (deep)
+  private deepTemperature: number = Number.isFinite(Number(process.env.CORTEX_DEEP_TEMPERATURE))
+    ? Number(process.env.CORTEX_DEEP_TEMPERATURE)
+    : 0.25;
+  private deepMaxTokens: number = Number.isFinite(Number(process.env.CORTEX_DEEP_MAX_TOKENS))
+    ? Number(process.env.CORTEX_DEEP_MAX_TOKENS)
+    : 3500;
   private conversations: Map<number, ConversationState> = new Map();
   
   // Notion functions (injected from telegram service)
@@ -384,6 +396,7 @@ Posso prosseguir?
   async chat(chatId: number, userMessage: string): Promise<BrainResponse> {
     const state = this.getState(chatId);
     const deliberate = this.shouldDeliberate(userMessage);
+    const { model, temperature, maxTokens } = this.getModelConfig(deliberate);
     
     // Check if this is a confirmation/negation of pending actions
     if (state.awaitingConfirmation && state.pendingActions.length > 0) {
@@ -413,25 +426,34 @@ Posso prosseguir?
       const notionAvailable = !!this.notionSearch;
       
       const response = await this.client.chat.completions.create({
-        model: this.model,
+        model,
         messages: [
           { role: 'system', content: this.getSystemPrompt(notionAvailable) },
           ...state.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
         ],
-        temperature: deliberate ? Math.min(0.35, this.baseTemperature) : this.baseTemperature,
-        max_tokens: deliberate ? Math.max(this.baseMaxTokens, 3200) : this.baseMaxTokens,
+        temperature,
+        max_tokens: maxTokens,
       });
 
       const assistantMessage = response.choices[0].message.content || '';
       state.messages.push({ role: 'assistant', content: assistantMessage });
 
+      // For deep mode (and no tool execution), refine once to get more analytical/propositive answers.
+      if (deliberate && !(/\[EXECUTE:\w+\]/.test(assistantMessage) || /\bEXECUTE:\w+\b/.test(assistantMessage))) {
+        const refined = await this.refineAnswer(state, assistantMessage);
+        // Replace the last assistant message with refined version
+        state.messages.pop();
+        state.messages.push({ role: 'assistant', content: refined });
+      }
+
       // Check if response contains EXECUTE tags (AI wants to execute now)
-      const hasExecuteTags = /\[EXECUTE:\w+\]/.test(assistantMessage) || /\bEXECUTE:\w+\b/.test(assistantMessage);
+      const finalAssistantMessage = state.messages[state.messages.length - 1]?.content || assistantMessage;
+      const hasExecuteTags = /\[EXECUTE:\w+\]/.test(finalAssistantMessage) || /\bEXECUTE:\w+\b/.test(finalAssistantMessage);
       
       if (hasExecuteTags) {
         // Extract and execute actions
-        const results = await this.processExecutions(assistantMessage, state);
-        const cleanMessage = this.removeExecuteTags(assistantMessage);
+        const results = await this.processExecutions(finalAssistantMessage, state);
+        const cleanMessage = this.removeExecuteTags(finalAssistantMessage);
 
         const followupNeeded = this.shouldGenerateFollowup(results, state);
         if (followupNeeded) {
@@ -468,7 +490,7 @@ Posso prosseguir?
       }
 
       return {
-        message: assistantMessage,
+        message: state.messages[state.messages.length - 1]?.content || assistantMessage,
         needsConfirmation: isProposing,
         pendingActions: state.pendingActions
       };
@@ -521,14 +543,15 @@ Posso prosseguir?
     state.messages.push({ role: 'user', content: 'Confirmado. Execute as ações propostas.' });
     
     try {
+      const { model, temperature, maxTokens } = this.getModelConfig(deliberate);
       const response = await this.client.chat.completions.create({
-        model: this.model,
+        model,
         messages: [
           { role: 'system', content: this.getSystemPrompt(!!this.notionSearch) + '\n\nO USUÁRIO CONFIRMOU. EXECUTE AGORA usando as tags [EXECUTE:...]. NÃO peça confirmação novamente.' },
           ...state.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
         ],
-        temperature: deliberate ? 0.2 : 0.3,
-        max_tokens: deliberate ? Math.max(this.baseMaxTokens, 3200) : this.baseMaxTokens,
+        temperature: deliberate ? Math.min(0.25, temperature) : Math.min(0.3, temperature),
+        max_tokens: deliberate ? Math.max(maxTokens, 3200) : maxTokens,
       });
 
       const assistantMessage = response.choices[0].message.content || '';
@@ -629,6 +652,7 @@ Posso prosseguir?
     const notionAvailable = !!this.notionSearch;
     const lastUser = state.messages.slice().reverse().find(m => m.role === 'user')?.content || '';
     const deliberate = this.shouldDeliberate(lastUser);
+    const { model, temperature, maxTokens } = this.getModelConfig(deliberate);
     const toolSummary = results
       .map(r => (r.success ? `OK ${r.actionType}: ${r.summary}` : `ERR ${r.actionType}: ${r.error}`))
       .join('\n');
@@ -639,7 +663,7 @@ Posso prosseguir?
       : '';
 
     const response = await this.client.chat.completions.create({
-      model: this.model,
+      model,
       messages: [
         { role: 'system', content: this.getSystemPrompt(notionAvailable) },
         ...state.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
@@ -684,11 +708,48 @@ Posso prosseguir?
             `Rascunho (pode ignorar se estiver ruim):\n${draftMessage}`.trim()
         }
       ],
-      temperature: deliberate ? 0.2 : 0.3,
-      max_tokens: deliberate ? 1400 : 900,
+      temperature: deliberate ? Math.min(0.25, temperature) : Math.min(0.3, temperature),
+      max_tokens: deliberate ? Math.max(1400, Math.min(2200, maxTokens)) : Math.min(900, maxTokens),
     });
 
     const msg = response.choices[0].message.content || '';
+    return this.removeExecuteTags(msg);
+  }
+
+  private getModelConfig(deliberate: boolean): { model: string; temperature: number; maxTokens: number } {
+    if (deliberate) {
+      return { model: this.deepModel, temperature: this.deepTemperature, maxTokens: this.deepMaxTokens };
+    }
+    return { model: this.fastModel, temperature: this.fastTemperature, maxTokens: this.fastMaxTokens };
+  }
+
+  private async refineAnswer(state: ConversationState, draft: string): Promise<string> {
+    // Single-pass refinement: add reasoning quality without extra questions spam.
+    const notionAvailable = !!this.notionSearch;
+    const { model, temperature, maxTokens } = this.getModelConfig(true);
+    const lastUser = state.messages.slice().reverse().find(m => m.role === 'user')?.content || '';
+
+    const response = await this.client.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: this.getSystemPrompt(notionAvailable) },
+        {
+          role: 'system',
+          content:
+            `Você está no modo DEEP.\n` +
+            `Refine a resposta para ser mais analítica/propositiva.\n` +
+            `- Traga opções e trade-offs\n` +
+            `- Feche com recomendação\n` +
+            `- Faça 0–2 perguntas (somente se realmente necessário)\n` +
+            `- Não invente fatos`
+        },
+        { role: 'user', content: `Pergunta do usuário:\n${lastUser}\n\nRascunho:\n${draft}\n\nResposta final refinada:` }
+      ],
+      temperature: Math.min(0.25, temperature),
+      max_tokens: Math.min(1400, maxTokens),
+    });
+
+    const msg = response.choices[0].message.content || draft;
     return this.removeExecuteTags(msg);
   }
 
