@@ -29,6 +29,8 @@ class TelegramService {
   private bot: TelegramBot;
   private authorizedUsers: number[];
   private brain: BrainService | null = null;
+  private pollingRestartAttempts = 0;
+  private pollingRestartTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -45,7 +47,15 @@ class TelegramService {
           .filter(n => Number.isFinite(n))
       : [];
 
-    this.bot = new TelegramBot(token, { polling: true });
+    // Use explicit polling config so we can recover from transient errors.
+    this.bot = new TelegramBot(token, {
+      polling: ({
+        autoStart: true,
+        // Keep interval low; Telegram long polling does most of the work.
+        interval: 300,
+        params: { timeout: 30 }
+      } as any)
+    });
     this.setupBrain();
     this.setupDailyDigest();
     this.setupHandlers();
@@ -478,7 +488,41 @@ Manda ver! 🚀
       const status = e?.response?.statusCode ? `status=${e.response.statusCode}` : '';
       const body = e?.response?.body ? `body=${JSON.stringify(e.response.body)}` : '';
       logger.error(`Polling error: ${code} ${status} ${error.message} ${body}`.trim());
+
+      // Auto-recover from common transient polling failures.
+      // - ECONNRESET/ETIMEDOUT often happen due to network hiccups.
+      // - EFATAL indicates the polling loop stopped.
+      // - 409 can happen if another instance is polling; restarting may help after the other stops.
+      this.schedulePollingRestart();
     });
+  }
+
+  private schedulePollingRestart(): void {
+    if (this.pollingRestartTimer) return;
+
+    this.pollingRestartAttempts += 1;
+    const attempt = this.pollingRestartAttempts;
+    const delayMs = Math.min(60_000, 1000 * Math.pow(2, Math.min(6, attempt))); // 2s..64s capped
+
+    logger.warn(`Telegram polling: tentando recuperar (tentativa ${attempt}) em ${Math.round(delayMs / 1000)}s`);
+
+    this.pollingRestartTimer = setTimeout(async () => {
+      this.pollingRestartTimer = null;
+      try {
+        // Stop + start polling to force a new getUpdates loop.
+        this.bot.stopPolling();
+      } catch { /* ignore */ }
+
+      try {
+        await (this.bot as any).startPolling();
+        this.pollingRestartAttempts = 0;
+        logger.info('Telegram polling: recuperado com sucesso');
+      } catch (err) {
+        logger.error(`Telegram polling: falha ao recuperar (${err instanceof Error ? err.message : String(err)})`);
+        // Retry again
+        this.schedulePollingRestart();
+      }
+    }, delayMs);
   }
 
   private searchVault(vault: ReturnType<typeof getVaultService>, query: string): string[] {
