@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { startTelegramBot } from '../services/telegram.service.js';
 import { logger } from '../utils/logger.js';
+import TelegramBot from 'node-telegram-bot-api';
 
 export function createTelegramCommand(): Command {
   const telegram = new Command('telegram')
@@ -37,6 +38,50 @@ export function createTelegramCommand(): Command {
     });
 
   telegram
+    .command('status')
+    .description('Verifica token/conectividade e mostra diagnóstico rápido')
+    .action(async () => {
+      const token = process.env.TELEGRAM_BOT_TOKEN;
+      if (!token) {
+        console.error('❌ TELEGRAM_BOT_TOKEN não configurado no .env');
+        process.exit(1);
+      }
+
+      const bot = new TelegramBot(token, { polling: false });
+      try {
+        const me = await bot.getMe();
+        let webhookInfo: any = null;
+        try {
+          webhookInfo = await (bot as any).getWebhookInfo?.();
+        } catch {
+          // ignore
+        }
+
+        console.log('✅ Token válido e API acessível');
+        console.log(`- bot: @${me.username} (id=${me.id})`);
+        if (webhookInfo) {
+          const url = webhookInfo.url || '';
+          console.log(`- webhook: ${url ? url : '(nenhum)'}`);
+          if (url) {
+            console.log('  ℹ️ Se você usa polling, garanta que o webhook esteja vazio (deleteWebhook).');
+          }
+        }
+
+        console.log('\nDica: para iniciar o bot:\n  npm run dev -- telegram start');
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`❌ Falha ao acessar a API do Telegram: ${msg}`);
+        process.exit(1);
+      } finally {
+        try {
+          await (bot as any).close?.();
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+  telegram
     .command('help')
     .description('Mostra instruções de configuração')
     .action(() => {
@@ -59,6 +104,13 @@ export function createTelegramCommand(): Command {
 
 4. Inicie o bot:
    npm run dev -- telegram start
+
+Diagnóstico:
+   npm run dev -- telegram status
+
+Observação sobre erro 409:
+   Se aparecer "409 Conflict", é porque existe outra instância rodando.
+   Pare a outra sessão (Ctrl+C). O CLI também cria um lock local: .telegram-bot.lock
 
 📝 Comandos disponíveis no bot:
 

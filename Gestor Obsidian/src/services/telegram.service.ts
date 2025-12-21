@@ -1,5 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { config } from 'dotenv';
+import * as path from 'node:path';
 import { getBrainService, type BrainService } from './brain.service.js';
 import { getNotionService } from './notion.service.js';
 import { getDailyDigestService } from './daily-digest.service.js';
@@ -9,6 +10,7 @@ import { getVaultService } from './vault.service.js';
 import { getCalendarService } from './calendar.service.js';
 import { getGoogleAuthService } from './google-auth.service.js';
 import { logger } from '../utils/logger.js';
+import { acquireProcessLockSync, type ProcessLock } from '../utils/process-lock.js';
 
 config();
 
@@ -31,6 +33,8 @@ class TelegramService {
   private brain: BrainService | null = null;
   private pollingRestartAttempts = 0;
   private pollingRestartTimer: NodeJS.Timeout | null = null;
+  private lock: ProcessLock | null = null;
+  private shutdownHooked = false;
 
   constructor() {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -38,6 +42,12 @@ class TelegramService {
     if (!token) {
       throw new Error('TELEGRAM_BOT_TOKEN não configurado');
     }
+
+    // Prevent two processes from polling at the same time (common root cause of 409 Conflict).
+    // Override with TELEGRAM_LOCK_PATH if needed.
+    const lockPath = process.env.TELEGRAM_LOCK_PATH || path.join(process.cwd(), '.telegram-bot.lock');
+    this.lock = acquireProcessLockSync(lockPath);
+    logger.info(`Telegram lock adquirido: ${this.lock.lockPath} (pid=${process.pid})`);
 
     const authorizedIds = process.env.TELEGRAM_AUTHORIZED_USERS;
     this.authorizedUsers = authorizedIds 
@@ -50,7 +60,7 @@ class TelegramService {
     // Use explicit polling config so we can recover from transient errors.
     this.bot = new TelegramBot(token, {
       polling: ({
-        autoStart: true,
+        autoStart: false,
         // Keep interval low; Telegram long polling does most of the work.
         interval: 300,
         params: { timeout: 30 }
@@ -59,8 +69,47 @@ class TelegramService {
     this.setupBrain();
     this.setupDailyDigest();
     this.setupHandlers();
-    
+
+    // Start polling asynchronously (allows deleteWebhook + clear startup errors).
+    void this.initPolling();
+
+    this.hookShutdown();
     logger.info('Telegram bot iniciado');
+  }
+
+  private hookShutdown(): void {
+    if (this.shutdownHooked) return;
+    this.shutdownHooked = true;
+
+    const shutdown = () => {
+      try {
+        this.stop();
+      } catch {
+        // ignore
+      }
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+    process.on('exit', shutdown);
+  }
+
+  private async initPolling(): Promise<void> {
+    try {
+      // Ensure we aren't in webhook mode (polling + webhook is a common misconfiguration).
+      await (this.bot as any).deleteWebHook?.({ drop_pending_updates: false }).catch(() => {});
+    } catch {
+      // ignore
+    }
+
+    try {
+      await (this.bot as any).startPolling();
+      logger.info('Telegram polling iniciado');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error(`Telegram polling: falha ao iniciar (${msg})`);
+      this.schedulePollingRestart(err);
+    }
   }
 
   private setupDailyDigest(): void {
@@ -532,16 +581,24 @@ Manda ver! 🚀
       // - ECONNRESET/ETIMEDOUT often happen due to network hiccups.
       // - EFATAL indicates the polling loop stopped.
       // - 409 can happen if another instance is polling; restarting may help after the other stops.
-      this.schedulePollingRestart();
+      this.schedulePollingRestart(error);
     });
   }
 
-  private schedulePollingRestart(): void {
+  private schedulePollingRestart(error?: unknown): void {
     if (this.pollingRestartTimer) return;
 
     this.pollingRestartAttempts += 1;
     const attempt = this.pollingRestartAttempts;
-    const delayMs = Math.min(60_000, 1000 * Math.pow(2, Math.min(6, attempt))); // 2s..64s capped
+    const e = error as any;
+    const statusCode = e?.response?.statusCode;
+
+    // 409 means another getUpdates loop is active elsewhere. Retrying quickly only spams logs.
+    // Backoff slower for 409; faster exponential for transient network issues.
+    const delayMs =
+      statusCode === 409
+        ? Math.min(15 * 60_000, 30_000 * attempt) // 30s, 60s, 90s... capped at 15min
+        : Math.min(60_000, 1000 * Math.pow(2, Math.min(6, attempt))); // 2s..64s capped
 
     logger.warn(`Telegram polling: tentando recuperar (tentativa ${attempt}) em ${Math.round(delayMs / 1000)}s`);
 
@@ -549,7 +606,7 @@ Manda ver! 🚀
       this.pollingRestartTimer = null;
       try {
         // Stop + start polling to force a new getUpdates loop.
-        this.bot.stopPolling();
+        await (this.bot as any).stopPolling?.().catch(() => {});
       } catch { /* ignore */ }
 
       try {
@@ -639,7 +696,22 @@ Manda ver! 🚀
   }
 
   stop(): void {
-    this.bot.stopPolling();
+    try {
+      if (this.pollingRestartTimer) {
+        clearTimeout(this.pollingRestartTimer);
+        this.pollingRestartTimer = null;
+      }
+    } catch { /* ignore */ }
+
+    try {
+      (this.bot as any).stopPolling?.();
+    } catch { /* ignore */ }
+
+    try {
+      this.lock?.release();
+      if (this.lock) logger.info(`Telegram lock liberado: ${this.lock.lockPath} (pid=${process.pid})`);
+    } catch { /* ignore */ }
+    this.lock = null;
   }
 }
 

@@ -794,6 +794,18 @@ Posso prosseguir?
       /(prioridad|foco|planej|projeto|q[1-4]|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/i.test(lower);
     if (!wantsPlanning) return;
 
+    // Avoid scanning the vault for "planejamento genérico" sem tópico claro.
+    // Ex: "me ajuda com prioridades" -> melhor usar Todoist/Calendar e pedir contexto depois,
+    // do que varrer o vault inteiro.
+    const planningNoise = new Set([
+      'prioridade', 'prioridades', 'foco', 'planejamento', 'planejar', 'plano',
+      'projeto', 'projetos', 'metas', 'meta',
+      'janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+      'q1', 'q2', 'q3', 'q4'
+    ]);
+    const topicTokens = this.tokenizeQuery(userMessage).filter(t => !planningNoise.has(t));
+    if (topicTokens.length === 0) return;
+
     // Avoid repeated prefetch spam for the same question
     const key = this.normalizeText(userMessage).slice(0, 80);
     if (state.lastPrefetchKey === key) return;
@@ -840,7 +852,8 @@ Posso prosseguir?
     // Vault context: search likely sources for the topic
     try {
       const vault = getVaultService();
-      const query = `${userMessage} Q1 2026 planejamento projetos`;
+      // Use the user's message only; adding fixed terms tends to explode the search space.
+      const query = userMessage;
       const ranked = this.searchVaultRanked(vault, query);
       const top = ranked.slice(0, 3);
       if (top.length > 0 && !this.isAmbiguousSearch(ranked)) {

@@ -7,6 +7,8 @@ config();
 
 class VaultService {
   private vaultPath: string;
+  private dirCache = new Map<string, { ts: number; folders: string[]; files: string[] }>();
+  private dirCacheTtlMs: number;
 
   constructor() {
     const envPath = process.env.OBSIDIAN_VAULT_PATH;
@@ -19,6 +21,10 @@ class VaultService {
     }
 
     this.vaultPath = envPath;
+
+    this.dirCacheTtlMs = Number.isFinite(Number(process.env.VAULT_DIR_CACHE_MS))
+      ? Math.max(0, Number(process.env.VAULT_DIR_CACHE_MS))
+      : 30_000;
     
     if (!this.vaultExists()) {
       throw new Error(`Vault não encontrado em: ${this.vaultPath}`);
@@ -61,6 +67,8 @@ class VaultService {
     if (!fs.existsSync(fullPath)) {
       fs.mkdirSync(fullPath, { recursive: true });
       logger.info(`Pasta criada: ${relativePath}`);
+      // Invalidate parent dir cache so new folder appears
+      this.invalidateDirCache(path.dirname(relativePath));
     }
   }
 
@@ -83,11 +91,13 @@ class VaultService {
     }
     
     fs.writeFileSync(fullPath, content, 'utf-8');
+    this.invalidateDirCache(path.dirname(relativePath));
   }
 
   appendToFile(relativePath: string, content: string): void {
     const fullPath = path.join(this.vaultPath, relativePath);
     fs.appendFileSync(fullPath, content, 'utf-8');
+    this.invalidateDirCache(path.dirname(relativePath));
   }
 
   getFullPath(relativePath: string): string {
@@ -97,10 +107,8 @@ class VaultService {
   listFolders(relativePath: string = ''): string[] {
     const fullPath = path.join(this.vaultPath, relativePath);
     try {
-      const items = fs.readdirSync(fullPath, { withFileTypes: true });
-      return items
-        .filter(item => item.isDirectory() && !item.name.startsWith('.'))
-        .map(item => item.name);
+      const { folders } = this.readDirCached(fullPath);
+      return folders;
     } catch {
       return [];
     }
@@ -109,10 +117,8 @@ class VaultService {
   listFiles(relativePath: string, extension: string = '.md'): string[] {
     const fullPath = path.join(this.vaultPath, relativePath);
     try {
-      const items = fs.readdirSync(fullPath, { withFileTypes: true });
-      return items
-        .filter(item => item.isFile() && item.name.endsWith(extension))
-        .map(item => item.name);
+      const { files } = this.readDirCached(fullPath);
+      return files.filter(f => f.endsWith(extension));
     } catch {
       return [];
     }
@@ -123,6 +129,39 @@ class VaultService {
     const regex = new RegExp(pattern, 'i');
     const found = files.find(f => regex.test(f));
     return found ? path.join(folder, found) : null;
+  }
+
+  private invalidateDirCache(relativeDir: string): void {
+    // relativeDir can be "." when path.dirname("file.md") -> "."
+    const rel = relativeDir === '.' ? '' : relativeDir;
+    const fullPath = path.join(this.vaultPath, rel);
+    this.dirCache.delete(fullPath);
+  }
+
+  private readDirCached(fullPath: string): { folders: string[]; files: string[] } {
+    const ttl = this.dirCacheTtlMs;
+    if (ttl === 0) return this.readDirUncached(fullPath);
+
+    const now = Date.now();
+    const cached = this.dirCache.get(fullPath);
+    if (cached && now - cached.ts <= ttl) {
+      return { folders: cached.folders, files: cached.files };
+    }
+
+    const fresh = this.readDirUncached(fullPath);
+    this.dirCache.set(fullPath, { ts: now, folders: fresh.folders, files: fresh.files });
+    return fresh;
+  }
+
+  private readDirUncached(fullPath: string): { folders: string[]; files: string[] } {
+    const items = fs.readdirSync(fullPath, { withFileTypes: true });
+    const folders = items
+      .filter(item => item.isDirectory() && !item.name.startsWith('.'))
+      .map(item => item.name);
+    const files = items
+      .filter(item => item.isFile())
+      .map(item => item.name);
+    return { folders, files };
   }
 }
 
