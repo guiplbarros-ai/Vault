@@ -10,12 +10,13 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx src/index.ts",
-    "note": "tsx src/index.ts note",
-    "calendar": "tsx src/index.ts calendar",
-    "gmail": "tsx src/index.ts gmail",
-    "google:auth": "tsx src/index.ts google auth",
-    "google:status": "tsx src/index.ts google status"
+    "dev": "node --import tsx src/index.ts",
+    "mcp:todoist": "node --import tsx src/mcp/todoist.server.ts",
+    "note": "node --import tsx src/index.ts note",
+    "calendar": "node --import tsx src/index.ts calendar",
+    "gmail": "node --import tsx src/index.ts gmail",
+    "google:auth": "node --import tsx src/index.ts google auth",
+    "google:status": "node --import tsx src/index.ts google status"
   },
   "keywords": [
     "obsidian",
@@ -26,6 +27,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "commander": "^12.1.0",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.5",

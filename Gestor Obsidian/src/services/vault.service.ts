@@ -12,21 +12,23 @@ class VaultService {
 
   constructor() {
     const envPath = process.env.OBSIDIAN_VAULT_PATH;
-    
-    if (!envPath) {
-      throw new Error(
-        'OBSIDIAN_VAULT_PATH não configurado. ' +
-        'Copie env.example para .env e configure o caminho do vault.'
-      );
-    }
+    const localVaultPath = path.resolve(process.cwd(), 'vault');
 
-    this.vaultPath = envPath;
+    // Prefer explicit env var, but allow repo-local vault/ as a safe default.
+    // This makes the CLI work out-of-the-box when the vault lives inside the project.
+    this.vaultPath = envPath ?? localVaultPath;
 
     this.dirCacheTtlMs = Number.isFinite(Number(process.env.VAULT_DIR_CACHE_MS))
       ? Math.max(0, Number(process.env.VAULT_DIR_CACHE_MS))
       : 30_000;
     
     if (!this.vaultExists()) {
+      if (!envPath) {
+        throw new Error(
+          'Vault não encontrado. ' +
+          'Configure OBSIDIAN_VAULT_PATH no .env ou crie um vault em ./vault (padrão).'
+        );
+      }
       throw new Error(`Vault não encontrado em: ${this.vaultPath}`);
     }
   }

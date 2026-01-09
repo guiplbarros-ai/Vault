@@ -10,10 +10,34 @@ interface NotionSearchResult {
   url: string;
 }
 
+type NotionSortTimestamp = 'last_edited_time' | 'created_time';
+type NotionSortDirection = 'ascending' | 'descending';
+
+interface NotionSearchOptions {
+  pageSize?: number;
+  sort?: {
+    timestamp: NotionSortTimestamp;
+    direction: NotionSortDirection;
+  };
+}
+
 interface NotionBlock {
   type: string;
   [key: string]: unknown;
 }
+
+type NotionRichText = Array<{ plain_text: string }>;
+
+type NotionSearchApiResult = {
+  results: Array<{
+    id: string;
+    object: 'page' | 'database';
+    url: string;
+    // page objects often expose properties; databases have title
+    properties?: Record<string, unknown>;
+    title?: NotionRichText;
+  }>;
+};
 
 class NotionService {
   private apiKey: string;
@@ -47,46 +71,91 @@ class NotionService {
     return response.json() as Promise<T>;
   }
 
-  async search(query: string): Promise<string> {
+  private extractTitleFromProperties(props?: Record<string, unknown>): string {
+    if (!props) return 'Sem título';
+
+    // Try "title" property
+    if (props.title) {
+      const titleProp = props.title as { title?: NotionRichText };
+      const t = titleProp.title?.[0]?.plain_text;
+      if (t) return t;
+    }
+
+    // Try "Name" (common default title property name)
+    if (props.Name) {
+      const nameProp = props.Name as { title?: NotionRichText };
+      const t = nameProp.title?.[0]?.plain_text;
+      if (t) return t;
+    }
+
+    // Try to find any title-like property
+    for (const value of Object.values(props)) {
+      const maybe = value as { title?: NotionRichText };
+      const t = maybe?.title?.[0]?.plain_text;
+      if (t) return t;
+    }
+
+    return 'Sem título';
+  }
+
+  async searchResults(query: string, options: NotionSearchOptions = {}): Promise<NotionSearchResult[]> {
     try {
-      const result = await this.request<{results: Array<{id: string; properties?: Record<string, unknown>; title?: Array<{plain_text: string}>; object: string; url: string}>}>('/search', {
+      const pageSize = options.pageSize ?? 10;
+      const body: Record<string, unknown> = { page_size: pageSize };
+      const trimmed = query.trim();
+      if (trimmed) body.query = trimmed;
+      if (options.sort) body.sort = options.sort;
+
+      const result = await this.request<NotionSearchApiResult>('/search', {
         method: 'POST',
-        body: JSON.stringify({
-          query,
-          page_size: 10
-        }),
+        body: JSON.stringify(body),
       });
 
-      if (result.results.length === 0) {
-        return `Nenhum resultado para "${query}"`;
-      }
+      const mapped: NotionSearchResult[] = result.results.map((item) => {
+        const type = item.object === 'database' ? 'database' : 'page';
+        const title =
+          type === 'database'
+            ? item.title?.[0]?.plain_text || 'Sem título'
+            : this.extractTitleFromProperties(item.properties);
+        return { id: item.id, title, type, url: item.url };
+      });
 
-      const formatted = result.results.map((item, i) => {
-        let title = 'Sem título';
-        
-        // Try to get title from different places
-        if (item.properties?.title) {
-          const titleProp = item.properties.title as {title?: Array<{plain_text: string}>};
-          if (titleProp.title?.[0]?.plain_text) {
-            title = titleProp.title[0].plain_text;
-          }
-        } else if (item.properties?.Name) {
-          const nameProp = item.properties.Name as {title?: Array<{plain_text: string}>};
-          if (nameProp.title?.[0]?.plain_text) {
-            title = nameProp.title[0].plain_text;
-          }
-        }
-
-        const type = item.object === 'database' ? '📊' : '📄';
-        return `${i + 1}. ${type} ${title}\n   ID: ${item.id}`;
-      }).join('\n\n');
-
-      logger.info(`Notion search: "${query}" → ${result.results.length} resultados`);
-      return formatted;
+      logger.info(`Notion search: "${trimmed || '[sem query]'}" → ${mapped.length} resultados`);
+      return mapped;
     } catch (error) {
       logger.error(`Notion search error: ${error}`);
       throw error;
     }
+  }
+
+  async search(query: string, options: NotionSearchOptions = {}): Promise<string> {
+    const trimmed = query.trim();
+    const results = await this.searchResults(trimmed, options);
+    if (results.length === 0) {
+      return trimmed ? `Nenhum resultado para "${trimmed}"` : 'Nenhum resultado.';
+    }
+
+    return results
+      .map((item, i) => {
+        const typeIcon = item.type === 'database' ? '📊' : '📄';
+        return `${i + 1}. ${typeIcon} ${item.title}\n   ID: ${item.id}\n   URL: ${item.url}`;
+      })
+      .join('\n\n');
+  }
+
+  async recent(pageSize: number = 10): Promise<string> {
+    const results = await this.searchResults('', {
+      pageSize,
+      sort: { timestamp: 'last_edited_time', direction: 'descending' },
+    });
+
+    if (results.length === 0) return 'Nenhuma página encontrada.';
+    return results
+      .map((item, i) => {
+        const typeIcon = item.type === 'database' ? '📊' : '📄';
+        return `${i + 1}. ${typeIcon} ${item.title}\n   ID: ${item.id}\n   URL: ${item.url}`;
+      })
+      .join('\n\n');
   }
 
   async getPage(pageId: string): Promise<string> {
@@ -101,15 +170,7 @@ class NotionService {
       const blocks = await this.request<{results: NotionBlock[]}>(`/blocks/${cleanId}/children?page_size=100`);
       
       // Extract title
-      let title = 'Página do Notion';
-      const props = page.properties;
-      if (props.title) {
-        const t = props.title as {title?: Array<{plain_text: string}>};
-        title = t.title?.[0]?.plain_text || title;
-      } else if (props.Name) {
-        const n = props.Name as {title?: Array<{plain_text: string}>};
-        title = n.title?.[0]?.plain_text || title;
-      }
+      const title = this.extractTitleFromProperties(page.properties) || 'Página do Notion';
 
       // Convert blocks to text
       const content = this.blocksToText(blocks.results);

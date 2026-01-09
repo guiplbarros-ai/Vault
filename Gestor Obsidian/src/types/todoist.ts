@@ -5,6 +5,7 @@ export interface TodoistTask {
   project_id: string;
   section_id: string | null;
   parent_id: string | null;
+  assignee_id?: string | null;
   order: number;
   priority: 1 | 2 | 3 | 4; // 4 = urgent, 1 = normal
   due: TodoistDue | null;
@@ -35,6 +36,9 @@ export interface CreateTaskOptions {
   content: string;
   description?: string;
   project_id?: string;
+  section_id?: string;
+  parent_id?: string;
+  assignee_id?: string;
   due_string?: string;
   due_date?: string;
   priority?: 1 | 2 | 3 | 4;
@@ -49,3 +53,8 @@ export interface TodoistLabel {
   is_favorite: boolean;
 }
 
+export interface TodoistCollaborator {
+  id: string;
+  name: string;
+  email: string;
+}

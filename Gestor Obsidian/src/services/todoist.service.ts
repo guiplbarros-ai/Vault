@@ -3,7 +3,8 @@ import type {
   TodoistTask, 
   TodoistProject, 
   CreateTaskOptions,
-  TodoistLabel 
+  TodoistLabel,
+  TodoistCollaborator,
 } from '../types/todoist.js';
 import { logger } from '../utils/logger.js';
 
@@ -153,6 +154,28 @@ class TodoistService {
    */
   async getLabels(): Promise<TodoistLabel[]> {
     return this.request<TodoistLabel[]>('/labels');
+  }
+
+  /**
+   * Lista colaboradores de um projeto compartilhado
+   */
+  async getProjectCollaborators(projectId: string): Promise<TodoistCollaborator[]> {
+    return this.request<TodoistCollaborator[]>(`/projects/${projectId}/collaborators`);
+  }
+
+  /**
+   * Busca colaborador por nome/email (match aproximado)
+   */
+  async findProjectCollaborator(projectId: string, query: string): Promise<TodoistCollaborator | null> {
+    const q = query.toLowerCase();
+    const collabs = await this.getProjectCollaborators(projectId);
+    return (
+      collabs.find(c => c.email.toLowerCase() === q) ??
+      collabs.find(c => c.name.toLowerCase() === q) ??
+      collabs.find(c => c.email.toLowerCase().includes(q)) ??
+      collabs.find(c => c.name.toLowerCase().includes(q)) ??
+      null
+    );
   }
 
   /**

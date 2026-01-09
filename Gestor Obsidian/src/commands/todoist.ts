@@ -52,6 +52,8 @@ export function createTodoistCommand(): Command {
     .option('-d, --due <due>', 'Data de vencimento (ex: "today", "tomorrow", "next monday")')
     .option('-p, --priority <priority>', 'Prioridade (1-4, sendo 4 a mais alta)', '1')
     .option('-P, --project <project>', 'Nome do projeto')
+    .option('--parent <taskId>', 'ID da tarefa pai (cria como subtask)')
+    .option('-A, --assignee <nameOrEmail>', 'Responsável (nome ou email; requer --project)')
     .option('-l, --labels <labels>', 'Labels separadas por vírgula')
     .option('-D, --description <description>', 'Descrição da tarefa')
     .action(async (content, options) => {
@@ -71,6 +73,10 @@ export function createTodoistCommand(): Command {
           taskOptions.description = options.description;
         }
 
+        if (options.parent) {
+          taskOptions.parent_id = options.parent;
+        }
+
         if (options.labels) {
           taskOptions.labels = options.labels.split(',').map((l: string) => l.trim());
         }
@@ -79,9 +85,20 @@ export function createTodoistCommand(): Command {
           const project = await service.findProjectByName(options.project);
           if (project) {
             taskOptions.project_id = project.id;
+
+            if (options.assignee) {
+              const collab = await service.findProjectCollaborator(project.id, options.assignee);
+              if (!collab) {
+                console.log(`⚠️ Responsável "${options.assignee}" não encontrado no projeto "${project.name}"`);
+              } else {
+                taskOptions.assignee_id = collab.id;
+              }
+            }
           } else {
             console.log(`⚠️ Projeto "${options.project}" não encontrado, criando na Inbox`);
           }
+        } else if (options.assignee) {
+          console.log('⚠️ Para usar --assignee, informe também --project');
         }
 
         const task = await service.createTask(taskOptions);
@@ -90,6 +107,37 @@ export function createTodoistCommand(): Command {
         console.log(`  ID: ${task.id}`);
         console.log(`  URL: ${task.url}`);
         
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro desconhecido';
+        logger.error(message);
+        console.error(`✗ Erro: ${message}`);
+        process.exit(1);
+      }
+    });
+
+  // Listar colaboradores de um projeto
+  todoist
+    .command('collaborators')
+    .description('Lista colaboradores de um projeto compartilhado')
+    .option('-P, --project <project>', 'Nome do projeto')
+    .action(async (options) => {
+      try {
+        const service = getTodoistService();
+
+        if (!options.project) {
+          console.log('⚠️ Informe --project "<nome>"');
+          process.exit(1);
+        }
+
+        const project = await service.findProjectByName(options.project);
+        if (!project) {
+          console.log(`⚠️ Projeto "${options.project}" não encontrado`);
+          process.exit(1);
+        }
+
+        const collabs = await service.getProjectCollaborators(project.id);
+        console.log(`\n👥 Colaboradores (${project.name}):\n`);
+        collabs.forEach(c => console.log(`• ${c.name} <${c.email}> - ID: ${c.id}`));
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Erro desconhecido';
         logger.error(message);

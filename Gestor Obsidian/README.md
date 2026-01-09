@@ -80,6 +80,44 @@ npm run dev -- todoist complete <task_id>
 npm run dev -- todoist projects
 ```
 
+### 🔌 MCP do Todoist (Cursor)
+
+Além do CLI, você pode expor o Todoist como **MCP server** para o Cursor (para o modelo chamar ferramentas diretamente).
+
+1. Garanta o token no `.env` (não coloque token no chat):
+
+```bash
+cp env.example .env
+```
+
+2. Rode o servidor localmente (para testar):
+
+```bash
+npm run mcp:todoist
+```
+
+3. Configure o Cursor para usar o MCP do Todoist apontando para esse script. Exemplo de configuração (ajuste o `cwd` para o caminho do seu projeto):
+
+```json
+{
+  "mcpServers": {
+    "todoist": {
+      "command": "npm",
+      "args": ["run", "-s", "mcp:todoist"],
+      "cwd": "/Users/guilhermebarros/Documents/Coding/Gestor Obsidian"
+    }
+  }
+}
+```
+
+Ferramentas expostas (nomes MCP):
+- `todoist_list_tasks`
+- `todoist_get_task`
+- `todoist_add_task`
+- `todoist_complete_task`
+- `todoist_list_projects`
+- `todoist_list_labels`
+
 #### Opções do comando `todoist add`
 
 | Opção | Descrição |
@@ -272,16 +310,17 @@ npm run dev -- gmail profile
 
 ### 📘 Notion (via MCP)
 
-O Notion está integrado via MCP no Cursor. Use comandos naturais:
+O fluxo recomendado é usar o Notion via **MCP no Cursor** (comandos naturais, sem token no projeto).
+Para automações via terminal (ou execução fora do Cursor), você pode configurar `NOTION_API_KEY`.
 
 ```bash
 # Ver guia de uso
 npm run dev -- notion help
 
-# Ver instrução de busca
+# (Opcional) Usar Notion API pelo terminal (requer NOTION_API_KEY no .env)
 npm run dev -- notion search "comunidade"
-
-# Instrução para enriquecer nota
+npm run dev -- notion fetch "<id-ou-url>"
+npm run dev -- notion recent --max 10
 npm run dev -- notion enrich "10-AREAS/.../nota.md" "termo de busca"
 ```
 
