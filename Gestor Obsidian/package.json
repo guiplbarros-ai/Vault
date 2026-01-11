@@ -9,8 +9,11 @@
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/server.js",
+    "start:cli": "node dist/index.js",
     "dev": "node --import tsx src/index.ts",
+    "dev:server": "node --import tsx src/server.ts",
+    "start:server": "node dist/server.js",
     "mcp:todoist": "node --import tsx src/mcp/todoist.server.ts",
     "note": "node --import tsx src/index.ts note",
     "calendar": "node --import tsx src/index.ts calendar",
@@ -43,6 +46,7 @@
     }
   },
   "devDependencies": {
+    "@flydotio/dockerfile": "^0.7.10",
     "@types/node": "^22.10.1",
     "@types/node-cron": "^3.0.11",
     "@types/node-telegram-bot-api": "^0.64.7",

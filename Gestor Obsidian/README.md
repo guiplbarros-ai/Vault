@@ -16,10 +16,26 @@ npm install
 cp env.example .env
 ```
 
-Edite `.env` e configure:
+Edite `.env` (ou use perfis `.env.*`) e configure:
 - `OBSIDIAN_VAULT_PATH` - caminho absoluto do seu vault
 - `TODOIST_API_TOKEN` - token da API do Todoist
 - `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` - credenciais OAuth do Google (ver seção Google Calendar & Gmail)
+
+### Perfis de ambiente (pessoal / código / trabalho)
+
+Para evitar misturar contas do Google (ex.: pessoal vs profissional), você pode criar arquivos:
+- `.env.pessoal`
+- `.env.codigo`
+- `.env.trabalho`
+
+E rodar comandos escolhendo o profile:
+
+```bash
+OBSIDIAN_MANAGER_ENV_FILE=.env.pessoal npm run dev -- google diag
+OBSIDIAN_MANAGER_ENV_FILE=.env.pessoal npm run dev -- google auth --force
+```
+
+> Dica: combine profiles com `GOOGLE_TOKENS_PATH` para isolar tokens por conta.
 
 ## Comandos Disponíveis
 
@@ -118,6 +134,11 @@ Ferramentas expostas (nomes MCP):
 - `todoist_list_projects`
 - `todoist_list_labels`
 
+#### Roteamento (Freelaw vs Pessoal)
+
+Para manter o “segundo cérebro” consistente, siga o guia:
+- `docs/roteamento-integracoes.md`
+
 #### Opções do comando `todoist add`
 
 | Opção | Descrição |
@@ -167,6 +188,33 @@ O bot permite criar notas e tarefas diretamente pelo Telegram!
 
 **Dica:** Envie texto sem comando e o bot pergunta onde salvar!
 
+#### Smoke test / utilitários
+
+```bash
+# Diagnóstico do token e conectividade
+npm run dev -- telegram status
+
+# Enviar uma mensagem para um chatId (teste / automações)
+npm run dev -- telegram send --chat 123456789 --text "teste"
+```
+
+---
+
+### 🧠 Agent (orquestrador do segundo cérebro)
+
+O Agent é a camada de orquestração que:
+- aplica suas regras do vault (ex.: `00-INBOX/CORTEX_RULES.md`)
+- usa o `BrainService` + tools para consultar/agir
+- é o caminho “oficial” para conversas naturais via Telegram
+
+```bash
+# Chat via CLI (útil para testar sem Telegram)
+npm run dev -- agent chat --chat 123456789 --text "o que tenho hoje?"
+
+# Limpar memória do chat
+npm run dev -- agent clear --chat 123456789
+```
+
 ---
 
 ### 📅 Google Calendar
@@ -194,8 +242,14 @@ O bot permite criar notas e tarefas diretamente pelo Telegram!
 # Autenticar (abre navegador)
 npm run dev -- google auth
 
+# Autenticar forçando reconsentimento/seleção de conta (recomendado com múltiplas contas)
+npm run dev -- google auth --force
+
 # Verificar status
 npm run dev -- google status
+
+# Diagnóstico (mostra env file / client id / token file)
+npm run dev -- google diag
 
 # Logout
 npm run dev -- google logout
@@ -313,6 +367,11 @@ npm run dev -- gmail profile
 O fluxo recomendado é usar o Notion via **MCP no Cursor** (comandos naturais, sem token no projeto).
 Para automações via terminal (ou execução fora do Cursor), você pode configurar `NOTION_API_KEY`.
 
+### 📊 Sheets → Notion (Financeiro)
+
+Ver guia detalhado:
+- `docs/sheets-notion-sync.md`
+
 ```bash
 # Ver guia de uso
 npm run dev -- notion help
@@ -332,6 +391,15 @@ O Cursor tem acesso direto ao Notion via MCP. Exemplos de prompts:
 - **Ler:** "Leia a página Comunidade do Notion"
 - **Criar:** "Crie uma página no Notion com as notas da reunião"
 - **Enriquecer:** "Busque no Notion sobre X e adicione na nota Y do Obsidian"
+
+#### Roteamento (Freelaw vs Pessoal)
+
+Para evitar misturar contextos, mantenha duas integrações MCP distintas:
+- **`Notion`**: assuntos da **Freelaw**
+- **`Notion-Pessoal`**: assuntos **pessoais**
+
+Detalhes e regras completas em:
+- `docs/roteamento-integracoes.md`
 
 ---
 
@@ -406,12 +474,18 @@ npm run dev -- todoist list
 npm run build
 
 # Rodar versão compilada
-npm start -- note "teste"
+npm run start:cli -- note "teste"
 ```
 
 ---
 
 ## Arquitetura
+
+Docs (detalhado):
+- `docs/arquitetura-agente-segundo-cerebro.md`
+- `docs/uso-possiveis-checklist.md`
+- `docs/PRD-segundo-cerebro-telegram.md`
+- `docs/roadmap-etapas-validacoes.md`
 
 ```
 obsidian-manager/

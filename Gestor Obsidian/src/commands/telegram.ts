@@ -82,6 +82,41 @@ export function createTelegramCommand(): Command {
     });
 
   telegram
+    .command('send')
+    .description('Envia uma mensagem para um chatId (smoke test / automações)')
+    .requiredOption('--chat <chatId>', 'Chat ID (número)')
+    .requiredOption('--text <text>', 'Texto da mensagem')
+    .action(async (opts) => {
+      const token = process.env.TELEGRAM_BOT_TOKEN;
+      if (!token) {
+        console.error('❌ TELEGRAM_BOT_TOKEN não configurado no .env');
+        process.exit(1);
+      }
+
+      const chatId = Number(opts.chat);
+      if (!Number.isFinite(chatId)) {
+        console.error('❌ chatId inválido. Use um número (ex: 123456789).');
+        process.exit(1);
+      }
+
+      const bot = new TelegramBot(token, { polling: false });
+      try {
+        await bot.sendMessage(chatId, String(opts.text));
+        console.log(`✅ Mensagem enviada para chatId=${chatId}`);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`❌ Falha ao enviar mensagem: ${msg}`);
+        process.exit(1);
+      } finally {
+        try {
+          await (bot as any).close?.();
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+  telegram
     .command('help')
     .description('Mostra instruções de configuração')
     .action(() => {
@@ -107,6 +142,9 @@ export function createTelegramCommand(): Command {
 
 Diagnóstico:
    npm run dev -- telegram status
+
+Enviar mensagem (smoke test):
+   npm run dev -- telegram send --chat 123456789 --text "teste"
 
 Observação sobre erro 409:
    Se aparecer "409 Conflict", é porque existe outra instância rodando.

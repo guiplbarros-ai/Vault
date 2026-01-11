@@ -2,26 +2,99 @@ import { Command } from 'commander';
 import { getGoogleAuthService } from '../services/google-auth.service.js';
 import { logger } from '../utils/logger.js';
 import { exec } from 'child_process';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { getEnvFilePath, loadEnv } from '../utils/env.js';
 
 export function createGoogleCommand(): Command {
   const google = new Command('google')
     .description('Gerencia autenticação com Google (Calendar/Gmail)');
 
+  // Diagnóstico (não abre navegador)
+  google
+    .command('diag')
+    .description('Mostra qual profile/env/client está ativo (sem autenticar)')
+    .action(() => {
+      try {
+        const env = loadEnv();
+        const clientId = process.env.GOOGLE_CLIENT_ID || '';
+        const hasSecret = !!process.env.GOOGLE_CLIENT_SECRET;
+        const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/oauth2callback';
+        const envPath = getEnvFilePath();
+
+        console.log('\n🧪 Google diag\n');
+        console.log(`📄 env file: ${env.exists ? envPath : `(não encontrado: ${envPath})`}`);
+        console.log(`🔎 OAuth client: ${clientId ? clientId : '(não configurado)'}`);
+        console.log(`🔁 Redirect URI: ${redirectUri}`);
+        console.log(`🔑 Client secret: ${hasSecret ? 'ok' : '(não configurado)'}`);
+
+        if (!clientId || !hasSecret) {
+          console.log('\nℹ️ Para este profile, configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET.');
+          console.log('   Depois rode: obsidian-manager google auth --force\n');
+          return;
+        }
+
+        const authService = getGoogleAuthService();
+        console.log(`🔐 Token file: ${authService.getTokenPath()}`);
+
+        const status = authService.getAuthStatus();
+        console.log(`✅ Authenticated: ${status.authenticated ? 'sim' : 'não'}`);
+        if (status.expiresAt) console.log(`⏳ Token expira em: ${status.expiresAt.toLocaleString()}`);
+        if (status.authenticated) console.log(`🧾 Scopes OK: ${authService.hasAllRequiredScopes() ? 'sim' : 'não'}`);
+        console.log('');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro desconhecido';
+        logger.error(message);
+        console.error(`\n✗ Erro: ${message}`);
+        process.exit(1);
+      }
+    });
+
   // Autenticar
   google
     .command('auth')
     .description('Autentica com sua conta Google')
-    .action(async () => {
+    .option('-f, --force', 'Força reautenticação (útil quando mudam os escopos)', false)
+    .action(async (opts) => {
       try {
+        const env = loadEnv();
+
+        // Helpful diagnostics during OAuth setup (do not print secrets)
+        const clientId = process.env.GOOGLE_CLIENT_ID || '';
+        const hasSecret = !!process.env.GOOGLE_CLIENT_SECRET;
+        const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/oauth2callback';
+        const envPath = getEnvFilePath();
+        const envExists = env.exists;
+        console.log(`\n🔎 OAuth client: ${clientId ? clientId : '(não configurado)'}`);
+        console.log(`🔁 Redirect URI: ${redirectUri}`);
+        console.log(`📄 env file: ${envExists ? envPath : `(não encontrado: ${envPath})`}`);
+        console.log(`🔑 Client secret: ${hasSecret ? 'ok' : '(não configurado)'}`);
+
+        if (!clientId || !hasSecret) {
+          throw new Error(
+            'GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET não configurados neste profile.\n' +
+            'Edite o arquivo mostrado em "env file" e adicione as duas variáveis.'
+          );
+        }
+
         const authService = getGoogleAuthService();
+        console.log(`🔐 Token file: ${authService.getTokenPath()}`);
         
         // Verifica se já está autenticado
         const status = authService.getAuthStatus();
-        if (status.authenticated) {
+        const needsScopes = status.authenticated && !authService.hasAllRequiredScopes();
+        const shouldReauth = Boolean(opts.force) || needsScopes;
+
+        if (status.authenticated && !shouldReauth) {
           console.log('\n✓ Você já está autenticado com o Google!');
           console.log(`  Token expira em: ${status.expiresAt?.toLocaleString()}`);
-          console.log('\n  Para reautenticar, execute primeiro: obsidian-manager google logout');
+          console.log('\n  Para reautenticar, execute: obsidian-manager google auth --force');
           return;
+        }
+
+        if (needsScopes && !opts.force) {
+          console.log('\nℹ️ Detectei que seus tokens atuais não incluem todos os novos escopos (ex: Google Sheets).');
+          console.log('   Vou reautenticar para atualizar os escopos.\n');
         }
         
         // Gera URL de autenticação

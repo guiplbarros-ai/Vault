@@ -1,4 +1,3 @@
-import { config } from 'dotenv';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -6,8 +5,9 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { getTodoistService } from '../services/todoist.service.js';
+import { loadEnv } from '../utils/env.js';
 
-config();
+loadEnv();
 
 function asString(v: unknown): string | undefined {
   return typeof v === 'string' && v.trim() ? v : undefined;
@@ -39,7 +39,7 @@ async function main() {
         {
           name: 'todoist_list_tasks',
           description:
-            'Lista tarefas ativas. Por padrão, retorna apenas tarefas atribuídas a você ("assigned to: me"). Aceita filtro Todoist (ex: "today | overdue") e/ou nome de projeto.',
+            'Lista tarefas ativas. Por padrão, retorna apenas tarefas atribuídas a você ("assigned to: me"). Aceita filtro Todoist (ex: "today | overdue") e/ou nome de projeto.\n\nRoteamento (importante):\n- Freelaw/financeiro: projeto "Gestão financeira"\n- Pessoal: projetos "Casinha :)" (casa/obra/reforma) ou "Guilherme Barros" (geral)',
           inputSchema: {
             type: 'object',
             properties: {
@@ -68,7 +68,7 @@ async function main() {
         {
           name: 'todoist_add_task',
           description:
-            'Cria uma tarefa no Todoist. Você pode informar due, prioridade (1-4), projeto, labels e descrição.',
+            'Cria uma tarefa no Todoist. Você pode informar due, prioridade (1-4), projeto, labels e descrição.\n\nRoteamento (importante):\n- Freelaw/financeiro: use project "Gestão financeira"\n- Pessoal: use project "Casinha :)" (casa/obra/reforma) ou "Guilherme Barros" (geral)',
           inputSchema: {
             type: 'object',
             properties: {

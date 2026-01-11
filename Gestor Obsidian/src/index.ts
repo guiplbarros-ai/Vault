@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { config } from 'dotenv';
+import { loadEnv } from './utils/env.js';
 import { createNoteCommand } from './commands/note.js';
 import { createTodoistCommand } from './commands/todoist.js';
 import { createNotionCommand } from './commands/notion.js';
 import { createTelegramCommand } from './commands/telegram.js';
+import { createAgentCommand } from './commands/agent.js';
 import { createGoogleCommand } from './commands/google.js';
 import { createCalendarCommand } from './commands/calendar.js';
 import { createGmailCommand } from './commands/gmail.js';
 import { createFinancasCommand } from './commands/financas.js';
+import { createSheetsCommand } from './commands/sheets.js';
 
 // Load environment variables
-config();
+loadEnv();
 
 const program = new Command();
 
@@ -26,10 +28,12 @@ program.addCommand(createNoteCommand());
 program.addCommand(createTodoistCommand());
 program.addCommand(createNotionCommand());
 program.addCommand(createTelegramCommand());
+program.addCommand(createAgentCommand());
 program.addCommand(createGoogleCommand());
 program.addCommand(createCalendarCommand());
 program.addCommand(createGmailCommand());
 program.addCommand(createFinancasCommand());
+program.addCommand(createSheetsCommand());
 
 // Parse arguments
 program.parse();

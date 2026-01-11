@@ -1,5 +1,4 @@
 import cron from 'node-cron';
-import { config } from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -10,8 +9,9 @@ import { getGoogleAuthService } from './google-auth.service.js';
 import { logger } from '../utils/logger.js';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { loadEnv } from '../utils/env.js';
 
-config();
+loadEnv();
 
 interface DigestConfig {
   id: string;

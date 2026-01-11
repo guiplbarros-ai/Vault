@@ -1,7 +1,7 @@
-import { config } from 'dotenv';
 import { logger } from '../utils/logger.js';
+import { loadEnv } from '../utils/env.js';
 
-config();
+loadEnv();
 
 interface NotionSearchResult {
   id: string;

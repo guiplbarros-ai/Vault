@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { config } from 'dotenv';
 import { logger } from '../utils/logger.js';
+import { loadEnv } from '../utils/env.js';
 
-config();
+loadEnv();
 
 class VaultService {
   private vaultPath: string;

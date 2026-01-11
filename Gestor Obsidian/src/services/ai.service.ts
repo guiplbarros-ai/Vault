@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
-import { config } from 'dotenv';
 import type { NoteType } from '../types/index.js';
 import { logger } from '../utils/logger.js';
+import { loadEnv } from '../utils/env.js';
 
-config();
+loadEnv();
 
 interface ClassificationResult {
   type: 'note' | 'task';

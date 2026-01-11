@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import { config } from 'dotenv';
 import { noteService } from './note.service.js';
 import { getTodoistService } from './todoist.service.js';
 import { getVaultService } from './vault.service.js';
@@ -8,8 +7,11 @@ import { getGmailService } from './gmail.service.js';
 import { getGoogleAuthService } from './google-auth.service.js';
 import { logger } from '../utils/logger.js';
 import type { NoteType } from '../types/index.js';
+import { loadEnv } from '../utils/env.js';
+import { createDefaultToolRegistry } from '../agent/default-tools.js';
+import { cleanObsidianContent, isAmbiguousSearch, searchVaultRanked } from '../agent/vault-search.js';
 
-config();
+loadEnv();
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -70,6 +72,8 @@ class BrainService {
     ? Number(process.env.CORTEX_DEEP_MAX_TOKENS)
     : 3500;
   private conversations: Map<number, ConversationState> = new Map();
+  private tools = createDefaultToolRegistry();
+  private externalRules: string | null = null;
   
   // Notion functions (injected from telegram service)
   public notionSearch?: NotionSearchFn;
@@ -81,6 +85,10 @@ class BrainService {
       throw new Error('OPENAI_API_KEY não configurado');
     }
     this.client = new OpenAI({ apiKey });
+  }
+
+  setExternalRules(rules: string | null): void {
+    this.externalRules = rules && rules.trim().length > 0 ? rules.trim() : null;
   }
 
   private isGoogleAvailable(): boolean {
@@ -104,10 +112,21 @@ class BrainService {
 
 Você gerencia o conhecimento e tarefas do Guilherme através de cinco sistemas:
 1. **Obsidian** - Vault de notas pessoais (segundo cérebro)
-2. **Todoist** - Gestão de tarefas pessoais
-3. **Notion** - Base de conhecimento da EMPRESA (Freelaw)${notionAvailable ? ' ✅ DISPONÍVEL' : ' ❌ Indisponível nesta sessão'}
+2. **Todoist** - Gestão de tarefas (pessoais e Freelaw/financeiro)
+3. **Notion** - Bases de conhecimento (Freelaw e pessoal)${notionAvailable ? ' ✅ DISPONÍVEL' : ' ❌ Indisponível nesta sessão'}
 4. **Google Calendar** - Agenda e eventos${googleAvailable ? ' ✅ DISPONÍVEL' : ' ❌ Não autenticado'}
 5. **Gmail** - Emails${googleAvailable ? ' ✅ DISPONÍVEL' : ' ❌ Não autenticado'}
+
+## ROTEAMENTO DE CONTEXTO (CRÍTICO)
+
+Evite misturar informações e ações entre **Freelaw** e **pessoal**.
+
+- **Notion**:
+  - Freelaw (empresa): Notion (documentos oficiais)
+  - Pessoal: Notion pessoal
+- **Todoist**:
+  - Freelaw/financeiro: projeto **"Gestão financeira"**
+  - Pessoal: projetos **"Casinha :)"** (casa/obra/reforma) ou **"Guilherme Barros"** (geral)
 
 ## CONTEXTO FREELAW (MUITO IMPORTANTE)
 
@@ -445,7 +464,7 @@ Posso prosseguir?
       const response = await this.client.chat.completions.create({
         model,
         messages: [
-          { role: 'system', content: this.getSystemPrompt(notionAvailable) },
+          { role: 'system', content: this.getSystemPrompt(notionAvailable) + (this.externalRules ? `\n\n## REGRAS EXTERNAS (Vault)\n\n${this.externalRules}\n` : '') },
           ...state.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
         ],
         temperature,
@@ -469,7 +488,7 @@ Posso prosseguir?
       
       if (hasExecuteTags) {
         // Extract and execute actions
-        const results = await this.processExecutions(finalAssistantMessage, state);
+        const results = await this.processExecutions(chatId, finalAssistantMessage, state);
         const cleanMessage = this.removeExecuteTags(finalAssistantMessage);
 
         const followupNeeded = this.shouldGenerateFollowup(results, state);
@@ -564,7 +583,7 @@ Posso prosseguir?
       const response = await this.client.chat.completions.create({
         model,
         messages: [
-          { role: 'system', content: this.getSystemPrompt(!!this.notionSearch) + '\n\nO USUÁRIO CONFIRMOU. EXECUTE AGORA usando as tags [EXECUTE:...]. NÃO peça confirmação novamente.' },
+          { role: 'system', content: (this.getSystemPrompt(!!this.notionSearch) + (this.externalRules ? `\n\n## REGRAS EXTERNAS (Vault)\n\n${this.externalRules}\n` : '')) + '\n\nO USUÁRIO CONFIRMOU. EXECUTE AGORA usando as tags [EXECUTE:...]. NÃO peça confirmação novamente.' },
           ...state.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
         ],
         temperature: deliberate ? Math.min(0.25, temperature) : Math.min(0.3, temperature),
@@ -576,7 +595,7 @@ Posso prosseguir?
       state.pendingActions = [];
 
       // Process executions
-      const results = await this.processExecutions(assistantMessage, state);
+      const results = await this.processExecutions(chatId, assistantMessage, state);
       const cleanMessage = this.removeExecuteTags(assistantMessage);
 
       const followupNeeded = this.shouldGenerateFollowup(results, state);
@@ -613,6 +632,7 @@ Posso prosseguir?
   }
 
   private async processExecutions(
+    chatId: number,
     message: string, 
     state: ConversationState
   ): Promise<ExecutionOutcome[]> {
@@ -626,7 +646,7 @@ Posso prosseguir?
       const params = this.parseParams(match[2]);
       
       try {
-        const result = await this.executeAction(actionType, params, state);
+        const result = await this.executeAction(chatId, actionType, params, state);
         results.push({ success: true, actionType, summary: result });
       } catch (error) {
         results.push({ 
@@ -682,7 +702,7 @@ Posso prosseguir?
     const response = await this.client.chat.completions.create({
       model,
       messages: [
-        { role: 'system', content: this.getSystemPrompt(notionAvailable) },
+        { role: 'system', content: this.getSystemPrompt(notionAvailable) + (this.externalRules ? `\n\n## REGRAS EXTERNAS (Vault)\n\n${this.externalRules}\n` : '') },
         ...state.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
         {
           role: 'system',
@@ -750,7 +770,7 @@ Posso prosseguir?
     const response = await this.client.chat.completions.create({
       model,
       messages: [
-        { role: 'system', content: this.getSystemPrompt(notionAvailable) },
+        { role: 'system', content: this.getSystemPrompt(notionAvailable) + (this.externalRules ? `\n\n## REGRAS EXTERNAS (Vault)\n\n${this.externalRules}\n` : '') },
         {
           role: 'system',
           content:
@@ -915,252 +935,18 @@ Posso prosseguir?
   }
 
   private async executeAction(
+    chatId: number,
     actionType: string, 
     params: Record<string, string>,
     state: ConversationState
   ): Promise<string> {
     logger.info(`Brain executing: ${actionType}`);
-    
-    switch (actionType) {
-      case 'CREATE_NOTE': {
-        const result = await noteService.processNote({
-          content: params.content || '',
-          type: (params.type as NoteType) || 'inbox',
-          title: params.title,
-        });
-        return `Nota criada: ${result.filePath.split('/').pop()}`;
-      }
 
-      case 'CREATE_TASK': {
-        const todoist = getTodoistService();
-        const task = await todoist.createTask({
-          content: params.content,
-          due_string: params.due,
-          priority: params.priority ? parseInt(params.priority) as 1|2|3|4 : undefined,
-        });
-        return `Tarefa criada: "${task.content}"`;
-      }
-
-      case 'LIST_TASKS': {
-        const todoist = getTodoistService();
-        const filter = params.filter === 'all' ? undefined : 'today | overdue';
-        const tasks = await todoist.getTasks(filter);
-        
-        if (tasks.length === 0) return 'Nenhuma tarefa encontrada';
-        
-        const list = tasks.slice(0, 10).map((t, i) => {
-          const p = t.priority > 1 ? ` [P${5-t.priority}]` : '';
-          const d = t.due ? ` 📅${t.due.string}` : '';
-          return `${i+1}. ${t.content}${p}${d}`;
-        }).join('\n');
-        
-        // Store in state for AI context
-        this.appendInternalData(state, 'TODOIST (amostra)', list);
-        return `Tarefas carregadas (${tasks.length})`;
-      }
-
-      case 'COMPLETE_TASK': {
-        const todoist = getTodoistService();
-        await todoist.completeTask(params.id);
-        return `Tarefa ${params.id} concluída`;
-      }
-
-      case 'SEARCH_VAULT': {
-        const vault = getVaultService();
-        const query = (params.query || '').trim();
-        if (!query) return 'Busca inválida: query vazia';
-
-        const results = this.searchVaultRanked(vault, query);
-        if (results.length === 0) return `Nenhuma nota encontrada para "${query}"`;
-
-        // Ambiguous → do not read, ask user to choose
-        if (this.isAmbiguousSearch(results)) {
-          const top = results.slice(0, 6);
-          this.appendInternalData(
-            state,
-            `BUSCA AMBÍGUA: ${query}`,
-            `Peça ao usuário para escolher UM arquivo ou esclarecer (pessoa/quarter/projeto).\n\n` +
-              `CANDIDATOS:\n` +
-              top.map((r, i) => `${i + 1}. ${r.path}`).join('\n'),
-          );
-          return `Encontrei múltiplas notas possíveis para "${query}"`;
-        }
-
-        // Read best match
-        const mainFile = results[0].path;
-        const content = vault.readFile(mainFile);
-
-        if (!content) {
-          const fallback = results.slice(0, 3).map(r => r.path).join(', ');
-          return `Encontrei arquivos mas não consegui ler. Tente: ${fallback}`;
-        }
-
-        const cleanContent = this.cleanObsidianContent(content).substring(0, 6500);
-        this.appendInternalData(state, `FONTE: ${mainFile}`, cleanContent);
-        return `Dados carregados do Obsidian: ${mainFile}`;
-      }
-
-      case 'READ_NOTE': {
-        const vault = getVaultService();
-        const content = vault.readFile(params.path);
-        if (!content) return `Nota não encontrada: ${params.path}`;
-        const cleanContent = this.cleanObsidianContent(content).substring(0, 6500);
-        this.appendInternalData(state, `FONTE: ${params.path}`, cleanContent);
-        return `Dados carregados do Obsidian: ${params.path}`;
-      }
-
-      case 'NOTION_SEARCH': {
-        if (!this.notionSearch) return 'Notion não disponível';
-        const results = await this.notionSearch(params.query);
-        this.appendInternalData(state, `NOTION_SEARCH("${params.query}")`, results.substring(0, 6500));
-        return `Resultados do Notion carregados (${Math.min(results.length, 6500)} chars)`;
-      }
-
-      case 'NOTION_FETCH': {
-        if (!this.notionFetch) return 'Notion não disponível';
-        const content = await this.notionFetch(params.id);
-        this.appendInternalData(state, `NOTION_FETCH("${params.id}")`, content.substring(0, 6500));
-        return `Conteúdo do Notion carregado (${content.length} caracteres)`;
-      }
-
-      // ==================== GOOGLE CALENDAR ====================
-      
-      case 'CALENDAR_TODAY': {
-        if (!this.isGoogleAvailable()) return 'Google não autenticado. Peça ao usuário para rodar: obsidian-manager google auth';
-        const calendar = getCalendarService();
-        const events = await calendar.getTodayEvents();
-        
-        if (events.length === 0) return 'Nenhum evento para hoje! 🎉';
-        
-        const list = events.map(e => {
-          const parsed = calendar.parseEvent(e);
-          const time = parsed.isAllDay ? '📅 Dia inteiro' : `🕐 ${parsed.start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-          const meet = parsed.meetLink ? ' 🔗' : '';
-          return `• ${time} - ${parsed.title}${meet}`;
-        }).join('\n');
-        
-        this.appendInternalData(state, 'CALENDAR_TODAY', list);
-        return `📅 Eventos de hoje carregados (${events.length})`;
-      }
-
-      case 'CALENDAR_WEEK': {
-        if (!this.isGoogleAvailable()) return 'Google não autenticado';
-        const calendar = getCalendarService();
-        const events = await calendar.getWeekEvents();
-        
-        if (events.length === 0) return 'Semana livre! Nenhum evento nos próximos 7 dias.';
-        
-        const formatted = calendar.formatEventList(events);
-        this.appendInternalData(state, 'CALENDAR_WEEK', formatted);
-        return `📅 Eventos da semana carregados (${events.length})`;
-      }
-
-      case 'CALENDAR_NEXT': {
-        if (!this.isGoogleAvailable()) return 'Google não autenticado';
-        const calendar = getCalendarService();
-        const event = await calendar.getNextEvent();
-        
-        if (!event) return 'Nenhum próximo evento agendado.';
-        
-        const parsed = calendar.parseEvent(event);
-        const time = parsed.isAllDay 
-          ? 'Dia inteiro' 
-          : parsed.start.toLocaleString('pt-BR', { weekday: 'long', hour: '2-digit', minute: '2-digit' });
-        const meet = parsed.meetLink ? `\n🔗 Meet: ${parsed.meetLink}` : '';
-        const location = parsed.location ? `\n📍 ${parsed.location}` : '';
-        
-        return `⏰ PRÓXIMO EVENTO:\n\n📌 ${parsed.title}\n🕐 ${time}${location}${meet}`;
-      }
-
-      case 'CALENDAR_QUICK': {
-        if (!this.isGoogleAvailable()) return 'Google não autenticado';
-        const calendar = getCalendarService();
-        const event = await calendar.quickAdd(params.text);
-        return `✅ Evento criado: "${event.summary}"\n🔗 ${event.htmlLink}`;
-      }
-
-      // ==================== GMAIL ====================
-
-      case 'GMAIL_UNREAD': {
-        if (!this.isGoogleAvailable()) return 'Google não autenticado';
-        const gmail = getGmailService();
-        const max = params.max ? parseInt(params.max) : 10;
-        const messageRefs = await gmail.getUnreadMessages(max);
-        
-        if (messageRefs.length === 0) return '✨ Inbox zero! Nenhum email não lido.';
-        
-        const messages = [];
-        for (const ref of messageRefs.slice(0, 10)) {
-          const msg = await gmail.getMessage(ref.id);
-          const parsed = gmail.parseMessage(msg);
-          const fromName = parsed.from.match(/^([^<]+)/)?.[1]?.trim() || parsed.from;
-          messages.push(`• ${fromName.slice(0, 25)} - ${parsed.subject.slice(0, 40)}`);
-        }
-        
-        const list = messages.join('\n');
-        this.appendInternalData(state, 'GMAIL_UNREAD', list);
-        return `📬 Emails não lidos carregados (${messageRefs.length})`;
-      }
-
-      case 'GMAIL_IMPORTANT': {
-        if (!this.isGoogleAvailable()) return 'Google não autenticado';
-        const gmail = getGmailService();
-        const messageRefs = await gmail.getImportantUnread(10);
-        
-        if (messageRefs.length === 0) return '✨ Nenhum email importante não lido!';
-        
-        const messages = [];
-        for (const ref of messageRefs) {
-          const msg = await gmail.getMessage(ref.id);
-          const parsed = gmail.parseMessage(msg);
-          const fromName = parsed.from.match(/^([^<]+)/)?.[1]?.trim() || parsed.from;
-          messages.push(`⭐ ${fromName.slice(0, 25)} - ${parsed.subject.slice(0, 40)}`);
-        }
-        
-        const list = messages.join('\n');
-        return `📧 EMAILS IMPORTANTES NÃO LIDOS (${messageRefs.length}):\n\n${list}`;
-      }
-
-      case 'GMAIL_SEARCH': {
-        if (!this.isGoogleAvailable()) return 'Google não autenticado';
-        const gmail = getGmailService();
-        const max = params.max ? parseInt(params.max) : 10;
-        const messages = await gmail.search(params.query, max);
-        
-        if (messages.length === 0) return `Nenhum email encontrado para: "${params.query}"`;
-        
-        const list = messages.map(msg => {
-          const parsed = gmail.parseMessage(msg);
-          const fromName = parsed.from.match(/^([^<]+)/)?.[1]?.trim() || parsed.from;
-          return `• ${fromName.slice(0, 20)} - ${parsed.subject.slice(0, 35)}`;
-        }).join('\n');
-        
-        this.appendInternalData(state, `GMAIL_SEARCH("${params.query}")`, list);
-        return `🔍 Busca no Gmail carregada (${messages.length})`;
-      }
-
-      case 'GMAIL_READ': {
-        if (!this.isGoogleAvailable()) return 'Google não autenticado';
-        const gmail = getGmailService();
-        const message = await gmail.getMessage(params.id);
-        const parsed = gmail.parseMessage(message);
-        
-        const content = `
-De: ${parsed.from}
-Para: ${parsed.to.join(', ')}
-Assunto: ${parsed.subject}
-Data: ${parsed.date.toLocaleString('pt-BR')}
-
-${parsed.body.slice(0, 2000)}${parsed.body.length > 2000 ? '\n\n[...truncado]' : ''}
-        `.trim();
-        
-        this.appendInternalData(state, `GMAIL_READ("${params.id}")`, content);
-        return `📧 Email carregado`;
-      }
-
-      default:
-        return `Ação desconhecida: ${actionType}`;
-    }
+    return await this.tools.execute(actionType, params, {
+      chatId,
+      appendInternalData: (title, payload, limit) => this.appendInternalData(state, title, payload, limit),
+      notion: { search: this.notionSearch, fetch: this.notionFetch },
+    });
   }
 
   private searchVault(vault: ReturnType<typeof getVaultService>, query: string): string[] {
@@ -1169,10 +955,7 @@ ${parsed.body.slice(0, 2000)}${parsed.body.length > 2000 ? '\n\n[...truncado]' :
   }
 
   private cleanObsidianContent(content: string): string {
-    return content
-      .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2') // [[path|name]] -> name
-      .replace(/\[\[([^\]]+)\]\]/g, '$1') // [[name]] -> name
-      .replace(/^---[\s\S]*?---\n/m, ''); // Remove frontmatter
+    return cleanObsidianContent(content);
   }
 
   private normalizeText(text: string): string {
@@ -1292,96 +1075,14 @@ ${parsed.body.slice(0, 2000)}${parsed.body.length > 2000 ? '\n\n[...truncado]' :
   }
 
   private isAmbiguousSearch(results: Array<{ path: string; score: number; reason: string }>): boolean {
-    if (results.length <= 1) return false;
-    const top = results[0];
-    const second = results[1];
-    // If scores are close or top is weak, ask user.
-    if (top.score < 35) return true;
-    if (second.score >= top.score - 8) return true;
-    return false;
+    return isAmbiguousSearch(results);
   }
 
   private searchVaultRanked(
     vault: ReturnType<typeof getVaultService>,
     query: string
   ): Array<{ path: string; score: number; reason: string }> {
-    const tokens = this.tokenizeQuery(query);
-    const results: Array<{ path: string; score: number; reason: string }> = [];
-    const roots = this.getSearchRootsForQuery(tokens);
-
-    const seen = new Set<string>();
-
-    const consider = (filePath: string) => {
-      if (seen.has(filePath)) return;
-      seen.add(filePath);
-      const { score, reason } = this.scorePath(filePath, tokens);
-      if (score > 0) results.push({ path: filePath, score, reason });
-    };
-
-    const search = (folder: string) => {
-      try {
-        for (const f of vault.listFiles(folder)) {
-          const filePath = `${folder}/${f}`;
-          consider(filePath);
-        }
-        for (const sub of vault.listFolders(folder)) {
-          search(`${folder}/${sub}`);
-        }
-      } catch {
-        // ignore
-      }
-    };
-
-    roots.forEach(search);
-
-    // Sort by score desc
-    results.sort((a, b) => b.score - a.score);
-
-    // If ranking found nothing meaningful, fall back to previous simplistic method with content match
-    if (results.length === 0) {
-      const fallback: string[] = [];
-      const terms = this.normalizeText(query).split(/\s+/).filter(Boolean);
-      const search2 = (folder: string) => {
-        try {
-          for (const f of vault.listFiles(folder)) {
-            const filePath = `${folder}/${f}`;
-            const fileName = this.normalizeText(f);
-            if (terms.some(t => fileName.includes(t))) {
-              fallback.push(filePath);
-              continue;
-            }
-            if (f.endsWith('.md') && terms.length > 1) {
-              const content = vault.readFile(filePath);
-              if (content) {
-                const cl = this.normalizeText(content);
-                if (terms.every(t => cl.includes(t))) fallback.push(filePath);
-              }
-            }
-          }
-          for (const sub of vault.listFolders(folder)) search2(`${folder}/${sub}`);
-        } catch { /* ignore */ }
-      };
-      ['00-INBOX', '10-AREAS', '20-RESOURCES', '30-PROJECTS'].forEach(search2);
-      return fallback.slice(0, 10).map(p => ({ path: p, score: 1, reason: 'fallback' }));
-    }
-
-    // Content re-scoring for top candidates (cheap + improves precision)
-    const top = results.slice(0, 8);
-    for (const r of top) {
-      try {
-        const content = vault.readFile(r.path);
-        if (!content) continue;
-        const cl = this.normalizeText(content);
-        let hits = 0;
-        for (const t of tokens) if (t && cl.includes(t)) hits++;
-        if (hits > 0) {
-          r.score += Math.min(30, hits * 4);
-          r.reason += `+conteudo(${hits})`;
-        }
-      } catch { /* ignore */ }
-    }
-    results.sort((a, b) => b.score - a.score);
-    return results.slice(0, 20);
+    return searchVaultRanked(vault, query);
   }
 
   private removeExecuteTags(message: string): string {

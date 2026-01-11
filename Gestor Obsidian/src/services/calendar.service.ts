@@ -1,4 +1,3 @@
-import { config } from 'dotenv';
 import { getGoogleAuthService } from './google-auth.service.js';
 import type {
   GoogleCalendarEvent,
@@ -9,8 +8,9 @@ import type {
 } from '../types/google.js';
 import { logger } from '../utils/logger.js';
 import { format, parseISO, startOfDay, endOfDay, addDays } from 'date-fns';
+import { loadEnv } from '../utils/env.js';
 
-config();
+loadEnv();
 
 const CALENDAR_API_URL = 'https://www.googleapis.com/calendar/v3';
 

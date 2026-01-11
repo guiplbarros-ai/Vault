@@ -1,12 +1,20 @@
-import { config } from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as http from 'http';
 import { URL } from 'url';
 import type { GoogleTokens, GoogleCredentials } from '../types/google.js';
 import { logger } from '../utils/logger.js';
+import { loadEnv } from '../utils/env.js';
 
-config();
+loadEnv();
+
+type GoogleTokenResponse = {
+  access_token: string;
+  refresh_token?: string;
+  scope?: string;
+  token_type: string;
+  expires_in?: number;
+};
 
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar',
@@ -14,17 +22,40 @@ const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.modify',
+  // Google Sheets (leitura) - para sync financeiro
+  'https://www.googleapis.com/auth/spreadsheets.readonly',
 ];
 
-const TOKEN_PATH = path.join(
-  process.env.HOME || process.env.USERPROFILE || '.',
-  '.obsidian-manager',
-  'google-tokens.json'
-);
+function getTokenDir(): string {
+  return path.join(
+    process.env.HOME || process.env.USERPROFILE || '.',
+    '.obsidian-manager'
+  );
+}
+
+function safeClientKey(clientId: string): string {
+  // client_id looks like: xxxx.apps.googleusercontent.com
+  // We just need a stable file name segment.
+  return clientId
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+}
+
+function getTokenPathForClient(clientId: string): string {
+  const explicit = process.env.GOOGLE_TOKENS_PATH;
+  if (explicit) return explicit;
+  const dir = getTokenDir();
+  const key = safeClientKey(clientId) || 'unknown-client';
+  return path.join(dir, `google-tokens.${key}.json`);
+}
 
 class GoogleAuthService {
   private credentials: GoogleCredentials;
   private tokens: GoogleTokens | null = null;
+  private tokenPath: string;
 
   constructor() {
     const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -45,7 +76,12 @@ class GoogleAuthService {
       redirect_uri: redirectUri,
     };
 
+    this.tokenPath = getTokenPathForClient(this.credentials.client_id);
     this.loadTokens();
+  }
+
+  getTokenPath(): string {
+    return this.tokenPath;
   }
 
   /**
@@ -53,8 +89,8 @@ class GoogleAuthService {
    */
   private loadTokens(): void {
     try {
-      if (fs.existsSync(TOKEN_PATH)) {
-        const tokenData = fs.readFileSync(TOKEN_PATH, 'utf-8');
+      if (fs.existsSync(this.tokenPath)) {
+        const tokenData = fs.readFileSync(this.tokenPath, 'utf-8');
         this.tokens = JSON.parse(tokenData);
         logger.info('Google Auth: Tokens carregados do arquivo');
       }
@@ -68,11 +104,11 @@ class GoogleAuthService {
    * Salva tokens no arquivo
    */
   private saveTokens(tokens: GoogleTokens): void {
-    const dir = path.dirname(TOKEN_PATH);
+    const dir = path.dirname(this.tokenPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2));
+    fs.writeFileSync(this.tokenPath, JSON.stringify(tokens, null, 2));
     this.tokens = tokens;
     logger.info('Google Auth: Tokens salvos');
   }
@@ -87,7 +123,8 @@ class GoogleAuthService {
       response_type: 'code',
       scope: SCOPES.join(' '),
       access_type: 'offline',
-      prompt: 'consent',
+      // força escolher conta + reconsentimento (bom para múltiplas contas)
+      prompt: 'consent select_account',
     });
 
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
@@ -116,8 +153,17 @@ class GoogleAuthService {
       throw new Error(`Erro ao trocar código: ${error}`);
     }
 
-    const tokens = await response.json() as GoogleTokens;
-    tokens.expiry_date = Date.now() + (tokens.expiry_date || 3600) * 1000;
+    const raw = (await response.json()) as GoogleTokenResponse;
+    const expiresIn = Number(raw.expires_in ?? 3600);
+    const tokens: GoogleTokens = {
+      access_token: raw.access_token,
+      // Em alguns casos o Google NÃO retorna refresh_token (ex.: re-consentimento).
+      // Mantemos o refresh_token anterior para não "deslogar" o usuário.
+      refresh_token: raw.refresh_token ?? this.tokens?.refresh_token,
+      scope: raw.scope ?? SCOPES.join(' '),
+      token_type: raw.token_type,
+      expiry_date: Date.now() + expiresIn * 1000,
+    };
     
     this.saveTokens(tokens);
     return tokens;
@@ -149,12 +195,13 @@ class GoogleAuthService {
       throw new Error(`Erro ao renovar token: ${error}`);
     }
 
-    const newTokens = await response.json() as Partial<GoogleTokens>;
+    const raw = (await response.json()) as Partial<GoogleTokenResponse>;
+    const expiresIn = Number(raw.expires_in ?? 3600);
     
     const tokens: GoogleTokens = {
       ...this.tokens,
-      access_token: newTokens.access_token!,
-      expiry_date: Date.now() + (newTokens.expiry_date || 3600) * 1000,
+      access_token: raw.access_token!,
+      expiry_date: Date.now() + expiresIn * 1000,
     };
     
     this.saveTokens(tokens);
@@ -185,6 +232,15 @@ class GoogleAuthService {
    */
   isAuthenticated(): boolean {
     return this.tokens !== null && !!this.tokens.access_token;
+  }
+
+  /**
+   * Verifica se o token atual contém TODOS os escopos exigidos pelo app.
+   * (Útil quando adicionamos novos escopos, ex: Sheets.)
+   */
+  hasAllRequiredScopes(): boolean {
+    const granted = new Set((this.tokens?.scope ?? '').split(/\s+/).filter(Boolean));
+    return SCOPES.every((s) => granted.has(s));
   }
 
   /**
@@ -258,8 +314,8 @@ class GoogleAuthService {
    * Remove tokens salvos (logout)
    */
   logout(): void {
-    if (fs.existsSync(TOKEN_PATH)) {
-      fs.unlinkSync(TOKEN_PATH);
+    if (fs.existsSync(this.tokenPath)) {
+      fs.unlinkSync(this.tokenPath);
     }
     this.tokens = null;
     logger.info('Google Auth: Logout realizado');

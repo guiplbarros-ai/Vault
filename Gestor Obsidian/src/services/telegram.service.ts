@@ -1,5 +1,4 @@
 import TelegramBot from 'node-telegram-bot-api';
-import { config } from 'dotenv';
 import * as path from 'node:path';
 import { getBrainService, type BrainService } from './brain.service.js';
 import { getNotionService } from './notion.service.js';
@@ -11,8 +10,10 @@ import { getCalendarService } from './calendar.service.js';
 import { getGoogleAuthService } from './google-auth.service.js';
 import { logger } from '../utils/logger.js';
 import { acquireProcessLockSync, type ProcessLock } from '../utils/process-lock.js';
+import { loadEnv } from '../utils/env.js';
+import { getAgentService, type AgentService } from './agent.service.js';
 
-config();
+loadEnv();
 
 // Notion MCP functions - will be set by external caller if available
 let notionSearchFn: ((query: string) => Promise<string>) | null = null;
@@ -27,27 +28,34 @@ export function setNotionFunctions(
   logger.info('Notion functions registered');
 }
 
+type TelegramMode = 'polling' | 'webhook';
+
 class TelegramService {
   private bot: TelegramBot;
   private authorizedUsers: number[];
   private brain: BrainService | null = null;
+  private agent: AgentService | null = null;
   private pollingRestartAttempts = 0;
   private pollingRestartTimer: NodeJS.Timeout | null = null;
   private lock: ProcessLock | null = null;
   private shutdownHooked = false;
+  private mode: TelegramMode;
 
-  constructor() {
+  constructor(mode: TelegramMode = 'polling') {
+    this.mode = mode;
     const token = process.env.TELEGRAM_BOT_TOKEN;
     
     if (!token) {
       throw new Error('TELEGRAM_BOT_TOKEN não configurado');
     }
 
-    // Prevent two processes from polling at the same time (common root cause of 409 Conflict).
-    // Override with TELEGRAM_LOCK_PATH if needed.
-    const lockPath = process.env.TELEGRAM_LOCK_PATH || path.join(process.cwd(), '.telegram-bot.lock');
-    this.lock = acquireProcessLockSync(lockPath);
-    logger.info(`Telegram lock adquirido: ${this.lock.lockPath} (pid=${process.pid})`);
+    if (mode === 'polling') {
+      // Prevent two processes from polling at the same time (common root cause of 409 Conflict).
+      // Override with TELEGRAM_LOCK_PATH if needed.
+      const lockPath = process.env.TELEGRAM_LOCK_PATH || path.join(process.cwd(), '.telegram-bot.lock');
+      this.lock = acquireProcessLockSync(lockPath);
+      logger.info(`Telegram lock adquirido: ${this.lock.lockPath} (pid=${process.pid})`);
+    }
 
     const authorizedIds = process.env.TELEGRAM_AUTHORIZED_USERS;
     this.authorizedUsers = authorizedIds 
@@ -57,24 +65,41 @@ class TelegramService {
           .filter(n => Number.isFinite(n))
       : [];
 
-    // Use explicit polling config so we can recover from transient errors.
-    this.bot = new TelegramBot(token, {
-      polling: ({
-        autoStart: false,
-        // Keep interval low; Telegram long polling does most of the work.
-        interval: 300,
-        params: { timeout: 30 }
-      } as any)
-    });
+    if (mode === 'polling') {
+      // Use explicit polling config so we can recover from transient errors.
+      this.bot = new TelegramBot(token, {
+        polling: ({
+          autoStart: false,
+          // Keep interval low; Telegram long polling does most of the work.
+          interval: 300,
+          params: { timeout: 30 }
+        } as any)
+      });
+    } else {
+      // Webhook mode: updates are injected via processUpdate().
+      this.bot = new TelegramBot(token, { polling: false });
+    }
     this.setupBrain();
     this.setupDailyDigest();
     this.setupHandlers();
 
-    // Start polling asynchronously (allows deleteWebhook + clear startup errors).
-    void this.initPolling();
+    if (mode === 'polling') {
+      // Start polling asynchronously (allows deleteWebhook + clear startup errors).
+      void this.initPolling();
+    }
 
     this.hookShutdown();
     logger.info('Telegram bot iniciado');
+  }
+
+  /**
+   * Webhook mode: process incoming update.
+   */
+  processUpdate(update: unknown): void {
+    if (this.mode !== 'webhook') {
+      throw new Error('processUpdate só é suportado em modo webhook');
+    }
+    (this.bot as any).processUpdate(update);
   }
 
   private hookShutdown(): void {
@@ -128,6 +153,7 @@ class TelegramService {
     try {
       const brain = getBrainService();
       this.brain = brain;
+      this.agent = getAgentService();
       
       // Try to connect Notion
       const notion = getNotionService();
@@ -556,7 +582,7 @@ Manda ver! 🚀
           return;
         }
 
-        const response = await this.brain.chat(msg.chat.id, msg.text);
+        const response = await (this.agent ?? getAgentService()).chat(msg.chat.id, msg.text);
 
         // Send response, splitting if needed
         await this.sendLongMessage(msg.chat.id, response.message);
@@ -703,14 +729,18 @@ Manda ver! 🚀
       }
     } catch { /* ignore */ }
 
-    try {
-      (this.bot as any).stopPolling?.();
-    } catch { /* ignore */ }
+    if (this.mode === 'polling') {
+      try {
+        (this.bot as any).stopPolling?.();
+      } catch { /* ignore */ }
+    }
 
-    try {
-      this.lock?.release();
-      if (this.lock) logger.info(`Telegram lock liberado: ${this.lock.lockPath} (pid=${process.pid})`);
-    } catch { /* ignore */ }
+    if (this.mode === 'polling') {
+      try {
+        this.lock?.release();
+        if (this.lock) logger.info(`Telegram lock liberado: ${this.lock.lockPath} (pid=${process.pid})`);
+      } catch { /* ignore */ }
+    }
     this.lock = null;
   }
 }
@@ -719,7 +749,14 @@ let instance: TelegramService | null = null;
 
 export function startTelegramBot(): TelegramService {
   if (!instance) {
-    instance = new TelegramService();
+    instance = new TelegramService('polling');
+  }
+  return instance;
+}
+
+export function getTelegramWebhookBot(): TelegramService {
+  if (!instance) {
+    instance = new TelegramService('webhook');
   }
   return instance;
 }

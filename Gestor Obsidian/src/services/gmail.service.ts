@@ -1,4 +1,3 @@
-import { config } from 'dotenv';
 import { getGoogleAuthService } from './google-auth.service.js';
 import type {
   GmailMessage,
@@ -10,8 +9,9 @@ import type {
 } from '../types/google.js';
 import { logger } from '../utils/logger.js';
 import { format } from 'date-fns';
+import { loadEnv } from '../utils/env.js';
 
-config();
+loadEnv();
 
 const GMAIL_API_URL = 'https://www.googleapis.com/gmail/v1';
 

@@ -1,4 +1,3 @@
-import { config } from 'dotenv';
 import type { 
   TodoistTask, 
   TodoistProject, 
@@ -7,8 +6,9 @@ import type {
   TodoistCollaborator,
 } from '../types/todoist.js';
 import { logger } from '../utils/logger.js';
+import { loadEnv } from '../utils/env.js';
 
-config();
+loadEnv();
 
 const TODOIST_API_URL = 'https://api.todoist.com/rest/v2';
 
