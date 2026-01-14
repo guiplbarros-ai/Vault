@@ -16,26 +16,13 @@ npm install
 cp env.example .env
 ```
 
-Edite `.env` (ou use perfis `.env.*`) e configure:
+Edite `.env` e configure:
 - `OBSIDIAN_VAULT_PATH` - caminho absoluto do seu vault
 - `TODOIST_API_TOKEN` - token da API do Todoist
 - `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` - credenciais OAuth do Google (ver seção Google Calendar & Gmail)
+- (Opcional) `SUPERMEMORY_API_KEY` - memória de longo prazo (cloud) via Supermemory
 
-### Perfis de ambiente (pessoal / código / trabalho)
-
-Para evitar misturar contas do Google (ex.: pessoal vs profissional), você pode criar arquivos:
-- `.env.pessoal`
-- `.env.codigo`
-- `.env.trabalho`
-
-E rodar comandos escolhendo o profile:
-
-```bash
-OBSIDIAN_MANAGER_ENV_FILE=.env.pessoal npm run dev -- google diag
-OBSIDIAN_MANAGER_ENV_FILE=.env.pessoal npm run dev -- google auth --force
-```
-
-> Dica: combine profiles com `GOOGLE_TOKENS_PATH` para isolar tokens por conta.
+> Nota: este projeto agora carrega **apenas** o arquivo `.env` (centralizado) para evitar inconsistências.
 
 ## Comandos Disponíveis
 
@@ -483,9 +470,16 @@ npm run start:cli -- note "teste"
 
 Docs (detalhado):
 - `docs/arquitetura-agente-segundo-cerebro.md`
+- `docs/supermemory.md`
 - `docs/uso-possiveis-checklist.md`
 - `docs/PRD-segundo-cerebro-telegram.md`
 - `docs/roadmap-etapas-validacoes.md`
+- `docs/CHANGELOG.md`
+- `docs/decisoes/README.md` (ADRs)
+- `docs/modelo-dados-taxonomia.md`
+- `docs/CRM-pessoal-e-profissional.md`
+- `docs/plano-de-contas-taxonomia-pessoal.md`
+- `docs/mcp-supabase-cursor.md`
 
 ```
 obsidian-manager/

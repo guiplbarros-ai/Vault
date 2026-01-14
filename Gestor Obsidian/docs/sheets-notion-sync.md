@@ -6,8 +6,8 @@ Esta integração existe para manter o **controle financeiro do Google Sheets** 
 ### O que foi implementado
 
 - **Perfis de ambiente**:
-  - Suporte a múltiplos arquivos `.env.*` via `OBSIDIAN_MANAGER_ENV_FILE` (ou `ENV_FILE`).
-  - Carregamento de env centralizado em `src/utils/env.ts` com `override: true` para evitar “vazamento” de variáveis exportadas no shell.
+- Carregamento de env centralizado em `src/utils/env.ts` com `override: true` para evitar “vazamento” de variáveis exportadas no shell.
+- Este projeto usa **apenas** o arquivo `.env` (centralizado) para reduzir inconsistências.
 
 - **Comando de sync (CLI)**:
   - `npm run dev -- sheets sync-finance`
@@ -35,21 +35,19 @@ Esta integração existe para manter o **controle financeiro do Google Sheets** 
 #### 1) Diagnóstico (qual profile está ativo)
 
 ```bash
-OBSIDIAN_MANAGER_ENV_FILE=.env.pessoal  npm run dev -- google diag
-OBSIDIAN_MANAGER_ENV_FILE=.env.codigo   npm run dev -- google diag
-OBSIDIAN_MANAGER_ENV_FILE=.env.trabalho npm run dev -- google diag
+npm run dev -- google diag
 ```
 
 #### 2) Autenticar o Google (no profile certo)
 
 ```bash
-OBSIDIAN_MANAGER_ENV_FILE=.env.pessoal npm run dev -- google auth --force
+npm run dev -- google auth --force
 ```
 
 #### 3) Ler o Sheets (sem Notion)
 
 ```bash
-OBSIDIAN_MANAGER_ENV_FILE=.env.pessoal npm run dev -- sheets sync-finance \
+npm run dev -- sheets sync-finance \
   --spreadsheet "1dck3mGWp2BHAPfgk3tDKA3d53oIlzJq0RPze3Se6wok" \
   --range 'Financeiro!A1:K30' \
   --dry-run
@@ -63,7 +61,7 @@ Pré-requisitos no mesmo profile:
 - Database compartilhada com a integração do `NOTION_API_KEY`.
 
 ```bash
-OBSIDIAN_MANAGER_ENV_FILE=.env.pessoal npm run dev -- sheets sync-finance \
+npm run dev -- sheets sync-finance \
   --spreadsheet "1dck3mGWp2BHAPfgk3tDKA3d53oIlzJq0RPze3Se6wok" \
   --range 'Financeiro!A1:Z2000' \
   --notionDb "2e482982-7596-8076-bfa7-c1cdb5bb2e91"

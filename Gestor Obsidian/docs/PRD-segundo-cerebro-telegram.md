@@ -93,6 +93,13 @@ Uso do Obsidian:
 - Follow-up (“faz 30 dias que não falo com X”)
 - Notas sobre pessoas
 
+### CRM (pessoal e profissional) — obrigatório no produto
+- Separação por contexto (**pessoal** vs **Freelaw**) com regras de roteamento
+- Registro de interações (timeline por pessoa)
+- Pendências por pessoa (“o que estou esperando do X?”)
+- Follow-ups automáticos (com proatividade e janela de silêncio)
+- Documentação: `docs/CRM-pessoal-e-profissional.md`
+
 ### Finanças (obrigatório)
 - Registrar transações (manual e/ou importadas)
 - Categorias e regras de categorização

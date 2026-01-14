@@ -14,6 +14,7 @@
     "dev": "node --import tsx src/index.ts",
     "dev:server": "node --import tsx src/server.ts",
     "start:server": "node dist/server.js",
+    "mcp:supabase": "node --import tsx src/mcp/supabase.server.ts",
     "mcp:todoist": "node --import tsx src/mcp/todoist.server.ts",
     "note": "node --import tsx src/index.ts note",
     "calendar": "node --import tsx src/index.ts calendar",
@@ -31,14 +32,18 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",
+    "@supabase/supabase-js": "^2.90.1",
     "commander": "^12.1.0",
     "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.5",
     "gray-matter": "^4.0.3",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
     "node-telegram-bot-api": "^0.66.0",
-    "openai": "^4.73.0"
+    "openai": "^4.73.0",
+    "pg": "^8.16.3",
+    "rss-parser": "^3.13.0"
   },
   "overrides": {
     "node-telegram-bot-api": {
@@ -50,6 +55,7 @@
     "@types/node": "^22.10.1",
     "@types/node-cron": "^3.0.11",
     "@types/node-telegram-bot-api": "^0.64.7",
+    "@types/pg": "^8.16.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

@@ -16,12 +16,24 @@ loadEnv();
 const GMAIL_API_URL = 'https://www.googleapis.com/gmail/v1';
 
 class GmailService {
+  constructor(
+    private workspaceId?: string,
+    private accountEmail?: string | null,
+    private forcedAccessToken?: string
+  ) {}
+
+  private async resolveAccessToken(): Promise<string> {
+    if (this.forcedAccessToken) return this.forcedAccessToken;
+
+    const auth = getGoogleAuthService(this.workspaceId, this.accountEmail || null);
+    return await auth.getValidAccessToken();
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const authService = getGoogleAuthService();
-    const accessToken = await authService.getValidAccessToken();
+    const accessToken = await this.resolveAccessToken();
     
     const url = `${GMAIL_API_URL}${endpoint}`;
     
@@ -41,6 +53,25 @@ class GmailService {
 
     const text = await response.text();
     return text ? JSON.parse(text) : (null as T);
+  }
+
+  private encodeRawEmail(raw: string): string {
+    return Buffer.from(raw)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  }
+
+  async modifyLabels(input: { messageId: string; addLabelIds?: string[]; removeLabelIds?: string[] }): Promise<void> {
+    const { messageId, addLabelIds, removeLabelIds } = input;
+    await this.request(`/users/me/messages/${messageId}/modify`, {
+      method: 'POST',
+      body: JSON.stringify({
+        addLabelIds: addLabelIds?.length ? addLabelIds : undefined,
+        removeLabelIds: removeLabelIds?.length ? removeLabelIds : undefined,
+      }),
+    });
   }
 
   /**
@@ -139,12 +170,7 @@ class GmailService {
    * Marca mensagem como lida
    */
   async markAsRead(messageId: string): Promise<void> {
-    await this.request(`/users/me/messages/${messageId}/modify`, {
-      method: 'POST',
-      body: JSON.stringify({
-        removeLabelIds: ['UNREAD'],
-      }),
-    });
+    await this.modifyLabels({ messageId, removeLabelIds: ['UNREAD'] });
     logger.info(`Gmail: Mensagem ${messageId} marcada como lida`);
   }
 
@@ -152,12 +178,7 @@ class GmailService {
    * Marca mensagem como não lida
    */
   async markAsUnread(messageId: string): Promise<void> {
-    await this.request(`/users/me/messages/${messageId}/modify`, {
-      method: 'POST',
-      body: JSON.stringify({
-        addLabelIds: ['UNREAD'],
-      }),
-    });
+    await this.modifyLabels({ messageId, addLabelIds: ['UNREAD'] });
     logger.info(`Gmail: Mensagem ${messageId} marcada como não lida`);
   }
 
@@ -165,12 +186,7 @@ class GmailService {
    * Arquiva uma mensagem (remove da Inbox)
    */
   async archive(messageId: string): Promise<void> {
-    await this.request(`/users/me/messages/${messageId}/modify`, {
-      method: 'POST',
-      body: JSON.stringify({
-        removeLabelIds: ['INBOX'],
-      }),
-    });
+    await this.modifyLabels({ messageId, removeLabelIds: ['INBOX'] });
     logger.info(`Gmail: Mensagem ${messageId} arquivada`);
   }
 
@@ -188,13 +204,13 @@ class GmailService {
    * Adiciona label a uma mensagem
    */
   async addLabel(messageId: string, labelId: string): Promise<void> {
-    await this.request(`/users/me/messages/${messageId}/modify`, {
-      method: 'POST',
-      body: JSON.stringify({
-        addLabelIds: [labelId],
-      }),
-    });
+    await this.modifyLabels({ messageId, addLabelIds: [labelId] });
     logger.info(`Gmail: Label adicionada à mensagem ${messageId}`);
+  }
+
+  async removeLabel(messageId: string, labelId: string): Promise<void> {
+    await this.modifyLabels({ messageId, removeLabelIds: [labelId] });
+    logger.info(`Gmail: Label removida da mensagem ${messageId}`);
   }
 
   /**
@@ -229,11 +245,7 @@ class GmailService {
     const email = `${headers.join('\r\n')}\r\n\r\n${body}`;
     
     // Codifica em base64 URL-safe
-    const encodedEmail = Buffer.from(email)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
+    const encodedEmail = this.encodeRawEmail(email);
 
     const requestBody: { raw: string; threadId?: string } = {
       raw: encodedEmail,
@@ -250,6 +262,20 @@ class GmailService {
 
     logger.info(`Gmail: Email enviado - "${subject}" para ${toAddresses}`);
     return result;
+  }
+
+  /**
+   * Envia um email "raw" (RFC822) — necessário para reply/thread consistente.
+   */
+  async sendRawEmail(rawEmail: string, threadId?: string): Promise<GmailMessage> {
+    const requestBody: { raw: string; threadId?: string } = {
+      raw: this.encodeRawEmail(rawEmail),
+    };
+    if (threadId) requestBody.threadId = threadId;
+    return await this.request<GmailMessage>('/users/me/messages/send', {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+    });
   }
 
   /**
@@ -271,11 +297,7 @@ class GmailService {
     }
 
     const email = `${headers.join('\r\n')}\r\n\r\n${body}`;
-    const encodedEmail = Buffer.from(email)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
+    const encodedEmail = this.encodeRawEmail(email);
 
     const result = await this.request<{ id: string; message: GmailMessage }>('/users/me/drafts', {
       method: 'POST',
@@ -285,6 +307,21 @@ class GmailService {
     });
 
     logger.info(`Gmail: Rascunho criado - "${subject}"`);
+    return result;
+  }
+
+  /**
+   * Cria rascunho a partir de um email raw (RFC822).
+   */
+  async createDraftRaw(rawEmail: string): Promise<{ id: string; message: GmailMessage }> {
+    const encodedEmail = this.encodeRawEmail(rawEmail);
+    const result = await this.request<{ id: string; message: GmailMessage }>('/users/me/drafts', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: { raw: encodedEmail },
+      }),
+    });
+    logger.info(`Gmail: Rascunho raw criado (ID: ${result.id})`);
     return result;
   }
 
@@ -308,9 +345,10 @@ class GmailService {
   /**
    * Decodifica corpo da mensagem
    */
-  private decodeBody(payload: GmailMessage['payload']): string {
+  private decodeBody(payload: GmailMessage['payload'] | undefined | null): string {
+    if (!payload) return '';
     // Se o corpo está diretamente no payload
-    if (payload.body.data) {
+    if (payload.body?.data) {
       return Buffer.from(payload.body.data, 'base64').toString('utf-8');
     }
 
@@ -351,7 +389,7 @@ class GmailService {
     const subject = this.getHeader(message, 'Subject');
     const dateStr = this.getHeader(message, 'Date');
     
-    const hasAttachments = message.payload.parts?.some(
+    const hasAttachments = message.payload?.parts?.some(
       p => p.filename && p.filename.length > 0
     ) || false;
 
@@ -451,13 +489,8 @@ class GmailService {
 }
 
 // Singleton
-let gmailInstance: GmailService | null = null;
-
-export function getGmailService(): GmailService {
-  if (!gmailInstance) {
-    gmailInstance = new GmailService();
-  }
-  return gmailInstance;
+export function getGmailService(workspaceId?: string, accountEmail?: string | null, forcedAccessToken?: string): GmailService {
+  return new GmailService(workspaceId, accountEmail || null, forcedAccessToken);
 }
 
 export { GmailService };

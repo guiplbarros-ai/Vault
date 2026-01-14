@@ -24,8 +24,8 @@ class NotionDbService {
   private baseUrl = 'https://api.notion.com/v1';
   private version = '2025-09-03';
 
-  constructor() {
-    const key = process.env.NOTION_API_KEY;
+  constructor(apiKey?: string) {
+    const key = (apiKey || process.env.NOTION_API_KEY || '').trim();
     if (!key) throw new Error('NOTION_API_KEY não configurado');
     this.apiKey = key;
   }
@@ -111,12 +111,22 @@ class NotionDbService {
   }
 }
 
-let notionDbInstance: NotionDbService | null = null;
+const notionDbInstances = new Map<string, NotionDbService>();
 
-export function getNotionDbService(): NotionDbService | null {
-  if (!process.env.NOTION_API_KEY) return null;
-  if (!notionDbInstance) notionDbInstance = new NotionDbService();
-  return notionDbInstance;
+function keyForWorkspace(workspaceId?: 'pessoal' | 'freelaw'): string {
+  if (workspaceId === 'freelaw') return (process.env.NOTION_API_KEY_FREELAW || process.env.NOTION_API_KEY || '').trim();
+  if (workspaceId === 'pessoal') return (process.env.NOTION_API_KEY_PESSOAL || process.env.NOTION_API_KEY || '').trim();
+  return (process.env.NOTION_API_KEY || '').trim();
+}
+
+export function getNotionDbService(workspaceId?: 'pessoal' | 'freelaw'): NotionDbService | null {
+  const key = keyForWorkspace(workspaceId);
+  if (!key) return null;
+  const cacheKey = `${workspaceId || 'default'}:${key.slice(0, 6)}`;
+  if (!notionDbInstances.has(cacheKey)) {
+    notionDbInstances.set(cacheKey, new NotionDbService(key));
+  }
+  return notionDbInstances.get(cacheKey)!;
 }
 
 export { NotionDbService };

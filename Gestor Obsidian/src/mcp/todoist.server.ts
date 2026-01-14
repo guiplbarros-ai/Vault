@@ -39,7 +39,7 @@ async function main() {
         {
           name: 'todoist_list_tasks',
           description:
-            'Lista tarefas ativas. Por padrão, retorna apenas tarefas atribuídas a você ("assigned to: me"). Aceita filtro Todoist (ex: "today | overdue") e/ou nome de projeto.\n\nRoteamento (importante):\n- Freelaw/financeiro: projeto "Gestão financeira"\n- Pessoal: projetos "Casinha :)" (casa/obra/reforma) ou "Guilherme Barros" (geral)',
+            'Lista tarefas ativas. Por padrão, retorna apenas tarefas atribuídas a você ("assigned to: me"). Aceita filtro Todoist (ex: "today | overdue") e/ou nome de projeto.\n\nRoteamento (importante):\n- Freelaw/financeiro: projeto "Gestão Financeira - Freelaw"\n- Pessoal: projetos "Casinha :)" (casa/obra/reforma) ou "Guilherme Barros" (geral)',
           inputSchema: {
             type: 'object',
             properties: {
@@ -68,7 +68,7 @@ async function main() {
         {
           name: 'todoist_add_task',
           description:
-            'Cria uma tarefa no Todoist. Você pode informar due, prioridade (1-4), projeto, labels e descrição.\n\nRoteamento (importante):\n- Freelaw/financeiro: use project "Gestão financeira"\n- Pessoal: use project "Casinha :)" (casa/obra/reforma) ou "Guilherme Barros" (geral)',
+            'Cria uma tarefa no Todoist. Você pode informar due, prioridade (1-4), projeto, labels e descrição.\n\nRoteamento (importante):\n- Freelaw/financeiro: use project "Gestão Financeira - Freelaw"\n- Pessoal: use project "Casinha :)" (casa/obra/reforma) ou "Guilherme Barros" (geral)',
           inputSchema: {
             type: 'object',
             properties: {

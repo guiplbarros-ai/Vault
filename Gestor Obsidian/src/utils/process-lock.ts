@@ -31,19 +31,27 @@ function safeUnlink(filePath: string): void {
 export function acquireProcessLockSync(lockPath: string): ProcessLock {
   const resolved = path.isAbsolute(lockPath) ? lockPath : path.join(process.cwd(), lockPath);
 
-  const tryAcquire = (): fs.WriteStream => {
-    // Using createWriteStream with 'wx' gives us atomic exclusive creation.
-    return fs.createWriteStream(resolved, { flags: 'wx', encoding: 'utf8' });
+  const writeLockFile = (payload: unknown): void => {
+    // IMPORTANT:
+    // - createWriteStream emits errors asynchronously (can crash if unhandled).
+    // - We want a *synchronous* exclusive creation so errors are catchable here.
+    //
+    // Using openSync with 'wx' is atomic and throws EEXIST synchronously.
+    const fd = fs.openSync(resolved, 'wx');
+    try {
+      const body = JSON.stringify(payload, null, 2);
+      fs.writeFileSync(fd, body, { encoding: 'utf8' });
+    } finally {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        // ignore
+      }
+    }
   };
 
   try {
-    const stream = tryAcquire();
-    const payload = JSON.stringify(
-      { pid: process.pid, startedAt: new Date().toISOString(), cwd: process.cwd() },
-      null,
-      2,
-    );
-    stream.end(payload);
+    writeLockFile({ pid: process.pid, startedAt: new Date().toISOString(), cwd: process.cwd() });
 
     return {
       lockPath: resolved,
@@ -70,13 +78,12 @@ export function acquireProcessLockSync(lockPath: string): ProcessLock {
 
       // Stale lock: remove and retry once.
       safeUnlink(resolved);
-      const stream = tryAcquire();
-      const payload = JSON.stringify(
-        { pid: process.pid, startedAt: new Date().toISOString(), cwd: process.cwd(), recoveredFromStale: true },
-        null,
-        2,
-      );
-      stream.end(payload);
+      writeLockFile({
+        pid: process.pid,
+        startedAt: new Date().toISOString(),
+        cwd: process.cwd(),
+        recoveredFromStale: true,
+      });
 
       return {
         lockPath: resolved,

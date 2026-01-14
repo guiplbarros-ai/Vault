@@ -9,10 +9,21 @@ Este projeto é um **segundo cérebro**. Para evitar misturar contexto **Freelaw
 
 ## Google (contas separadas)
 
-Recomendação: **não misturar** contas pessoais e profissionais no mesmo OAuth client/token.
+Agora estamos em modo **cloud-first** (Fly + Supabase) e o roteamento é feito por **contexto (workspace)**.
 
-- Use perfis `.env.*` (ex.: `.env.pessoal`, `.env.trabalho`) e rode com `OBSIDIAN_MANAGER_ENV_FILE`.
-- Use `GOOGLE_TOKENS_PATH` (um por profile) para isolar tokens.
+### Freelaw
+- 1 conta (ex.: `guilherme@freelaw.work`)
+- o bot usa a conta selecionada no chat (ou a primeira conectada)
+
+### Pessoal
+- *pool* de contas (ex.: `guilhermeplbarros@gmail.com` + `guiplbarros@gmail.com`)
+- leituras de **emails** e **agenda** consultam **todas as contas conectadas** e o bot responde com resultado mesclado
+- itens vêm prefixados com a conta: `[email@...]`
+
+> Ações mutáveis (ex.: enviar email, criar/editar/deletar evento, arquivar email, aplicar labels) seguem pedindo confirmação.
+> No **pessoal** com múltiplas contas, o bot exige uma conta **ativa** para mutações:
+> - use `GOOGLE_SET_ACCOUNT` para selecionar a conta
+> - ou use o formato `email::id` quando a ação for por id (ex.: `GMAIL_ARCHIVE`, `GMAIL_REPLY`, `CALENDAR_DELETE`)
 
 ## Todoist
 

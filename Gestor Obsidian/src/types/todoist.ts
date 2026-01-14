@@ -58,3 +58,11 @@ export interface TodoistCollaborator {
   name: string;
   email: string;
 }
+
+export interface TodoistComment {
+  id: string;
+  task_id: string | null;
+  project_id: string | null;
+  content: string;
+  posted_at: string;
+}

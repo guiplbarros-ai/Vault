@@ -12,15 +12,16 @@ function resolveEnvFile(input: string): string {
 
 /**
  * Decide qual arquivo de env carregar.
+ * 
+ * A partir de agora, este projeto usa **apenas um** arquivo central:
+ * - `.env` no diretório atual
  *
- * Ordem:
- * 1) OBSIDIAN_MANAGER_ENV_FILE (recomendado)
- * 2) ENV_FILE (compat)
- * 3) .env no diretório atual
+ * Motivo: reduzir inconsistências e erros operacionais com múltiplos `.env.*`.
  */
 export function getEnvFilePath(): string {
-  const raw = (process.env.OBSIDIAN_MANAGER_ENV_FILE || process.env.ENV_FILE || '.env').trim();
-  return resolveEnvFile(raw);
+  // Intencionalmente ignoramos OBSIDIAN_MANAGER_ENV_FILE/ENV_FILE.
+  // Mantemos resolveEnvFile por compatibilidade de path absoluto/relativo.
+  return resolveEnvFile('.env');
 }
 
 /**
@@ -31,6 +32,16 @@ export function getEnvFilePath(): string {
 export function loadEnv(): { path: string; exists: boolean } {
   if (loaded) {
     return { path: loadedPath || getEnvFilePath(), exists: loadedPath ? fs.existsSync(loadedPath) : false };
+  }
+
+  // Warn if user is trying to use multiple env files (no longer supported).
+  const overrideRequested = (process.env.OBSIDIAN_MANAGER_ENV_FILE || process.env.ENV_FILE || '').trim();
+  if (overrideRequested) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[env] OBSIDIAN_MANAGER_ENV_FILE/ENV_FILE foi definido, mas o projeto agora carrega apenas .env. ` +
+      `Ignorando override="${overrideRequested}".`
+    );
   }
 
   const envPath = getEnvFilePath();

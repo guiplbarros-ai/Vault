@@ -15,12 +15,23 @@ loadEnv();
 const CALENDAR_API_URL = 'https://www.googleapis.com/calendar/v3';
 
 class CalendarService {
+  constructor(
+    private workspaceId?: string,
+    private accountEmail?: string | null,
+    private forcedAccessToken?: string
+  ) {}
+
+  private async resolveAccessToken(): Promise<string> {
+    if (this.forcedAccessToken) return this.forcedAccessToken;
+    const authService = getGoogleAuthService(this.workspaceId, this.accountEmail || null);
+    return await authService.getValidAccessToken();
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const authService = getGoogleAuthService();
-    const accessToken = await authService.getValidAccessToken();
+    const accessToken = await this.resolveAccessToken();
     
     const url = `${CALENDAR_API_URL}${endpoint}`;
     
@@ -331,14 +342,8 @@ class CalendarService {
   }
 }
 
-// Singleton
-let calendarInstance: CalendarService | null = null;
-
-export function getCalendarService(): CalendarService {
-  if (!calendarInstance) {
-    calendarInstance = new CalendarService();
-  }
-  return calendarInstance;
+export function getCalendarService(workspaceId?: string, accountEmail?: string | null, forcedAccessToken?: string): CalendarService {
+  return new CalendarService(workspaceId, accountEmail || null, forcedAccessToken);
 }
 
 export { CalendarService };

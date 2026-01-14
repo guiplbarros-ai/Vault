@@ -44,8 +44,8 @@ class NotionService {
   private baseUrl = 'https://api.notion.com/v1';
   private version = '2022-06-28';
 
-  constructor() {
-    const key = process.env.NOTION_API_KEY;
+  constructor(apiKey?: string) {
+    const key = (apiKey || process.env.NOTION_API_KEY || '').trim();
     if (!key) {
       throw new Error('NOTION_API_KEY não configurado');
     }
@@ -222,20 +222,35 @@ class NotionService {
       }
     }).filter(t => t).join('\n\n');
   }
+
+  async getPageMeta(pageId: string): Promise<{ id: string; url?: string; title: string; lastEditedTime?: string }> {
+    const cleanId = pageId.replace(/-/g, '').replace(/https:\/\/.*notion\.so\/.*?([a-f0-9]{32}).*/, '$1');
+    const page = await this.request<{ id: string; url?: string; last_edited_time?: string; properties?: Record<string, unknown> }>(`/pages/${cleanId}`);
+    const title = this.extractTitleFromProperties(page.properties) || 'Sem título';
+    return { id: page.id || cleanId, url: page.url, title, lastEditedTime: page.last_edited_time };
+  }
 }
 
-let notionInstance: NotionService | null = null;
+const notionInstances = new Map<string, NotionService>();
 
-export function getNotionService(): NotionService | null {
-  if (!process.env.NOTION_API_KEY) return null;
-  if (!notionInstance) {
+function keyForWorkspace(workspaceId?: 'pessoal' | 'freelaw'): string {
+  if (workspaceId === 'freelaw') return (process.env.NOTION_API_KEY_FREELAW || process.env.NOTION_API_KEY || '').trim();
+  if (workspaceId === 'pessoal') return (process.env.NOTION_API_KEY_PESSOAL || process.env.NOTION_API_KEY || '').trim();
+  return (process.env.NOTION_API_KEY || '').trim();
+}
+
+export function getNotionService(workspaceId?: 'pessoal' | 'freelaw'): NotionService | null {
+  const key = keyForWorkspace(workspaceId);
+  if (!key) return null;
+  const cacheKey = `${workspaceId || 'default'}:${key.slice(0, 6)}`;
+  if (!notionInstances.has(cacheKey)) {
     try {
-      notionInstance = new NotionService();
+      notionInstances.set(cacheKey, new NotionService(key));
     } catch {
       return null;
     }
   }
-  return notionInstance;
+  return notionInstances.get(cacheKey)!;
 }
 
 export { NotionService };

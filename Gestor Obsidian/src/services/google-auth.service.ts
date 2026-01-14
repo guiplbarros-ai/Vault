@@ -5,6 +5,7 @@ import { URL } from 'url';
 import type { GoogleTokens, GoogleCredentials } from '../types/google.js';
 import { logger } from '../utils/logger.js';
 import { loadEnv } from '../utils/env.js';
+import { getGoogleTokensDbService } from './google-tokens-db.service.js';
 
 loadEnv();
 
@@ -22,6 +23,10 @@ const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.modify',
+  // Google Drive (organização de arquivos/pastas)
+  // Observação: ao adicionar este escopo, é necessário re-consentir (reconectar Google)
+  // para que o token passe a incluir a permissão.
+  'https://www.googleapis.com/auth/drive',
   // Google Sheets (leitura) - para sync financeiro
   'https://www.googleapis.com/auth/spreadsheets.readonly',
 ];
@@ -56,8 +61,12 @@ class GoogleAuthService {
   private credentials: GoogleCredentials;
   private tokens: GoogleTokens | null = null;
   private tokenPath: string;
+  private workspaceId: string;
+  private accountEmail: string | null;
+  private loaded: boolean = false;
+  private loadingPromise: Promise<void> | null = null;
 
-  constructor() {
+  constructor(input?: { workspaceId?: string; accountEmail?: string | null }) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/oauth2callback';
@@ -76,8 +85,16 @@ class GoogleAuthService {
       redirect_uri: redirectUri,
     };
 
+    this.workspaceId = (input?.workspaceId || process.env.CORTEX_DEFAULT_WORKSPACE || 'pessoal').trim();
+    this.accountEmail = (input?.accountEmail || null);
+
     this.tokenPath = getTokenPathForClient(this.credentials.client_id);
-    this.loadTokens();
+    // Load tokens from Supabase (cloud) if possible, otherwise from local file (dev).
+    // NOTE: For multi-account, you MUST pass accountEmail (or set chat_settings.google_account_email).
+    this.loadingPromise = this.loadTokens().finally(() => {
+      this.loaded = true;
+      this.loadingPromise = null;
+    });
   }
 
   getTokenPath(): string {
@@ -87,14 +104,27 @@ class GoogleAuthService {
   /**
    * Carrega tokens salvos do arquivo
    */
-  private loadTokens(): void {
+  private async loadTokens(): Promise<void> {
+    const db = getGoogleTokensDbService();
+    if (db.enabled() && this.accountEmail) {
+      const row = await db.get(this.workspaceId, this.accountEmail);
+      if (row?.tokens) {
+        this.tokens = row.tokens as unknown as GoogleTokens;
+        logger.info(`Google Auth: Tokens carregados do Supabase (${this.workspaceId}/${this.accountEmail})`);
+        return;
+      }
+      this.tokens = null;
+      return;
+    }
+
+    // Local fallback (dev)
     try {
       if (fs.existsSync(this.tokenPath)) {
         const tokenData = fs.readFileSync(this.tokenPath, 'utf-8');
         this.tokens = JSON.parse(tokenData);
         logger.info('Google Auth: Tokens carregados do arquivo');
       }
-    } catch (error) {
+    } catch {
       logger.error('Erro ao carregar tokens do Google');
       this.tokens = null;
     }
@@ -103,7 +133,21 @@ class GoogleAuthService {
   /**
    * Salva tokens no arquivo
    */
-  private saveTokens(tokens: GoogleTokens): void {
+  private async saveTokens(tokens: GoogleTokens): Promise<void> {
+    const db = getGoogleTokensDbService();
+    if (db.enabled() && this.accountEmail) {
+      await db.upsert({
+        workspaceId: this.workspaceId,
+        accountEmail: this.accountEmail,
+        tokens: tokens as unknown as Record<string, unknown>,
+        scopes: tokens.scope || SCOPES.join(' '),
+      });
+      this.tokens = tokens;
+      logger.info(`Google Auth: Tokens salvos no Supabase (${this.workspaceId}/${this.accountEmail})`);
+      return;
+    }
+
+    // Local fallback (dev)
     const dir = path.dirname(this.tokenPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -116,7 +160,7 @@ class GoogleAuthService {
   /**
    * Gera URL de autorização
    */
-  getAuthUrl(): string {
+  getAuthUrl(opts?: { state?: string; loginHint?: string }): string {
     const params = new URLSearchParams({
       client_id: this.credentials.client_id,
       redirect_uri: this.credentials.redirect_uri,
@@ -126,6 +170,8 @@ class GoogleAuthService {
       // força escolher conta + reconsentimento (bom para múltiplas contas)
       prompt: 'consent select_account',
     });
+    if (opts?.state) params.set('state', opts.state);
+    if (opts?.loginHint) params.set('login_hint', opts.loginHint);
 
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
@@ -133,7 +179,19 @@ class GoogleAuthService {
   /**
    * Troca o código de autorização por tokens
    */
+  private async ensureLoaded(): Promise<void> {
+    if (this.loadingPromise) {
+      await this.loadingPromise;
+      return;
+    }
+    if (!this.loaded) {
+      await this.loadTokens();
+      this.loaded = true;
+    }
+  }
+
   async exchangeCode(code: string): Promise<GoogleTokens> {
+    await this.ensureLoaded();
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -165,7 +223,7 @@ class GoogleAuthService {
       expiry_date: Date.now() + expiresIn * 1000,
     };
     
-    this.saveTokens(tokens);
+    await this.saveTokens(tokens);
     return tokens;
   }
 
@@ -173,6 +231,7 @@ class GoogleAuthService {
    * Renova o access token usando o refresh token
    */
   async refreshAccessToken(): Promise<GoogleTokens> {
+    await this.ensureLoaded();
     if (!this.tokens?.refresh_token) {
       throw new Error('Sem refresh token. Execute: obsidian-manager google auth');
     }
@@ -204,7 +263,7 @@ class GoogleAuthService {
       expiry_date: Date.now() + expiresIn * 1000,
     };
     
-    this.saveTokens(tokens);
+    await this.saveTokens(tokens);
     logger.info('Google Auth: Token renovado');
     return tokens;
   }
@@ -213,6 +272,7 @@ class GoogleAuthService {
    * Obtém um access token válido (renova se necessário)
    */
   async getValidAccessToken(): Promise<string> {
+    await this.ensureLoaded();
     if (!this.tokens) {
       throw new Error(
         'Não autenticado com Google. Execute: obsidian-manager google auth'
@@ -337,13 +397,16 @@ class GoogleAuthService {
 }
 
 // Singleton
-let authInstance: GoogleAuthService | null = null;
+const instances = new Map<string, GoogleAuthService>();
 
-export function getGoogleAuthService(): GoogleAuthService {
-  if (!authInstance) {
-    authInstance = new GoogleAuthService();
+export function getGoogleAuthService(workspaceId?: string, accountEmail?: string | null): GoogleAuthService {
+  const wid = (workspaceId || process.env.CORTEX_DEFAULT_WORKSPACE || 'pessoal').trim();
+  const acc = (accountEmail || '').trim().toLowerCase();
+  const key = `${wid}::${acc || 'default'}`;
+  if (!instances.has(key)) {
+    instances.set(key, new GoogleAuthService({ workspaceId: wid, accountEmail: acc || null }));
   }
-  return authInstance;
+  return instances.get(key)!;
 }
 
 export { GoogleAuthService };

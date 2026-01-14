@@ -1,10 +1,49 @@
 import { Command } from 'commander';
 import { getGoogleAuthService } from '../services/google-auth.service.js';
+import { getGmailService } from '../services/gmail.service.js';
+import { getGoogleTokensDbService } from '../services/google-tokens-db.service.js';
 import { logger } from '../utils/logger.js';
 import { exec } from 'child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { getEnvFilePath, loadEnv } from '../utils/env.js';
+
+function readJsonSafe(filePath: string): any | null {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function persistLocalGoogleTokensToSupabase(workspaceId: string, tokenPath: string): Promise<{
+  ok: boolean;
+  accountEmail?: string;
+  reason?: string;
+}> {
+  const db = getGoogleTokensDbService();
+  if (!db.enabled()) return { ok: false, reason: 'Supabase google_tokens não está configurado' };
+
+  const tokens = readJsonSafe(tokenPath);
+  if (!tokens?.access_token) return { ok: false, reason: 'Token local não encontrado/ inválido' };
+
+  // Descobre email via Gmail profile (já exigimos gmail.readonly no app)
+  const gmail = getGmailService(workspaceId, null, String(tokens.access_token));
+  const profile = await gmail.getProfile();
+  const accountEmail = (profile.emailAddress || '').toLowerCase().trim();
+  if (!accountEmail) return { ok: false, reason: 'Não consegui descobrir o email da conta via Gmail profile' };
+
+  await db.upsert({
+    workspaceId,
+    accountEmail,
+    tokens: tokens as unknown as Record<string, unknown>,
+    scopes: String(tokens.scope || ''),
+  });
+
+  return { ok: true, accountEmail };
+}
 
 export function createGoogleCommand(): Command {
   const google = new Command('google')
@@ -113,6 +152,20 @@ export function createGoogleCommand(): Command {
         const result = await authService.startAuthServer();
         
         console.log(`\n✅ ${result}`);
+        // Se Supabase estiver configurado, persiste os tokens também lá (usado pelo bot/agent).
+        // Sem isso, o Telegram/Fly pode ficar sem as permissões novas (ex.: Drive) mesmo após auth local.
+        try {
+          const wid = (process.env.CORTEX_DEFAULT_WORKSPACE || 'pessoal').trim();
+          const persisted = await persistLocalGoogleTokensToSupabase(wid, authService.getTokenPath());
+          if (persisted.ok) {
+            console.log(`✅ Tokens persistidos no Supabase para: ${persisted.accountEmail} (workspace=${wid})`);
+          } else {
+            console.log(`ℹ️ Não persisti tokens no Supabase: ${persisted.reason}`);
+          }
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.log(`ℹ️ Falha ao persistir tokens no Supabase (sem quebrar o fluxo): ${msg}`);
+        }
         console.log('\nAgora você pode usar os comandos:');
         console.log('  • obsidian-manager calendar today');
         console.log('  • obsidian-manager gmail unread');

@@ -15,6 +15,60 @@ O **canal principal de comunicação é o Telegram**.
   - pessoas/aniversários/follow-ups
   - finanças (lançamentos, categorias, checklist)
 
+## Supermemory (camada opcional)
+
+O Supermemory pode ser usado como **índice de recuperação** (“memória semântica”) — mas **não** como banco primário.
+
+- **Supabase**: fonte oficial (RLS, auditoria, versionamento, integridade)
+- **Supermemory**: melhora relevância e recall, retornando IDs/snippets para o agente carregar o conteúdo real no Supabase
+
+### Padrão de integração (recomendado)
+
+1) **Write path (verdade)**  
+Sempre grava no Supabase primeiro.
+
+2) **Index path (opcional e seletivo)**  
+Indexa no Supermemory apenas:
+- resumos/abstracts
+- fatos estáveis e preferências (“memórias”)
+- ponteiros (IDs) para entidades no Supabase
+
+3) **Read path (RAG)**
+- busca no Supermemory → obtém melhores IDs
+- fetch das entidades no Supabase → injeta no contexto interno
+
+Motivo: controlar **custo de tokens** e manter governança do dado.
+
+## Policy Layer (RAG inteligente a partir do chat)
+
+Para o agente decidir “**o que é RAG** vs **o que é simples** vs **o que deve virar memória**” a partir da conversa,
+existe uma camada de policy que roda **antes** do LLM principal:
+
+- arquivo: `src/services/policy.service.ts`
+- integrada em: `src/services/agent.service.ts` (antes do `BrainService.chat`)
+
+### O que a Policy faz
+
+1) **Classifica a mensagem** (intent):
+- `recall`: “lembra do que eu disse…”, “quais eram meus focos…”
+- `lookup_notes`: perguntas que exigem buscar notas/documentos
+- `lookup_people`: perguntas sobre pessoas/contatos/cargos
+- `save_memory`: quando o usuário pede para guardar (“lembre que…”, “anote…”)
+- `no_retrieval`: small talk / resposta direta
+
+2) **Executa retrieval (RAG) quando necessário**
+- `lookup_notes`: usa Supermemory (índice) → obtém IDs → carrega conteúdo real do Supabase
+- `lookup_people`: busca no CRM (Supabase `people`)
+
+3) **Executa writeback de memória (quando aplicável)**
+- `save_memory`: salva no Supermemory (camada de memória)
+
+### Configuração (env)
+
+- `CORTEX_POLICY_ENABLED=1`
+- `CORTEX_POLICY_USE_LLM=1` (se 0, usa só heurísticas)
+- `CORTEX_POLICY_MODEL=` (opcional)
+
 ## Visão geral (camadas)
 
 ### Canal (Interface)

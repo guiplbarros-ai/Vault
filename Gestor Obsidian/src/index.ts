@@ -12,6 +12,8 @@ import { createCalendarCommand } from './commands/calendar.js';
 import { createGmailCommand } from './commands/gmail.js';
 import { createFinancasCommand } from './commands/financas.js';
 import { createSheetsCommand } from './commands/sheets.js';
+import { createMigrateCommand } from './commands/migrate.js';
+import { createPolymarketCommand } from './commands/polymarket.js';
 
 // Load environment variables
 loadEnv();
@@ -34,6 +36,8 @@ program.addCommand(createCalendarCommand());
 program.addCommand(createGmailCommand());
 program.addCommand(createFinancasCommand());
 program.addCommand(createSheetsCommand());
+program.addCommand(createMigrateCommand());
+program.addCommand(createPolymarketCommand());
 
 // Parse arguments
 program.parse();
