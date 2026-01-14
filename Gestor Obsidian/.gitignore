@@ -38,3 +38,9 @@ vault/
 # Cache
 .cache/
 *.tsbuildinfo
+
+# NPM cache (nunca commitar)
+.npm-cache/
+
+# Lock do bot (runtime)
+.telegram-bot.lock
