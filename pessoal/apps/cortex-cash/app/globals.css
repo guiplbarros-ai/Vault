@@ -1,0 +1,1350 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Habilita variante dark baseada em classe (.dark) no Tailwind v4 */
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================================
+   3D GLASS EFFECT - Cards com Glassmorphism e Profundidade 3D
+   IMPORTANTE: Deve vir ANTES dos estilos forçados para ter prioridade
+   ============================================================================ */
+
+/* Classe base para efeito 3D glass */
+.glass-card-3d {
+  /* Glassmorphism - fundo semi-transparente com blur */
+  background: rgba(26, 54, 47, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+
+  /* Bordas sutis com brilho interno */
+  border: 1px solid rgba(58, 143, 110, 0.3) !important;
+
+  /* Sombras em múltiplas camadas para profundidade 3D */
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2),
+    0 10px 15px -3px rgba(0, 0, 0, 0.25),
+    0 20px 25px -5px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 20px 0 rgba(58, 143, 110, 0.03) !important;
+
+  /* Transform 3D inicial */
+  transform: perspective(1000px) rotateX(0deg) translateZ(0px);
+  transform-style: preserve-3d;
+
+  /* Transição ultra suave com alta taxa de atualizações */
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Garante que o conteúdo fique visível */
+  opacity: 1 !important;
+}
+
+.glass-card-3d::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+  opacity: 0.5;
+}
+
+.glass-card-3d:hover {
+  /* Leve aumento com escala suave - text-rendering mantém nitidez */
+  transform: scale(1.005);
+
+  /* Força renderização nítida do texto durante transformação */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Sombra mais pronunciada no hover */
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.4),
+    0 4px 6px -2px rgba(0, 0, 0, 0.25),
+    0 20px 25px -5px rgba(0, 0, 0, 0.3),
+    0 30px 35px -7px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 30px 0 rgba(58, 143, 110, 0.05),
+    0 0 40px -10px rgba(58, 143, 110, 0.15) !important;
+
+  /* Mantém backdrop filter normal para consistência */
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+
+  /* Fundo mais opaco */
+  background: rgba(26, 54, 47, 0.85) !important;
+
+  /* Border mais visível */
+  border: 1px solid rgba(58, 143, 110, 0.5) !important;
+}
+
+/* Variante com efeito mais intenso para cards importantes */
+.glass-card-3d-intense {
+  /* Herda da base */
+  background: rgba(31, 61, 54, 0.75) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+
+  border: 1px solid rgba(58, 143, 110, 0.4) !important;
+
+  box-shadow:
+    0 8px 10px -2px rgba(0, 0, 0, 0.35),
+    0 4px 6px -1px rgba(0, 0, 0, 0.25),
+    0 15px 20px -5px rgba(0, 0, 0, 0.3),
+    0 25px 30px -7px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 25px 0 rgba(58, 143, 110, 0.05),
+    0 0 30px -5px rgba(58, 143, 110, 0.1) !important;
+
+  transform: perspective(1000px) rotateX(0deg) translateZ(0px);
+  transform-style: preserve-3d;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  opacity: 1 !important;
+}
+
+.glass-card-3d-intense::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(58, 143, 110, 0.3) 50%, transparent 100%);
+  opacity: 0.7;
+}
+
+.glass-card-3d-intense:hover {
+  /* Leve aumento com escala suave - text-rendering mantém nitidez */
+  transform: scale(1.01);
+
+  /* Força renderização nítida do texto durante transformação */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  background: rgba(31, 61, 54, 0.85) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+
+  border: 1px solid rgba(58, 143, 110, 0.6) !important;
+
+  box-shadow:
+    0 12px 18px -4px rgba(0, 0, 0, 0.45),
+    0 6px 8px -2px rgba(0, 0, 0, 0.3),
+    0 25px 30px -7px rgba(0, 0, 0, 0.35),
+    0 35px 40px -10px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 35px 0 rgba(58, 143, 110, 0.08),
+    0 0 50px -8px rgba(58, 143, 110, 0.2) !important;
+}
+
+/* Wrapper para garantir que o conteúdo interno fique correto */
+.glass-card-3d > *,
+.glass-card-3d-intense > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Efeito glass para header/topbar */
+.glass-header {
+  background: rgba(26, 54, 47, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(58, 143, 110, 0.3) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Efeito glass para sidebar */
+.glass-sidebar {
+  background: rgba(26, 54, 47, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-right: 1px solid rgba(58, 143, 110, 0.3) !important;
+}
+
+/* ==========================================================================
+   FORÇA CORES VERDE ESCURO (CORES.md) - SEM AFETAR LAYOUT
+   ========================================================================== */
+
+/* Background com imagem - PRIORIDADE MÁXIMA */
+html,
+html.dark,
+html[lang] {
+  background-color: #0e1c19 !important;
+  background-image: radial-gradient(
+      ellipse at center,
+      rgba(21, 40, 33, 0.85) 0%,
+      rgba(17, 31, 28, 0.9) 40%,
+      rgba(14, 28, 25, 0.93) 70%,
+      rgba(10, 21, 18, 0.96) 100%
+    ), url("/assets/backgrounds/background.jpg") !important;
+  background-position: center center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+  min-height: 100vh !important;
+}
+
+body,
+body.dark,
+body[class] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Força opacidade total em cards e containers (sem translucência) */
+/* EXCETO quando tem efeito glass 3D */
+[data-slot="card"]:not(.glass-card-3d):not(.glass-card-3d-intense),
+.card:not(.glass-card-3d):not(.glass-card-3d-intense),
+.bg-card:not(.glass-card-3d):not(.glass-card-3d-intense),
+aside,
+header,
+main {
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Força background sólido em cards — NOVO: Melhor contraste */
+/* EXCETO quando tem efeito glass 3D */
+[data-slot="card"]:not(.glass-card-3d):not(.glass-card-3d-intense),
+.card:not(.glass-card-3d):not(.glass-card-3d-intense),
+.bg-card:not(.glass-card-3d):not(.glass-card-3d-intense) {
+  background-color: #1a362f !important;
+  border-color: #2d5247 !important;
+}
+
+/* Sidebar com mesmo padrão do header */
+aside {
+  background: linear-gradient(180deg, #1a362f 0%, #1a2e36 50%, #1a362f 100%) !important;
+  border-right: 1px solid #2d5247 !important;
+}
+
+/* Header com gradiente sutil */
+header {
+  background: linear-gradient(90deg, #1a362f 0%, #1a2e36 50%, #1a362f 100%) !important;
+  border-bottom: 1px solid #2d5247 !important;
+}
+
+/* Main com background transparente para mostrar gradiente */
+main {
+  background-color: transparent !important;
+}
+
+/* Força opacidade em gráficos, barras de progresso e outros elementos visuais */
+canvas,
+svg,
+[role="progressbar"],
+[class*="chart"],
+[class*="graph"],
+.recharts-wrapper,
+.recharts-surface {
+  opacity: 1 !important;
+}
+
+/* Backgrounds sólidos para elementos de UI — NOVO: Melhor contraste */
+.bg-muted {
+  background-color: #152b26 !important;
+  opacity: 1 !important;
+}
+
+.bg-primary {
+  background-color: #3a8f6e !important;
+  opacity: 1 !important;
+}
+
+.bg-secondary {
+  background-color: #1f3d36 !important;
+  opacity: 1 !important;
+}
+
+.bg-success {
+  background-color: #5fc883 !important;
+  opacity: 1 !important;
+}
+
+.bg-destructive {
+  background-color: #f07167 !important;
+  opacity: 1 !important;
+}
+
+.bg-warning {
+  background-color: #e0b257 !important;
+  opacity: 1 !important;
+}
+
+.bg-gold {
+  background-color: #d4af37 !important;
+  opacity: 1 !important;
+}
+
+/* Força bordas visíveis */
+.border,
+[class*="border-"] {
+  border-color: #2a4942 !important;
+}
+
+/* Remove qualquer transparência de popover/dropdown */
+[data-slot="popover"],
+.popover,
+[role="dialog"],
+[role="menu"],
+[role="listbox"] {
+  background-color: #18322c !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Remove transparência de backgrounds com opacity nas classes Tailwind */
+[class*="bg-background/"],
+[class*="bg-card/"],
+[class*="bg-primary/"],
+[class*="bg-secondary/"],
+[class*="bg-muted/"] {
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Força opacidade em skeletons e loading states */
+.animate-pulse,
+[class*="skeleton"] {
+  opacity: 1 !important;
+}
+
+/* Força opacidade em inputs e selects */
+input,
+textarea,
+select,
+button {
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* FORÇA REMOÇÃO DE TODOS OS BACKDROP FILTERS E BLURS */
+*,
+*::before,
+*::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Remove blur de classes Tailwind */
+[class*="backdrop-blur"],
+[class*="bg-opacity"],
+[class*="bg-transparent"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+/* ==========================================================================
+   CORTEX PIXEL TEAL THEME
+   Design System baseado no logo pixel art com navy/teal e acentos gold/orange
+   ========================================================================== */
+
+/* ==========================================================================
+   GLOBAL THEME (Apenas modo escuro em tons de verde)
+   ========================================================================== */
+
+:root {
+  /* TEMA.md - Background Gradient (seção 2.1) */
+  --bg-gradient-center: #1a2f2a;
+  --bg-gradient-mid: #152821;
+  --bg-gradient-base: #132421;
+  --bg-gradient-edge: #0f1e1b;
+
+  /* TEMA.md - Background Principal */
+  --background: 165 33% 11%; /* #132421 - Background principal */
+  --foreground: 150 10% 96%; /* #F2F7F5 - Texto principal */
+
+  /* TEMA.md - Cards / Painéis */
+  --card: 165 33% 15%; /* #18322C - Background de cards */
+  --card-foreground: 150 10% 96%; /* #F2F7F5 - Texto de cards */
+
+  /* TEMA.md - Popover e Dropdown */
+  --popover: 165 33% 15%; /* #18322C - Mesma cor dos cards */
+  --popover-foreground: 150 10% 96%; /* #F2F7F5 - Texto */
+
+  /* TEMA.md - Primary (Ações principais) */
+  --primary: 160 44% 39%; /* #3A8F6E - Focus/Primary */
+  --primary-foreground: 150 10% 96%; /* #F2F7F5 - Texto branco */
+
+  /* TEMA.md - Secondary (Links e ações sutis) */
+  --secondary: 165 45% 68%; /* #8FCDBD - Links/Ações sutis */
+  --secondary-foreground: 165 33% 11%; /* Texto escuro para contraste */
+
+  /* TEMA.md - Muted (Superfície aninhada bg-card-2) */
+  --muted: 165 30% 13%; /* #142A25 - Superfície aninhada */
+  --muted-foreground: 165 15% 60%; /* #8CA39C - Texto muted */
+
+  /* TEMA.md - Accent (hover) */
+  --accent: 165 30% 17%; /* #1D3A34 - Hover de linhas/itens */
+  --accent-foreground: 150 10% 96%; /* #F2F7F5 - Texto */
+
+  /* CORES.md - Destructive (Erros) */
+  --destructive: 4 82% 68%; /* #F07167 - Erro */
+  --destructive-foreground: 150 10% 96%;
+
+  /* CORES.md - Bordas */
+  --border: 165 25% 22%; /* #2A4942 - Borda */
+  --input: 165 25% 22%; /* #2A4942 - Borda de input */
+
+  /* CORES.md - Ring (Focus) */
+  --ring: 160 44% 39%; /* #3A8F6E - Focus */
+
+  /* CORES.md - Cores adicionais */
+  --success: 140 46% 60%; /* #6CCB8C - Sucesso */
+  --warning: 42 67% 61%; /* #E0B257 - Alerta */
+  --gold: 45 62% 52%; /* #D4AF37 - Destaques monetários */
+
+  /* CORES.md - Charts (Gráficos) */
+  --chart-1: 140 46% 60%; /* #6CCB8C */
+  --chart-2: 200 16% 63%; /* #9AA4AD */
+  --chart-3: 30 37% 59%; /* #C49A6C */
+  --chart-4: 200 28% 59%; /* #7AA6BF */
+  --chart-5: 160 44% 39%; /* #3A8F6E */
+  --chart-6: 42 67% 61%; /* #E0B257 */
+  --chart-7: 165 35% 13%; /* Cor escura extra */
+  --chart-8: 140 46% 60%; /* #6CCB8C */
+
+  /* Radius */
+  --radius: 0.5rem;
+
+  /* Remove backgrounds com imagens (sem translucências) */
+  --app-bg-image: none;
+  --app-bg-size: cover;
+  --app-bg-position: center center;
+  --app-bg-attachment: fixed;
+  --app-bg-repeat: no-repeat;
+}
+
+/* Não há modo claro: as variáveis acima são globais e únicas */
+
+/* ==========================================================================
+   TAILWIND THEME MAPPING
+   ========================================================================== */
+
+@theme inline {
+  /* TEMA.md - Cores diretas em HSL para Tailwind v4 */
+  --color-background: 165 33% 11%; /* #132421 */
+  --color-foreground: 150 10% 96%; /* #F2F7F5 */
+  --color-card: 165 33% 15%; /* #18322C */
+  --color-card-foreground: 150 10% 96%; /* #F2F7F5 */
+  --color-popover: 165 33% 15%; /* #18322C */
+  --color-popover-foreground: 150 10% 96%; /* #F2F7F5 */
+  --color-primary: 160 44% 39%; /* #3A8F6E */
+  --color-primary-foreground: 150 10% 96%; /* #F2F7F5 */
+  --color-secondary: 165 45% 68%; /* #8FCDBD */
+  --color-secondary-foreground: 165 33% 11%; /* #132421 */
+  --color-muted: 165 30% 13%; /* #142A25 */
+  --color-muted-foreground: 165 15% 60%; /* #8CA39C */
+  --color-accent: 165 30% 17%; /* #1D3A34 */
+  --color-accent-foreground: 150 10% 96%; /* #F2F7F5 */
+  --color-destructive: 4 82% 68%; /* #F07167 */
+  --color-destructive-foreground: 150 10% 96%;
+  --color-border: 165 25% 22%; /* #2A4942 */
+  --color-input: 165 25% 22%; /* #2A4942 */
+  --color-ring: 160 44% 39%; /* #3A8F6E */
+  --color-success: 140 46% 60%; /* #6CCB8C */
+  --color-warning: 42 67% 61%; /* #E0B257 */
+  --color-gold: 45 62% 52%; /* #D4AF37 */
+  --color-chart-1: 140 46% 60%; /* #6CCB8C */
+  --color-chart-2: 200 16% 63%; /* #9AA4AD */
+  --color-chart-3: 30 37% 59%; /* #C49A6C */
+  --color-chart-4: 200 28% 59%; /* #7AA6BF */
+  --color-chart-5: 160 44% 39%; /* #3A8F6E */
+  --color-chart-6: 42 67% 61%; /* #E0B257 */
+  --color-chart-7: 165 35% 13%; /* #142A25 */
+  --color-chart-8: 140 46% 60%; /* #6CCB8C */
+
+  /* Font families */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Radius scale */
+  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) - 0.125rem);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 0.125rem);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+}
+
+/* ==========================================================================
+   BASE STYLES
+   ========================================================================== */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  /* Background #3a4a43 para inputs, textareas e selects */
+  input[data-slot="input"],
+  textarea[data-slot="textarea"],
+  [data-slot="select-trigger"],
+  input,
+  textarea,
+  select {
+    background-color: #3a4a43 !important;
+  }
+
+  html {
+    @apply text-foreground;
+    /* Cor customizada para inputs e selects */
+    --input-border: #3a4a43;
+    /* Background com imagem customizada + overlay verde escuro */
+    background-image: radial-gradient(
+        ellipse at center,
+        rgba(21, 40, 33, 0.85) 0%,
+        rgba(17, 31, 28, 0.9) 40%,
+        rgba(14, 28, 25, 0.93) 70%,
+        rgba(10, 21, 18, 0.96) 100%
+      ), url("/assets/backgrounds/background.jpg") !important;
+    background-position: center center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    color: #f7faf9 !important;
+    min-height: 100vh;
+    /* Previne layout shift quando scrollbar aparece/desaparece */
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply text-foreground;
+    /* Body transparente para mostrar background com imagem do html */
+    background: transparent !important;
+    color: #f7faf9 !important;
+    min-height: 100vh;
+  }
+
+  /* Garante cores corretas para todos os elementos de texto */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply text-foreground;
+    color: #f7faf9;
+  }
+
+  p,
+  span,
+  div,
+  label {
+    color: inherit;
+  }
+}
+
+/* ==========================================================================
+   CUSTOM SCROLLBAR
+   ========================================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: var(--radius);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Custom scrollbar para tooltips e modais */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted) / 0.6);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* ==========================================================================
+   PIXEL ART MODE (Optional)
+   ========================================================================== */
+
+.pixel-art-mode {
+  /* Font estilo pixel art */
+  --font-sans: "Press Start 2P", "Courier New", monospace;
+
+  /* Rendering pixelado para imagens */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.pixel-art-mode * {
+  /* Aplica font pixel art em todos os elementos */
+  font-family: "Press Start 2P", "Courier New", monospace !important;
+
+  /* Rendering pixelado */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+
+  /* Transições mais rápidas e discretas */
+  transition: all 0.1s steps(2) !important;
+}
+
+/* Bordas pixeladas para cards e containers */
+.pixel-art-mode .card,
+.pixel-art-mode [data-slot="card"],
+.pixel-art-mode button,
+.pixel-art-mode input,
+.pixel-art-mode select,
+.pixel-art-mode textarea {
+  border-radius: 0 !important;
+  box-shadow: 2px 2px 0 0 rgba(11, 34, 48, 0.3), 4px 4px 0 0 rgba(11, 34, 48, 0.1) !important;
+}
+
+/* Cantos pixelados (estilo NES) */
+.pixel-art-mode .pixel-corners {
+  clip-path: polygon(
+    0 4px,
+    4px 4px,
+    4px 0,
+    calc(100% - 4px) 0,
+    calc(100% - 4px) 4px,
+    100% 4px,
+    100% calc(100% - 4px),
+    calc(100% - 4px) calc(100% - 4px),
+    calc(100% - 4px) 100%,
+    4px 100%,
+    4px calc(100% - 4px),
+    0 calc(100% - 4px)
+  );
+}
+
+/* Botões pixel art */
+.pixel-art-mode button:hover {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0 0 rgba(11, 34, 48, 0.4), 5px 5px 0 0 rgba(11, 34, 48, 0.15) !important;
+}
+
+.pixel-art-mode button:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0 0 rgba(11, 34, 48, 0.3) !important;
+}
+
+/* Ícones pixelados com mais cor e contraste */
+.pixel-art-mode svg {
+  filter: contrast(1.4) saturate(1.5) brightness(1.1);
+  shape-rendering: crispEdges;
+}
+
+.pixel-art-mode img {
+  filter: contrast(1.3) saturate(1.4);
+}
+
+/* Ícones na sidebar com cores mais vibrantes */
+.pixel-art-mode aside svg,
+.pixel-art-mode nav svg {
+  filter: contrast(1.5) saturate(1.8) brightness(1.2) drop-shadow(1px 1px 0 rgba(11, 34, 48, 0.5));
+}
+
+/* Ícones em cards e headers */
+.pixel-art-mode .card svg,
+.pixel-art-mode [data-slot="card"] svg {
+  filter: contrast(1.4) saturate(1.6) brightness(1.15);
+}
+
+/* Scrollbar pixel art */
+.pixel-art-mode ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.pixel-art-mode ::-webkit-scrollbar-track {
+  background: repeating-linear-gradient(
+    45deg,
+    hsl(var(--background)),
+    hsl(var(--background)) 2px,
+    hsl(var(--muted)) 2px,
+    hsl(var(--muted)) 4px
+  );
+}
+
+.pixel-art-mode ::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
+  border: 2px solid hsl(var(--background));
+  border-radius: 0;
+}
+
+/* Ajustes de tamanho de fonte para legibilidade */
+.pixel-art-mode {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pixel-art-mode h1 {
+  font-size: 1.6em !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.05em;
+}
+
+.pixel-art-mode h2 {
+  font-size: 1.3em !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.05em;
+}
+
+.pixel-art-mode h3 {
+  font-size: 1.1em !important;
+  line-height: 1.4 !important;
+}
+
+.pixel-art-mode h4 {
+  font-size: 1em !important;
+  line-height: 1.4 !important;
+}
+
+.pixel-art-mode p {
+  font-size: 0.85em !important;
+  line-height: 1.6 !important;
+}
+
+.pixel-art-mode span {
+  font-size: inherit !important;
+}
+
+.pixel-art-mode div {
+  font-size: inherit;
+}
+
+.pixel-art-mode button {
+  font-size: 0.8em !important;
+  padding: 10px 16px !important;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+.pixel-art-mode input,
+.pixel-art-mode select,
+.pixel-art-mode textarea {
+  font-size: 0.8em !important;
+  padding: 8px 12px !important;
+}
+
+.pixel-art-mode label {
+  font-size: 0.85em !important;
+  font-weight: bold;
+}
+
+/* Desativa animações suaves */
+.pixel-art-mode * {
+  animation-timing-function: steps(2) !important;
+}
+
+/* Sombras de texto pixeladas */
+.pixel-art-mode .text-shadow-pixel {
+  text-shadow: 2px 2px 0 rgba(11, 34, 48, 0.5), 3px 3px 0 rgba(11, 34, 48, 0.2);
+}
+
+/* Cores mais vibrantes para textos importantes */
+.pixel-art-mode h1,
+.pixel-art-mode h2,
+.pixel-art-mode h3 {
+  text-shadow: 1px 1px 0 rgba(11, 34, 48, 0.3);
+  font-weight: normal !important;
+}
+
+/* Links e elementos interativos */
+.pixel-art-mode a {
+  text-decoration: none;
+  position: relative;
+}
+
+.pixel-art-mode a:hover {
+  text-shadow: 1px 1px 0 rgba(11, 34, 48, 0.5);
+}
+
+/* Badges e tags com visual pixel art */
+.pixel-art-mode [data-slot="badge"],
+.pixel-art-mode .badge {
+  border-radius: 0 !important;
+  padding: 4px 8px !important;
+  font-weight: bold !important;
+  border: 2px solid currentColor !important;
+  box-shadow: 2px 2px 0 0 rgba(11, 34, 48, 0.2) !important;
+}
+
+/* Aumenta contraste de cores primárias */
+.pixel-art-mode {
+  --primary: 175 90% 55%; /* Teal mais saturado */
+  --chart-1: 175 90% 55%;
+}
+
+/* Tabelas com bordas pixeladas */
+.pixel-art-mode table {
+  border-collapse: separate !important;
+  border-spacing: 2px !important;
+}
+
+.pixel-art-mode td,
+.pixel-art-mode th {
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  padding: 8px 12px !important;
+}
+
+/* Melhor contraste para texto em fundos escuros */
+.pixel-art-mode .dark {
+  --foreground: 165 80% 98%; /* Texto mais brilhante */
+}
+
+/* ==========================================================================
+   DARK MODE TEXT FIXES - Garantir texto branco em modo escuro
+   ========================================================================== */
+
+/* Força cores corretas em modo escuro para todos os textos */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark [data-slot="card"] h1,
+.dark [data-slot="card"] h2,
+.dark [data-slot="card"] h3,
+.dark [data-slot="card"] h4,
+.dark [data-slot="card"] h5,
+.dark [data-slot="card"] h6 {
+  color: hsl(var(--card-foreground)) !important;
+}
+
+.dark [data-slot="card-title"] {
+  color: hsl(var(--card-foreground)) !important;
+}
+
+.dark [data-slot="card-description"] {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Força cards completamente opacos no modo escuro */
+.dark [data-slot="card"] {
+  background-color: hsl(var(--card)) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+}
+
+/* Força bordas visíveis no modo escuro */
+.dark [data-slot="card"],
+.dark .border,
+.dark [class*="border-"] {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Dividers e separadores */
+.dark hr,
+.dark .divide-y > * + *,
+.dark [class*="border-t"],
+.dark [class*="border-b"],
+.dark [class*="border-l"],
+.dark [class*="border-r"] {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Inputs e elementos de formulário */
+.dark input,
+.dark textarea,
+.dark select {
+  border-color: hsl(var(--input)) !important;
+}
+
+/* Ícones SVG no modo escuro */
+.dark svg {
+  color: inherit;
+}
+
+.dark [class*="text-primary"] svg,
+.dark .text-primary svg {
+  color: hsl(var(--primary)) !important;
+}
+
+/* Força texto branco em botões outline no modo escuro */
+.dark [data-slot="button"][class*="outline"] {
+  color: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark [data-slot="button"][class*="outline"]:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ==========================================================================
+   UTILITY CLASSES
+   ========================================================================== */
+
+/* Accent Gold para highlights monetários */
+.text-gold {
+  color: hsl(42 89% 63%);
+}
+
+.bg-gold {
+  background-color: hsl(42 89% 63%);
+}
+
+/* Accent Orange */
+.text-orange {
+  color: hsl(32 99% 48%);
+}
+
+.bg-orange {
+  background-color: hsl(32 99% 48%);
+}
+
+/* Success */
+.text-success {
+  color: hsl(142 71% 45%);
+}
+
+.bg-success {
+  background-color: hsl(142 71% 45%);
+}
+
+/* Warning */
+.text-warning {
+  color: hsl(38 92% 50%);
+}
+
+.bg-warning {
+  background-color: hsl(38 92% 50%);
+}
+
+/* ==========================================================================
+   3D CARD EFFECTS - Cortex Pixel Teal Theme
+   ========================================================================== */
+
+/* Card 3D: Navy/Teal (Neutral - Saldo Total) */
+.card-3d-neutral {
+  background: linear-gradient(135deg, #ffffff 0%, #f0faf8 100%) !important;
+  border: 2px solid #18b0a4 !important;
+  box-shadow: 0 4px 6px -1px rgba(24, 176, 164, 0.15), 0 2px 4px -2px rgba(24, 176, 164, 0.1), inset
+    0 -2px 8px rgba(24, 176, 164, 0.08) !important;
+}
+
+.dark .card-3d-neutral {
+  background: linear-gradient(135deg, #4a7080 0%, #42636f 100%) !important;
+  border: 2px solid #1ad4c4 !important;
+  box-shadow: 0 8px 16px -4px rgba(26, 212, 196, 0.3), 0 4px 8px -2px rgba(26, 212, 196, 0.2), inset
+    0 -2px 12px rgba(26, 212, 196, 0.15) !important;
+}
+
+/* Card 3D: Success Green (Receitas) */
+.card-3d-success {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+  border: 2px solid #22c55e !important;
+  box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.2), 0 2px 4px -2px rgba(34, 197, 94, 0.15), inset 0
+    -2px 8px rgba(34, 197, 94, 0.1) !important;
+}
+
+.dark .card-3d-success {
+  background: linear-gradient(135deg, #4a7080 0%, #2d5a4d 100%) !important;
+  border: 2px solid #4ade80 !important;
+  box-shadow: 0 8px 16px -4px rgba(74, 222, 128, 0.35), 0 4px 8px -2px rgba(74, 222, 128, 0.25),
+    inset 0 -2px 12px rgba(74, 222, 128, 0.18) !important;
+}
+
+/* Card 3D: Destructive Red (Despesas) */
+.card-3d-danger {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
+  border: 2px solid #ef4444 !important;
+  box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2), 0 2px 4px -2px rgba(239, 68, 68, 0.15), inset 0
+    -2px 8px rgba(239, 68, 68, 0.1) !important;
+}
+
+.dark .card-3d-danger {
+  background: linear-gradient(135deg, #4a7080 0%, #5a3a3a 100%) !important;
+  border: 2px solid #fa6b6b !important;
+  box-shadow: 0 8px 16px -4px rgba(250, 107, 107, 0.35), 0 4px 8px -2px rgba(250, 107, 107, 0.25),
+    inset 0 -2px 12px rgba(250, 107, 107, 0.18) !important;
+}
+
+/* Card 3D: Gold/Orange (Cartões de Crédito) */
+.card-3d-warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+  border: 2px solid #f59e0b !important;
+  box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.2), 0 2px 4px -2px rgba(245, 158, 11, 0.15), inset
+    0 -2px 8px rgba(245, 158, 11, 0.1) !important;
+}
+
+.dark .card-3d-warning {
+  background: linear-gradient(135deg, #4a7080 0%, #6b5a3a 100%) !important;
+  border: 2px solid #ffa340 !important;
+  box-shadow: 0 8px 16px -4px rgba(255, 163, 64, 0.35), 0 4px 8px -2px rgba(255, 163, 64, 0.25),
+    inset 0 -2px 12px rgba(255, 163, 64, 0.18) !important;
+}
+
+/* Hover effects for all 3D cards */
+.card-3d-neutral:hover,
+.card-3d-success:hover,
+.card-3d-danger:hover,
+.card-3d-warning:hover {
+  transform: translateY(-1px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .card-3d-neutral:hover,
+.dark .card-3d-success:hover,
+.dark .card-3d-danger:hover,
+.dark .card-3d-warning:hover {
+  box-shadow: 0 12px 24px -6px currentColor, 0 6px 12px -3px currentColor, inset 0 -2px 16px
+    currentColor;
+}
+
+/* ==========================================================================
+   MELHORIAS DE CONTRASTE E HIERARQUIA VISUAL (2025-11-10)
+   Implementa os novos tokens do TEMA.md para melhor legibilidade
+   ========================================================================== */
+
+/* Cards com hierarquia de elevação */
+.card-elevated,
+[data-elevated="true"] {
+  background-color: #1f3d36 !important;
+  border-color: #3a6456 !important;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 12px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Inputs com melhor contraste */
+input,
+textarea,
+select {
+  background-color: #13251f !important;
+  border-color: #2d5247 !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #3a8f6e !important;
+  box-shadow: 0 0 0 3px rgba(58, 143, 110, 0.15) !important;
+}
+
+/* Botões com melhor feedback */
+button:hover,
+[data-slot="button"]:hover {
+  background-color: #48a080 !important;
+}
+
+button:active,
+[data-slot="button"]:active {
+  background-color: #2e7d6b !important;
+}
+
+/* Cards de status com backgrounds sutis */
+.card-success,
+[data-status="success"] {
+  background-color: #1a3329 !important;
+  border-left: 4px solid #5fc883 !important;
+}
+
+.card-warning,
+[data-status="warning"] {
+  background-color: #2e2819 !important;
+  border-left: 4px solid #e0b257 !important;
+}
+
+.card-error,
+[data-status="error"] {
+  background-color: #2e1f1f !important;
+  border-left: 4px solid #f07167 !important;
+}
+
+.card-info,
+[data-status="info"] {
+  background-color: #1a262e !important;
+  border-left: 4px solid #7aa6bf !important;
+}
+
+/* Texto com melhor contraste */
+.text-primary {
+  color: #f7faf9 !important;
+}
+
+.text-secondary {
+  color: #bbc5c2 !important;
+}
+
+.text-muted {
+  color: #94a8a1 !important;
+}
+
+.text-disabled {
+  color: #6b7d76 !important;
+}
+
+/* Divisores mais visíveis */
+hr,
+.divider {
+  border-color: #2d5247 !important;
+}
+
+/* Hover states mais perceptíveis */
+.hover\:bg-accent:hover,
+[role="menuitem"]:hover,
+[role="option"]:hover,
+tr:hover {
+  background-color: #234039 !important;
+}
+
+/* Sombra colorida para elementos de destaque */
+.shadow-accent {
+  box-shadow: 0 8px 16px -4px rgba(58, 143, 110, 0.25) !important;
+}
+
+/* Main transparente para mostrar background do html (com imagem) */
+main {
+  background: transparent !important;
+}
+
+/* Ajuste de bordas em todos os elementos */
+.border {
+  border-width: 1px !important;
+  border-color: #2d5247 !important;
+}
+
+.border-emphasis {
+  border-color: #3a6456 !important;
+}
+
+.border-subtle {
+  border-color: #203a33 !important;
+}
+
+/* Charts com backgrounds mais contrastantes */
+[class*="recharts"],
+canvas {
+  background-color: transparent !important;
+}
+
+/* Popover e dropdown com melhor contraste */
+[data-slot="popover"],
+[role="menu"],
+[role="dialog"] {
+  background-color: #1a362f !important;
+  border-color: #2d5247 !important;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 12px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Tabs e navegação */
+[role="tab"][data-state="active"] {
+  background-color: #1f3d36 !important;
+  border-bottom: 2px solid #3a8f6e !important;
+}
+
+/* Progress bars */
+[role="progressbar"] {
+  background-color: #13251f !important;
+}
+
+[role="progressbar"] > div {
+  background-color: #3a8f6e !important;
+}
+
+/* Badges com melhor contraste */
+[data-slot="badge"],
+.badge {
+  background-color: #152b26 !important;
+  border: 1px solid #2d5247 !important;
+  color: #bbc5c2 !important;
+}
+
+/* Badges coloridos */
+.badge-success {
+  background-color: #1a3329 !important;
+  border-color: #5fc883 !important;
+  color: #5fc883 !important;
+}
+
+.badge-warning {
+  background-color: #2e2819 !important;
+  border-color: #e0b257 !important;
+  color: #e0b257 !important;
+}
+
+.badge-error {
+  background-color: #2e1f1f !important;
+  border-color: #f07167 !important;
+  color: #f07167 !important;
+}
+
+.badge-info {
+  background-color: #1a262e !important;
+  border-color: #7aa6bf !important;
+  color: #7aa6bf !important;
+}
+
+/* Skeleton loaders */
+.skeleton {
+  background: linear-gradient(90deg, #152b26 0%, #1a362f 50%, #152b26 100%) !important;
+  background-size: 200% 100% !important;
+  animation: skeleton-loading 1.5s ease-in-out infinite !important;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Tooltips */
+[data-slot="tooltip"],
+[role="tooltip"] {
+  background-color: #0e1814 !important;
+  border: 1px solid #2d5247 !important;
+  color: #f7faf9 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ============================================================================
+   OPÇÃO 2: GRADIENTES COLORIDOS (Moderada)
+   Cards com glow colorido e backgrounds tintados
+   ============================================================================ */
+
+/* Cards principais com glow colorido no hover */
+.card-highlight:hover,
+.card-glow:hover {
+  box-shadow: 0 0 20px rgba(95, 200, 131, 0.15), 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.3s ease;
+}
+
+/* Cards de receita com background tintado e glow verde */
+.card-income,
+[data-type="income"] {
+  background: linear-gradient(135deg, #1a3329 0%, #1f3d36 100%) !important;
+  border-left: 4px solid #5fc883 !important;
+}
+
+.card-income:hover,
+[data-type="income"]:hover {
+  box-shadow: 0 0 20px rgba(95, 200, 131, 0.2), 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Cards de despesa com background tintado e glow vermelho */
+.card-expense,
+[data-type="expense"] {
+  background: linear-gradient(135deg, #2e1f1f 0%, #3a2525 100%) !important;
+  border-left: 4px solid #f07167 !important;
+}
+
+.card-expense:hover,
+[data-type="expense"]:hover {
+  box-shadow: 0 0 20px rgba(240, 113, 103, 0.2), 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Cards de saldo/balance com background tintado e glow azul */
+.card-balance,
+[data-type="balance"] {
+  background: linear-gradient(135deg, #1a262e 0%, #1f3239 100%) !important;
+  border-left: 4px solid #7aa6bf !important;
+}
+
+.card-balance:hover,
+[data-type="balance"]:hover {
+  box-shadow: 0 0 20px rgba(122, 166, 191, 0.2), 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Áreas de gráficos com background tintado */
+.chart-container-income {
+  background: radial-gradient(ellipse at top, rgba(95, 200, 131, 0.05) 0%, transparent 70%) !important;
+}
+
+.chart-container-expense {
+  background: radial-gradient(ellipse at top, rgba(240, 113, 103, 0.05) 0%, transparent 70%) !important;
+}
+
+.chart-container-balance {
+  background: radial-gradient(ellipse at top, rgba(122, 166, 191, 0.05) 0%, transparent 70%) !important;
+}
+
+/* Badges com cores mais vibrantes e gradientes */
+.badge-success {
+  background: linear-gradient(135deg, #5fc883 0%, #4fb070 100%) !important;
+  border: 1px solid #5fc883 !important;
+  color: #0e1814 !important;
+  font-weight: 600;
+}
+
+.badge-error,
+.badge-danger {
+  background: linear-gradient(135deg, #f07167 0%, #d96159 100%) !important;
+  border: 1px solid #f07167 !important;
+  color: #0e1814 !important;
+  font-weight: 600;
+}
+
+.badge-warning {
+  background: linear-gradient(135deg, #e0b257 0%, #c99a45 100%) !important;
+  border: 1px solid #e0b257 !important;
+  color: #0e1814 !important;
+  font-weight: 600;
+}
+
+.badge-info {
+  background: linear-gradient(135deg, #7aa6bf 0%, #6891aa 100%) !important;
+  border: 1px solid #7aa6bf !important;
+  color: #0e1814 !important;
+  font-weight: 600;
+}
+
+/* Botões com gradiente sutil */
+button[data-slot="button"]:not([class*="outline"]):not([class*="ghost"]),
+.btn-primary {
+  background: linear-gradient(135deg, #3a8f6e 0%, #2e7d6b 100%) !important;
+}
+
+button[data-slot="button"]:hover:not([class*="outline"]):not([class*="ghost"]),
+.btn-primary:hover {
+  background: linear-gradient(135deg, #48a080 0%, #3a8f6e 100%) !important;
+}
+
+/* Progress bars com gradiente colorido */
+[role="progressbar"] > div {
+  background: linear-gradient(90deg, #3a8f6e 0%, #5fc883 100%) !important;
+}
+
+/* Gráficos com cores mais saturadas */
+:root {
+  --chart-1: hsl(140, 55%, 65%) !important; /* Verde mais saturado */
+  --chart-2: hsl(4, 85%, 70%) !important; /* Vermelho mais saturado */
+  --chart-3: hsl(42, 70%, 65%) !important; /* Amarelo mais saturado */
+  --chart-4: hsl(200, 35%, 65%) !important; /* Azul mais saturado */
+  --chart-5: hsl(30, 40%, 62%) !important; /* Laranja mais saturado */
+  --chart-6: hsl(200, 18%, 68%) !important; /* Cinza com mais vida */
+}
+
+/* ============================================================================
+   3D GLASS EFFECT - Cards com Glassmorphism e Profundidade 3D
+   Adicionar no final do globals.css
+   ============================================================================ */
+
+/* Classe base para efeito 3D glass */
