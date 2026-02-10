@@ -40,11 +40,8 @@ Orçamentos manuais demorados → Sistema automatizado em minutos.
 
 ## CREDENCIAIS (Supabase)
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://yxiitvlzelzzqkbeyvuk.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=***SUPABASE_ANON_KEY_REDACTED***
-DATABASE_URL=postgresql://postgres.yxiitvlzelzzqkbeyvuk:***DB_PASSWORD_REDACTED***@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true
-```
+Chaves no `.env.local` (NUNCA commitar). Copie do [Dashboard Supabase](https://supabase.com/dashboard/project/yxiitvlzelzzqkbeyvuk/settings/api).
+Ver detalhes em [SUPABASE_CONFIG.md](./SUPABASE_CONFIG.md).
 
 ---
 

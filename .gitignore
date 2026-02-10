@@ -1,0 +1,18 @@
+# Environment / Secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Tokens & credentials
+*-tokens.json
+credentials.json
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (may contain sensitive imports)
+data/

@@ -18,20 +18,19 @@
 ## Variáveis de Ambiente
 
 ```env
-# Supabase
+# Supabase (valores reais no .env.local — NUNCA commitar)
 NEXT_PUBLIC_SUPABASE_URL=https://yxiitvlzelzzqkbeyvuk.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=***SUPABASE_ANON_KEY_REDACTED***
-SUPABASE_SERVICE_ROLE_KEY=***SUPABASE_SERVICE_KEY_REDACTED***
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<ver dashboard Supabase>
+SUPABASE_SERVICE_ROLE_KEY=<ver dashboard Supabase>
 
-# Database (senha URL-encoded)
-DATABASE_URL=postgresql://postgres.yxiitvlzelzzqkbeyvuk:***DB_PASSWORD_REDACTED***@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true
-DIRECT_URL=postgresql://postgres.yxiitvlzelzzqkbeyvuk:***DB_PASSWORD_REDACTED***@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
+# Database
+DATABASE_URL=postgresql://postgres.yxiitvlzelzzqkbeyvuk:<SENHA>@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+DIRECT_URL=postgresql://postgres.yxiitvlzelzzqkbeyvuk:<SENHA>@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
 ```
 
-### Nota sobre a senha
-A senha contém caracteres especiais e precisa ser URL-encoded:
-- Original: `***DB_PASSWORD_REDACTED***`
-- Encoded: `***DB_PASSWORD_REDACTED***`
+### Nota
+Copie as chaves do [Dashboard Supabase](https://supabase.com/dashboard/project/yxiitvlzelzzqkbeyvuk/settings/api) para o `.env.local`.
+A senha do DB contém caracteres especiais — use URL-encoding.
 
 ---
 
