@@ -212,7 +212,7 @@ class DailyDigestService {
       digest += `${'─'.repeat(25)}\n`
     }
 
-    digest += `\n_Ida e volta (17 dias) | Econômica_`
+    digest += `\n_Ida e volta (19 dias) | Econômica_`
 
     return digest
   }

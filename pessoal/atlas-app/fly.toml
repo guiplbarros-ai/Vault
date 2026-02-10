@@ -24,4 +24,4 @@ primary_region = 'gru'
   ATLAS_TIMEZONE = "America/Sao_Paulo"
   ATLAS_SEARCH_CRONS = "0 8 * * *,0 20 * * *"
   ATLAS_DIGEST_CRON = "30 20 * * 5"
-  ATLAS_SERPAPI_MONTHLY_LIMIT = "150"
+  ATLAS_SERPAPI_MONTHLY_LIMIT = "250"

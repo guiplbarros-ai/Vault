@@ -95,32 +95,41 @@ class PriceAlertService {
     // Busca voos para os proximos 30-90 dias (periodo de busca)
     const searchDates = this.getSearchDates()
 
-    // Estadia padrão: 17 dias (ou configurado na rota)
-    const stayDays = route.minStayDays || 17
+    // Estadia padrão: 19 dias (ou configurado na rota)
+    const stayDays = route.minStayDays || 19
+
+    // Aeroportos alternativos na mesma cidade (ex: NRT e HND = Tóquio)
+    const ALTERNATIVE_AIRPORTS: Record<string, string[]> = {
+      NRT: ['HND'],
+      HND: ['NRT'],
+    }
+    const destinations = [route.destination, ...(ALTERNATIVE_AIRPORTS[route.destination] || [])]
 
     for (const date of searchDates) {
-      try {
-        // Calcula data de volta (ida + estadia)
-        const returnDate = new Date(date)
-        returnDate.setDate(returnDate.getDate() + stayDays)
+      for (const dest of destinations) {
+        try {
+          // Calcula data de volta (ida + estadia)
+          const returnDate = new Date(date)
+          returnDate.setDate(returnDate.getDate() + stayDays)
 
-        const result = await searchFlights({
-          origin: route.origin,
-          destination: route.destination,
-          departureDate: date,
-          returnDate: returnDate,
-        })
+          const result = await searchFlights({
+            origin: route.origin,
+            destination: dest,
+            departureDate: date,
+            returnDate: returnDate,
+          })
 
-        if (result.results.length === 0) continue
+          if (result.results.length === 0) continue
 
-        // Salva os precos no historico
-        await this.pricesDb.savePrices(result.results, route.id)
+          // Salva os precos no historico
+          await this.pricesDb.savePrices(result.results, route.id)
 
-        // Verifica deals
-        const routeDeals = await this.detectDeals(route, result.results)
-        deals.push(...routeDeals)
-      } catch (error) {
-        logger.warn(`Erro ao buscar ${route.origin}->${route.destination} para ${date}: ${error}`)
+          // Verifica deals (usa a rota original para o benchmark)
+          const routeDeals = await this.detectDeals(route, result.results)
+          deals.push(...routeDeals)
+        } catch (error) {
+          logger.warn(`Erro ao buscar ${route.origin}->${dest} para ${date}: ${error}`)
+        }
       }
     }
 
@@ -273,12 +282,12 @@ class PriceAlertService {
       ? depDateStr.split('T')[0].split('-').reverse().join('/')
       : depDateStr
 
-    // Calcula data de volta (ida + 17 dias de estadia)
+    // Calcula data de volta (ida + 19 dias de estadia)
     const depParts = depDateStr.includes('-') ? depDateStr.split('T')[0].split('-') : null
     let returnDateStr = ''
     if (depParts) {
       const depDate = new Date(Number(depParts[0]), Number(depParts[1]) - 1, Number(depParts[2]))
-      depDate.setDate(depDate.getDate() + 17)
+      depDate.setDate(depDate.getDate() + 19)
       returnDateStr = `${String(depDate.getDate()).padStart(2, '0')}/${String(depDate.getMonth() + 1).padStart(2, '0')}/${depDate.getFullYear()}`
     }
 
@@ -306,7 +315,7 @@ class PriceAlertService {
 
     // Rota completa com cidade e país
     message += `✈️ *${routeFull}*\n`
-    message += `📅 ${departureDate}${returnDateStr ? ` → ${returnDateStr}` : ''} (17 dias)\n`
+    message += `📅 ${departureDate}${returnDateStr ? ` → ${returnDateStr}` : ''} (19 dias)\n`
     message += `🛫 ${flight.airline} | ${durationStr} | ${stopsStr}\n\n`
 
     // Comparação com benchmark (se disponível)
@@ -349,14 +358,14 @@ class PriceAlertService {
   }
 
   // Retorna datas de busca alvo
-  // Ida: 27 ou 28 de novembro, volta 17 dias depois (14 ou 15 de dezembro)
+  // Ida: 27 ou 28 de novembro, volta 19 dias depois (16 ou 17 de dezembro)
   private getSearchDates(): Date[] {
     const currentYear = new Date().getFullYear()
     const targetYear = currentYear
 
     const dates: Date[] = [
-      new Date(targetYear, 10, 27),  // 27/11 -> volta 14/12
-      new Date(targetYear, 10, 28),  // 28/11 -> volta 15/12
+      new Date(targetYear, 10, 27),  // 27/11 -> volta 16/12
+      new Date(targetYear, 10, 28),  // 28/11 -> volta 17/12
     ]
 
     // Filtra datas que já passaram

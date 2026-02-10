@@ -30,6 +30,14 @@ const PRICE_BENCHMARKS: Record<string, PriceBenchmark> = {
     lastUpdated: '2026-01',
     notes: 'Via EUA ou Oriente Médio. Direto não existe.',
   },
+  'CNF-HND': {
+    route: 'CNF-HND',
+    avgPrice: 11000,
+    goodPrice: 9000,
+    greatPrice: 7000,
+    lastUpdated: '2026-02',
+    notes: 'Haneda (Tokyo). Mesmos benchmarks de CNF-NRT.',
+  },
   'GRU-NRT': {
     route: 'GRU-NRT',
     avgPrice: 9500,
