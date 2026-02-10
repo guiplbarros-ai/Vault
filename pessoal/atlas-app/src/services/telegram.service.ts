@@ -6,6 +6,7 @@ import { getRoutesDbService } from './routes-db.service.js'
 import { getAlertsDbService } from './alerts-db.service.js'
 import { getPriceAlertService } from './price-alert.service.js'
 import { getUsageDbService } from './usage-db.service.js'
+import { getPromoMonitorService } from './promo-monitor.service.js'
 import { formatRoute, isValidIata, normalizeIata } from '../utils/airports.js'
 import { parseDateInput } from '../utils/date.js'
 import type { AlertNotification } from '../types/index.js'
@@ -65,6 +66,7 @@ class TelegramService {
           `/rotas - Listar rotas monitoradas\n` +
           `/buscar GRU LIS 15/03 - Busca manual\n` +
           `/budget - Ver uso de API (custos)\n` +
+          `/promos - Status do monitor Livelo\n` +
           `/digest - Ver configuracao de digest\n` +
           `/id - Ver seu chat ID`
       )
@@ -258,6 +260,30 @@ class TelegramService {
       } catch (error) {
         this.sendMessage(msg.chat.id, `Erro: ${error}`)
       }
+    })
+
+    // /promos
+    this.bot.onText(/\/promos/, async (msg) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+
+      const promo = getPromoMonitorService()
+      const last = promo.getLastArticle()
+      const seen = promo.getSeenCount()
+
+      let message = `🎁 *Monitor de Promoções Livelo*\n\n`
+      message += `Status: Ativo (a cada 30min)\n`
+      message += `Fonte: Melhores Destinos\n`
+      message += `Artigos processados: ${seen}\n\n`
+
+      if (last) {
+        message += `Última promoção encontrada:\n`
+        message += `${last.title}\n`
+        message += `🔗 ${last.link}`
+      } else {
+        message += `Nenhuma promoção Livelo recente.`
+      }
+
+      this.sendMessage(msg.chat.id, message)
     })
   }
 

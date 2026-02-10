@@ -25,3 +25,4 @@ primary_region = 'gru'
   ATLAS_SEARCH_CRONS = "0 8 * * *,0 20 * * *"
   ATLAS_DIGEST_CRON = "30 20 * * 5"
   ATLAS_SERPAPI_MONTHLY_LIMIT = "250"
+  ATLAS_PROMO_CRON = "*/30 * * * *"

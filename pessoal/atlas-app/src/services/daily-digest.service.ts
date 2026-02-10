@@ -10,6 +10,7 @@ import { loadEnv } from '../utils/env.js'
 import { formatRoute, formatRouteFull } from '../utils/airports.js'
 import { formatDate } from '../utils/date.js'
 import { getBenchmark, ratePriceVsBenchmark } from '../utils/price-benchmark.js'
+import { getPromoMonitorService } from './promo-monitor.service.js'
 import { addDays, format } from 'date-fns'
 
 loadEnv()
@@ -19,6 +20,8 @@ const TIMEZONE = process.env.ATLAS_TIMEZONE || 'America/Sao_Paulo'
 const SEARCH_CRONS = (process.env.ATLAS_SEARCH_CRONS || '0 8 * * *,0 20 * * *').split(',')
 // Digest semanal: sexta-feira às 20:30
 const DIGEST_CRON = process.env.ATLAS_DIGEST_CRON || '30 20 * * 5'
+// Monitor de promoções RSS: a cada 30 minutos
+const PROMO_CRON = process.env.ATLAS_PROMO_CRON || '*/30 * * * *'
 
 class DailyDigestService {
   private routesDb = getRoutesDbService()
@@ -59,6 +62,19 @@ class DailyDigestService {
     )
     this.scheduledTasks.push(digestTask)
     logger.info(`[Cron] Resumo semanal agendado: ${DIGEST_CRON}`)
+
+    // Cron de monitor de promoções (RSS)
+    const promoTask = cron.schedule(
+      PROMO_CRON,
+      () => {
+        getPromoMonitorService().checkFeeds().catch((e) =>
+          logger.error(`[Cron] Erro no monitor de promos: ${e}`)
+        )
+      },
+      { timezone: TIMEZONE }
+    )
+    this.scheduledTasks.push(promoTask)
+    logger.info(`[Cron] Monitor de promoções agendado: ${PROMO_CRON}`)
   }
 
   stopCrons(): void {
