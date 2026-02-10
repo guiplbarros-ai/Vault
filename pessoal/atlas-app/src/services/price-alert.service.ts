@@ -1,0 +1,391 @@
+import type { FlightResult, FlightDeal, AlertNotification, MonitoredRoute } from '../types/index.js'
+import { getRoutesDbService } from './routes-db.service.js'
+import { getPricesDbService } from './prices-db.service.js'
+import { getAlertsDbService } from './alerts-db.service.js'
+import { getUsageDbService } from './usage-db.service.js'
+import { getTelegramService } from './telegram.service.js'
+import { searchFlights } from './flight-search.service.js'
+import { logger } from '../utils/logger.js'
+import { formatRoute, formatRouteFull } from '../utils/airports.js'
+import { ratePriceVsBenchmark, getBenchmark, type PriceRating } from '../utils/price-benchmark.js'
+import { loadEnv } from '../utils/env.js'
+
+loadEnv()
+
+const DEFAULT_DROP_PERCENT = Number(process.env.ATLAS_ALERT_DROP_PERCENT) || 15
+
+interface DetectedDeal {
+  flight: FlightResult
+  route: MonitoredRoute
+  type: 'price_drop' | 'lowest_ever' | 'trend_down' | 'target_reached' | 'good_price' | 'great_price'
+  previousPrice?: number
+  dropPercent?: number
+  lowestPrice?: number
+  benchmarkAvg?: number
+  benchmarkGood?: number
+  benchmarkGreat?: number
+  priceRating?: PriceRating
+}
+
+class PriceAlertService {
+  private pricesDb = getPricesDbService()
+  private alertsDb = getAlertsDbService()
+  private routesDb = getRoutesDbService()
+
+  // Lazy loading para evitar dependencia circular
+  private getTelegram() {
+    return getTelegramService()
+  }
+
+  // Executa busca em todas as rotas ativas e detecta deals
+  async checkAllRoutes(): Promise<DetectedDeal[]> {
+    const routes = await this.routesDb.getAllActiveRoutes()
+    logger.info(`Verificando ${routes.length} rotas monitoradas`)
+
+    const allDeals: DetectedDeal[] = []
+
+    for (const route of routes) {
+      try {
+        const deals = await this.checkRoute(route)
+
+        // Envia notificações para cada deal
+        for (const deal of deals) {
+          await this.sendDealNotification(deal)
+        }
+
+        allDeals.push(...deals)
+      } catch (error) {
+        logger.error(`Erro ao verificar rota ${route.origin}->${route.destination}: ${error}`)
+      }
+    }
+
+    logger.info(`Detectados ${allDeals.length} deals`)
+    return allDeals
+  }
+
+  // Envia notificação de deal via Telegram
+  private async sendDealNotification(deal: DetectedDeal): Promise<void> {
+    const telegram = this.getTelegram()
+
+    if (!telegram.enabled()) {
+      logger.warn('Telegram não configurado - notificação não enviada')
+      return
+    }
+
+    const notification = this.formatNotification(deal)
+    const chatId = deal.route.chatId
+
+    if (!chatId || chatId === 0) {
+      logger.warn(`Chat ID não configurado para rota ${deal.route.origin}->${deal.route.destination}`)
+      return
+    }
+
+    try {
+      await telegram.sendAlert(chatId, notification)
+      logger.info(`Notificação enviada para chat ${chatId}`)
+    } catch (error) {
+      logger.error(`Erro ao enviar notificação: ${error}`)
+    }
+  }
+
+  // Verifica uma rota especifica
+  async checkRoute(route: MonitoredRoute): Promise<DetectedDeal[]> {
+    const deals: DetectedDeal[] = []
+
+    // Busca voos para os proximos 30-90 dias (periodo de busca)
+    const searchDates = this.getSearchDates()
+
+    // Estadia padrão: 17 dias (ou configurado na rota)
+    const stayDays = route.minStayDays || 17
+
+    for (const date of searchDates) {
+      try {
+        // Calcula data de volta (ida + estadia)
+        const returnDate = new Date(date)
+        returnDate.setDate(returnDate.getDate() + stayDays)
+
+        const result = await searchFlights({
+          origin: route.origin,
+          destination: route.destination,
+          departureDate: date,
+          returnDate: returnDate,
+        })
+
+        if (result.results.length === 0) continue
+
+        // Salva os precos no historico
+        await this.pricesDb.savePrices(result.results, route.id)
+
+        // Verifica deals
+        const routeDeals = await this.detectDeals(route, result.results)
+        deals.push(...routeDeals)
+      } catch (error) {
+        logger.warn(`Erro ao buscar ${route.origin}->${route.destination} para ${date}: ${error}`)
+      }
+    }
+
+    return deals
+  }
+
+  // Detecta deals com base no BENCHMARK de mercado (fonte principal)
+  private async detectDeals(route: MonitoredRoute, flights: FlightResult[]): Promise<DetectedDeal[]> {
+    const deals: DetectedDeal[] = []
+
+    if (flights.length === 0) return deals
+
+    const bestFlight = flights[0] // Já ordenado por preço (menor primeiro)
+
+    // 1. PRINCIPAL: Verifica contra o BENCHMARK de mercado
+    const { rating, benchmark, percentVsAvg } = ratePriceVsBenchmark(
+      route.origin,
+      route.destination,
+      bestFlight.price
+    )
+
+    if (benchmark) {
+      // Notifica se for preço BOM ou EXCELENTE
+      if (rating === 'great') {
+        deals.push({
+          flight: bestFlight,
+          route,
+          type: 'great_price',
+          benchmarkAvg: benchmark.avgPrice,
+          benchmarkGood: benchmark.goodPrice,
+          benchmarkGreat: benchmark.greatPrice,
+          dropPercent: percentVsAvg,
+          priceRating: rating,
+        })
+        logger.info(
+          `🔥 PROMOÇÃO EXCELENTE: ${route.origin}->${route.destination} R$${bestFlight.price} (benchmark great: R$${benchmark.greatPrice})`
+        )
+      } else if (rating === 'good') {
+        deals.push({
+          flight: bestFlight,
+          route,
+          type: 'good_price',
+          benchmarkAvg: benchmark.avgPrice,
+          benchmarkGood: benchmark.goodPrice,
+          benchmarkGreat: benchmark.greatPrice,
+          dropPercent: percentVsAvg,
+          priceRating: rating,
+        })
+        logger.info(
+          `✅ Preço bom: ${route.origin}->${route.destination} R$${bestFlight.price} (benchmark good: R$${benchmark.goodPrice})`
+        )
+      } else {
+        // Preço normal ou caro - apenas loga, não notifica
+        logger.info(
+          `📊 Preço ${rating}: ${route.origin}->${route.destination} R$${bestFlight.price} (avg: R$${benchmark.avgPrice})`
+        )
+      }
+    } else {
+      // Sem benchmark - loga aviso
+      logger.warn(
+        `⚠️ Sem benchmark para ${route.origin}->${route.destination}. Preço: R$${bestFlight.price}`
+      )
+    }
+
+    // 2. Verifica preço alvo do usuário (sempre verifica, independente do benchmark)
+    if (route.targetPrice && bestFlight.price <= route.targetPrice) {
+      const alreadyDetected = deals.some((d) => d.flight.id === bestFlight.id)
+      if (!alreadyDetected) {
+        deals.push({
+          flight: bestFlight,
+          route,
+          type: 'target_reached',
+          benchmarkAvg: benchmark?.avgPrice,
+          benchmarkGood: benchmark?.goodPrice,
+          benchmarkGreat: benchmark?.greatPrice,
+          priceRating: rating,
+        })
+        logger.info(
+          `🎯 Preço alvo atingido: ${route.origin}->${route.destination} R$${bestFlight.price} <= R$${route.targetPrice}`
+        )
+      }
+    }
+
+    // Salva preços no histórico (para referência futura, mas não usamos para alertas ainda)
+    // Quando tivermos dados suficientes (30+ dias), podemos usar para complementar o benchmark
+
+    return deals
+  }
+
+  // Salva um deal detectado no banco
+  async saveDeal(deal: DetectedDeal): Promise<FlightDeal> {
+    const savedDeal = await this.alertsDb.saveDeal({
+      routeId: deal.route.id,
+      origin: deal.flight.origin,
+      destination: deal.flight.destination,
+      departureDate: deal.flight.departureDate,
+      price: deal.flight.price,
+      previousPrice: deal.previousPrice,
+      dropPercent: deal.dropPercent,
+      airline: deal.flight.airline,
+      stops: deal.flight.stops,
+      deepLink: deal.flight.deepLink,
+      dealType: deal.type,
+    })
+
+    return savedDeal
+  }
+
+  // Formata notificacao para enviar via Telegram
+  formatNotification(deal: DetectedDeal): AlertNotification {
+    const routeShort = formatRoute(deal.flight.origin, deal.flight.destination)
+    const routeFull = formatRouteFull(deal.flight.origin, deal.flight.destination)
+    const flight = deal.flight
+    const price = flight.price
+
+    // Emoji e header baseado no tipo
+    let emoji = '✈️'
+    let header = ''
+
+    switch (deal.type) {
+      case 'great_price':
+        emoji = '🔥🔥🔥'
+        header = 'PROMOÇÃO EXCELENTE!'
+        break
+      case 'good_price':
+        emoji = '✅'
+        header = 'PREÇO BOM!'
+        break
+      case 'target_reached':
+        emoji = '🎯'
+        header = 'PREÇO ALVO ATINGIDO!'
+        break
+      case 'price_drop':
+        emoji = '📉'
+        header = `QUEDA DE ${deal.dropPercent?.toFixed(0)}%!`
+        break
+      case 'lowest_ever':
+        emoji = '🏆'
+        header = 'MENOR PREÇO HISTÓRICO!'
+        break
+      case 'trend_down':
+        emoji = '📊'
+        header = 'TENDÊNCIA DE QUEDA!'
+        break
+    }
+
+    // Formata data do voo (YYYY-MM-DD -> DD/MM/YYYY)
+    const depDateStr = String(flight.departureDate)
+    const departureDate = depDateStr.includes('-')
+      ? depDateStr.split('T')[0].split('-').reverse().join('/')
+      : depDateStr
+
+    // Calcula data de volta (ida + 17 dias de estadia)
+    const depParts = depDateStr.includes('-') ? depDateStr.split('T')[0].split('-') : null
+    let returnDateStr = ''
+    if (depParts) {
+      const depDate = new Date(Number(depParts[0]), Number(depParts[1]) - 1, Number(depParts[2]))
+      depDate.setDate(depDate.getDate() + 17)
+      returnDateStr = `${String(depDate.getDate()).padStart(2, '0')}/${String(depDate.getMonth() + 1).padStart(2, '0')}/${depDate.getFullYear()}`
+    }
+
+    // Formata duração
+    const hours = Math.floor(flight.duration / 60)
+    const mins = flight.duration % 60
+    const durationStr = mins > 0 ? `${hours}h${mins}min` : `${hours}h`
+
+    // Paradas
+    const stopsStr = flight.stops === 0 ? 'Direto' : `${flight.stops} parada${flight.stops > 1 ? 's' : ''}`
+
+    // Simulações de preço
+    const priceFor2 = price * 2
+    const priceFor4 = price * 4
+
+    // Equivalente em pontos (estimativa: 1 ponto ≈ R$0.020)
+    const POINTS_VALUE = 0.020
+    const pointsFor1 = Math.round(price / POINTS_VALUE)
+    const pointsFor2 = Math.round(priceFor2 / POINTS_VALUE)
+    const pointsFor4 = Math.round(priceFor4 / POINTS_VALUE)
+
+    // Monta mensagem
+    let message = `${emoji} *${header}*\n`
+    message += `*R$ ${this.formatPrice(price)}* por pessoa\n\n`
+
+    // Rota completa com cidade e país
+    message += `✈️ *${routeFull}*\n`
+    message += `📅 ${departureDate}${returnDateStr ? ` → ${returnDateStr}` : ''} (17 dias)\n`
+    message += `🛫 ${flight.airline} | ${durationStr} | ${stopsStr}\n\n`
+
+    // Comparação com benchmark (se disponível)
+    if (deal.benchmarkAvg) {
+      const diffPercent = ((deal.benchmarkAvg - price) / deal.benchmarkAvg * 100).toFixed(0)
+      message += `📊 *vs mercado:* ${diffPercent}% abaixo da média (R$ ${this.formatPrice(deal.benchmarkAvg)})\n\n`
+    }
+
+    // Preços por pessoa
+    message += `💰 *Ida e volta, econômica:*\n`
+    message += `  1p: *R$ ${this.formatPrice(price)}*\n`
+    message += `  2p: R$ ${this.formatPrice(priceFor2)}\n`
+    message += `  4p: R$ ${this.formatPrice(priceFor4)}\n\n`
+
+    // Equivalente em pontos (estimativa simples)
+    message += `🎁 *Em pontos (~R$0,02/pt):*\n`
+    message += `  1p: ~${this.formatPoints(pointsFor1)} pts\n`
+    message += `  2p: ~${this.formatPoints(pointsFor2)} pts\n`
+
+    return {
+      type: deal.type,
+      route: routeShort,
+      currentPrice: price,
+      previousPrice: deal.previousPrice,
+      dropPercent: deal.dropPercent,
+      lowestPrice: deal.lowestPrice,
+      message,
+      deepLink: flight.deepLink,
+    }
+  }
+
+  // Formata preço com separador de milhar
+  private formatPrice(price: number): string {
+    return price.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  }
+
+  // Formata pontos com separador de milhar
+  private formatPoints(points: number): string {
+    return points.toLocaleString('pt-BR')
+  }
+
+  // Retorna datas de busca alvo
+  // Ida: 27 ou 28 de novembro, volta 17 dias depois (14 ou 15 de dezembro)
+  private getSearchDates(): Date[] {
+    const currentYear = new Date().getFullYear()
+    const targetYear = currentYear
+
+    const dates: Date[] = [
+      new Date(targetYear, 10, 27),  // 27/11 -> volta 14/12
+      new Date(targetYear, 10, 28),  // 28/11 -> volta 15/12
+    ]
+
+    // Filtra datas que já passaram
+    const now = new Date()
+    return dates.filter(d => d > now)
+  }
+
+  // Verifica budget antes de executar buscas
+  async checkBudgetBeforeSearch(): Promise<{ canProceed: boolean; message?: string }> {
+    const usageDb = getUsageDbService()
+    const budget = await usageDb.checkBudget('serpapi')
+
+    if (!budget.allowed) {
+      return { canProceed: false, message: budget.warning }
+    }
+
+    if (budget.warning) {
+      logger.warn(budget.warning)
+    }
+
+    return { canProceed: true, message: budget.warning }
+  }
+}
+
+let instance: PriceAlertService | null = null
+
+export function getPriceAlertService(): PriceAlertService {
+  if (!instance) {
+    instance = new PriceAlertService()
+  }
+  return instance
+}

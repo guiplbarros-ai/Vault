@@ -1,0 +1,63 @@
+{
+  "name": "atlas-app",
+  "version": "1.0.0",
+  "description": "Monitor de passagens aereas com alertas via Telegram",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "atlas": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "start:cli": "node dist/index.js",
+    "dev": "node --import tsx src/index.ts",
+    "dev:server": "node --import tsx src/server.ts",
+    "search": "node --import tsx src/index.ts search",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:security": "vitest run tests/security",
+    "test:e2e": "vitest run tests/e2e",
+    "test:ci": "vitest run --reporter=junit --outputFile=test-results.xml",
+    "predeploy": "npm run test && npm run build",
+    "deploy": "npm run predeploy && fly deploy"
+  },
+  "keywords": [
+    "flight",
+    "monitor",
+    "telegram",
+    "travel"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.90.1",
+    "commander": "^12.1.0",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
+    "dotenv": "^16.4.5",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^3.3.2",
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "overrides": {
+    "node-telegram-bot-api": {
+      "request": "npm:@cypress/request@^3.0.0"
+    }
+  },
+  "devDependencies": {
+    "@flydotio/dockerfile": "^0.7.10",
+    "@types/node": "^22.10.1",
+    "@types/node-cron": "^3.0.11",
+    "@types/node-telegram-bot-api": "^0.64.7",
+    "@vitest/coverage-v8": "^4.0.17",
+    "msw": "^2.12.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.17"
+  }
+}
