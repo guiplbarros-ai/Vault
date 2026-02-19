@@ -5,7 +5,6 @@ import { getAlertsDbService } from './alerts-db.service.js'
 import { getUsageDbService } from './usage-db.service.js'
 import { getTelegramService } from './telegram.service.js'
 import { searchFlights } from './flight-search.service.js'
-import { searchFlightsKiwi, isKiwiConfigured } from './kiwi.service.js'
 import { logger } from '../utils/logger.js'
 import { formatRoute, formatRouteFull, getAirport } from '../utils/airports.js'
 import { ratePriceVsBenchmark, getBenchmark, type PriceRating } from '../utils/price-benchmark.js'
@@ -172,7 +171,8 @@ class PriceAlertService {
     return deals
   }
 
-  // Busca voos domésticos reais (CNF→GRU ida + GRU→CNF volta) via Kiwi (grátis)
+  // Busca voos domésticos reais (CNF→GRU ida + GRU→CNF volta)
+  // Usa searchFlights (SerpAPI/Kiwi/Amadeus) — qualquer provider disponível
   // Filtra outbound: deve chegar no hub 4h antes do voo internacional
   private async findDomesticConnection(
     homeOrigin: string,
@@ -180,8 +180,6 @@ class PriceAlertService {
     internationalDeparture: string,
     stayDays: number,
   ): Promise<DomesticConnection | null> {
-    if (!isKiwiConfigured()) return null
-
     const MIN_BUFFER_HOURS = 4
 
     try {
@@ -195,14 +193,15 @@ class PriceAlertService {
       outboundDate.setHours(0, 0, 0, 0)
 
       // 1. Outbound: homeOrigin → hub (one-way, mesmo dia)
-      const outboundResults = await searchFlightsKiwi({
+      logger.info(`🏠 Buscando doméstico ida: ${homeOrigin}→${hubAirport}`)
+      const outboundSearch = await searchFlights({
         origin: homeOrigin,
         destination: hubAirport,
         departureDate: outboundDate,
       })
 
       // Filtra por horário: deve chegar antes do buffer
-      const validOutbound = outboundResults.filter((f) => {
+      const validOutbound = outboundSearch.results.filter((f) => {
         const dep = new Date(String(f.departureDate).replace(' ', 'T'))
         const arrival = new Date(dep.getTime() + f.duration * 60000)
         return arrival <= latestArrival
@@ -214,13 +213,14 @@ class PriceAlertService {
       const returnDate = new Date(outboundDate)
       returnDate.setDate(returnDate.getDate() + stayDays)
 
-      const inboundResults = await searchFlightsKiwi({
+      logger.info(`🏠 Buscando doméstico volta: ${hubAirport}→${homeOrigin}`)
+      const inboundSearch = await searchFlights({
         origin: hubAirport,
         destination: homeOrigin,
         departureDate: returnDate,
       })
 
-      const bestInbound = inboundResults[0] || null
+      const bestInbound = inboundSearch.results[0] || null
 
       const outPrice = bestOutbound?.price || 0
       const inPrice = bestInbound?.price || 0
