@@ -6,7 +6,7 @@ import { getUsageDbService } from './usage-db.service.js'
 import { getTelegramService } from './telegram.service.js'
 import { searchFlights } from './flight-search.service.js'
 import { logger } from '../utils/logger.js'
-import { formatRoute, formatRouteFull } from '../utils/airports.js'
+import { formatRoute, formatRouteFull, getAirport } from '../utils/airports.js'
 import { ratePriceVsBenchmark, getBenchmark, type PriceRating } from '../utils/price-benchmark.js'
 import { loadEnv } from '../utils/env.js'
 
@@ -303,20 +303,47 @@ class PriceAlertService {
     const priceFor2 = price * 2
     const priceFor4 = price * 4
 
-    // Equivalente em pontos (estimativa: 1 ponto ≈ R$0.020)
-    const POINTS_VALUE = 0.020
-    const pointsFor1 = Math.round(price / POINTS_VALUE)
-    const pointsFor2 = Math.round(priceFor2 / POINTS_VALUE)
-    const pointsFor4 = Math.round(priceFor4 / POINTS_VALUE)
+    // Pontos — tabela de custo por ponto por programa
+    const POINTS_PROGRAMS = [
+      { name: 'Smiles', costPerPoint: 0.019 },
+      { name: 'LATAM Pass', costPerPoint: 0.022 },
+      { name: 'Livelo', costPerPoint: 0.020 },
+    ] as const
 
     // Monta mensagem
     let message = `${emoji} *${header}*\n`
     message += `*R$ ${this.formatPrice(price)}* por pessoa\n\n`
 
-    // Rota completa com cidade e país
-    message += `✈️ *${routeFull}*\n`
+    // Rota com aeroportos explícitos
+    const originAirport = getAirport(flight.origin)
+    const destAirport = getAirport(flight.destination)
+    const originLabel = originAirport
+      ? `${originAirport.city} (${originAirport.iata})`
+      : flight.origin
+    const destLabel = destAirport
+      ? `${destAirport.city} (${destAirport.iata})`
+      : flight.destination
+
+    message += `🛫 *Origem:* ${originLabel}\n`
+    message += `🛬 *Destino:* ${destLabel}\n`
     message += `📅 ${departureDate}${returnDateStr ? ` → ${returnDateStr}` : ''} (19 dias)\n`
-    message += `🛫 ${flight.airline} | ${durationStr} | ${stopsStr}\n\n`
+    message += `✈️ ${flight.airline} | ${durationStr} | ${stopsStr}\n`
+
+    // Detalhes das paradas (onde e quanto tempo)
+    if (flight.layovers && flight.layovers.length > 0) {
+      message += `\n📍 *Conexões:*\n`
+      for (const layover of flight.layovers) {
+        const layoverAirport = getAirport(layover.airport)
+        const layoverLabel = layoverAirport
+          ? `${layoverAirport.city} (${layover.airport})`
+          : layover.city || layover.airport
+        const layoverHours = Math.floor(layover.duration / 60)
+        const layoverMins = layover.duration % 60
+        const layoverDur = layoverMins > 0 ? `${layoverHours}h${layoverMins}min` : `${layoverHours}h`
+        message += `  • ${layoverLabel} — ${layoverDur}\n`
+      }
+    }
+    message += '\n'
 
     // Comparação com benchmark (se disponível)
     if (deal.benchmarkAvg) {
@@ -330,10 +357,13 @@ class PriceAlertService {
     message += `  2p: R$ ${this.formatPrice(priceFor2)}\n`
     message += `  4p: R$ ${this.formatPrice(priceFor4)}\n\n`
 
-    // Equivalente em pontos (estimativa simples)
-    message += `🎁 *Em pontos (~R$0,02/pt):*\n`
-    message += `  1p: ~${this.formatPoints(pointsFor1)} pts\n`
-    message += `  2p: ~${this.formatPoints(pointsFor2)} pts\n\n`
+    // Equivalente em pontos por programa
+    message += `🎁 *Em pontos (1 pessoa):*\n`
+    for (const prog of POINTS_PROGRAMS) {
+      const points = Math.round(price / prog.costPerPoint)
+      message += `  ${prog.name}: ~${this.formatPoints(points)} pts (R$${prog.costPerPoint.toFixed(3)}/pt)\n`
+    }
+    message += '\n'
 
     // Janela de compra
     message += this.getPurchaseWindowAdvice(flight.departureDate)

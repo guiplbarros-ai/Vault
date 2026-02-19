@@ -1,3 +1,9 @@
+export interface Layover {
+  airport: string // IATA code (ex: "IAH")
+  city?: string // Nome da cidade (ex: "Houston")
+  duration: number // Tempo de conexão em minutos
+}
+
 export interface FlightResult {
   id: string
   origin: string
@@ -9,6 +15,7 @@ export interface FlightResult {
   airline: string
   stops: number
   duration: number // em minutos
+  layovers?: Layover[] // Detalhes das paradas (onde e quanto tempo)
   deepLink?: string
   provider: 'kiwi' | 'serpapi' | 'amadeus'
   fetchedAt: Date

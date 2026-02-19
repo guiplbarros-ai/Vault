@@ -131,6 +131,22 @@ function mapKiwiFlightToResult(flight: KiwiFlight, currency: string): FlightResu
   const stops = flight.route.length - 1
   const airline = flight.airlines[0] || 'Unknown'
 
+  // Extrai detalhes das paradas (layovers entre segmentos)
+  const layovers: import('../types/index.js').Layover[] = []
+  for (let i = 0; i < flight.route.length - 1; i++) {
+    const arriving = flight.route[i]
+    const departing = flight.route[i + 1]
+
+    const arrivalTime = new Date(arriving.local_arrival).getTime()
+    const departureTime = new Date(departing.local_departure).getTime()
+    const layoverMinutes = Math.round((departureTime - arrivalTime) / 60000)
+
+    layovers.push({
+      airport: arriving.flyTo,
+      duration: layoverMinutes > 0 ? layoverMinutes : 0,
+    })
+  }
+
   return {
     id: flight.id,
     origin: flight.flyFrom,
@@ -141,6 +157,7 @@ function mapKiwiFlightToResult(flight: KiwiFlight, currency: string): FlightResu
     airline: airline,
     stops: stops,
     duration: Math.round(flight.duration.total / 60), // segundos para minutos
+    layovers: layovers.length > 0 ? layovers : undefined,
     deepLink: flight.deep_link,
     provider: 'kiwi',
     fetchedAt: new Date(),

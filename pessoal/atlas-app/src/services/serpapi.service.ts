@@ -175,6 +175,24 @@ function mapSerpApiFlightToResult(flight: SerpApiFlight, params: FlightSearchPar
   const stops = flight.flights.length - 1
   const airline = firstSegment?.airline || 'Unknown'
 
+  // Extrai detalhes das paradas (layovers entre segmentos)
+  const layovers: import('../types/index.js').Layover[] = []
+  for (let i = 0; i < flight.flights.length - 1; i++) {
+    const arriving = flight.flights[i]
+    const departing = flight.flights[i + 1]
+
+    // Calcula duração da conexão a partir dos horários
+    const arrivalTime = new Date(arriving.arrival_airport.time).getTime()
+    const departureTime = new Date(departing.departure_airport.time).getTime()
+    const layoverMinutes = Math.round((departureTime - arrivalTime) / 60000)
+
+    layovers.push({
+      airport: arriving.arrival_airport.id,
+      city: arriving.arrival_airport.name,
+      duration: layoverMinutes > 0 ? layoverMinutes : 0,
+    })
+  }
+
   return {
     id: `serpapi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     origin: params.origin.toUpperCase(),
@@ -185,6 +203,7 @@ function mapSerpApiFlightToResult(flight: SerpApiFlight, params: FlightSearchPar
     airline: airline,
     stops: stops,
     duration: flight.total_duration,
+    layovers: layovers.length > 0 ? layovers : undefined,
     provider: 'serpapi',
     fetchedAt: new Date(),
   }
