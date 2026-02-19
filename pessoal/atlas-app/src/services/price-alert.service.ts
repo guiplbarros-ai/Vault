@@ -98,37 +98,46 @@ class PriceAlertService {
     // Estadia padrão: 19 dias (ou configurado na rota)
     const stayDays = route.minStayDays || 19
 
-    // Aeroportos alternativos na mesma cidade (ex: NRT e HND = Tóquio)
-    const ALTERNATIVE_AIRPORTS: Record<string, string[]> = {
+    // Aeroportos alternativos de destino (ex: NRT e HND = Tóquio)
+    const ALTERNATIVE_DESTINATIONS: Record<string, string[]> = {
       NRT: ['HND'],
       HND: ['NRT'],
     }
-    const destinations = [route.destination, ...(ALTERNATIVE_AIRPORTS[route.destination] || [])]
+
+    // Aeroportos alternativos de origem (ex: GRU como alternativa a CNF — compra trecho doméstico por fora)
+    const ALTERNATIVE_ORIGINS: Record<string, string[]> = {
+      CNF: ['GRU'],
+    }
+
+    const origins = [route.origin, ...(ALTERNATIVE_ORIGINS[route.origin] || [])]
+    const destinations = [route.destination, ...(ALTERNATIVE_DESTINATIONS[route.destination] || [])]
 
     for (const date of searchDates) {
-      for (const dest of destinations) {
-        try {
-          // Calcula data de volta (ida + estadia)
-          const returnDate = new Date(date)
-          returnDate.setDate(returnDate.getDate() + stayDays)
+      for (const orig of origins) {
+        for (const dest of destinations) {
+          try {
+            // Calcula data de volta (ida + estadia)
+            const returnDate = new Date(date)
+            returnDate.setDate(returnDate.getDate() + stayDays)
 
-          const result = await searchFlights({
-            origin: route.origin,
-            destination: dest,
-            departureDate: date,
-            returnDate: returnDate,
-          })
+            const result = await searchFlights({
+              origin: orig,
+              destination: dest,
+              departureDate: date,
+              returnDate: returnDate,
+            })
 
-          if (result.results.length === 0) continue
+            if (result.results.length === 0) continue
 
-          // Salva os precos no historico
-          await this.pricesDb.savePrices(result.results, route.id)
+            // Salva os precos no historico
+            await this.pricesDb.savePrices(result.results, route.id)
 
-          // Verifica deals (usa a rota original para o benchmark)
-          const routeDeals = await this.detectDeals(route, result.results)
-          deals.push(...routeDeals)
-        } catch (error) {
-          logger.warn(`Erro ao buscar ${route.origin}->${dest} para ${date}: ${error}`)
+            // Verifica deals (usa o aeroporto real da busca para o benchmark)
+            const routeDeals = await this.detectDeals({ ...route, origin: orig }, result.results)
+            deals.push(...routeDeals)
+          } catch (error) {
+            logger.warn(`Erro ao buscar ${orig}->${dest} para ${date}: ${error}`)
+          }
         }
       }
     }
