@@ -5,6 +5,7 @@ import { getAlertsDbService } from './alerts-db.service.js'
 import { getUsageDbService } from './usage-db.service.js'
 import { getTelegramService } from './telegram.service.js'
 import { searchFlights } from './flight-search.service.js'
+import { searchFlightsKiwi, isKiwiConfigured } from './kiwi.service.js'
 import { logger } from '../utils/logger.js'
 import { formatRoute, formatRouteFull, getAirport } from '../utils/airports.js'
 import { ratePriceVsBenchmark, getBenchmark, type PriceRating } from '../utils/price-benchmark.js'
@@ -13,6 +14,18 @@ import { loadEnv } from '../utils/env.js'
 loadEnv()
 
 const DEFAULT_DROP_PERCENT = Number(process.env.ATLAS_ALERT_DROP_PERCENT) || 15
+
+interface DomesticLeg {
+  price: number
+  airline: string
+  departureTime: string // horário de saída formatado (ex: "14:30")
+}
+
+interface DomesticConnection {
+  outbound: DomesticLeg | null
+  inbound: DomesticLeg | null
+  totalPrice: number
+}
 
 interface DetectedDeal {
   flight: FlightResult
@@ -25,8 +38,9 @@ interface DetectedDeal {
   benchmarkGood?: number
   benchmarkGreat?: number
   priceRating?: PriceRating
-  surcharge?: number // Custo extra do trecho doméstico (ex: BH→SP)
+  surcharge?: number // Custo real do trecho doméstico (buscado via Kiwi)
   homeOrigin?: string // Aeroporto base do usuário (ex: CNF)
+  domesticConnection?: DomesticConnection // Detalhes dos voos domésticos
 }
 
 class PriceAlertService {
@@ -158,6 +172,87 @@ class PriceAlertService {
     return deals
   }
 
+  // Busca voos domésticos reais (CNF→GRU ida + GRU→CNF volta) via Kiwi (grátis)
+  // Filtra outbound: deve chegar no hub 4h antes do voo internacional
+  private async findDomesticConnection(
+    homeOrigin: string,
+    hubAirport: string,
+    internationalDeparture: string,
+    stayDays: number,
+  ): Promise<DomesticConnection | null> {
+    if (!isKiwiConfigured()) return null
+
+    const MIN_BUFFER_HOURS = 4
+
+    try {
+      // Parse horário do voo internacional
+      const intlDepStr = String(internationalDeparture).replace(' ', 'T')
+      const intlDepTime = new Date(intlDepStr)
+      const latestArrival = new Date(intlDepTime.getTime() - MIN_BUFFER_HOURS * 3600000)
+
+      // Data do voo (meia-noite)
+      const outboundDate = new Date(intlDepTime)
+      outboundDate.setHours(0, 0, 0, 0)
+
+      // 1. Outbound: homeOrigin → hub (one-way, mesmo dia)
+      const outboundResults = await searchFlightsKiwi({
+        origin: homeOrigin,
+        destination: hubAirport,
+        departureDate: outboundDate,
+      })
+
+      // Filtra por horário: deve chegar antes do buffer
+      const validOutbound = outboundResults.filter((f) => {
+        const dep = new Date(String(f.departureDate).replace(' ', 'T'))
+        const arrival = new Date(dep.getTime() + f.duration * 60000)
+        return arrival <= latestArrival
+      })
+
+      const bestOutbound = validOutbound[0] || null // já ordenado por preço
+
+      // 2. Inbound: hub → homeOrigin (one-way, dia da volta)
+      const returnDate = new Date(outboundDate)
+      returnDate.setDate(returnDate.getDate() + stayDays)
+
+      const inboundResults = await searchFlightsKiwi({
+        origin: hubAirport,
+        destination: homeOrigin,
+        departureDate: returnDate,
+      })
+
+      const bestInbound = inboundResults[0] || null
+
+      const outPrice = bestOutbound?.price || 0
+      const inPrice = bestInbound?.price || 0
+      const totalPrice = outPrice + inPrice
+
+      if (totalPrice === 0) return null
+
+      // Formata horário de saída (ex: "14:30")
+      const formatTime = (dateStr: string): string => {
+        const timePart = dateStr.replace('T', ' ').split(' ')[1] || ''
+        return timePart.slice(0, 5) // "HH:MM"
+      }
+
+      logger.info(
+        `🏠 Trecho doméstico ${homeOrigin}↔${hubAirport}: R$${totalPrice} (ida R$${outPrice} + volta R$${inPrice})`
+      )
+
+      return {
+        outbound: bestOutbound
+          ? { price: bestOutbound.price, airline: bestOutbound.airline, departureTime: formatTime(String(bestOutbound.departureDate)) }
+          : null,
+        inbound: bestInbound
+          ? { price: bestInbound.price, airline: bestInbound.airline, departureTime: formatTime(String(bestInbound.departureDate)) }
+          : null,
+        totalPrice,
+      }
+    } catch (error) {
+      logger.warn(`Erro ao buscar trecho doméstico ${homeOrigin}↔${hubAirport}: ${error}`)
+      return null
+    }
+  }
+
   // Detecta deals com base no BENCHMARK de mercado (fonte principal)
   private async detectDeals(
     route: MonitoredRoute,
@@ -169,12 +264,42 @@ class PriceAlertService {
     if (flights.length === 0) return deals
 
     const bestFlight = flights[0] // Já ordenado por preço (menor primeiro)
+    const isAlternativeOrigin = extra.surcharge > 0
 
-    // Preço efetivo = preço do voo + custo do trecho doméstico
-    const effectivePrice = bestFlight.price + extra.surcharge
+    // Para origens alternativas: pre-filtra com estimativa, depois busca preço real
+    let surcharge = extra.surcharge
+    let domesticConnection: DomesticConnection | undefined
+
+    if (isAlternativeOrigin) {
+      // Pre-filtra com estimativa conservadora (R$300 mínimo doméstico i/v)
+      const conservativeTotal = bestFlight.price + 300
+      const preCheck = ratePriceVsBenchmark(extra.homeOrigin, route.destination, conservativeTotal)
+
+      if (preCheck.rating === 'good' || preCheck.rating === 'great') {
+        // Promissor! Busca preço real do trecho doméstico via Kiwi (grátis)
+        const domestic = await this.findDomesticConnection(
+          extra.homeOrigin,
+          route.origin,
+          String(bestFlight.departureDate),
+          route.minStayDays || 19,
+        )
+        if (domestic) {
+          surcharge = domestic.totalPrice
+          domesticConnection = domestic
+        }
+      } else {
+        // Nem com R$300 de doméstico é deal — pula
+        logger.info(
+          `📊 Preço ${preCheck.rating}: ${route.origin}->${route.destination} R$${conservativeTotal} estimado (avg: R$${preCheck.benchmark?.avgPrice})`
+        )
+        return deals
+      }
+    }
+
+    // Preço efetivo = preço do voo + custo real do trecho doméstico
+    const effectivePrice = bestFlight.price + surcharge
 
     // 1. PRINCIPAL: Verifica contra o BENCHMARK da origem BASE (ex: CNF, não GRU)
-    // Isso garante comparação justa: voo GRU R$7.000 + R$500 trecho = R$7.500 vs benchmark CNF
     const { rating, benchmark, percentVsAvg } = ratePriceVsBenchmark(
       extra.homeOrigin,
       route.destination,
@@ -193,11 +318,12 @@ class PriceAlertService {
           benchmarkGreat: benchmark.greatPrice,
           dropPercent: percentVsAvg,
           priceRating: rating,
-          surcharge: extra.surcharge || undefined,
-          homeOrigin: extra.surcharge ? extra.homeOrigin : undefined,
+          surcharge: surcharge || undefined,
+          homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
+          domesticConnection,
         })
         logger.info(
-          `🔥 PROMOÇÃO EXCELENTE: ${route.origin}->${route.destination} R$${effectivePrice}${extra.surcharge ? ` (voo R$${bestFlight.price} + trecho R$${extra.surcharge})` : ''} (benchmark great: R$${benchmark.greatPrice})`
+          `🔥 PROMOÇÃO EXCELENTE: ${route.origin}->${route.destination} R$${effectivePrice}${surcharge ? ` (voo R$${bestFlight.price} + doméstico R$${surcharge})` : ''} (benchmark great: R$${benchmark.greatPrice})`
         )
       } else if (rating === 'good') {
         deals.push({
@@ -209,16 +335,17 @@ class PriceAlertService {
           benchmarkGreat: benchmark.greatPrice,
           dropPercent: percentVsAvg,
           priceRating: rating,
-          surcharge: extra.surcharge || undefined,
-          homeOrigin: extra.surcharge ? extra.homeOrigin : undefined,
+          surcharge: surcharge || undefined,
+          homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
+          domesticConnection,
         })
         logger.info(
-          `✅ Preço bom: ${route.origin}->${route.destination} R$${effectivePrice}${extra.surcharge ? ` (voo R$${bestFlight.price} + trecho R$${extra.surcharge})` : ''} (benchmark good: R$${benchmark.goodPrice})`
+          `✅ Preço bom: ${route.origin}->${route.destination} R$${effectivePrice}${surcharge ? ` (voo R$${bestFlight.price} + doméstico R$${surcharge})` : ''} (benchmark good: R$${benchmark.goodPrice})`
         )
       } else {
         // Preço normal ou caro - apenas loga, não notifica
         logger.info(
-          `📊 Preço ${rating}: ${route.origin}->${route.destination} R$${effectivePrice}${extra.surcharge ? ` (voo R$${bestFlight.price} + trecho R$${extra.surcharge})` : ''} (avg: R$${benchmark.avgPrice})`
+          `📊 Preço ${rating}: ${route.origin}->${route.destination} R$${effectivePrice}${surcharge ? ` (voo R$${bestFlight.price} + doméstico R$${surcharge})` : ''} (avg: R$${benchmark.avgPrice})`
         )
       }
     } else {
@@ -347,13 +474,25 @@ class PriceAlertService {
     // Custo do trecho doméstico (se origem alternativa)
     const surcharge = deal.surcharge || 0
     const effectivePrice = price + surcharge
+    const domestic = deal.domesticConnection
 
     // Monta mensagem
     let message = `${emoji} *${header}*\n`
     if (surcharge > 0) {
-      message += `*R$ ${this.formatPrice(effectivePrice)}* por pessoa (custo total estimado)\n`
-      message += `  ✈️ Voo internacional: R$ ${this.formatPrice(price)}\n`
-      message += `  🚌 Trecho ${deal.homeOrigin || 'CNF'}→${flight.origin}: ~R$ ${this.formatPrice(surcharge)}\n\n`
+      message += `*R$ ${this.formatPrice(effectivePrice)}* por pessoa (custo total)\n\n`
+      message += `✈️ *Voo internacional:* R$ ${this.formatPrice(price)}\n`
+      if (domestic) {
+        message += `🏠 *Trecho doméstico ${deal.homeOrigin || 'CNF'}↔${flight.origin}:* R$ ${this.formatPrice(domestic.totalPrice)}\n`
+        if (domestic.outbound) {
+          message += `  Ida: R$ ${this.formatPrice(domestic.outbound.price)} — ${domestic.outbound.airline} às ${domestic.outbound.departureTime}\n`
+        }
+        if (domestic.inbound) {
+          message += `  Volta: R$ ${this.formatPrice(domestic.inbound.price)} — ${domestic.inbound.airline} às ${domestic.inbound.departureTime}\n`
+        }
+      } else {
+        message += `🏠 *Trecho ${deal.homeOrigin || 'CNF'}→${flight.origin}:* ~R$ ${this.formatPrice(surcharge)} (estimativa)\n`
+      }
+      message += '\n'
     } else {
       message += `*R$ ${this.formatPrice(price)}* por pessoa\n\n`
     }
