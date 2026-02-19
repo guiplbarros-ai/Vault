@@ -285,14 +285,18 @@ class PriceAlertService {
         break
     }
 
-    // Formata data do voo (YYYY-MM-DD -> DD/MM/YYYY)
+    // Extrai apenas a parte da data (YYYY-MM-DD), ignorando horário
+    // SerpAPI manda "2026-11-30 10:30", Kiwi manda "2026-11-30T10:30:00.000Z"
     const depDateStr = String(flight.departureDate)
-    const departureDate = depDateStr.includes('-')
-      ? depDateStr.split('T')[0].split('-').reverse().join('/')
+    const dateOnly = depDateStr.split(/[T ]/)[0] // separa em T ou espaço
+    const depParts = dateOnly.includes('-') ? dateOnly.split('-') : null
+
+    // Formata data do voo (YYYY-MM-DD -> DD/MM/YYYY)
+    const departureDate = depParts
+      ? `${depParts[2]}/${depParts[1]}/${depParts[0]}`
       : depDateStr
 
     // Calcula data de volta (ida + 19 dias de estadia)
-    const depParts = depDateStr.includes('-') ? depDateStr.split('T')[0].split('-') : null
     let returnDateStr = ''
     if (depParts) {
       const depDate = new Date(Number(depParts[0]), Number(depParts[1]) - 1, Number(depParts[2]))

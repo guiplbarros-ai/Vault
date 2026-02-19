@@ -129,7 +129,7 @@ export async function searchFlightsKiwi(params: FlightSearchParams): Promise<Fli
 
 function mapKiwiFlightToResult(flight: KiwiFlight, currency: string): FlightResult {
   const stops = flight.route.length - 1
-  const airline = flight.airlines[0] || 'Unknown'
+  const airline = flight.airlines.length > 0 ? flight.airlines.join(', ') : 'Unknown'
 
   // Extrai detalhes das paradas (layovers entre segmentos)
   const layovers: import('../types/index.js').Layover[] = []

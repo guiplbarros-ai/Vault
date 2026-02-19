@@ -173,7 +173,8 @@ function mapSerpApiFlightToResult(flight: SerpApiFlight, params: FlightSearchPar
   const lastSegment = flight.flights[flight.flights.length - 1]
 
   const stops = flight.flights.length - 1
-  const airline = firstSegment?.airline || 'Unknown'
+  const airlines = [...new Set(flight.flights.map(s => s.airline).filter(Boolean))]
+  const airline = airlines.join(', ') || 'Unknown'
 
   // Extrai detalhes das paradas (layovers entre segmentos)
   const layovers: import('../types/index.js').Layover[] = []
