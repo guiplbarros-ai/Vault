@@ -14,6 +14,25 @@ loadEnv()
 
 const DEFAULT_DROP_PERCENT = Number(process.env.ATLAS_ALERT_DROP_PERCENT) || 15
 
+// --- Preferências de alerta por chat ---
+export type AlertLevel = 'all' | 'good_and_great' | 'great_only'
+
+interface ChatAlertPrefs {
+  alertLevel: AlertLevel
+  silenceUntil?: Date // Silencia alertas até esta data
+}
+
+const chatPrefs = new Map<number, ChatAlertPrefs>()
+
+export function setChatAlertPrefs(chatId: number, prefs: Partial<ChatAlertPrefs>): void {
+  const current = chatPrefs.get(chatId) || { alertLevel: 'good_and_great' as AlertLevel }
+  chatPrefs.set(chatId, { ...current, ...prefs })
+}
+
+export function getChatAlertPrefs(chatId: number): ChatAlertPrefs {
+  return chatPrefs.get(chatId) || { alertLevel: 'good_and_great' }
+}
+
 // Países que exigem visto de trânsito para brasileiros
 const VISA_REQUIRED_COUNTRIES = new Set(['US'])
 
@@ -114,6 +133,25 @@ class PriceAlertService {
     const chatId = deal.route.chatId
     if (!chatId || chatId === 0) {
       logger.warn(`Chat ID não configurado para rota ${deal.route.origin}->${deal.route.destination}`)
+      return
+    }
+
+    // Verifica preferências de alerta do chat
+    const prefs = getChatAlertPrefs(chatId)
+
+    // Silenciado?
+    if (prefs.silenceUntil && new Date() < prefs.silenceUntil) {
+      logger.info(`🔇 Chat ${chatId} silenciado até ${prefs.silenceUntil.toLocaleDateString('pt-BR')}`)
+      return
+    }
+
+    // Filtro de nível
+    if (prefs.alertLevel === 'great_only' && deal.type !== 'great_price' && deal.type !== 'target_reached') {
+      logger.info(`🔇 Chat ${chatId} quer só great_price, ignorando ${deal.type}`)
+      return
+    }
+    if (prefs.alertLevel === 'good_and_great' && !['good_price', 'great_price', 'target_reached'].includes(deal.type)) {
+      logger.info(`🔇 Chat ${chatId} quer good+great, ignorando ${deal.type}`)
       return
     }
 
@@ -598,11 +636,16 @@ class PriceAlertService {
     const stopsStr = flight.stops === 0 ? 'Direto' : `${flight.stops} parada${flight.stops > 1 ? 's' : ''}`
 
     // Pontos — tabela de custo por ponto por programa
+    // costPerPoint: quanto custa comprar 1 ponto no mercado (R$)
+    // typicalRedemption: quantos pontos tipicamente se gasta para emitir ida+volta Japan
     const POINTS_PROGRAMS = [
-      { name: 'Smiles', costPerPoint: 0.019 },
-      { name: 'LATAM Pass', costPerPoint: 0.022 },
-      { name: 'Livelo', costPerPoint: 0.020 },
+      { name: 'Smiles', costPerPoint: 0.019, typicalRedemption: 100000, transferBonus: 0 },
+      { name: 'LATAM Pass', costPerPoint: 0.022, typicalRedemption: 110000, transferBonus: 0 },
+      { name: 'Livelo', costPerPoint: 0.020, typicalRedemption: 120000, transferBonus: 0 },
     ] as const
+    // Valor do ponto quando redimido: quanto cada ponto "vale" em R$ no resgate
+    // Se preço_cash / pontos_necessários > custo_compra_ponto → vale comprar com dinheiro
+    // Se preço_cash / pontos_necessários < custo_compra_ponto → vale usar pontos
 
     // Custo do trecho doméstico (se origem alternativa)
     const surcharge = deal.surcharge || 0
@@ -684,11 +727,15 @@ class PriceAlertService {
     message += `  2p: R$ ${this.formatPrice(effectivePrice * 2)}\n`
     message += `  4p: R$ ${this.formatPrice(effectivePrice * 4)}\n\n`
 
-    // Equivalente em pontos por programa (baseado no custo total)
+    // Equivalente em pontos por programa + análise "vale a pena?"
     message += `🎁 *Em pontos (1 pessoa):*\n`
     for (const prog of POINTS_PROGRAMS) {
-      const points = Math.round(effectivePrice / prog.costPerPoint)
-      message += `  ${prog.name}: ~${this.formatPoints(points)} pts (R$${prog.costPerPoint.toFixed(3)}/pt)\n`
+      const pointsNeeded = Math.round(effectivePrice / prog.costPerPoint)
+      // Valor do ponto no resgate = preço cash / pontos típicos para emitir
+      const redemptionValue = effectivePrice / prog.typicalRedemption
+      const verdict = redemptionValue > prog.costPerPoint ? '💰 _pontos valem mais_' : '💵 _dinheiro melhor_'
+      message += `  ${prog.name}: ~${this.formatPoints(prog.typicalRedemption)} pts | ${verdict}\n`
+      message += `    _(pt vale R$${redemptionValue.toFixed(3)} vs compra R$${prog.costPerPoint.toFixed(3)})_\n`
     }
     message += '\n'
 
@@ -705,6 +752,24 @@ class PriceAlertService {
         message += `  • R$ ${this.formatPrice(altPrice)} — ${alt.airline} | ${altDur} | ${altStops}${altUsFlag}\n`
       }
       message += '\n'
+    }
+
+    // Open-jaw: sugere combinação NRT/KIX quando aplicável
+    const OPEN_JAW_PAIRS: Record<string, { alt: string; transport: string }> = {
+      NRT: { alt: 'KIX', transport: 'shinkansen Tóquio→Osaka (~2h30)' },
+      HND: { alt: 'KIX', transport: 'shinkansen Tóquio→Osaka (~2h30)' },
+      KIX: { alt: 'NRT', transport: 'shinkansen Osaka→Tóquio (~2h30)' },
+    }
+    const ojPair = OPEN_JAW_PAIRS[flight.destination]
+    if (ojPair && depParts) {
+      const retDate = new Date(Number(depParts[0]), Number(depParts[1]) - 1, Number(depParts[2]))
+      retDate.setDate(retDate.getDate() + 19)
+      const retIso = `${retDate.getFullYear()}-${String(retDate.getMonth() + 1).padStart(2, '0')}-${String(retDate.getDate()).padStart(2, '0')}`
+      const depIso = `${depParts[0]}-${depParts[1]}-${depParts[2]}`
+      const ojOrigin = surcharge > 0 ? (deal.homeOrigin || flight.origin) : flight.origin
+      const ojUrl = `https://www.google.com/travel/flights?q=Flights+from+${ojOrigin}+to+${flight.destination}+on+${depIso}+then+from+${ojPair.alt}+to+${ojOrigin}+on+${retIso}&curr=BRL&hl=pt-BR`
+      message += `🔄 *Open-jaw:* Ida ${flight.destination}, volta ${ojPair.alt} (${ojPair.transport})\n`
+      message += `  [Buscar multi-cidade no Google Flights](${ojUrl})\n\n`
     }
 
     // Janela de compra

@@ -1,8 +1,10 @@
+import { format } from 'date-fns'
 import type { FlightResult, FlightSearchParams } from '../types/index.js'
 import { searchFlightsKiwi, isKiwiConfigured, searchFlexibleDatesKiwi } from './kiwi.service.js'
 import { searchFlightsSerpApi, isSerpApiConfigured, BudgetExceededError } from './serpapi.service.js'
 import { searchFlightsAmadeus, isAmadeusConfigured } from './amadeus.service.js'
 import { getUsageDbService } from './usage-db.service.js'
+import { getHealthService } from './health.service.js'
 import { logger } from '../utils/logger.js'
 import { formatRoute } from '../utils/airports.js'
 import { formatDate } from '../utils/date.js'
@@ -15,7 +17,59 @@ export interface SearchResult {
   budgetWarning?: string
 }
 
+// --- Cache de buscas (economia ~50% do budget SerpAPI) ---
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000 // 6 horas
+const searchCache = new Map<string, { result: SearchResult; timestamp: number }>()
+
+function getCacheKey(params: FlightSearchParams): string {
+  const dep = format(params.departureDate, 'yyyy-MM-dd')
+  const ret = params.returnDate ? format(params.returnDate, 'yyyy-MM-dd') : 'ow'
+  return `${params.origin.toUpperCase()}-${params.destination.toUpperCase()}-${dep}-${ret}`
+}
+
+function getCachedResult(params: FlightSearchParams): SearchResult | null {
+  const key = getCacheKey(params)
+  const cached = searchCache.get(key)
+  if (!cached) return null
+
+  const age = Date.now() - cached.timestamp
+  if (age > CACHE_TTL_MS) {
+    searchCache.delete(key)
+    return null
+  }
+
+  logger.info(`📦 Cache hit: ${key} (age: ${Math.round(age / 60000)}min)`)
+  return cached.result
+}
+
+function setCachedResult(params: FlightSearchParams, result: SearchResult): void {
+  const key = getCacheKey(params)
+  searchCache.set(key, { result, timestamp: Date.now() })
+
+  // Limpa entradas expiradas periodicamente (a cada 50 entradas)
+  if (searchCache.size > 50) {
+    const now = Date.now()
+    for (const [k, v] of searchCache) {
+      if (now - v.timestamp > CACHE_TTL_MS) searchCache.delete(k)
+    }
+  }
+}
+
+export function getCacheStats(): { size: number; entries: string[] } {
+  const now = Date.now()
+  const entries: string[] = []
+  for (const [key, val] of searchCache) {
+    const ageMin = Math.round((now - val.timestamp) / 60000)
+    entries.push(`${key} (${ageMin}min, ${val.result.results.length} voos)`)
+  }
+  return { size: searchCache.size, entries }
+}
+
 export async function searchFlights(params: FlightSearchParams): Promise<SearchResult> {
+  // Check cache first (economia de budget)
+  const cached = getCachedResult(params)
+  if (cached) return cached
+
   const errors: string[] = []
   const results: FlightResult[] = []
   const providers: string[] = []
@@ -28,6 +82,8 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
     formatDate(params.departureDate)
   )
 
+  const health = getHealthService()
+
   // 1. SerpAPI (principal - preços reais via Google Flights)
   // Custa $0.01/call mas tem dados precisos de mercado
   // BLOQUEADO automaticamente se limite mensal atingido
@@ -36,6 +92,7 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
       const serpResults = await searchFlightsSerpApi(params)
       results.push(...serpResults)
       providers.push('serpapi')
+      health.recordSuccess('serpapi')
       logger.info(`SerpAPI: ${serpResults.length} resultados`)
 
       // Check for budget warnings after successful call
@@ -55,6 +112,7 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
         errors.push(`SerpAPI: Limite mensal atingido (${error.used}/${error.limit})`)
       } else {
         const msg = error instanceof Error ? error.message : String(error)
+        await health.recordFailure('serpapi', msg)
         errors.push(`SerpAPI: ${msg}`)
         logger.warn(`Erro SerpAPI: ${msg}`)
       }
@@ -68,9 +126,11 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
       const kiwiResults = await searchFlightsKiwi(params)
       results.push(...kiwiResults)
       providers.push('kiwi')
+      health.recordSuccess('kiwi')
       logger.info(`Kiwi: ${kiwiResults.length} resultados`)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
+      await health.recordFailure('kiwi', msg)
       errors.push(`Kiwi: ${msg}`)
       logger.warn(`Erro Kiwi: ${msg}`)
     }
@@ -84,9 +144,11 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
       const amadeusResults = await searchFlightsAmadeus(params)
       results.push(...amadeusResults)
       providers.push('amadeus')
+      health.recordSuccess('amadeus')
       logger.info(`Amadeus (TEST API): ${amadeusResults.length} resultados`)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
+      await health.recordFailure('amadeus', msg)
       errors.push(`Amadeus: ${msg}`)
       logger.warn(`Erro Amadeus: ${msg}`)
     }
@@ -97,13 +159,20 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
 
   const lowestPrice = results.length > 0 ? results[0] : undefined
 
-  return {
+  const searchResult: SearchResult = {
     results,
     providers,
     lowestPrice,
     errors,
     budgetWarning,
   }
+
+  // Cache results (only if we got actual results)
+  if (results.length > 0) {
+    setCachedResult(params, searchResult)
+  }
+
+  return searchResult
 }
 
 // Busca apenas com SerpAPI (para validacao de deals)

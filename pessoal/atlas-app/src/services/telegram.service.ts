@@ -5,11 +5,15 @@ import { searchFlights, formatSearchSummary } from './flight-search.service.js'
 import { getRoutesDbService } from './routes-db.service.js'
 import { getAlertsDbService } from './alerts-db.service.js'
 import { getPricesDbService } from './prices-db.service.js'
-import { getPriceAlertService } from './price-alert.service.js'
+import { getPriceAlertService, getChatAlertPrefs, setChatAlertPrefs } from './price-alert.service.js'
+import type { AlertLevel } from './price-alert.service.js'
 import { getUsageDbService } from './usage-db.service.js'
 import { getPromoMonitorService } from './promo-monitor.service.js'
+import { getHealthService } from './health.service.js'
+import { getCacheStats } from './flight-search.service.js'
 import { formatRoute, isValidIata, normalizeIata, formatAirportFull } from '../utils/airports.js'
 import { getBenchmark } from '../utils/price-benchmark.js'
+import { generateAsciiChart } from '../utils/ascii-chart.js'
 import { parseDateInput } from '../utils/date.js'
 import type { AlertNotification } from '../types/index.js'
 
@@ -67,8 +71,10 @@ class TelegramService {
           `/rota remove GRU LIS - Parar de monitorar\n` +
           `/rotas - Listar rotas monitoradas\n` +
           `/buscar GRU LIS 15/03 - Busca manual\n` +
-          `/historico CNF NRT - Histórico de preços 7d\n` +
+          `/historico CNF NRT - Histórico de preços 30d\n` +
+          `/config - Configurar alertas\n` +
           `/budget - Ver uso de API (custos)\n` +
+          `/health - Status dos providers\n` +
           `/promos - Status do monitor Livelo\n` +
           `/digest - Ver configuracao de digest\n` +
           `/id - Ver seu chat ID`
@@ -289,7 +295,90 @@ class TelegramService {
       this.sendMessage(msg.chat.id, message)
     })
 
-    // /historico CNF NRT - Histórico de preços dos últimos 7 dias
+    // /config - Ver e alterar preferências de alertas
+    this.bot.onText(/\/config$/, (msg) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+
+      const prefs = getChatAlertPrefs(msg.chat.id)
+      const levelLabel: Record<string, string> = {
+        all: '📢 Todos (good + great + target)',
+        good_and_great: '✅ Bom e Excelente (padrão)',
+        great_only: '🔥 Apenas Excelente',
+      }
+
+      let message = `⚙️ *Configurações de Alerta*\n\n`
+      message += `Nível: ${levelLabel[prefs.alertLevel] || prefs.alertLevel}\n`
+      if (prefs.silenceUntil) {
+        message += `🔇 Silenciado até: ${prefs.silenceUntil.toLocaleDateString('pt-BR')}\n`
+      }
+      message += `\n*Alterar:*\n`
+      message += `/config great - Só promoções excelentes\n`
+      message += `/config good - Bom + Excelente\n`
+      message += `/config all - Todos os alertas\n`
+      message += `/config silence 30/03 - Silenciar até data\n`
+      message += `/config resume - Reativar alertas`
+
+      this.sendMessage(msg.chat.id, message)
+    })
+
+    // /config <level>
+    this.bot.onText(/\/config (great|good|all)/, (msg, match) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+      if (!match) return
+
+      const levelMap: Record<string, AlertLevel> = {
+        great: 'great_only',
+        good: 'good_and_great',
+        all: 'all',
+      }
+      const level = levelMap[match[1]]
+      setChatAlertPrefs(msg.chat.id, { alertLevel: level })
+
+      const labels: Record<string, string> = {
+        great_only: '🔥 Apenas Excelente',
+        good_and_great: '✅ Bom + Excelente',
+        all: '📢 Todos os alertas',
+      }
+      this.sendMessage(msg.chat.id, `Configuração atualizada: ${labels[level]}`)
+    })
+
+    // /config silence DD/MM
+    this.bot.onText(/\/config silence (\d{1,2})\/(\d{1,2})/, (msg, match) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+      if (!match) return
+
+      const day = Number(match[1])
+      const month = Number(match[2])
+      const year = new Date().getFullYear()
+      const silenceDate = new Date(year, month - 1, day, 23, 59, 59)
+
+      if (silenceDate <= new Date()) {
+        silenceDate.setFullYear(year + 1)
+      }
+
+      setChatAlertPrefs(msg.chat.id, { silenceUntil: silenceDate })
+      this.sendMessage(msg.chat.id, `🔇 Alertas silenciados até ${silenceDate.toLocaleDateString('pt-BR')}`)
+    })
+
+    // /config resume
+    this.bot.onText(/\/config resume/, (msg) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+      setChatAlertPrefs(msg.chat.id, { silenceUntil: undefined })
+      this.sendMessage(msg.chat.id, `🔔 Alertas reativados!`)
+    })
+
+    // /health - Status dos providers e cache
+    this.bot.onText(/\/health/, (msg) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+
+      const healthMsg = getHealthService().getStatusMessage()
+      const cache = getCacheStats()
+      const cacheSection = `\n\n📦 *Cache de buscas:* ${cache.size} entradas`
+
+      this.sendMessage(msg.chat.id, healthMsg + cacheSection)
+    })
+
+    // /historico CNF NRT - Histórico de preços dos últimos 30 dias + gráfico
     this.bot.onText(/\/historico ([A-Za-z]{3}) ([A-Za-z]{3})/, async (msg, match) => {
       if (!isAuthorized(msg.from?.id || 0)) return
       if (!match) return
@@ -304,23 +393,42 @@ class TelegramService {
           return
         }
 
-        const [avg7d, trend, recentPrices, lowest] = await Promise.all([
+        const [avg7d, trend, recentPrices30d, lowest] = await Promise.all([
           pricesDb.getAvgPrice7Days(origin, dest),
           pricesDb.getTrend(origin, dest),
-          pricesDb.getRecentPrices(origin, dest, 7),
+          pricesDb.getRecentPrices(origin, dest, 30),
           pricesDb.getLowestHistoricalPrice(origin, dest),
         ])
 
         const benchmark = getBenchmark(origin, dest)
         const routeLabel = `${formatAirportFull(origin)} → ${formatAirportFull(dest)}`
 
-        let message = `📈 *Histórico de Preços (7 dias)*\n`
+        let message = `📈 *Histórico de Preços*\n`
         message += `${routeLabel}\n\n`
 
-        if (!avg7d || avg7d.sampleCount === 0) {
-          message += `Sem dados de preço para esta rota nos últimos 7 dias.`
+        if (!recentPrices30d || recentPrices30d.length === 0) {
+          message += `Sem dados de preço para esta rota.`
           this.sendMessage(msg.chat.id, message)
           return
+        }
+
+        // Gráfico ASCII (agrupa por dia, pega menor preço de cada dia)
+        const byDay = new Map<string, number>()
+        for (const p of recentPrices30d) {
+          const d = new Date(p.fetchedAt)
+          const dayKey = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
+          const existing = byDay.get(dayKey)
+          if (!existing || p.price < existing) {
+            byDay.set(dayKey, p.price)
+          }
+        }
+        const chartPoints = Array.from(byDay.entries())
+          .reverse() // cronológico
+          .map(([label, value]) => ({ label, value }))
+
+        if (chartPoints.length >= 2) {
+          message += generateAsciiChart(chartPoints, { title: '📊 *Gráfico 30 dias (menor/dia):*' })
+          message += '\n\n'
         }
 
         // Tendência
@@ -330,11 +438,13 @@ class TelegramService {
 
         // Estatísticas 7 dias
         const fmt = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-        message += `📊 *Últimos 7 dias:*\n`
-        message += `  Média: R$ ${fmt(avg7d.avgPrice)}\n`
-        message += `  Mínimo: R$ ${fmt(avg7d.minPrice)}\n`
-        message += `  Máximo: R$ ${fmt(avg7d.maxPrice)}\n`
-        message += `  Amostras: ${avg7d.sampleCount}\n\n`
+        if (avg7d && avg7d.sampleCount > 0) {
+          message += `📊 *Últimos 7 dias:*\n`
+          message += `  Média: R$ ${fmt(avg7d.avgPrice)}\n`
+          message += `  Mínimo: R$ ${fmt(avg7d.minPrice)}\n`
+          message += `  Máximo: R$ ${fmt(avg7d.maxPrice)}\n`
+          message += `  Amostras: ${avg7d.sampleCount}\n\n`
+        }
 
         // Benchmark
         if (benchmark) {
@@ -354,7 +464,7 @@ class TelegramService {
         }
 
         // Últimas 5 cotações
-        const last5 = recentPrices.slice(0, 5)
+        const last5 = recentPrices30d.slice(0, 5)
         if (last5.length > 0) {
           message += `🕐 *Últimas cotações:*\n`
           for (const p of last5) {
