@@ -118,6 +118,29 @@ describe('Promo Filter - isTransferPromo', () => {
     })
   })
 
+  describe('deve REJEITAR promos de passagens por milhas (PPV)', () => {
+    it('Smiles passagens para Miami', () => {
+      expect(isTransferPromo(
+        'Alerta de passagens PPV! Smiles oferece passagens para Miami a partir de 37.500 milhas',
+        'Passagens por milhas'
+      )).toBe(false)
+    })
+
+    it('Smiles passagens ida e volta', () => {
+      expect(isTransferPromo(
+        'Smiles: passagens ida e volta para Europa a partir de 50.000 milhas',
+        'Promoção de passagens'
+      )).toBe(false)
+    })
+
+    it('Smiles passagem só de ida', () => {
+      expect(isTransferPromo(
+        'Smiles oferece passagem só de ida para Nova York por 20.000 milhas',
+        'Passagens aéreas'
+      )).toBe(false)
+    })
+  })
+
   describe('deve REJEITAR conteúdo sem relação', () => {
     it('artigo genérico de viagem', () => {
       expect(isTransferPromo(

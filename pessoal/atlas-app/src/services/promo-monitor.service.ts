@@ -13,14 +13,20 @@ const REQUIRED_KEYWORD = 'livelo'
 const TRANSFER_KEYWORDS = ['transferência', 'transferencia', 'transferir', 'bônus', 'bonus', 'milhas', 'smiles', 'latam pass', 'azul', 'tudo azul']
 
 // Filter 2: Smiles transfer bonuses — "smiles" + transfer/bonus keyword
+// NÃO inclui "milhas" (genérico demais — qualquer artigo Smiles menciona milhas)
 const SMILES_KEYWORD = 'smiles'
-const SMILES_BONUS_KEYWORDS = ['bônus', 'bonus', 'transferência', 'transferencia', 'livelo', 'milhas']
+const SMILES_BONUS_KEYWORDS = ['bônus', 'bonus', 'transferência', 'transferencia', 'livelo']
 
-// Exclui promos de consumo/compras (pontos por real gasto em lojas)
-const CONSUMPTION_KEYWORDS = ['por real', 'por r$', 'compras', 'parceiros', 'cashback', 'shopping', 'loja', 'gasto', 'marketplace', 'clube livelo', 'assinatura']
+// Exclui promos de consumo/compras E promos de passagens por milhas (PPV)
+const CONSUMPTION_KEYWORDS = [
+  'por real', 'por r$', 'compras', 'parceiros', 'cashback', 'shopping',
+  'loja', 'gasto', 'marketplace', 'clube livelo', 'assinatura',
+  'passagens', 'passagem', 'a partir de', 'ida e volta', 'só de ida',
+]
 
-// Só notifica artigos publicados nas últimas 6 horas (evita spam no restart)
-const MAX_AGE_MS = 6 * 60 * 60 * 1000
+// Só notifica artigos publicados nos últimos 45 minutos
+// (evita re-envio após deploy — cron roda a cada 30min)
+const MAX_AGE_MS = 45 * 60 * 1000
 
 const FETCH_TIMEOUT_MS = 15000
 

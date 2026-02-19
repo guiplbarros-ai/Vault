@@ -14,6 +14,18 @@ loadEnv()
 
 const DEFAULT_DROP_PERCENT = Number(process.env.ATLAS_ALERT_DROP_PERCENT) || 15
 
+// Países que exigem visto de trânsito para brasileiros
+const VISA_REQUIRED_COUNTRIES = new Set(['US'])
+
+// Verifica se um voo transita por país que exige visto
+function hasVisaRequiredTransit(flight: FlightResult): boolean {
+  if (!flight.layovers || flight.layovers.length === 0) return false
+  return flight.layovers.some((layover) => {
+    const airport = getAirport(layover.airport)
+    return airport ? VISA_REQUIRED_COUNTRIES.has(airport.country) : false
+  })
+}
+
 interface DomesticLeg {
   price: number
   airline: string
@@ -263,7 +275,25 @@ class PriceAlertService {
 
     if (flights.length === 0) return deals
 
-    const bestFlight = flights[0] // Já ordenado por preço (menor primeiro)
+    // Prefere voos SEM trânsito em países que exigem visto (EUA)
+    const noVisaFlights = flights.filter((f) => !hasVisaRequiredTransit(f))
+    const bestFlight = noVisaFlights[0] || null
+
+    if (!bestFlight) {
+      // Todos os voos passam por país com exigência de visto
+      const cheapest = flights[0]
+      logger.info(
+        `⚠️ ${route.origin}->${route.destination}: todos os ${flights.length} voos transitam por país com visto (melhor: R$${cheapest.price}). Ignorando.`
+      )
+      return deals
+    }
+
+    if (noVisaFlights.length < flights.length) {
+      logger.info(
+        `🛂 ${route.origin}->${route.destination}: ${flights.length - noVisaFlights.length}/${flights.length} voos excluídos (trânsito EUA). Melhor sem visto: R$${bestFlight.price}`
+      )
+    }
+
     const isAlternativeOrigin = extra.surcharge > 0
 
     // Para origens alternativas: pre-filtra com estimativa, depois busca preço real
