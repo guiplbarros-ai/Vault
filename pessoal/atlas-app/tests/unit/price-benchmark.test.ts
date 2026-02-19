@@ -37,20 +37,20 @@ describe('price-benchmark utils', () => {
   })
 
   describe('ratePriceVsBenchmark', () => {
-    // CNF-NRT benchmark (ida+volta): avg=8000, good=7500, great=6500
+    // CNF-NRT benchmark (ida+volta): avg=7600, good=7200, great=6000
     it('should rate as "great" when price is below greatPrice', () => {
-      const result = ratePriceVsBenchmark('CNF', 'NRT', 6000)
+      const result = ratePriceVsBenchmark('CNF', 'NRT', 5500)
       expect(result.rating).toBe('great')
       expect(result.benchmark).not.toBeUndefined()
     })
 
     it('should rate as "good" when price is between great and good', () => {
-      const result = ratePriceVsBenchmark('CNF', 'NRT', 7000)
+      const result = ratePriceVsBenchmark('CNF', 'NRT', 6500)
       expect(result.rating).toBe('good')
     })
 
     it('should rate as "normal" when price is between good and avg', () => {
-      const result = ratePriceVsBenchmark('CNF', 'NRT', 7800)
+      const result = ratePriceVsBenchmark('CNF', 'NRT', 7400)
       expect(result.rating).toBe('normal')
     })
 
@@ -83,16 +83,16 @@ describe('price-benchmark utils', () => {
   })
 
   describe('isPromotion', () => {
-    // CNF-NRT benchmark (ida+volta): avg=8000, good=7500, great=6500
+    // CNF-NRT benchmark (ida+volta): avg=7600, good=7200, great=6000
     it('should return true for prices at or below goodPrice', () => {
-      expect(isPromotion('CNF', 'NRT', 6000)).toBe(true) // great price
-      expect(isPromotion('CNF', 'NRT', 6500)).toBe(true) // exactly great price
-      expect(isPromotion('CNF', 'NRT', 7000)).toBe(true) // good price
-      expect(isPromotion('CNF', 'NRT', 7500)).toBe(true) // exactly good price
+      expect(isPromotion('CNF', 'NRT', 5500)).toBe(true) // great price
+      expect(isPromotion('CNF', 'NRT', 6000)).toBe(true) // exactly great price
+      expect(isPromotion('CNF', 'NRT', 6500)).toBe(true) // good price
+      expect(isPromotion('CNF', 'NRT', 7200)).toBe(true) // exactly good price
     })
 
     it('should return false for prices above goodPrice', () => {
-      expect(isPromotion('CNF', 'NRT', 7800)).toBe(false) // normal
+      expect(isPromotion('CNF', 'NRT', 7400)).toBe(false) // normal
       expect(isPromotion('CNF', 'NRT', 9000)).toBe(false) // expensive
     })
 

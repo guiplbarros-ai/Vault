@@ -21,37 +21,38 @@ export interface PriceBenchmark {
 
 // Benchmark de preços por rota (origem-destino) - IDA E VOLTA (18 dias)
 const PRICE_BENCHMARKS: Record<string, PriceBenchmark> = {
-  // Brasil -> Japão (ida e volta)
+  // Brasil -> Japão (ida e volta) — calibrado com dados reais (fev/2026)
   'CNF-NRT': {
     route: 'CNF-NRT',
-    avgPrice: 8000,
-    goodPrice: 7500,
-    greatPrice: 6500,
+    avgPrice: 7600,
+    goodPrice: 7200,
+    greatPrice: 6000,
     lastUpdated: '2026-02',
-    notes: 'Via EUA ou Oriente Médio. Direto não existe.',
+    notes: 'Via EUA ou Oriente Médio. Mediana real: R$7.581 (840 amostras).',
   },
   'CNF-HND': {
     route: 'CNF-HND',
-    avgPrice: 8000,
-    goodPrice: 7500,
-    greatPrice: 6500,
+    avgPrice: 7600,
+    goodPrice: 7200,
+    greatPrice: 6000,
     lastUpdated: '2026-02',
-    notes: 'Haneda (Tokyo). Mesmos benchmarks de CNF-NRT.',
+    notes: 'Haneda (Tokyo). Média real: R$7.914 (112 amostras).',
   },
   'GRU-NRT': {
     route: 'GRU-NRT',
-    avgPrice: 8000,
-    goodPrice: 7500,
-    greatPrice: 6500,
+    avgPrice: 7500,
+    goodPrice: 7000,
+    greatPrice: 5800,
     lastUpdated: '2026-02',
-    notes: 'Melhor hub para Ásia. LATAM tem parceria JAL.',
+    notes: 'Melhor hub para Ásia. Média real: R$7.556, mín: R$6.547.',
   },
   'GRU-HND': {
     route: 'GRU-HND',
-    avgPrice: 8000,
-    goodPrice: 7500,
-    greatPrice: 6500,
+    avgPrice: 7500,
+    goodPrice: 7000,
+    greatPrice: 5800,
     lastUpdated: '2026-02',
+    notes: 'Média real: R$7.695, mín: R$6.540.',
   },
 
   // Brasil -> EUA (ida e volta)
