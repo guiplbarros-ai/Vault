@@ -9,7 +9,7 @@ import { logger } from '../utils/logger.js'
 import { loadEnv } from '../utils/env.js'
 import { formatRoute, formatRouteFull } from '../utils/airports.js'
 import { formatDate } from '../utils/date.js'
-import { getBenchmark, ratePriceVsBenchmark } from '../utils/price-benchmark.js'
+import { getBenchmark, ratePriceVsBenchmark, getAllBenchmarks, setBenchmark } from '../utils/price-benchmark.js'
 import { getPromoMonitorService } from './promo-monitor.service.js'
 import { addDays, format } from 'date-fns'
 
@@ -22,6 +22,9 @@ const SEARCH_CRONS = (process.env.ATLAS_SEARCH_CRONS || '0 8 * * *,0 20 * * *').
 const DIGEST_CRON = process.env.ATLAS_DIGEST_CRON || '30 20 * * 5'
 // Monitor de promoções RSS: a cada 30 minutos
 const PROMO_CRON = process.env.ATLAS_PROMO_CRON || '*/30 * * * *'
+// Recalibração de benchmarks: domingo às 23:00
+const BENCHMARK_CRON = process.env.ATLAS_BENCHMARK_CRON || '0 23 * * 0'
+const MIN_SAMPLES_RECALIBRATE = 30
 
 class DailyDigestService {
   private routesDb = getRoutesDbService()
@@ -75,6 +78,20 @@ class DailyDigestService {
     )
     this.scheduledTasks.push(promoTask)
     logger.info(`[Cron] Monitor de promoções agendado: ${PROMO_CRON}`)
+
+    // Cron de recalibração de benchmarks (semanal)
+    const benchmarkTask = cron.schedule(
+      BENCHMARK_CRON,
+      () => {
+        logger.info(`[Cron] Recalibrando benchmarks`)
+        this.recalibrateBenchmarks().catch((e) =>
+          logger.error(`[Cron] Erro na recalibração: ${e}`)
+        )
+      },
+      { timezone: TIMEZONE }
+    )
+    this.scheduledTasks.push(benchmarkTask)
+    logger.info(`[Cron] Recalibração de benchmarks agendada: ${BENCHMARK_CRON}`)
   }
 
   stopCrons(): void {
@@ -236,6 +253,78 @@ class DailyDigestService {
   // Mantém compatibilidade com código antigo
   async generateDigest(chatId: number): Promise<string> {
     return this.generateWeeklyDigest(chatId)
+  }
+
+  // Recalibra benchmarks com dados reais do Supabase (últimos 30 dias)
+  async recalibrateBenchmarks(): Promise<void> {
+    if (!this.pricesDb.enabled()) {
+      logger.warn('[Benchmark] Supabase não configurado — pulando recalibração')
+      return
+    }
+
+    const benchmarks = getAllBenchmarks()
+    let updated = 0
+
+    for (const bm of benchmarks) {
+      const [origin, dest] = bm.route.split('-')
+      if (!origin || !dest) continue
+
+      try {
+        const prices = await this.pricesDb.getRecentPrices(origin, dest, 30)
+        if (prices.length < MIN_SAMPLES_RECALIBRATE) {
+          logger.info(`[Benchmark] ${bm.route}: ${prices.length} amostras (< ${MIN_SAMPLES_RECALIBRATE}) — mantendo atual`)
+          continue
+        }
+
+        // Ordena preços do menor para o maior
+        const sorted = prices.map(p => p.price).sort((a, b) => a - b)
+
+        // Calcula percentis
+        const percentile = (arr: number[], p: number) => {
+          const idx = Math.floor(arr.length * p / 100)
+          return arr[Math.min(idx, arr.length - 1)]
+        }
+
+        const median = percentile(sorted, 50)
+        const p25 = percentile(sorted, 25)
+        const p10 = percentile(sorted, 10)
+
+        // Arredonda para centenas
+        const round100 = (n: number) => Math.round(n / 100) * 100
+
+        const newAvg = round100(median)
+        const newGood = round100(p25)
+        const newGreat = round100(p10)
+
+        // Só atualiza se mudou significativamente (>3%)
+        const avgDiff = Math.abs(newAvg - bm.avgPrice) / bm.avgPrice
+        if (avgDiff < 0.03) {
+          logger.info(`[Benchmark] ${bm.route}: sem mudança significativa (avg ${bm.avgPrice} → ${newAvg}, diff ${(avgDiff * 100).toFixed(1)}%)`)
+          continue
+        }
+
+        logger.info(
+          `[Benchmark] ${bm.route}: recalibrando (${sorted.length} amostras)\n` +
+          `  avg: ${bm.avgPrice} → ${newAvg}\n` +
+          `  good: ${bm.goodPrice} → ${newGood}\n` +
+          `  great: ${bm.greatPrice} → ${newGreat}`
+        )
+
+        setBenchmark({
+          route: bm.route,
+          avgPrice: newAvg,
+          goodPrice: newGood,
+          greatPrice: newGreat,
+          lastUpdated: format(new Date(), 'yyyy-MM'),
+          notes: `Auto-recalibrado (${sorted.length} amostras, 30d). Anterior: avg=${bm.avgPrice}/good=${bm.goodPrice}/great=${bm.greatPrice}`,
+        })
+        updated++
+      } catch (error) {
+        logger.warn(`[Benchmark] Erro ao recalibrar ${bm.route}: ${error}`)
+      }
+    }
+
+    logger.info(`[Benchmark] Recalibração concluída: ${updated} rotas atualizadas`)
   }
 
   // Formata preço com separador de milhar

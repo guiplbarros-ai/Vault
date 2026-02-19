@@ -4,10 +4,12 @@ import { logger } from '../utils/logger.js'
 import { searchFlights, formatSearchSummary } from './flight-search.service.js'
 import { getRoutesDbService } from './routes-db.service.js'
 import { getAlertsDbService } from './alerts-db.service.js'
+import { getPricesDbService } from './prices-db.service.js'
 import { getPriceAlertService } from './price-alert.service.js'
 import { getUsageDbService } from './usage-db.service.js'
 import { getPromoMonitorService } from './promo-monitor.service.js'
-import { formatRoute, isValidIata, normalizeIata } from '../utils/airports.js'
+import { formatRoute, isValidIata, normalizeIata, formatAirportFull } from '../utils/airports.js'
+import { getBenchmark } from '../utils/price-benchmark.js'
 import { parseDateInput } from '../utils/date.js'
 import type { AlertNotification } from '../types/index.js'
 
@@ -65,6 +67,7 @@ class TelegramService {
           `/rota remove GRU LIS - Parar de monitorar\n` +
           `/rotas - Listar rotas monitoradas\n` +
           `/buscar GRU LIS 15/03 - Busca manual\n` +
+          `/historico CNF NRT - Histórico de preços 7d\n` +
           `/budget - Ver uso de API (custos)\n` +
           `/promos - Status do monitor Livelo\n` +
           `/digest - Ver configuracao de digest\n` +
@@ -284,6 +287,88 @@ class TelegramService {
       }
 
       this.sendMessage(msg.chat.id, message)
+    })
+
+    // /historico CNF NRT - Histórico de preços dos últimos 7 dias
+    this.bot.onText(/\/historico ([A-Za-z]{3}) ([A-Za-z]{3})/, async (msg, match) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+      if (!match) return
+
+      const origin = normalizeIata(match[1])
+      const dest = normalizeIata(match[2])
+
+      try {
+        const pricesDb = getPricesDbService()
+        if (!pricesDb.enabled()) {
+          this.sendMessage(msg.chat.id, '⚠️ Supabase não configurado.')
+          return
+        }
+
+        const [avg7d, trend, recentPrices, lowest] = await Promise.all([
+          pricesDb.getAvgPrice7Days(origin, dest),
+          pricesDb.getTrend(origin, dest),
+          pricesDb.getRecentPrices(origin, dest, 7),
+          pricesDb.getLowestHistoricalPrice(origin, dest),
+        ])
+
+        const benchmark = getBenchmark(origin, dest)
+        const routeLabel = `${formatAirportFull(origin)} → ${formatAirportFull(dest)}`
+
+        let message = `📈 *Histórico de Preços (7 dias)*\n`
+        message += `${routeLabel}\n\n`
+
+        if (!avg7d || avg7d.sampleCount === 0) {
+          message += `Sem dados de preço para esta rota nos últimos 7 dias.`
+          this.sendMessage(msg.chat.id, message)
+          return
+        }
+
+        // Tendência
+        const trendArrow = trend === 'down' ? '↘️' : trend === 'up' ? '↗️' : '➡️'
+        const trendLabel = trend === 'down' ? 'Caindo' : trend === 'up' ? 'Subindo' : 'Estável'
+        message += `${trendArrow} *Tendência:* ${trendLabel}\n\n`
+
+        // Estatísticas 7 dias
+        const fmt = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+        message += `📊 *Últimos 7 dias:*\n`
+        message += `  Média: R$ ${fmt(avg7d.avgPrice)}\n`
+        message += `  Mínimo: R$ ${fmt(avg7d.minPrice)}\n`
+        message += `  Máximo: R$ ${fmt(avg7d.maxPrice)}\n`
+        message += `  Amostras: ${avg7d.sampleCount}\n\n`
+
+        // Benchmark
+        if (benchmark) {
+          message += `🎯 *Benchmark:*\n`
+          message += `  Média mercado: R$ ${fmt(benchmark.avgPrice)}\n`
+          message += `  Bom: ≤ R$ ${fmt(benchmark.goodPrice)}\n`
+          message += `  Excelente: ≤ R$ ${fmt(benchmark.greatPrice)}\n\n`
+        }
+
+        // Menor histórico
+        if (lowest) {
+          const lowestDate = new Date(lowest.departureDate)
+          const formattedDate = `${String(lowestDate.getDate()).padStart(2, '0')}/${String(lowestDate.getMonth() + 1).padStart(2, '0')}`
+          message += `🏆 *Menor histórico:* R$ ${fmt(lowest.lowestPrice)}`
+          if (lowest.airline) message += ` (${lowest.airline})`
+          message += ` em ${formattedDate}\n\n`
+        }
+
+        // Últimas 5 cotações
+        const last5 = recentPrices.slice(0, 5)
+        if (last5.length > 0) {
+          message += `🕐 *Últimas cotações:*\n`
+          for (const p of last5) {
+            const fetchDate = new Date(p.fetchedAt)
+            const dateStr = `${String(fetchDate.getDate()).padStart(2, '0')}/${String(fetchDate.getMonth() + 1).padStart(2, '0')} ${String(fetchDate.getHours()).padStart(2, '0')}:${String(fetchDate.getMinutes()).padStart(2, '0')}`
+            message += `  ${dateStr} — R$ ${fmt(p.price)}\n`
+          }
+        }
+
+        this.sendMessage(msg.chat.id, message)
+      } catch (error) {
+        logger.error(`Erro no /historico: ${error}`)
+        this.sendMessage(msg.chat.id, `❌ Erro ao buscar histórico: ${error}`)
+      }
     })
   }
 

@@ -35,11 +35,11 @@ const COST_PER_CALL: Record<string, number> = {
 
 // Limite mensal de calls por provider
 // Amadeus: 500 calls/mês (free tier)
-// SerpAPI: 100 calls/mês (safe limit ~$1/mês)
-// Para aumentar, configure ATLAS_SERPAPI_MONTHLY_LIMIT no .env
+// SerpAPI: 750 calls/mês (~$7.50/mês)
+// Para alterar, configure ATLAS_SERPAPI_MONTHLY_LIMIT no .env
 const MONTHLY_LIMITS: Record<string, number> = {
   amadeus: Number(process.env.ATLAS_AMADEUS_MONTHLY_LIMIT) || 500, // Free tier
-  serpapi: Number(process.env.ATLAS_SERPAPI_MONTHLY_LIMIT) || 100, // Safe limit (~$1/mês)
+  serpapi: Number(process.env.ATLAS_SERPAPI_MONTHLY_LIMIT) || 750, // ~$7.50/mês
   kiwi: 999999, // Unlimited
 }
 

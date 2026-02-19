@@ -285,6 +285,32 @@ class AlertsDbService {
       .eq('id', dealId)
   }
 
+  // Dedup: busca deal notificado recentemente para mesma rota+data
+  async findRecentNotification(
+    origin: string,
+    destination: string,
+    departureDate: string,
+    maxAgeHours: number = 12,
+  ): Promise<FlightDeal | null> {
+    const supabase = getSupabaseClient()
+    const since = new Date(Date.now() - maxAgeHours * 3600000).toISOString()
+    const depDate = departureDate.split(/[T ]/)[0] // YYYY-MM-DD only
+
+    const { data, error } = await supabase
+      .from('atlas_flight_deals')
+      .select('*')
+      .eq('origin', normalizeIata(origin))
+      .eq('destination', normalizeIata(destination))
+      .eq('departure_date', depDate)
+      .not('notified_at', 'is', null)
+      .gte('notified_at', since)
+      .order('notified_at', { ascending: false })
+      .limit(1)
+
+    if (error || !data || data.length === 0) return null
+    return mapDbToDeal(data[0] as DbFlightDeal)
+  }
+
   async getRecentDeals(hours: number = 24): Promise<FlightDeal[]> {
     const supabase = getSupabaseClient()
     const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()

@@ -60,6 +60,7 @@ interface DetectedDeal {
   homeOrigin?: string // Aeroporto base do usuário (ex: CNF)
   domesticConnection?: DomesticConnection // Detalhes dos voos domésticos
   trendInfo?: TrendInfo // Tendência de preços dos últimos 7 dias
+  alternativeFlights?: FlightResult[] // Top 2-3 opções extras (diferentes do principal)
 }
 
 class PriceAlertService {
@@ -120,13 +121,33 @@ class PriceAlertService {
     const effectivePrice = deal.flight.price + (deal.surcharge || 0)
     const depDate = String(deal.flight.departureDate).split(/[T ]/)[0]
     const dedupKey = `${deal.flight.origin}-${deal.flight.destination}-${depDate}-${chatId}`
-    const previous = this.notifiedDeals.get(dedupKey)
 
-    if (previous) {
-      const priceDiff = Math.abs(effectivePrice - previous.price) / previous.price
+    // 1. Check in-memory (fast, mesma instância)
+    const memPrevious = this.notifiedDeals.get(dedupKey)
+    if (memPrevious) {
+      const priceDiff = Math.abs(effectivePrice - memPrevious.price) / memPrevious.price
       if (priceDiff < 0.02) {
-        logger.info(`🔇 Dedup: ${dedupKey} R$${effectivePrice} (~R$${previous.price}, diff ${(priceDiff * 100).toFixed(1)}%) — pulando`)
+        logger.info(`🔇 Dedup (mem): ${dedupKey} R$${effectivePrice} (~R$${memPrevious.price}, diff ${(priceDiff * 100).toFixed(1)}%) — pulando`)
         return
+      }
+    }
+
+    // 2. Check Supabase (persistente, sobrevive a deploys)
+    if (this.alertsDb.enabled()) {
+      try {
+        const dbPrevious = await this.alertsDb.findRecentNotification(
+          deal.flight.origin, deal.flight.destination, depDate
+        )
+        if (dbPrevious) {
+          const priceDiff = Math.abs(effectivePrice - dbPrevious.price) / dbPrevious.price
+          if (priceDiff < 0.02) {
+            logger.info(`🔇 Dedup (db): ${dedupKey} R$${effectivePrice} (~R$${dbPrevious.price}, diff ${(priceDiff * 100).toFixed(1)}%) — pulando`)
+            this.notifiedDeals.set(dedupKey, { price: dbPrevious.price, timestamp: Date.now() })
+            return
+          }
+        }
+      } catch (error) {
+        logger.warn(`Erro ao checar dedup no Supabase: ${error}`)
       }
     }
 
@@ -134,8 +155,29 @@ class PriceAlertService {
 
     try {
       await telegram.sendAlert(chatId, notification)
-      // Registra no dedup após envio bem-sucedido
+      // Registra no dedup (memória + Supabase)
       this.notifiedDeals.set(dedupKey, { price: effectivePrice, timestamp: Date.now() })
+
+      // Salva deal no Supabase com notified_at
+      if (this.alertsDb.enabled()) {
+        try {
+          await this.alertsDb.saveDeal({
+            routeId: deal.route.id,
+            origin: deal.flight.origin,
+            destination: deal.flight.destination,
+            departureDate: deal.flight.departureDate,
+            price: effectivePrice,
+            airline: deal.flight.airline,
+            stops: deal.flight.stops,
+            deepLink: deal.flight.deepLink,
+            dealType: deal.type,
+            notifiedAt: new Date(),
+          })
+        } catch (err) {
+          logger.warn(`Erro ao salvar deal no Supabase: ${err}`)
+        }
+      }
+
       logger.info(`Notificação enviada para chat ${chatId}`)
     } catch (error) {
       logger.error(`Erro ao enviar notificação: ${error}`)
@@ -367,6 +409,9 @@ class PriceAlertService {
       }
     }
 
+    // Seleciona até 2 voos alternativos (cia diferente ou sem EUA)
+    const alternatives = this.pickAlternativeFlights(bestFlight, flights, 2)
+
     if (benchmark) {
       // Notifica se for preço BOM ou EXCELENTE
       if (rating === 'great') {
@@ -383,6 +428,7 @@ class PriceAlertService {
           homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
           domesticConnection,
           trendInfo,
+          alternativeFlights: alternatives,
         })
         logger.info(
           `🔥 PROMOÇÃO EXCELENTE: ${route.origin}->${route.destination} R$${effectivePrice}${surcharge ? ` (voo R$${bestFlight.price} + doméstico R$${surcharge})` : ''} (benchmark great: R$${benchmark.greatPrice})`
@@ -401,6 +447,7 @@ class PriceAlertService {
           homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
           domesticConnection,
           trendInfo,
+          alternativeFlights: alternatives,
         })
         logger.info(
           `✅ Preço bom: ${route.origin}->${route.destination} R$${effectivePrice}${surcharge ? ` (voo R$${bestFlight.price} + doméstico R$${surcharge})` : ''} (benchmark good: R$${benchmark.goodPrice})`
@@ -441,6 +488,29 @@ class PriceAlertService {
     // Quando tivermos dados suficientes (30+ dias), podemos usar para complementar o benchmark
 
     return deals
+  }
+
+  // Seleciona voos alternativos que agreguem valor (cia diferente, sem EUA, etc)
+  private pickAlternativeFlights(best: FlightResult, all: FlightResult[], max: number): FlightResult[] {
+    const bestUsTransit = hasVisaRequiredTransit(best)
+    const alternatives: FlightResult[] = []
+    const seenAirlines = new Set([best.airline])
+
+    for (const f of all) {
+      if (f.id === best.id) continue
+      if (alternatives.length >= max) break
+
+      // Prioriza: cia diferente OU sem trânsito EUA (quando o melhor passa pelos EUA)
+      const isDiffAirline = !seenAirlines.has(f.airline)
+      const isNoUs = bestUsTransit && !hasVisaRequiredTransit(f)
+
+      if (isDiffAirline || isNoUs) {
+        alternatives.push(f)
+        seenAirlines.add(f.airline)
+      }
+    }
+
+    return alternatives
   }
 
   // Salva um deal detectado no banco
@@ -621,6 +691,21 @@ class PriceAlertService {
       message += `  ${prog.name}: ~${this.formatPoints(points)} pts (R$${prog.costPerPoint.toFixed(3)}/pt)\n`
     }
     message += '\n'
+
+    // Outras opções (top 3)
+    if (deal.alternativeFlights && deal.alternativeFlights.length > 0) {
+      message += `✈️ *Outras opções:*\n`
+      for (const alt of deal.alternativeFlights) {
+        const altHours = Math.floor(alt.duration / 60)
+        const altMins = alt.duration % 60
+        const altDur = altMins > 0 ? `${altHours}h${altMins}` : `${altHours}h`
+        const altStops = alt.stops === 0 ? 'direto' : `${alt.stops}p`
+        const altUsFlag = hasVisaRequiredTransit(alt) ? ' 🇺🇸' : ''
+        const altPrice = alt.price + surcharge
+        message += `  • R$ ${this.formatPrice(altPrice)} — ${alt.airline} | ${altDur} | ${altStops}${altUsFlag}\n`
+      }
+      message += '\n'
+    }
 
     // Janela de compra
     message += this.getPurchaseWindowAdvice(flight.departureDate)
