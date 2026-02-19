@@ -25,6 +25,8 @@ interface DetectedDeal {
   benchmarkGood?: number
   benchmarkGreat?: number
   priceRating?: PriceRating
+  surcharge?: number // Custo extra do trecho doméstico (ex: BH→SP)
+  homeOrigin?: string // Aeroporto base do usuário (ex: CNF)
 }
 
 class PriceAlertService {
@@ -104,12 +106,19 @@ class PriceAlertService {
       HND: ['NRT'],
     }
 
-    // Aeroportos alternativos de origem (ex: GRU como alternativa a CNF — compra trecho doméstico por fora)
-    const ALTERNATIVE_ORIGINS: Record<string, string[]> = {
-      CNF: ['GRU'],
+    // Aeroportos alternativos de origem com custo estimado do trecho doméstico (ida+volta)
+    // Ex: saindo de GRU em vez de CNF, soma ~R$500 do trecho BH→SP
+    const ALTERNATIVE_ORIGINS: Record<string, { airport: string; surcharge: number }[]> = {
+      CNF: [{ airport: 'GRU', surcharge: 500 }],
     }
 
-    const origins = [route.origin, ...(ALTERNATIVE_ORIGINS[route.origin] || [])]
+    const origins: { airport: string; surcharge: number; homeOrigin: string }[] = [
+      { airport: route.origin, surcharge: 0, homeOrigin: route.origin },
+      ...(ALTERNATIVE_ORIGINS[route.origin] || []).map((alt) => ({
+        ...alt,
+        homeOrigin: route.origin,
+      })),
+    ]
     const destinations = [route.destination, ...(ALTERNATIVE_DESTINATIONS[route.destination] || [])]
 
     for (const date of searchDates) {
@@ -121,7 +130,7 @@ class PriceAlertService {
             returnDate.setDate(returnDate.getDate() + stayDays)
 
             const result = await searchFlights({
-              origin: orig,
+              origin: orig.airport,
               destination: dest,
               departureDate: date,
               returnDate: returnDate,
@@ -132,11 +141,15 @@ class PriceAlertService {
             // Salva os precos no historico
             await this.pricesDb.savePrices(result.results, route.id)
 
-            // Verifica deals (usa o aeroporto real da busca para o benchmark)
-            const routeDeals = await this.detectDeals({ ...route, origin: orig }, result.results)
+            // Verifica deals — compara preço efetivo (voo + trecho doméstico) contra benchmark da origem base
+            const routeDeals = await this.detectDeals(
+              { ...route, origin: orig.airport },
+              result.results,
+              { surcharge: orig.surcharge, homeOrigin: orig.homeOrigin }
+            )
             deals.push(...routeDeals)
           } catch (error) {
-            logger.warn(`Erro ao buscar ${orig}->${dest} para ${date}: ${error}`)
+            logger.warn(`Erro ao buscar ${orig.airport}->${dest} para ${date}: ${error}`)
           }
         }
       }
@@ -146,18 +159,26 @@ class PriceAlertService {
   }
 
   // Detecta deals com base no BENCHMARK de mercado (fonte principal)
-  private async detectDeals(route: MonitoredRoute, flights: FlightResult[]): Promise<DetectedDeal[]> {
+  private async detectDeals(
+    route: MonitoredRoute,
+    flights: FlightResult[],
+    extra: { surcharge: number; homeOrigin: string } = { surcharge: 0, homeOrigin: route.origin }
+  ): Promise<DetectedDeal[]> {
     const deals: DetectedDeal[] = []
 
     if (flights.length === 0) return deals
 
     const bestFlight = flights[0] // Já ordenado por preço (menor primeiro)
 
-    // 1. PRINCIPAL: Verifica contra o BENCHMARK de mercado
+    // Preço efetivo = preço do voo + custo do trecho doméstico
+    const effectivePrice = bestFlight.price + extra.surcharge
+
+    // 1. PRINCIPAL: Verifica contra o BENCHMARK da origem BASE (ex: CNF, não GRU)
+    // Isso garante comparação justa: voo GRU R$7.000 + R$500 trecho = R$7.500 vs benchmark CNF
     const { rating, benchmark, percentVsAvg } = ratePriceVsBenchmark(
-      route.origin,
+      extra.homeOrigin,
       route.destination,
-      bestFlight.price
+      effectivePrice
     )
 
     if (benchmark) {
@@ -172,9 +193,11 @@ class PriceAlertService {
           benchmarkGreat: benchmark.greatPrice,
           dropPercent: percentVsAvg,
           priceRating: rating,
+          surcharge: extra.surcharge || undefined,
+          homeOrigin: extra.surcharge ? extra.homeOrigin : undefined,
         })
         logger.info(
-          `🔥 PROMOÇÃO EXCELENTE: ${route.origin}->${route.destination} R$${bestFlight.price} (benchmark great: R$${benchmark.greatPrice})`
+          `🔥 PROMOÇÃO EXCELENTE: ${route.origin}->${route.destination} R$${effectivePrice}${extra.surcharge ? ` (voo R$${bestFlight.price} + trecho R$${extra.surcharge})` : ''} (benchmark great: R$${benchmark.greatPrice})`
         )
       } else if (rating === 'good') {
         deals.push({
@@ -186,14 +209,16 @@ class PriceAlertService {
           benchmarkGreat: benchmark.greatPrice,
           dropPercent: percentVsAvg,
           priceRating: rating,
+          surcharge: extra.surcharge || undefined,
+          homeOrigin: extra.surcharge ? extra.homeOrigin : undefined,
         })
         logger.info(
-          `✅ Preço bom: ${route.origin}->${route.destination} R$${bestFlight.price} (benchmark good: R$${benchmark.goodPrice})`
+          `✅ Preço bom: ${route.origin}->${route.destination} R$${effectivePrice}${extra.surcharge ? ` (voo R$${bestFlight.price} + trecho R$${extra.surcharge})` : ''} (benchmark good: R$${benchmark.goodPrice})`
         )
       } else {
         // Preço normal ou caro - apenas loga, não notifica
         logger.info(
-          `📊 Preço ${rating}: ${route.origin}->${route.destination} R$${bestFlight.price} (avg: R$${benchmark.avgPrice})`
+          `📊 Preço ${rating}: ${route.origin}->${route.destination} R$${effectivePrice}${extra.surcharge ? ` (voo R$${bestFlight.price} + trecho R$${extra.surcharge})` : ''} (avg: R$${benchmark.avgPrice})`
         )
       }
     } else {
@@ -312,10 +337,6 @@ class PriceAlertService {
     // Paradas
     const stopsStr = flight.stops === 0 ? 'Direto' : `${flight.stops} parada${flight.stops > 1 ? 's' : ''}`
 
-    // Simulações de preço
-    const priceFor2 = price * 2
-    const priceFor4 = price * 4
-
     // Pontos — tabela de custo por ponto por programa
     const POINTS_PROGRAMS = [
       { name: 'Smiles', costPerPoint: 0.019 },
@@ -323,9 +344,19 @@ class PriceAlertService {
       { name: 'Livelo', costPerPoint: 0.020 },
     ] as const
 
+    // Custo do trecho doméstico (se origem alternativa)
+    const surcharge = deal.surcharge || 0
+    const effectivePrice = price + surcharge
+
     // Monta mensagem
     let message = `${emoji} *${header}*\n`
-    message += `*R$ ${this.formatPrice(price)}* por pessoa\n\n`
+    if (surcharge > 0) {
+      message += `*R$ ${this.formatPrice(effectivePrice)}* por pessoa (custo total estimado)\n`
+      message += `  ✈️ Voo internacional: R$ ${this.formatPrice(price)}\n`
+      message += `  🚌 Trecho ${deal.homeOrigin || 'CNF'}→${flight.origin}: ~R$ ${this.formatPrice(surcharge)}\n\n`
+    } else {
+      message += `*R$ ${this.formatPrice(price)}* por pessoa\n\n`
+    }
 
     // Rota com aeroportos explícitos
     const originAirport = getAirport(flight.origin)
@@ -360,20 +391,20 @@ class PriceAlertService {
 
     // Comparação com benchmark (se disponível)
     if (deal.benchmarkAvg) {
-      const diffPercent = ((deal.benchmarkAvg - price) / deal.benchmarkAvg * 100).toFixed(0)
+      const diffPercent = ((deal.benchmarkAvg - effectivePrice) / deal.benchmarkAvg * 100).toFixed(0)
       message += `📊 *vs mercado:* ${diffPercent}% abaixo da média (R$ ${this.formatPrice(deal.benchmarkAvg)})\n\n`
     }
 
-    // Preços por pessoa
-    message += `💰 *Ida e volta, econômica:*\n`
-    message += `  1p: *R$ ${this.formatPrice(price)}*\n`
-    message += `  2p: R$ ${this.formatPrice(priceFor2)}\n`
-    message += `  4p: R$ ${this.formatPrice(priceFor4)}\n\n`
+    // Preços por pessoa (custo total)
+    message += `💰 *Custo total ida e volta, econômica:*\n`
+    message += `  1p: *R$ ${this.formatPrice(effectivePrice)}*\n`
+    message += `  2p: R$ ${this.formatPrice(effectivePrice * 2)}\n`
+    message += `  4p: R$ ${this.formatPrice(effectivePrice * 4)}\n\n`
 
-    // Equivalente em pontos por programa
+    // Equivalente em pontos por programa (baseado no custo total)
     message += `🎁 *Em pontos (1 pessoa):*\n`
     for (const prog of POINTS_PROGRAMS) {
-      const points = Math.round(price / prog.costPerPoint)
+      const points = Math.round(effectivePrice / prog.costPerPoint)
       message += `  ${prog.name}: ~${this.formatPoints(points)} pts (R$${prog.costPerPoint.toFixed(3)}/pt)\n`
     }
     message += '\n'
