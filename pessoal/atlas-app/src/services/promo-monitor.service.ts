@@ -8,24 +8,54 @@ const FEEDS = [
   'https://pontospravoar.com/feed/',
 ]
 
-// Filter 1: Livelo promos (generic) — "livelo" + promo keyword
+// Filter 1: Livelo transfer promos — "livelo" + transfer/bonus keyword (NÃO promos de consumo)
 const REQUIRED_KEYWORD = 'livelo'
-const PROMO_KEYWORDS = ['bônus', 'bonus', 'transferência', 'transferencia', 'promoção', 'promocao', 'extra', 'pontos']
+const TRANSFER_KEYWORDS = ['transferência', 'transferencia', 'transferir', 'bônus', 'bonus', 'milhas', 'smiles', 'latam pass', 'azul', 'tudo azul']
 
 // Filter 2: Smiles transfer bonuses — "smiles" + transfer/bonus keyword
 const SMILES_KEYWORD = 'smiles'
-const SMILES_BONUS_KEYWORDS = ['bônus', 'bonus', 'transferência', 'transferencia', 'livelo', 'pontos']
+const SMILES_BONUS_KEYWORDS = ['bônus', 'bonus', 'transferência', 'transferencia', 'livelo', 'milhas']
+
+// Exclui promos de consumo/compras (pontos por real gasto em lojas)
+const CONSUMPTION_KEYWORDS = ['por real', 'por r$', 'compras', 'parceiros', 'cashback', 'shopping', 'loja', 'gasto', 'marketplace', 'clube livelo', 'assinatura']
 
 // Só notifica artigos publicados nas últimas 6 horas (evita spam no restart)
 const MAX_AGE_MS = 6 * 60 * 60 * 1000
 
 const FETCH_TIMEOUT_MS = 15000
 
-interface RssItem {
+export interface RssItem {
   title: string
   link: string
   pubDate: Date
   description: string
+}
+
+/** Verifica se um artigo é sobre transferência de pontos (não consumo) */
+export function isTransferPromo(title: string, description: string): boolean {
+  const text = `${title} ${description}`.toLowerCase()
+
+  // Exclui promos de consumo (pontos por compras em lojas/parceiros)
+  const isConsumption = CONSUMPTION_KEYWORDS.some(k => text.includes(k))
+  if (isConsumption) return false
+
+  // Filter 1: Livelo transfer promo (transferência entre programas)
+  const hasLivelo = text.includes(REQUIRED_KEYWORD)
+  const hasTransfer = TRANSFER_KEYWORDS.some(k => text.includes(k))
+
+  // Filter 2: Smiles transfer bonus (may or may not mention Livelo)
+  const hasSmiles = text.includes(SMILES_KEYWORD)
+  const hasSmilesBonus = SMILES_BONUS_KEYWORDS.some(k => text.includes(k))
+
+  return (hasLivelo && hasTransfer) || (hasSmiles && hasSmilesBonus)
+}
+
+/** Verifica se é especificamente um bônus de transferência Livelo→Smiles */
+export function isSmilesTransfer(title: string, description: string): boolean {
+  const text = `${title} ${description}`.toLowerCase()
+  const hasSmiles = text.includes(SMILES_KEYWORD)
+  const hasTransfer = ['transferência', 'transferencia', 'livelo', 'bônus', 'bonus'].some(k => text.includes(k))
+  return hasSmiles && hasTransfer
 }
 
 class PromoMonitorService {
@@ -65,24 +95,11 @@ class PromoMonitorService {
   }
 
   private isRelevant(item: RssItem): boolean {
-    const text = `${item.title} ${item.description}`.toLowerCase()
-
-    // Filter 1: Livelo generic promo
-    const hasLivelo = text.includes(REQUIRED_KEYWORD)
-    const hasPromo = PROMO_KEYWORDS.some(k => text.includes(k))
-
-    // Filter 2: Smiles transfer bonus (may or may not mention Livelo)
-    const hasSmiles = text.includes(SMILES_KEYWORD)
-    const hasSmilesBonus = SMILES_BONUS_KEYWORDS.some(k => text.includes(k))
-
-    return (hasLivelo && hasPromo) || (hasSmiles && hasSmilesBonus)
+    return isTransferPromo(item.title, item.description)
   }
 
   private isSmilesTransferBonus(item: RssItem): boolean {
-    const text = `${item.title} ${item.description}`.toLowerCase()
-    const hasSmiles = text.includes(SMILES_KEYWORD)
-    const hasTransfer = ['transferência', 'transferencia', 'livelo', 'bônus', 'bonus'].some(k => text.includes(k))
-    return hasSmiles && hasTransfer
+    return isSmilesTransfer(item.title, item.description)
   }
 
   private async fetchFeed(url: string): Promise<RssItem[]> {
