@@ -38,6 +38,11 @@ interface DomesticConnection {
   totalPrice: number
 }
 
+interface UsTransitAlternative {
+  flight: FlightResult
+  effectivePrice: number // preço do voo + surcharge doméstico
+}
+
 interface DetectedDeal {
   flight: FlightResult
   route: MonitoredRoute
@@ -52,6 +57,7 @@ interface DetectedDeal {
   surcharge?: number // Custo real do trecho doméstico (buscado via Kiwi)
   homeOrigin?: string // Aeroporto base do usuário (ex: CNF)
   domesticConnection?: DomesticConnection // Detalhes dos voos domésticos
+  usTransitAlternative?: UsTransitAlternative // Opção mais barata via EUA (requer visto)
 }
 
 class PriceAlertService {
@@ -275,23 +281,25 @@ class PriceAlertService {
 
     if (flights.length === 0) return deals
 
-    // Prefere voos SEM trânsito em países que exigem visto (EUA)
+    // Separa voos com e sem trânsito em países que exigem visto (EUA)
     const noVisaFlights = flights.filter((f) => !hasVisaRequiredTransit(f))
+    const visaFlights = flights.filter((f) => hasVisaRequiredTransit(f))
     const bestFlight = noVisaFlights[0] || null
+    const bestVisaFlight = visaFlights[0] || null
 
-    if (!bestFlight) {
-      // Todos os voos passam por país com exigência de visto
-      const cheapest = flights[0]
+    if (noVisaFlights.length > 0 && visaFlights.length > 0) {
       logger.info(
-        `⚠️ ${route.origin}->${route.destination}: todos os ${flights.length} voos transitam por país com visto (melhor: R$${cheapest.price}). Ignorando.`
+        `🛂 ${route.origin}->${route.destination}: ${noVisaFlights.length} sem visto (melhor R$${bestFlight!.price}) | ${visaFlights.length} via EUA (melhor R$${bestVisaFlight!.price})`
       )
-      return deals
     }
 
-    if (noVisaFlights.length < flights.length) {
+    if (!bestFlight) {
+      // Todos passam por EUA — ainda assim avalia, mas como categoria "via EUA"
       logger.info(
-        `🛂 ${route.origin}->${route.destination}: ${flights.length - noVisaFlights.length}/${flights.length} voos excluídos (trânsito EUA). Melhor sem visto: R$${bestFlight.price}`
+        `⚠️ ${route.origin}->${route.destination}: todos os ${flights.length} voos transitam por EUA (melhor: R$${flights[0].price})`
       )
+      // Não retorna deals sem opção sem visto — mas loga para referência
+      return deals
     }
 
     const isAlternativeOrigin = extra.surcharge > 0
@@ -336,6 +344,15 @@ class PriceAlertService {
       effectivePrice
     )
 
+    // Captura alternativa via EUA se for mais barata que o voo sem visto
+    let usTransitAlternative: UsTransitAlternative | undefined
+    if (bestVisaFlight && bestVisaFlight.price < bestFlight.price) {
+      usTransitAlternative = {
+        flight: bestVisaFlight,
+        effectivePrice: bestVisaFlight.price + surcharge,
+      }
+    }
+
     if (benchmark) {
       // Notifica se for preço BOM ou EXCELENTE
       if (rating === 'great') {
@@ -351,6 +368,7 @@ class PriceAlertService {
           surcharge: surcharge || undefined,
           homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
           domesticConnection,
+          usTransitAlternative,
         })
         logger.info(
           `🔥 PROMOÇÃO EXCELENTE: ${route.origin}->${route.destination} R$${effectivePrice}${surcharge ? ` (voo R$${bestFlight.price} + doméstico R$${surcharge})` : ''} (benchmark great: R$${benchmark.greatPrice})`
@@ -368,6 +386,7 @@ class PriceAlertService {
           surcharge: surcharge || undefined,
           homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
           domesticConnection,
+          usTransitAlternative,
         })
         logger.info(
           `✅ Preço bom: ${route.origin}->${route.destination} R$${effectivePrice}${surcharge ? ` (voo R$${bestFlight.price} + doméstico R$${surcharge})` : ''} (benchmark good: R$${benchmark.goodPrice})`
@@ -577,6 +596,26 @@ class PriceAlertService {
       message += `  ${prog.name}: ~${this.formatPoints(points)} pts (R$${prog.costPerPoint.toFixed(3)}/pt)\n`
     }
     message += '\n'
+
+    // Alternativa via EUA (se houver opção mais barata com trânsito)
+    if (deal.usTransitAlternative) {
+      const alt = deal.usTransitAlternative
+      const altFlight = alt.flight
+      const savings = effectivePrice - alt.effectivePrice
+
+      // Conexões do voo via EUA
+      const transitCities = (altFlight.layovers || [])
+        .map((l) => {
+          const ap = getAirport(l.airport)
+          return ap ? `${ap.city}` : l.airport
+        })
+        .join(', ')
+
+      message += `🛂 *Alternativa via EUA (requer visto):*\n`
+      message += `  R$ ${this.formatPrice(alt.effectivePrice)} — ${altFlight.airline}\n`
+      message += `  Via ${transitCities}\n`
+      message += `  _Economia de R$ ${this.formatPrice(savings)}/pessoa vs sem visto_\n\n`
+    }
 
     // Janela de compra
     message += this.getPurchaseWindowAdvice(flight.departureDate)
