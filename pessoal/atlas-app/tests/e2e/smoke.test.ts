@@ -54,15 +54,15 @@ describe('E2E: Smoke Tests', () => {
       // 1. Get benchmark (ida+volta)
       const benchmark = getBenchmark('CNF', 'NRT')
       expect(benchmark).not.toBeUndefined()
-      expect(benchmark?.avgPrice).toBe(11000)
-      expect(benchmark?.goodPrice).toBe(9000)
-      expect(benchmark?.greatPrice).toBe(7000)
+      expect(benchmark?.avgPrice).toBe(8000)
+      expect(benchmark?.goodPrice).toBe(7500)
+      expect(benchmark?.greatPrice).toBe(6500)
 
       // 2. Rate different prices (ida+volta)
-      const greatPrice = ratePriceVsBenchmark('CNF', 'NRT', 6500)
-      const goodPrice = ratePriceVsBenchmark('CNF', 'NRT', 8000)
-      const normalPrice = ratePriceVsBenchmark('CNF', 'NRT', 10000)
-      const expensivePrice = ratePriceVsBenchmark('CNF', 'NRT', 12000)
+      const greatPrice = ratePriceVsBenchmark('CNF', 'NRT', 6000)
+      const goodPrice = ratePriceVsBenchmark('CNF', 'NRT', 7000)
+      const normalPrice = ratePriceVsBenchmark('CNF', 'NRT', 7800)
+      const expensivePrice = ratePriceVsBenchmark('CNF', 'NRT', 9000)
 
       expect(greatPrice.rating).toBe('great')
       expect(goodPrice.rating).toBe('good')
@@ -70,8 +70,8 @@ describe('E2E: Smoke Tests', () => {
       expect(expensivePrice.rating).toBe('expensive')
 
       // 3. Check promotion detection
-      expect(isPromotion('CNF', 'NRT', 6500)).toBe(true)
-      expect(isPromotion('CNF', 'NRT', 12000)).toBe(false)
+      expect(isPromotion('CNF', 'NRT', 6000)).toBe(true)
+      expect(isPromotion('CNF', 'NRT', 9000)).toBe(false)
     })
   })
 

@@ -333,7 +333,10 @@ class PriceAlertService {
     // Equivalente em pontos (estimativa simples)
     message += `🎁 *Em pontos (~R$0,02/pt):*\n`
     message += `  1p: ~${this.formatPoints(pointsFor1)} pts\n`
-    message += `  2p: ~${this.formatPoints(pointsFor2)} pts\n`
+    message += `  2p: ~${this.formatPoints(pointsFor2)} pts\n\n`
+
+    // Janela de compra
+    message += this.getPurchaseWindowAdvice(flight.departureDate)
 
     return {
       type: deal.type,
@@ -358,19 +361,41 @@ class PriceAlertService {
   }
 
   // Retorna datas de busca alvo
-  // Ida: 27 ou 28 de novembro, volta 19 dias depois (16 ou 17 de dezembro)
+  // Ida: 28/11 a 30/11, volta: 17/12 a 19/12 (19 dias de estadia)
   private getSearchDates(): Date[] {
     const currentYear = new Date().getFullYear()
     const targetYear = currentYear
 
     const dates: Date[] = [
-      new Date(targetYear, 10, 27),  // 27/11 -> volta 16/12
       new Date(targetYear, 10, 28),  // 28/11 -> volta 17/12
+      new Date(targetYear, 10, 29),  // 29/11 -> volta 18/12
+      new Date(targetYear, 10, 30),  // 30/11 -> volta 19/12
     ]
 
     // Filtra datas que já passaram
     const now = new Date()
     return dates.filter(d => d > now)
+  }
+
+  // Avalia janela de compra com base na antecedência até o voo
+  private getPurchaseWindowAdvice(departureDate: Date | string): string {
+    const dep = typeof departureDate === 'string' ? new Date(departureDate) : departureDate
+    const now = new Date()
+    const daysUntilFlight = Math.round((dep.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (daysUntilFlight > 180) {
+      return '🟢 _Janela antecipada (6+ meses) — bom momento para monitorar, preços podem cair mais_'
+    }
+    if (daysUntilFlight > 120) {
+      return '🟢 _Janela ideal de compra (4-6 meses) — melhor momento para garantir bom preço_'
+    }
+    if (daysUntilFlight > 60) {
+      return '🟡 _Janela intermediária (2-4 meses) — preços razoáveis, mas compre logo se o preço estiver bom_'
+    }
+    if (daysUntilFlight > 30) {
+      return '🟠 _Janela curta (1-2 meses) — preços tendem a subir, compre se estiver bom_'
+    }
+    return '🔴 _Última hora (<30 dias) — preços altos, compre só se for urgente_'
   }
 
   // Verifica budget antes de executar buscas

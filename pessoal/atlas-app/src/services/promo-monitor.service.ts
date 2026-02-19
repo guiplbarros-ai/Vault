@@ -4,11 +4,17 @@ import { logger } from '../utils/logger.js'
 
 const FEEDS = [
   'https://www.melhoresdestinos.com.br/feed/',
+  'https://passageirodeprimeira.com/feed/',
+  'https://pontospravoar.com/feed/',
 ]
 
-// Artigo deve conter "livelo" E pelo menos um destes
+// Filter 1: Livelo promos (generic) — "livelo" + promo keyword
 const REQUIRED_KEYWORD = 'livelo'
 const PROMO_KEYWORDS = ['bônus', 'bonus', 'transferência', 'transferencia', 'promoção', 'promocao', 'extra', 'pontos']
+
+// Filter 2: Smiles transfer bonuses — "smiles" + transfer/bonus keyword
+const SMILES_KEYWORD = 'smiles'
+const SMILES_BONUS_KEYWORDS = ['bônus', 'bonus', 'transferência', 'transferencia', 'livelo', 'pontos']
 
 // Só notifica artigos publicados nas últimas 6 horas (evita spam no restart)
 const MAX_AGE_MS = 6 * 60 * 60 * 1000
@@ -60,9 +66,23 @@ class PromoMonitorService {
 
   private isRelevant(item: RssItem): boolean {
     const text = `${item.title} ${item.description}`.toLowerCase()
+
+    // Filter 1: Livelo generic promo
     const hasLivelo = text.includes(REQUIRED_KEYWORD)
     const hasPromo = PROMO_KEYWORDS.some(k => text.includes(k))
-    return hasLivelo && hasPromo
+
+    // Filter 2: Smiles transfer bonus (may or may not mention Livelo)
+    const hasSmiles = text.includes(SMILES_KEYWORD)
+    const hasSmilesBonus = SMILES_BONUS_KEYWORDS.some(k => text.includes(k))
+
+    return (hasLivelo && hasPromo) || (hasSmiles && hasSmilesBonus)
+  }
+
+  private isSmilesTransferBonus(item: RssItem): boolean {
+    const text = `${item.title} ${item.description}`.toLowerCase()
+    const hasSmiles = text.includes(SMILES_KEYWORD)
+    const hasTransfer = ['transferência', 'transferencia', 'livelo', 'bônus', 'bonus'].some(k => text.includes(k))
+    return hasSmiles && hasTransfer
   }
 
   private async fetchFeed(url: string): Promise<RssItem[]> {
@@ -153,8 +173,18 @@ class PromoMonitorService {
   }
 
   private formatNotification(item: RssItem): string {
-    let msg = `🎁 *PROMOÇÃO LIVELO*\n\n`
-    msg += `${item.title}\n\n`
+    const isSmiles = this.isSmilesTransferBonus(item)
+
+    let msg: string
+    if (isSmiles) {
+      msg = `🚨🎯 *BÔNUS LIVELO → SMILES!*\n\n`
+      msg += `${item.title}\n\n`
+      msg += `💡 _Você tem 150k Livelo. Com bônus de 80% = 270k Smiles (Japão ida+volta custa ~145k)_\n\n`
+    } else {
+      msg = `🎁 *PROMOÇÃO LIVELO*\n\n`
+      msg += `${item.title}\n\n`
+    }
+
     msg += `🔗 ${item.link}`
     return msg
   }
