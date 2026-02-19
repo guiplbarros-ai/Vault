@@ -171,6 +171,29 @@ class RoutesDbService {
 
     return true
   }
+
+  async updateStayDays(
+    chatId: number,
+    origin: string,
+    destination: string,
+    stayDays: number
+  ): Promise<boolean> {
+    const supabase = getSupabaseClient()
+
+    const { error } = await supabase
+      .from('atlas_monitored_routes')
+      .update({ min_stay_days: stayDays })
+      .eq('chat_id', chatId)
+      .eq('origin', normalizeIata(origin))
+      .eq('destination', normalizeIata(destination))
+
+    if (error) {
+      logger.error(`Erro ao atualizar estadia: ${error.message}`)
+      return false
+    }
+
+    return true
+  }
 }
 
 let instance: RoutesDbService | null = null

@@ -851,21 +851,42 @@ class PriceAlertService {
     return points.toLocaleString('pt-BR')
   }
 
-  // Retorna datas de busca alvo
-  // Ida: 28/11 a 30/11, volta: 17/12 a 19/12 (19 dias de estadia)
+  // Retorna datas de busca alvo (configurável via ATLAS_DEPARTURE_DATES)
+  // Formato: DD/MM ou DD/MM/YYYY separado por vírgula
+  // Ex: ATLAS_DEPARTURE_DATES=28/11,29/11,30/11
+  // Se data já passou no ano atual, usa o próximo ano
   private getSearchDates(): Date[] {
-    const currentYear = new Date().getFullYear()
-    const targetYear = currentYear
-
-    const dates: Date[] = [
-      new Date(targetYear, 10, 28),  // 28/11 -> volta 17/12
-      new Date(targetYear, 10, 29),  // 29/11 -> volta 18/12
-      new Date(targetYear, 10, 30),  // 30/11 -> volta 19/12
-    ]
-
-    // Filtra datas que já passaram
+    const raw = process.env.ATLAS_DEPARTURE_DATES || '28/11,29/11,30/11'
     const now = new Date()
-    return dates.filter(d => d > now)
+    const currentYear = now.getFullYear()
+
+    const dates: Date[] = []
+    for (const part of raw.split(',')) {
+      const trimmed = part.trim()
+      if (!trimmed) continue
+
+      const segments = trimmed.split('/')
+      if (segments.length < 2) continue
+
+      const day = Number(segments[0])
+      const month = Number(segments[1]) - 1 // JS months are 0-indexed
+      const year = segments.length >= 3 ? Number(segments[2]) : currentYear
+
+      if (isNaN(day) || isNaN(month) || isNaN(year)) continue
+
+      let date = new Date(year, month, day)
+
+      // Se a data já passou e o ano não foi explicitamente definido, usa o próximo ano
+      if (date <= now && segments.length < 3) {
+        date = new Date(currentYear + 1, month, day)
+      }
+
+      if (date > now) {
+        dates.push(date)
+      }
+    }
+
+    return dates
   }
 
   // Avalia janela de compra com base na antecedência até o voo

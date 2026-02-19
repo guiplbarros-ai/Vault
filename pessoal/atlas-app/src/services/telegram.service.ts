@@ -69,6 +69,9 @@ class TelegramService {
           `Comandos disponiveis:\n` +
           `/rota add GRU LIS - Monitorar rota\n` +
           `/rota remove GRU LIS - Parar de monitorar\n` +
+          `/rota CNF NRT - Detalhes da rota\n` +
+          `/rota update CNF NRT alvo 6000 - Preço-alvo\n` +
+          `/rota update CNF NRT estadia 19 - Dias de estadia\n` +
           `/rotas - Listar rotas monitoradas\n` +
           `/buscar GRU LIS 15/03 - Busca manual\n` +
           `/historico CNF NRT - Histórico de preços 30d\n` +
@@ -146,6 +149,88 @@ class TelegramService {
       }
     })
 
+    // /rota update ORIGIN DEST alvo PRECO
+    this.bot.onText(/\/rota update ([A-Za-z]{3}) ([A-Za-z]{3}) alvo (\d+)/, async (msg, match) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+      if (!match) return
+
+      const origin = normalizeIata(match[1])
+      const dest = normalizeIata(match[2])
+      const targetPrice = Number(match[3])
+
+      try {
+        const ok = await this.routesDb.updateTargetPrice(msg.chat.id, origin, dest, targetPrice)
+        if (ok) {
+          this.sendMessage(msg.chat.id, `🎯 Preço-alvo de ${formatRoute(origin, dest)} atualizado para R$ ${targetPrice.toLocaleString('pt-BR')}`)
+        } else {
+          this.sendMessage(msg.chat.id, `❌ Rota ${formatRoute(origin, dest)} não encontrada.`)
+        }
+      } catch (error) {
+        this.sendMessage(msg.chat.id, `Erro ao atualizar preço-alvo: ${error}`)
+      }
+    })
+
+    // /rota update ORIGIN DEST estadia DIAS
+    this.bot.onText(/\/rota update ([A-Za-z]{3}) ([A-Za-z]{3}) estadia (\d+)/, async (msg, match) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+      if (!match) return
+
+      const origin = normalizeIata(match[1])
+      const dest = normalizeIata(match[2])
+      const stayDays = Number(match[3])
+
+      try {
+        const ok = await this.routesDb.updateStayDays(msg.chat.id, origin, dest, stayDays)
+        if (ok) {
+          this.sendMessage(msg.chat.id, `📅 Estadia de ${formatRoute(origin, dest)} atualizada para ${stayDays} dias`)
+        } else {
+          this.sendMessage(msg.chat.id, `❌ Rota ${formatRoute(origin, dest)} não encontrada.`)
+        }
+      } catch (error) {
+        this.sendMessage(msg.chat.id, `Erro ao atualizar estadia: ${error}`)
+      }
+    })
+
+    // /rota ORIGIN DEST - Detalhes da rota
+    this.bot.onText(/\/rota ([A-Za-z]{3}) ([A-Za-z]{3})$/, async (msg, match) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+      if (!match) return
+
+      const origin = normalizeIata(match[1])
+      const dest = normalizeIata(match[2])
+
+      try {
+        const route = await this.routesDb.getRoute(msg.chat.id, origin, dest)
+        if (!route) {
+          return this.sendMessage(msg.chat.id, `Rota ${formatRoute(origin, dest)} não encontrada.\nUse /rota add ${origin} ${dest} para adicionar.`)
+        }
+
+        const benchmark = getBenchmark(origin, dest)
+        const fmt = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+
+        let message = `✈️ *${formatRoute(origin, dest)}*\n\n`
+        message += `Status: ${route.isActive ? '✅ Ativa' : '⏸ Inativa'}\n`
+        if (route.targetPrice) message += `🎯 Preço-alvo: R$ ${fmt(route.targetPrice)}\n`
+        if (route.minStayDays) message += `📅 Estadia: ${route.minStayDays} dias\n`
+        if (route.isRoundTrip) message += `🔄 Ida e volta\n`
+
+        if (benchmark) {
+          message += `\n📊 *Benchmark:*\n`
+          message += `  Média: R$ ${fmt(benchmark.avgPrice)}\n`
+          message += `  Bom: ≤ R$ ${fmt(benchmark.goodPrice)}\n`
+          message += `  Excelente: ≤ R$ ${fmt(benchmark.greatPrice)}\n`
+        }
+
+        message += `\n*Atualizar:*\n`
+        message += `/rota update ${origin} ${dest} alvo 6000\n`
+        message += `/rota update ${origin} ${dest} estadia 19`
+
+        this.sendMessage(msg.chat.id, message)
+      } catch (error) {
+        this.sendMessage(msg.chat.id, `Erro ao buscar rota: ${error}`)
+      }
+    })
+
     // /rota remove ORIGIN DEST
     this.bot.onText(/\/rota remove ([A-Za-z]{3}) ([A-Za-z]{3})/, async (msg, match) => {
       if (!isAuthorized(msg.from?.id || 0)) return
@@ -181,9 +266,10 @@ class TelegramService {
         for (const route of routes) {
           const formatted = formatRoute(route.origin, route.destination)
           message += `- ${formatted}`
-          if (route.targetPrice) {
-            message += ` (alvo: R$${route.targetPrice})`
-          }
+          const details: string[] = []
+          if (route.targetPrice) details.push(`alvo: R$${route.targetPrice}`)
+          if (route.minStayDays) details.push(`${route.minStayDays}d`)
+          if (details.length > 0) message += ` (${details.join(' | ')})`
           message += '\n'
         }
 

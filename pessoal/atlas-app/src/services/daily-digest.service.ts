@@ -24,6 +24,9 @@ const DIGEST_CRON = process.env.ATLAS_DIGEST_CRON || '30 20 * * 5'
 const PROMO_CRON = process.env.ATLAS_PROMO_CRON || '*/30 * * * *'
 // Recalibração de benchmarks: domingo às 23:00
 const BENCHMARK_CRON = process.env.ATLAS_BENCHMARK_CRON || '0 23 * * 0'
+// Limpeza de preços antigos: domingo às 04:00
+const CLEANUP_CRON = process.env.ATLAS_CLEANUP_CRON || '0 4 * * 0'
+const CLEANUP_DAYS = Number(process.env.ATLAS_CLEANUP_DAYS) || 90
 const MIN_SAMPLES_RECALIBRATE = 30
 
 class DailyDigestService {
@@ -97,6 +100,20 @@ class DailyDigestService {
     )
     this.scheduledTasks.push(benchmarkTask)
     logger.info(`[Cron] Recalibração de benchmarks agendada: ${BENCHMARK_CRON}`)
+
+    // Cron de limpeza de preços antigos (semanal)
+    const cleanupTask = cron.schedule(
+      CLEANUP_CRON,
+      () => {
+        logger.info(`[Cron] Limpando preços com mais de ${CLEANUP_DAYS} dias`)
+        this.pricesDb.cleanOldPrices(CLEANUP_DAYS).catch((e) =>
+          logger.error(`[Cron] Erro na limpeza: ${e}`)
+        )
+      },
+      { timezone: TIMEZONE }
+    )
+    this.scheduledTasks.push(cleanupTask)
+    logger.info(`[Cron] Limpeza de preços agendada: ${CLEANUP_CRON} (>${CLEANUP_DAYS}d)`)
   }
 
   stopCrons(): void {
