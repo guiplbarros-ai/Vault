@@ -4,12 +4,10 @@ import { getAlertsDbService } from './alerts-db.service.js'
 import { getPriceAlertService } from './price-alert.service.js'
 import { getTelegramService } from './telegram.service.js'
 import { getPricesDbService } from './prices-db.service.js'
-import { searchFlights } from './flight-search.service.js'
 import { logger } from '../utils/logger.js'
 import { loadEnv } from '../utils/env.js'
-import { formatRoute, formatRouteFull } from '../utils/airports.js'
-import { formatDate } from '../utils/date.js'
-import { getBenchmark, ratePriceVsBenchmark, getAllBenchmarks, setBenchmark, saveBenchmarkToSupabase, loadBenchmarksFromSupabase, seedBenchmarksToSupabase } from '../utils/price-benchmark.js'
+import { formatRouteFull } from '../utils/airports.js'
+import { getBenchmark, getAllBenchmarks, setBenchmark, saveBenchmarkToSupabase, loadBenchmarksFromSupabase, seedBenchmarksToSupabase } from '../utils/price-benchmark.js'
 import { getPromoMonitorService } from './promo-monitor.service.js'
 import { addDays, format } from 'date-fns'
 
@@ -125,42 +123,11 @@ class DailyDigestService {
   }
 
   // Executa busca de precos em todas as rotas e envia alertas
+  // Nota: checkAllRoutes() já envia notificações via sendDealNotification() internamente
   async runPriceSearch(): Promise<void> {
     try {
       const deals = await this.priceAlertService.checkAllRoutes()
-
-      if (deals.length === 0) {
-        logger.info('Nenhum deal detectado')
-        return
-      }
-
-      // Agrupa deals por chatId
-      const dealsByChat = new Map<number, typeof deals>()
-      for (const deal of deals) {
-        const chatId = deal.route.chatId
-        if (!dealsByChat.has(chatId)) {
-          dealsByChat.set(chatId, [])
-        }
-        dealsByChat.get(chatId)!.push(deal)
-      }
-
-      // Envia alertas para cada chat
-      for (const [chatId, chatDeals] of dealsByChat) {
-        for (const deal of chatDeals) {
-          try {
-            // Salva o deal no banco
-            await this.priceAlertService.saveDeal(deal)
-
-            // Formata e envia notificacao
-            const notification = this.priceAlertService.formatNotification(deal)
-            await this.telegram.sendAlert(chatId, notification)
-
-            logger.info(`Alerta enviado para chat ${chatId}: ${deal.type}`)
-          } catch (error) {
-            logger.error(`Erro ao enviar alerta para chat ${chatId}: ${error}`)
-          }
-        }
-      }
+      logger.info(`Busca concluída: ${deals.length} deal(s) detectado(s)`)
     } catch (error) {
       logger.error(`Erro no price search: ${error}`)
     }

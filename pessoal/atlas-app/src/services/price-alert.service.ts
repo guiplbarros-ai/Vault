@@ -562,8 +562,84 @@ class PriceAlertService {
       }
     }
 
-    // Salva preços no histórico (para referência futura, mas não usamos para alertas ainda)
-    // Quando tivermos dados suficientes (30+ dias), podemos usar para complementar o benchmark
+    // 3. Deal types secundários (só disparam se não houve good/great/target acima)
+    //    Filtrados por alertLevel='all' no sendDealNotification
+    const hasPrimaryDeal = deals.length > 0
+    if (!hasPrimaryDeal && this.pricesDb.enabled()) {
+      try {
+        // 3a. LOWEST EVER — menor preço histórico de toda a base
+        const lowest = await this.pricesDb.getLowestHistoricalPrice(extra.homeOrigin, route.destination)
+        if (lowest && effectivePrice < lowest.lowestPrice) {
+          deals.push({
+            flight: bestFlight,
+            route,
+            type: 'lowest_ever',
+            lowestPrice: lowest.lowestPrice,
+            benchmarkAvg: benchmark?.avgPrice,
+            benchmarkGood: benchmark?.goodPrice,
+            benchmarkGreat: benchmark?.greatPrice,
+            priceRating: rating,
+            surcharge: surcharge || undefined,
+            homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
+            domesticConnection,
+            trendInfo,
+            alternativeFlights: alternatives,
+          })
+          logger.info(
+            `🏆 MENOR PREÇO HISTÓRICO: ${extra.homeOrigin}->${route.destination} R$${effectivePrice} (anterior: R$${lowest.lowestPrice})`
+          )
+        }
+
+        // 3b. PRICE DROP — queda significativa vs média 7 dias
+        if (deals.length === 0 && trendInfo && trendInfo.sampleCount >= 5) {
+          const dropPercent = ((trendInfo.avg7d - effectivePrice) / trendInfo.avg7d) * 100
+          if (dropPercent >= DEFAULT_DROP_PERCENT) {
+            deals.push({
+              flight: bestFlight,
+              route,
+              type: 'price_drop',
+              previousPrice: trendInfo.avg7d,
+              dropPercent,
+              benchmarkAvg: benchmark?.avgPrice,
+              benchmarkGood: benchmark?.goodPrice,
+              benchmarkGreat: benchmark?.greatPrice,
+              priceRating: rating,
+              surcharge: surcharge || undefined,
+              homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
+              domesticConnection,
+              trendInfo,
+              alternativeFlights: alternatives,
+            })
+            logger.info(
+              `📉 QUEDA DE ${dropPercent.toFixed(0)}%: ${extra.homeOrigin}->${route.destination} R$${effectivePrice} (avg 7d: R$${trendInfo.avg7d})`
+            )
+          }
+        }
+
+        // 3c. TREND DOWN — tendência de queda consistente (3+ amostras caindo)
+        if (deals.length === 0 && trendInfo && trendInfo.trend === 'down' && trendInfo.sampleCount >= 3) {
+          deals.push({
+            flight: bestFlight,
+            route,
+            type: 'trend_down',
+            benchmarkAvg: benchmark?.avgPrice,
+            benchmarkGood: benchmark?.goodPrice,
+            benchmarkGreat: benchmark?.greatPrice,
+            priceRating: rating,
+            surcharge: surcharge || undefined,
+            homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
+            domesticConnection,
+            trendInfo,
+            alternativeFlights: alternatives,
+          })
+          logger.info(
+            `📊 TENDÊNCIA DE QUEDA: ${extra.homeOrigin}->${route.destination} R$${effectivePrice} (avg 7d: R$${trendInfo.avg7d})`
+          )
+        }
+      } catch (error) {
+        logger.warn(`Erro ao verificar deal types secundários: ${error}`)
+      }
+    }
 
     return deals
   }
