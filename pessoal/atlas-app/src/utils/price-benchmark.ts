@@ -55,6 +55,24 @@ const PRICE_BENCHMARKS: Record<string, PriceBenchmark> = {
     notes: 'Média real: R$7.695, mín: R$6.540.',
   },
 
+  // Brasil -> Osaka (ida e volta) — estimativa conservadora (menos opções que Tóquio)
+  'CNF-KIX': {
+    route: 'CNF-KIX',
+    avgPrice: 8000,
+    goodPrice: 7500,
+    greatPrice: 6200,
+    lastUpdated: '2026-02',
+    notes: 'Osaka/Kansai. Menos voos diretos, geralmente via EUA ou Oriente Médio.',
+  },
+  'GRU-KIX': {
+    route: 'GRU-KIX',
+    avgPrice: 7800,
+    goodPrice: 7300,
+    greatPrice: 6000,
+    lastUpdated: '2026-02',
+    notes: 'Osaka/Kansai via GRU. Mais opções que CNF.',
+  },
+
   // Brasil -> EUA (ida e volta)
   'CNF-DEN': {
     route: 'CNF-DEN',

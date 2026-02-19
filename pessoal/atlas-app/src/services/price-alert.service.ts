@@ -38,6 +38,13 @@ interface DomesticConnection {
   totalPrice: number
 }
 
+interface TrendInfo {
+  trend: 'up' | 'down' | 'stable'
+  avg7d: number
+  min7d: number
+  sampleCount: number
+}
+
 interface DetectedDeal {
   flight: FlightResult
   route: MonitoredRoute
@@ -52,12 +59,16 @@ interface DetectedDeal {
   surcharge?: number // Custo real do trecho doméstico (buscado via Kiwi)
   homeOrigin?: string // Aeroporto base do usuário (ex: CNF)
   domesticConnection?: DomesticConnection // Detalhes dos voos domésticos
+  trendInfo?: TrendInfo // Tendência de preços dos últimos 7 dias
 }
 
 class PriceAlertService {
   private pricesDb = getPricesDbService()
   private alertsDb = getAlertsDbService()
   private routesDb = getRoutesDbService()
+
+  // Dedup: evita re-notificar mesma rota+data se preço similar (dentro de 2%)
+  private notifiedDeals = new Map<string, { price: number; timestamp: number }>()
 
   // Lazy loading para evitar dependencia circular
   private getTelegram() {
@@ -90,7 +101,7 @@ class PriceAlertService {
     return allDeals
   }
 
-  // Envia notificação de deal via Telegram
+  // Envia notificação de deal via Telegram (com dedup)
   private async sendDealNotification(deal: DetectedDeal): Promise<void> {
     const telegram = this.getTelegram()
 
@@ -99,16 +110,32 @@ class PriceAlertService {
       return
     }
 
-    const notification = this.formatNotification(deal)
     const chatId = deal.route.chatId
-
     if (!chatId || chatId === 0) {
       logger.warn(`Chat ID não configurado para rota ${deal.route.origin}->${deal.route.destination}`)
       return
     }
 
+    // Dedup: verifica se já notificamos preço similar para esta rota+data
+    const effectivePrice = deal.flight.price + (deal.surcharge || 0)
+    const depDate = String(deal.flight.departureDate).split(/[T ]/)[0]
+    const dedupKey = `${deal.flight.origin}-${deal.flight.destination}-${depDate}-${chatId}`
+    const previous = this.notifiedDeals.get(dedupKey)
+
+    if (previous) {
+      const priceDiff = Math.abs(effectivePrice - previous.price) / previous.price
+      if (priceDiff < 0.02) {
+        logger.info(`🔇 Dedup: ${dedupKey} R$${effectivePrice} (~R$${previous.price}, diff ${(priceDiff * 100).toFixed(1)}%) — pulando`)
+        return
+      }
+    }
+
+    const notification = this.formatNotification(deal)
+
     try {
       await telegram.sendAlert(chatId, notification)
+      // Registra no dedup após envio bem-sucedido
+      this.notifiedDeals.set(dedupKey, { price: effectivePrice, timestamp: Date.now() })
       logger.info(`Notificação enviada para chat ${chatId}`)
     } catch (error) {
       logger.error(`Erro ao enviar notificação: ${error}`)
@@ -127,8 +154,9 @@ class PriceAlertService {
 
     // Aeroportos alternativos de destino (ex: NRT e HND = Tóquio)
     const ALTERNATIVE_DESTINATIONS: Record<string, string[]> = {
-      NRT: ['HND'],
-      HND: ['NRT'],
+      NRT: ['HND', 'KIX'],
+      HND: ['NRT', 'KIX'],
+      KIX: ['NRT', 'HND'],
     }
 
     // Aeroportos alternativos de origem com custo estimado do trecho doméstico (ida+volta)
@@ -318,6 +346,27 @@ class PriceAlertService {
       effectivePrice
     )
 
+    // Busca tendência de preços (últimos 7 dias) do Supabase
+    let trendInfo: TrendInfo | undefined
+    if (this.pricesDb.enabled()) {
+      try {
+        const [avg7d, trend] = await Promise.all([
+          this.pricesDb.getAvgPrice7Days(extra.homeOrigin, route.destination),
+          this.pricesDb.getTrend(extra.homeOrigin, route.destination),
+        ])
+        if (avg7d && avg7d.sampleCount >= 3) {
+          trendInfo = {
+            trend,
+            avg7d: avg7d.avgPrice,
+            min7d: avg7d.minPrice,
+            sampleCount: avg7d.sampleCount,
+          }
+        }
+      } catch (error) {
+        logger.warn(`Erro ao buscar tendência: ${error}`)
+      }
+    }
+
     if (benchmark) {
       // Notifica se for preço BOM ou EXCELENTE
       if (rating === 'great') {
@@ -333,7 +382,7 @@ class PriceAlertService {
           surcharge: surcharge || undefined,
           homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
           domesticConnection,
-
+          trendInfo,
         })
         logger.info(
           `🔥 PROMOÇÃO EXCELENTE: ${route.origin}->${route.destination} R$${effectivePrice}${surcharge ? ` (voo R$${bestFlight.price} + doméstico R$${surcharge})` : ''} (benchmark great: R$${benchmark.greatPrice})`
@@ -351,7 +400,7 @@ class PriceAlertService {
           surcharge: surcharge || undefined,
           homeOrigin: isAlternativeOrigin ? extra.homeOrigin : undefined,
           domesticConnection,
-
+          trendInfo,
         })
         logger.info(
           `✅ Preço bom: ${route.origin}->${route.destination} R$${effectivePrice}${surcharge ? ` (voo R$${bestFlight.price} + doméstico R$${surcharge})` : ''} (benchmark good: R$${benchmark.goodPrice})`
@@ -548,8 +597,16 @@ class PriceAlertService {
     // Comparação com benchmark (se disponível)
     if (deal.benchmarkAvg) {
       const diffPercent = ((deal.benchmarkAvg - effectivePrice) / deal.benchmarkAvg * 100).toFixed(0)
-      message += `📊 *vs mercado:* ${diffPercent}% abaixo da média (R$ ${this.formatPrice(deal.benchmarkAvg)})\n\n`
+      message += `📊 *vs mercado:* ${diffPercent}% abaixo da média (R$ ${this.formatPrice(deal.benchmarkAvg)})\n`
     }
+
+    // Tendência de preços (últimos 7 dias do Supabase)
+    if (deal.trendInfo) {
+      const trendArrow = deal.trendInfo.trend === 'down' ? '↘️' : deal.trendInfo.trend === 'up' ? '↗️' : '➡️'
+      const trendLabel = deal.trendInfo.trend === 'down' ? 'caindo' : deal.trendInfo.trend === 'up' ? 'subindo' : 'estável'
+      message += `${trendArrow} *Tendência 7d:* ${trendLabel} | mín R$ ${this.formatPrice(deal.trendInfo.min7d)} | média R$ ${this.formatPrice(deal.trendInfo.avg7d)} (${deal.trendInfo.sampleCount} amostras)\n`
+    }
+    message += '\n'
 
     // Preços por pessoa (custo total)
     message += `💰 *Custo total ida e volta, econômica:*\n`
@@ -567,6 +624,20 @@ class PriceAlertService {
 
     // Janela de compra
     message += this.getPurchaseWindowAdvice(flight.departureDate)
+    message += '\n\n'
+
+    // Link direto para Google Flights
+    if (flight.deepLink) {
+      message += `🔗 [Ver no Google Flights](${flight.deepLink})`
+    } else if (depParts) {
+      // Gera link de busca no Google Flights como fallback
+      const retDate = new Date(Number(depParts[0]), Number(depParts[1]) - 1, Number(depParts[2]))
+      retDate.setDate(retDate.getDate() + 19)
+      const retIso = `${retDate.getFullYear()}-${String(retDate.getMonth() + 1).padStart(2, '0')}-${String(retDate.getDate()).padStart(2, '0')}`
+      const depIso = `${depParts[0]}-${depParts[1]}-${depParts[2]}`
+      const gfUrl = `https://www.google.com/travel/flights?q=Flights+from+${flight.origin}+to+${flight.destination}+on+${depIso}+returning+${retIso}&curr=BRL&hl=pt-BR`
+      message += `🔗 [Buscar no Google Flights](${gfUrl})`
+    }
 
     return {
       type: deal.type,
