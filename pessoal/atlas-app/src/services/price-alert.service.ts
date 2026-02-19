@@ -14,7 +14,7 @@ loadEnv()
 
 const DEFAULT_DROP_PERCENT = Number(process.env.ATLAS_ALERT_DROP_PERCENT) || 15
 
-// --- Preferências de alerta por chat ---
+// --- Preferências de alerta por chat (in-memory cache + Supabase) ---
 export type AlertLevel = 'all' | 'good_and_great' | 'great_only'
 
 interface ChatAlertPrefs {
@@ -23,14 +23,54 @@ interface ChatAlertPrefs {
 }
 
 const chatPrefs = new Map<number, ChatAlertPrefs>()
+const prefsLoadedFromDb = new Set<number>() // Track which chats we already loaded from DB
 
 export function setChatAlertPrefs(chatId: number, prefs: Partial<ChatAlertPrefs>): void {
   const current = chatPrefs.get(chatId) || { alertLevel: 'good_and_great' as AlertLevel }
-  chatPrefs.set(chatId, { ...current, ...prefs })
+  const updated = { ...current, ...prefs }
+  chatPrefs.set(chatId, updated)
+  prefsLoadedFromDb.add(chatId)
+
+  // Persist to Supabase (fire-and-forget)
+  const alertsDb = getAlertsDbService()
+  if (alertsDb.enabled()) {
+    alertsDb.upsertChatSettings(chatId, {
+      alertLevel: updated.alertLevel,
+      silenceUntil: updated.silenceUntil ?? null,
+    }).catch((err) => logger.warn(`Erro ao persistir prefs chat ${chatId}: ${err}`))
+  }
 }
 
 export function getChatAlertPrefs(chatId: number): ChatAlertPrefs {
   return chatPrefs.get(chatId) || { alertLevel: 'good_and_great' }
+}
+
+// Load prefs from Supabase for a chat (called lazily on first access)
+export async function loadChatAlertPrefs(chatId: number): Promise<ChatAlertPrefs> {
+  if (prefsLoadedFromDb.has(chatId)) {
+    return getChatAlertPrefs(chatId)
+  }
+
+  const alertsDb = getAlertsDbService()
+  if (alertsDb.enabled()) {
+    try {
+      const settings = await alertsDb.getChatSettings(chatId)
+      if (settings) {
+        const prefs: ChatAlertPrefs = {
+          alertLevel: (settings.alertLevel as AlertLevel) || 'good_and_great',
+          silenceUntil: settings.silenceUntil,
+        }
+        chatPrefs.set(chatId, prefs)
+        prefsLoadedFromDb.add(chatId)
+        return prefs
+      }
+    } catch (err) {
+      logger.warn(`Erro ao carregar prefs do chat ${chatId}: ${err}`)
+    }
+  }
+
+  prefsLoadedFromDb.add(chatId)
+  return getChatAlertPrefs(chatId)
 }
 
 // Países que exigem visto de trânsito para brasileiros
@@ -136,8 +176,8 @@ class PriceAlertService {
       return
     }
 
-    // Verifica preferências de alerta do chat
-    const prefs = getChatAlertPrefs(chatId)
+    // Verifica preferências de alerta do chat (carrega do DB se necessário)
+    const prefs = await loadChatAlertPrefs(chatId)
 
     // Silenciado?
     if (prefs.silenceUntil && new Date() < prefs.silenceUntil) {

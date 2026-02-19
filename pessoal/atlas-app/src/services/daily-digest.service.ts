@@ -9,7 +9,7 @@ import { logger } from '../utils/logger.js'
 import { loadEnv } from '../utils/env.js'
 import { formatRoute, formatRouteFull } from '../utils/airports.js'
 import { formatDate } from '../utils/date.js'
-import { getBenchmark, ratePriceVsBenchmark, getAllBenchmarks, setBenchmark } from '../utils/price-benchmark.js'
+import { getBenchmark, ratePriceVsBenchmark, getAllBenchmarks, setBenchmark, saveBenchmarkToSupabase, loadBenchmarksFromSupabase, seedBenchmarksToSupabase } from '../utils/price-benchmark.js'
 import { getPromoMonitorService } from './promo-monitor.service.js'
 import { addDays, format } from 'date-fns'
 
@@ -36,6 +36,11 @@ class DailyDigestService {
 
   // Inicia os crons de monitoramento
   startCrons(): void {
+    // Carrega benchmarks do Supabase (sobrescreve hardcoded com dados persistidos)
+    loadBenchmarksFromSupabase()
+      .then(() => seedBenchmarksToSupabase())
+      .catch((e) => logger.warn(`[Cron] Erro ao carregar benchmarks: ${e}`))
+
     // Cron de busca de precos (2x ao dia por padrao)
     for (const cronExpr of SEARCH_CRONS) {
       const task = cron.schedule(
@@ -310,14 +315,16 @@ class DailyDigestService {
           `  great: ${bm.greatPrice} → ${newGreat}`
         )
 
-        setBenchmark({
+        const newBenchmark = {
           route: bm.route,
           avgPrice: newAvg,
           goodPrice: newGood,
           greatPrice: newGreat,
           lastUpdated: format(new Date(), 'yyyy-MM'),
           notes: `Auto-recalibrado (${sorted.length} amostras, 30d). Anterior: avg=${bm.avgPrice}/good=${bm.goodPrice}/great=${bm.greatPrice}`,
-        })
+        }
+        setBenchmark(newBenchmark)
+        await saveBenchmarkToSupabase(newBenchmark)
         updated++
       } catch (error) {
         logger.warn(`[Benchmark] Erro ao recalibrar ${bm.route}: ${error}`)

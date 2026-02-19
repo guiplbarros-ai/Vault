@@ -19,6 +19,8 @@ export interface ChatSettings {
   digestTime?: string // HH:mm
   timezone: string
   language: string
+  alertLevel?: string // 'all' | 'good_and_great' | 'great_only'
+  silenceUntil?: Date
   createdAt: Date
   updatedAt: Date
 }

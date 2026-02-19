@@ -5,7 +5,7 @@ import { searchFlights, formatSearchSummary } from './flight-search.service.js'
 import { getRoutesDbService } from './routes-db.service.js'
 import { getAlertsDbService } from './alerts-db.service.js'
 import { getPricesDbService } from './prices-db.service.js'
-import { getPriceAlertService, getChatAlertPrefs, setChatAlertPrefs } from './price-alert.service.js'
+import { getPriceAlertService, getChatAlertPrefs, setChatAlertPrefs, loadChatAlertPrefs } from './price-alert.service.js'
 import type { AlertLevel } from './price-alert.service.js'
 import { getUsageDbService } from './usage-db.service.js'
 import { getPromoMonitorService } from './promo-monitor.service.js'
@@ -296,10 +296,10 @@ class TelegramService {
     })
 
     // /config - Ver e alterar preferências de alertas
-    this.bot.onText(/\/config$/, (msg) => {
+    this.bot.onText(/\/config$/, async (msg) => {
       if (!isAuthorized(msg.from?.id || 0)) return
 
-      const prefs = getChatAlertPrefs(msg.chat.id)
+      const prefs = await loadChatAlertPrefs(msg.chat.id)
       const levelLabel: Record<string, string> = {
         all: '📢 Todos (good + great + target)',
         good_and_great: '✅ Bom e Excelente (padrão)',

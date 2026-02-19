@@ -8,7 +8,13 @@
  * - Google Flights (observação manual)
  * - Melhores Destinos
  * - Passagens Promo
+ *
+ * Persistência: benchmarks são carregados do Supabase na inicialização
+ * e salvos ao recalibrar. Os hardcoded abaixo são fallback/seed.
  */
+
+import { getSupabaseClient, isSupabaseConfigured } from '../services/supabase.service.js'
+import { logger } from './logger.js'
 
 export interface PriceBenchmark {
   route: string // "ORIGIN-DEST"
@@ -165,8 +171,102 @@ export function getAllBenchmarks(): PriceBenchmark[] {
 }
 
 /**
- * Adiciona ou atualiza um benchmark (para uso futuro via API/CLI)
+ * Adiciona ou atualiza um benchmark (in-memory)
  */
 export function setBenchmark(benchmark: PriceBenchmark): void {
   PRICE_BENCHMARKS[benchmark.route] = benchmark
+}
+
+/**
+ * Salva um benchmark no Supabase (upsert)
+ */
+export async function saveBenchmarkToSupabase(benchmark: PriceBenchmark): Promise<void> {
+  if (!isSupabaseConfigured()) return
+
+  try {
+    const supabase = getSupabaseClient()
+    const { error } = await supabase
+      .from('atlas_benchmarks')
+      .upsert({
+        route: benchmark.route,
+        avg_price: benchmark.avgPrice,
+        good_price: benchmark.goodPrice,
+        great_price: benchmark.greatPrice,
+        last_updated: benchmark.lastUpdated,
+        notes: benchmark.notes || null,
+      })
+
+    if (error) {
+      logger.warn(`[Benchmark] Erro ao salvar ${benchmark.route} no Supabase: ${error.message}`)
+    }
+  } catch (err) {
+    logger.warn(`[Benchmark] Erro ao persistir ${benchmark.route}: ${err}`)
+  }
+}
+
+/**
+ * Carrega benchmarks do Supabase e merge com os hardcoded
+ * (Supabase tem prioridade — sobrescreve hardcoded)
+ */
+export async function loadBenchmarksFromSupabase(): Promise<number> {
+  if (!isSupabaseConfigured()) return 0
+
+  try {
+    const supabase = getSupabaseClient()
+    const { data, error } = await supabase
+      .from('atlas_benchmarks')
+      .select('*')
+
+    if (error) {
+      logger.warn(`[Benchmark] Erro ao carregar do Supabase: ${error.message}`)
+      return 0
+    }
+
+    if (!data || data.length === 0) return 0
+
+    let loaded = 0
+    for (const row of data) {
+      PRICE_BENCHMARKS[row.route] = {
+        route: row.route,
+        avgPrice: Number(row.avg_price),
+        goodPrice: Number(row.good_price),
+        greatPrice: Number(row.great_price),
+        lastUpdated: row.last_updated,
+        notes: row.notes || undefined,
+      }
+      loaded++
+    }
+
+    logger.info(`[Benchmark] ${loaded} benchmarks carregados do Supabase`)
+    return loaded
+  } catch (err) {
+    logger.warn(`[Benchmark] Erro ao carregar benchmarks: ${err}`)
+    return 0
+  }
+}
+
+/**
+ * Seed: salva todos os benchmarks hardcoded no Supabase (apenas se tabela vazia)
+ */
+export async function seedBenchmarksToSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return
+
+  try {
+    const supabase = getSupabaseClient()
+    const { data, error } = await supabase.from('atlas_benchmarks').select('route').limit(1)
+
+    // Se tabela não existe ou erro, pula silenciosamente
+    if (error) return
+
+    // Só faz seed se tabela estiver vazia
+    if (data && data.length > 0) return
+
+    const benchmarks = getAllBenchmarks()
+    for (const bm of benchmarks) {
+      await saveBenchmarkToSupabase(bm)
+    }
+    logger.info(`[Benchmark] Seed: ${benchmarks.length} benchmarks salvos no Supabase`)
+  } catch (err) {
+    logger.warn(`[Benchmark] Erro no seed: ${err}`)
+  }
 }

@@ -194,6 +194,11 @@ function mapSerpApiFlightToResult(flight: SerpApiFlight, params: FlightSearchPar
     })
   }
 
+  // Deep link direto para o Google Flights (via departure_token)
+  const deepLink = flight.departure_token
+    ? `https://www.google.com/travel/flights/booking?tfs=${encodeURIComponent(flight.departure_token)}&curr=BRL&hl=pt-BR`
+    : undefined
+
   return {
     id: `serpapi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     origin: params.origin.toUpperCase(),
@@ -205,6 +210,7 @@ function mapSerpApiFlightToResult(flight: SerpApiFlight, params: FlightSearchPar
     stops: stops,
     duration: flight.total_duration,
     layovers: layovers.length > 0 ? layovers : undefined,
+    deepLink,
     provider: 'serpapi',
     fetchedAt: new Date(),
   }

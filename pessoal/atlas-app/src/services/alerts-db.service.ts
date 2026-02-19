@@ -25,6 +25,8 @@ interface DbChatSettings {
   digest_time: string | null
   timezone: string
   language: string
+  alert_level: string | null
+  silence_until: string | null
   created_at: string
   updated_at: string
 }
@@ -71,6 +73,8 @@ function mapDbToSettings(db: DbChatSettings): ChatSettings {
     digestTime: db.digest_time ?? undefined,
     timezone: db.timezone,
     language: db.language,
+    alertLevel: db.alert_level ?? undefined,
+    silenceUntil: db.silence_until ? new Date(db.silence_until) : undefined,
     createdAt: new Date(db.created_at),
     updatedAt: new Date(db.updated_at),
   }
@@ -204,6 +208,8 @@ class AlertsDbService {
       digestEnabled: boolean
       digestTime: string
       timezone: string
+      alertLevel: string
+      silenceUntil: Date | null
     }>
   ): Promise<ChatSettings> {
     const supabase = getSupabaseClient()
@@ -212,6 +218,8 @@ class AlertsDbService {
     if (settings.digestEnabled !== undefined) updateData.digest_enabled = settings.digestEnabled
     if (settings.digestTime !== undefined) updateData.digest_time = settings.digestTime
     if (settings.timezone !== undefined) updateData.timezone = settings.timezone
+    if (settings.alertLevel !== undefined) updateData.alert_level = settings.alertLevel
+    if (settings.silenceUntil !== undefined) updateData.silence_until = settings.silenceUntil?.toISOString() ?? null
 
     const { data, error } = await supabase
       .from('atlas_chat_settings')
