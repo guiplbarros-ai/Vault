@@ -6,7 +6,7 @@ import { logger } from '../utils/logger.js'
 loadEnv()
 
 const BASE_URL = 'https://sky-scrapper.p.rapidapi.com/api/v1/flights'
-const TIMEOUT_MS = 15000
+const TIMEOUT_MS = 20000
 
 // Cache de IATA → entityId (evita gastar calls do free tier)
 const entityIdCache = new Map<string, { skyId: string; entityId: string }>()
@@ -19,12 +19,19 @@ interface AirportSearchResult {
       title?: string
       subtitle?: string
     }
+    navigation?: {
+      entityType?: string
+    }
   }>
 }
 
 interface SkyscannerResponse {
   status?: boolean
   data?: {
+    context?: {
+      status?: string
+      totalResults?: number
+    }
     itineraries?: Array<{
       id: string
       price: {
@@ -108,7 +115,12 @@ async function getEntityId(iata: string): Promise<{ skyId: string; entityId: str
       return null
     }
 
-    const result = { skyId: data.data[0].skyId, entityId: data.data[0].entityId }
+    // Filtra pelo aeroporto exato (AIRPORT com skyId === IATA), senão usa o primeiro
+    const exact = data.data.find(
+      (d) => d.navigation?.entityType === 'AIRPORT' && d.skyId.toUpperCase() === key
+    )
+    const best = exact || data.data[0]
+    const result = { skyId: best.skyId, entityId: best.entityId }
     entityIdCache.set(key, result)
     logger.info(`Skyscanner: cache entityId ${key} → ${result.entityId}`)
     return result
@@ -179,6 +191,10 @@ export async function searchFlightsSkyscanner(params: FlightSearchParams): Promi
     }
 
     const data = (await response.json()) as SkyscannerResponse
+
+    if (data.data?.context?.status === 'failure') {
+      throw new Error('Skyscanner: busca retornou failure (rate limit do free tier)')
+    }
 
     if (!data.data?.itineraries || data.data.itineraries.length === 0) {
       return []

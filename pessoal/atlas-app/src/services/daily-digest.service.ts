@@ -9,6 +9,7 @@ import { loadEnv } from '../utils/env.js'
 import { formatRouteFull } from '../utils/airports.js'
 import { getBenchmark, getAllBenchmarks, setBenchmark, saveBenchmarkToSupabase, loadBenchmarksFromSupabase, seedBenchmarksToSupabase } from '../utils/price-benchmark.js'
 import { getPromoMonitorService } from './promo-monitor.service.js'
+import { searchFlightDeals, getDigestInsights, getRouteBenchmark, isPerplexityConfigured } from './perplexity.service.js'
 import { addDays, format } from 'date-fns'
 
 loadEnv()
@@ -22,6 +23,8 @@ const DIGEST_CRON = process.env.ATLAS_DIGEST_CRON || '30 20 * * 5'
 const PROMO_CRON = process.env.ATLAS_PROMO_CRON || '*/30 * * * *'
 // Recalibração de benchmarks: domingo às 23:00
 const BENCHMARK_CRON = process.env.ATLAS_BENCHMARK_CRON || '0 23 * * 0'
+// Caçador de promoções Perplexity: diariamente às 10:00
+const DEAL_HUNT_CRON = process.env.ATLAS_DEAL_HUNT_CRON || '0 10 * * *'
 // Limpeza de preços antigos: domingo às 04:00
 const CLEANUP_CRON = process.env.ATLAS_CLEANUP_CRON || '0 4 * * 0'
 const CLEANUP_DAYS = Number(process.env.ATLAS_CLEANUP_DAYS) || 90
@@ -98,6 +101,22 @@ class DailyDigestService {
     )
     this.scheduledTasks.push(benchmarkTask)
     logger.info(`[Cron] Recalibração de benchmarks agendada: ${BENCHMARK_CRON}`)
+
+    // Cron de caçador de promoções (diário via Perplexity)
+    if (isPerplexityConfigured()) {
+      const dealHuntTask = cron.schedule(
+        DEAL_HUNT_CRON,
+        () => {
+          logger.info(`[Cron] Caçando promoções via Perplexity`)
+          this.runDealHunt().catch((e) =>
+            logger.error(`[Cron] Erro no deal hunt: ${e}`)
+          )
+        },
+        { timezone: TIMEZONE }
+      )
+      this.scheduledTasks.push(dealHuntTask)
+      logger.info(`[Cron] Caçador de promoções agendado: ${DEAL_HUNT_CRON}`)
+    }
 
     // Cron de limpeza de preços antigos (semanal)
     const cleanupTask = cron.schedule(
@@ -236,12 +255,59 @@ class DailyDigestService {
 
     digest += `\n_Ida e volta (19 dias) | Econômica_`
 
+    // Inteligência de mercado via Perplexity
+    if (isPerplexityConfigured()) {
+      try {
+        const routeList = routes.map((r) => ({ origin: r.origin, destination: r.destination }))
+        const insights = await getDigestInsights(routeList)
+        if (insights) {
+          digest += `\n\n${insights}`
+        }
+      } catch (error) {
+        logger.warn(`[Digest] Erro ao buscar insights Perplexity: ${error}`)
+      }
+    }
+
     return digest
   }
 
   // Mantém compatibilidade com código antigo
   async generateDigest(chatId: number): Promise<string> {
     return this.generateWeeklyDigest(chatId)
+  }
+
+  // Caça promoções via Perplexity e envia para todos os chats com rotas ativas
+  async runDealHunt(): Promise<void> {
+    try {
+      const allRoutes = await this.routesDb.getAllActiveRoutes()
+      if (allRoutes.length === 0) return
+
+      // Rotas únicas
+      const uniqueRoutes = allRoutes
+        .map((r) => ({ origin: r.origin, destination: r.destination }))
+        .filter((r, i, arr) =>
+          arr.findIndex((a) => a.origin === r.origin && a.destination === r.destination) === i
+        )
+
+      const insight = await searchFlightDeals(uniqueRoutes)
+      if (!insight || !insight.hasDeal) {
+        logger.info('[DealHunt] Nenhuma promoção encontrada')
+        return
+      }
+
+      // Envia para todos os chats com rotas ativas
+      const chatIds = [...new Set(allRoutes.map((r) => r.chatId))]
+      for (const chatId of chatIds) {
+        try {
+          await this.telegram.sendMessage(chatId, `🔎 *Promoções Encontradas*\n\n${insight.summary}`)
+        } catch (error) {
+          logger.error(`[DealHunt] Erro ao enviar para chat ${chatId}: ${error}`)
+        }
+      }
+      logger.info(`[DealHunt] Promoções enviadas para ${chatIds.length} chat(s)`)
+    } catch (error) {
+      logger.error(`[DealHunt] Erro: ${error}`)
+    }
   }
 
   // Recalibra benchmarks com dados reais do Supabase (últimos 30 dias)
@@ -261,7 +327,19 @@ class DailyDigestService {
       try {
         const prices = await this.pricesDb.getRecentPrices(origin, dest, 30)
         if (prices.length < MIN_SAMPLES_RECALIBRATE) {
-          logger.info(`[Benchmark] ${bm.route}: ${prices.length} amostras (< ${MIN_SAMPLES_RECALIBRATE}) — mantendo atual`)
+          logger.info(`[Benchmark] ${bm.route}: ${prices.length} amostras (< ${MIN_SAMPLES_RECALIBRATE}) — tentando Perplexity`)
+
+          // Tenta enriquecer com dados do Perplexity
+          if (isPerplexityConfigured()) {
+            try {
+              const insight = await getRouteBenchmark(origin, dest)
+              if (insight?.avgPriceBRL && insight.avgPriceBRL > 1000) {
+                logger.info(`[Benchmark] ${bm.route}: Perplexity sugere avg R$ ${insight.avgPriceBRL}`)
+              }
+            } catch (error) {
+              logger.warn(`[Benchmark] Perplexity falhou para ${bm.route}: ${error}`)
+            }
+          }
           continue
         }
 

@@ -3,7 +3,6 @@ import type { FlightResult, FlightSearchParams } from '../types/index.js'
 import { searchFlightsKiwi, isKiwiConfigured, searchFlexibleDatesKiwi } from './kiwi.service.js'
 import { searchFlightsSerpApi, isSerpApiConfigured, BudgetExceededError } from './serpapi.service.js'
 import { searchFlightsSkyscanner, isSkyscannerConfigured } from './skyscanner.service.js'
-import { searchFlightsPerplexity, isPerplexityConfigured } from './perplexity.service.js'
 import { searchFlightsAmadeus, isAmadeusConfigured } from './amadeus.service.js'
 import { getUsageDbService } from './usage-db.service.js'
 import { getHealthService } from './health.service.js'
@@ -154,24 +153,7 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
     }
   }
 
-  // 4. Perplexity Sonar (~$0.005/call, LLM com busca web)
-  // Fallback criativo: usa IA para buscar preços reais na web
-  if (isPerplexityConfigured() && results.length === 0) {
-    try {
-      const perplexityResults = await searchFlightsPerplexity(params)
-      results.push(...perplexityResults)
-      providers.push('perplexity')
-      health.recordSuccess('perplexity')
-      logger.info(`Perplexity: ${perplexityResults.length} resultados`)
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error)
-      await health.recordFailure('perplexity', msg)
-      errors.push(`Perplexity: ${msg}`)
-      logger.warn(`Erro Perplexity: ${msg}`)
-    }
-  }
-
-  // 5. Amadeus (último recurso - API de TESTE com dados não confiáveis)
+  // 4. Amadeus (último recurso - API de TESTE com dados não confiáveis)
   // ATENÇÃO: test.api.amadeus.com retorna preços inflados/falsos
   // Só usar se não houver outra opção
   if (isAmadeusConfigured() && results.length === 0) {
@@ -361,5 +343,5 @@ function formatDuration(minutes: number): string {
 }
 
 export function isConfigured(): boolean {
-  return isAmadeusConfigured() || isKiwiConfigured() || isSerpApiConfigured() || isSkyscannerConfigured() || isPerplexityConfigured()
+  return isAmadeusConfigured() || isKiwiConfigured() || isSerpApiConfigured() || isSkyscannerConfigured()
 }

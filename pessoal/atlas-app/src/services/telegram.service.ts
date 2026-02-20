@@ -13,6 +13,7 @@ import { getHealthService } from './health.service.js'
 import { getCacheStats } from './flight-search.service.js'
 import { formatRoute, isValidIata, normalizeIata, formatAirportFull } from '../utils/airports.js'
 import { getBenchmark } from '../utils/price-benchmark.js'
+import { searchFlightDeals, getRouteBenchmark, isPerplexityConfigured } from './perplexity.service.js'
 import { generateAsciiChart } from '../utils/ascii-chart.js'
 import { parseDateInput } from '../utils/date.js'
 import type { AlertNotification } from '../types/index.js'
@@ -79,6 +80,7 @@ class TelegramService {
           `/budget - Ver uso de API (custos)\n` +
           `/health - Status dos providers\n` +
           `/promos - Status do monitor Livelo\n` +
+          `/insights CNF NRT - Inteligência da rota\n` +
           `/digest - Ver configuracao de digest\n` +
           `/id - Ver seu chat ID`
       )
@@ -462,6 +464,67 @@ class TelegramService {
       const cacheSection = `\n\n📦 *Cache de buscas:* ${cache.size} entradas`
 
       this.sendMessage(msg.chat.id, healthMsg + cacheSection)
+    })
+
+    // /insights CNF NRT - Inteligência de rota via Perplexity
+    this.bot.onText(/\/insights ([A-Za-z]{3}) ([A-Za-z]{3})/, async (msg, match) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+      if (!match) return
+
+      if (!isPerplexityConfigured()) {
+        return this.sendMessage(msg.chat.id, '⚠️ Perplexity não configurado (PERPLEXITY_API_KEY).')
+      }
+
+      const origin = normalizeIata(match[1])
+      const dest = normalizeIata(match[2])
+
+      this.sendMessage(msg.chat.id, `🔎 Buscando inteligência para ${formatRoute(origin, dest)}...`)
+
+      try {
+        // Busca benchmark e promoções em paralelo
+        const [benchmark, deals] = await Promise.all([
+          getRouteBenchmark(origin, dest),
+          searchFlightDeals([{ origin, destination: dest }]),
+        ])
+
+        let message = `📡 *Inteligência: ${formatRoute(origin, dest)}*\n`
+        message += `${'─'.repeat(25)}\n\n`
+
+        if (benchmark) {
+          message += `📊 *Análise de Mercado:*\n`
+          message += benchmark.summary.slice(0, 1500)
+
+          if (benchmark.airlines.length > 0) {
+            message += `\n\n✈️ *Cias:* ${benchmark.airlines.join(', ')}`
+          }
+          if (benchmark.avgPriceBRL) {
+            message += `\n💰 *Preço médio:* R$ ${benchmark.avgPriceBRL.toLocaleString('pt-BR')}`
+          }
+          if (benchmark.cheapestMonth) {
+            message += `\n📅 *Mês mais barato:* ${benchmark.cheapestMonth}`
+          }
+
+          if (benchmark.citations.length > 0) {
+            message += '\n\n_Fontes: '
+            const domains = benchmark.citations.slice(0, 3).map((c) => {
+              try { return new URL(c).hostname.replace('www.', '') }
+              catch { return c }
+            })
+            message += domains.join(', ') + '_'
+          }
+        }
+
+        if (deals && deals.hasDeal) {
+          message += `\n\n${'─'.repeat(25)}\n`
+          message += `🎁 *Promoções:*\n\n`
+          message += deals.summary.slice(0, 1000)
+        }
+
+        this.sendMessage(msg.chat.id, message)
+      } catch (error) {
+        logger.error(`Erro no /insights: ${error}`)
+        this.sendMessage(msg.chat.id, `❌ Erro ao buscar insights: ${error}`)
+      }
     })
 
     // /historico CNF NRT - Histórico de preços dos últimos 30 dias + gráfico

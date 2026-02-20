@@ -17,7 +17,7 @@ export interface FlightResult {
   duration: number // em minutos
   layovers?: Layover[] // Detalhes das paradas (onde e quanto tempo)
   deepLink?: string
-  provider: 'kiwi' | 'serpapi' | 'amadeus' | 'skyscanner' | 'perplexity'
+  provider: 'kiwi' | 'serpapi' | 'amadeus' | 'skyscanner'
   fetchedAt: Date
 }
 
@@ -56,6 +56,20 @@ export interface PriceHistory {
   currency: string
   provider: string
   fetchedAt: Date
+}
+
+export interface DealInsight {
+  summary: string // texto formatado para Telegram
+  citations: string[] // URLs de fonte
+  hasDeal: boolean
+}
+
+export interface BenchmarkInsight {
+  avgPriceBRL?: number
+  cheapestMonth?: string
+  airlines: string[]
+  summary: string
+  citations: string[]
 }
 
 export interface FlightDeal {

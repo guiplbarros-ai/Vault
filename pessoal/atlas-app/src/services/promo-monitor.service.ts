@@ -1,5 +1,7 @@
 import { getTelegramService } from './telegram.service.js'
 import { getRoutesDbService } from './routes-db.service.js'
+import { validatePromotion, isPerplexityConfigured } from './perplexity.service.js'
+import type { PromoValidation } from './perplexity.service.js'
 import { logger } from '../utils/logger.js'
 
 const FEEDS = [
@@ -19,8 +21,8 @@ const SMILES_BONUS_KEYWORDS = ['bônus', 'bonus', 'transferência', 'transferenc
 
 // Exclui promos de consumo/compras E promos de passagens por milhas (PPV)
 const CONSUMPTION_KEYWORDS = [
-  'por real', 'por r$', 'compras', 'parceiros', 'cashback', 'shopping',
-  'loja', 'gasto', 'marketplace', 'clube livelo', 'assinatura',
+  'por real', 'por r$', 'compras', 'compra de milhas', 'parceiros', 'cashback', 'shopping',
+  'loja', 'gasto', 'marketplace', 'clube livelo', 'assinatura', 'assinantes',
   'passagens', 'passagem', 'a partir de', 'ida e volta', 'só de ida',
 ]
 
@@ -182,8 +184,27 @@ class PromoMonitorService {
     if (chatIds.length === 0) return
 
     for (const item of alerts) {
-      const message = this.formatNotification(item)
-      logger.info(`[Promo] Notificando ${chatIds.length} chat(s): ${item.title}`)
+      // Validação via Perplexity (se configurado)
+      let validation: PromoValidation | null = null
+      if (isPerplexityConfigured()) {
+        try {
+          validation = await validatePromotion(item.title, item.link, item.description)
+        } catch (error) {
+          logger.warn(`[Promo] Erro na validação Perplexity: ${error}`)
+        }
+      }
+
+      // Se Perplexity validou e diz que NÃO é transferência, bloqueia
+      if (validation && !validation.isValid) {
+        logger.info(`[Promo] BLOQUEADO por Perplexity: "${item.title}" → ${validation.summary}`)
+        if (validation.correction) {
+          logger.info(`[Promo] Correção: ${validation.correction}`)
+        }
+        continue
+      }
+
+      const message = this.formatNotification(item, validation)
+      logger.info(`[Promo] Notificando ${chatIds.length} chat(s): ${item.title}${validation ? ' (✅ validado)' : ''}`)
 
       for (const chatId of chatIds) {
         try {
@@ -195,7 +216,7 @@ class PromoMonitorService {
     }
   }
 
-  private formatNotification(item: RssItem): string {
+  private formatNotification(item: RssItem, validation?: PromoValidation | null): string {
     const isSmiles = this.isSmilesTransferBonus(item)
 
     let msg: string
@@ -208,7 +229,17 @@ class PromoMonitorService {
       msg += `${item.title}\n\n`
     }
 
+    // Adiciona resumo da validação Perplexity
+    if (validation) {
+      msg += `📋 _${validation.summary}_\n\n`
+    }
+
     msg += `🔗 ${item.link}`
+
+    if (validation) {
+      msg += `\n\n✅ _Verificado via Perplexity_`
+    }
+
     return msg
   }
 

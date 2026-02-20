@@ -1,8 +1,8 @@
-import { format } from 'date-fns'
-import type { FlightResult, FlightSearchParams } from '../types/index.js'
 import { loadEnv } from '../utils/env.js'
 import { logger } from '../utils/logger.js'
 import { getUsageDbService } from './usage-db.service.js'
+import { formatAirportFull } from '../utils/airports.js'
+import type { DealInsight, BenchmarkInsight } from '../types/index.js'
 
 loadEnv()
 
@@ -15,20 +15,16 @@ interface PerplexityResponse {
       content?: string
     }
   }>
+  citations?: string[]
+  search_results?: Array<{
+    title?: string
+    url?: string
+    snippet?: string
+  }>
   usage?: {
     prompt_tokens: number
     completion_tokens: number
   }
-}
-
-interface PerplexityFlightData {
-  flights: Array<{
-    price_brl: number
-    airline: string
-    stops: number
-    duration_minutes?: number
-    departure_date?: string
-  }>
 }
 
 function getPerplexityKey(): string | null {
@@ -39,58 +35,26 @@ export function isPerplexityConfigured(): boolean {
   return getPerplexityKey() !== null
 }
 
-export async function searchFlightsPerplexity(params: FlightSearchParams): Promise<FlightResult[]> {
+// --- Helper: chama Perplexity Sonar (texto livre, sem json_schema) ---
+async function callPerplexity(
+  systemPrompt: string,
+  userPrompt: string,
+  endpoint: string,
+  metadata?: Record<string, unknown>,
+): Promise<{ content: string; citations: string[] } | null> {
   const apiKey = getPerplexityKey()
-  if (!apiKey) {
-    throw new Error('PERPLEXITY_API_KEY nao configurada')
-  }
+  if (!apiKey) return null
 
-  // Check budget before calling
+  // Check budget
   const usageDb = getUsageDbService()
   const budgetCheck = await usageDb.checkBudget('perplexity')
   if (!budgetCheck.allowed) {
     logger.warn(`Perplexity BLOQUEADO: ${budgetCheck.used}/${budgetCheck.limit} calls`)
-    throw new Error(`Perplexity: limite mensal atingido (${budgetCheck.used}/${budgetCheck.limit})`)
+    return null
   }
 
-  const outboundDate = format(params.departureDate, 'yyyy-MM-dd')
-  const returnDate = params.returnDate ? format(params.returnDate, 'yyyy-MM-dd') : null
-
-  const tripType = returnDate ? `round-trip departing ${outboundDate} returning ${returnDate}` : `one-way departing ${outboundDate}`
-
-  const prompt = `Find the 5 cheapest ${tripType} flights from ${params.origin} to ${params.destination}. Prices must be in BRL (Brazilian Reais). For each flight include: price in BRL, airline name, number of stops, and total duration in minutes if available.`
-
-  const schema = {
-    type: 'object' as const,
-    properties: {
-      flights: {
-        type: 'array' as const,
-        items: {
-          type: 'object' as const,
-          properties: {
-            price_brl: { type: 'number' as const },
-            airline: { type: 'string' as const },
-            stops: { type: 'integer' as const },
-            duration_minutes: { type: 'integer' as const },
-            departure_date: { type: 'string' as const },
-          },
-          required: ['price_brl', 'airline', 'stops'],
-          additionalProperties: false,
-        },
-      },
-    },
-    required: ['flights'],
-    additionalProperties: false,
-  }
-
-  logger.apiCall('perplexity', 'sonar')
-
-  // Track usage
-  await usageDb.trackCall('perplexity', 'sonar', {
-    origin: params.origin,
-    destination: params.destination,
-    date: outboundDate,
-  })
+  logger.apiCall('perplexity', endpoint)
+  await usageDb.trackCall('perplexity', endpoint, metadata)
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS)
@@ -105,25 +69,11 @@ export async function searchFlightsPerplexity(params: FlightSearchParams): Promi
       body: JSON.stringify({
         model: 'sonar',
         messages: [
-          {
-            role: 'system',
-            content: 'You are a flight search assistant. Return only structured JSON data about real flight prices. All prices must be in BRL (Brazilian Reais). Be precise with airline names and stop counts.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
         ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'flight_search',
-            schema,
-            strict: true,
-          },
-        },
-        search_domain_filter: ['google.com/travel', 'skyscanner.com', 'kayak.com.br'],
-        search_recency_filter: 'day',
+        temperature: 0.3,
+        search_recency_filter: 'month',
       }),
       signal: controller.signal,
     })
@@ -137,38 +87,271 @@ export async function searchFlightsPerplexity(params: FlightSearchParams): Promi
 
     const content = data.choices?.[0]?.message?.content
     if (!content) {
-      logger.warn('Perplexity: resposta vazia')
-      return []
+      logger.warn(`Perplexity [${endpoint}]: resposta vazia`)
+      return null
     }
 
-    const parsed = JSON.parse(content) as PerplexityFlightData
-
-    if (!parsed.flights || !Array.isArray(parsed.flights)) {
-      logger.warn('Perplexity: formato invalido')
-      return []
+    const citations = data.citations || []
+    if (citations.length > 0) {
+      logger.info(`Perplexity [${endpoint}]: ${citations.length} citation(s)`)
     }
 
-    return parsed.flights
-      .filter((f) => f.price_brl > 0 && f.airline)
-      .map((f) => ({
-        id: `perplexity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        origin: params.origin.toUpperCase(),
-        destination: params.destination.toUpperCase(),
-        departureDate: f.departure_date || outboundDate,
-        price: f.price_brl,
-        currency: 'BRL',
-        airline: f.airline,
-        stops: f.stops || 0,
-        duration: f.duration_minutes || 0,
-        provider: 'perplexity' as const,
-        fetchedAt: new Date(),
-      }))
+    return { content, citations }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Perplexity timeout')
+      logger.warn(`Perplexity [${endpoint}]: timeout`)
+      return null
     }
     throw error
   } finally {
     clearTimeout(timeout)
+  }
+}
+
+// --- 1. Caçador de promoções ---
+export async function searchFlightDeals(
+  routes: Array<{ origin: string; destination: string }>,
+): Promise<DealInsight | null> {
+  if (!isPerplexityConfigured() || routes.length === 0) return null
+
+  const routeLabels = routes
+    .map((r) => `${r.origin}-${r.destination}`)
+    .filter((v, i, a) => a.indexOf(v) === i) // unique
+    .join(', ')
+
+  const routeDescriptions = routes
+    .map((r) => `${formatAirportFull(r.origin)} → ${formatAirportFull(r.destination)}`)
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .join(', ')
+
+  const systemPrompt = `You are a flight deal hunter. Search for current promotions, error fares, flash sales, and special offers for flights from Brazil. Report only deals you find with sources. Answer in Portuguese (Brazil).`
+
+  const userPrompt = `Busque promoções e ofertas atuais de passagens aéreas para estas rotas: ${routeDescriptions}.
+
+Procure por:
+- Promoções de companhias aéreas (LATAM, ANA, JAL, Emirates, Qatar, Turkish, Ethiopian)
+- Ofertas de milhas Smiles e LATAM Pass (pontos necessários, bônus de transferência)
+- Error fares em sites de reserva
+- Flash sales e promoções de cartão de crédito para viagens
+
+Se encontrar promoções, liste cada uma com:
+- Descrição da promoção
+- Preço ou pontos necessários
+- Validade (se disponível)
+- Link da fonte
+
+Se não encontrar nada relevante, diga "Nenhuma promoção encontrada no momento para estas rotas."`
+
+  const result = await callPerplexity(systemPrompt, userPrompt, 'deals', { routes: routeLabels })
+  if (!result) return null
+
+  const noDeal = result.content.toLowerCase().includes('nenhuma promoção encontrada')
+
+  // Formata citations como links
+  let summary = result.content
+  if (result.citations.length > 0) {
+    summary += '\n\n🔗 *Fontes:*'
+    for (const cite of result.citations.slice(0, 5)) {
+      // Extrai domínio para label curto
+      try {
+        const domain = new URL(cite).hostname.replace('www.', '')
+        summary += `\n• [${domain}](${cite})`
+      } catch {
+        summary += `\n• ${cite}`
+      }
+    }
+  }
+
+  return {
+    summary,
+    citations: result.citations,
+    hasDeal: !noDeal,
+  }
+}
+
+// --- 2. Benchmark de rota ---
+export async function getRouteBenchmark(
+  origin: string,
+  destination: string,
+): Promise<BenchmarkInsight | null> {
+  if (!isPerplexityConfigured()) return null
+
+  const originFull = formatAirportFull(origin)
+  const destFull = formatAirportFull(destination)
+
+  const systemPrompt = `You are a flight market analyst. Provide factual data about flight pricing based on your web search results. Answer in Portuguese (Brazil). Be concise.`
+
+  const userPrompt = `Qual o preço típico de passagens aéreas ida e volta de ${originFull} (${origin}) para ${destFull} (${destination})?
+
+Inclua:
+- Preço médio em BRL (reais)
+- Meses mais baratos para voar
+- Companhias aéreas que operam essa rota (direto e com conexão)
+- Tendência recente de preços (subindo, caindo ou estável)
+
+Baseie suas respostas nos resultados de Google Flights, Skyscanner e Kayak.`
+
+  const result = await callPerplexity(systemPrompt, userPrompt, 'benchmark', {
+    origin,
+    destination,
+  })
+  if (!result) return null
+
+  // Tenta extrair preço médio do texto
+  const avgMatch = result.content.match(
+    /(?:preço médio|média|average|typical).*?R\$\s*([\d.]+)/i,
+  )
+  const avgPriceBRL = avgMatch ? Number(avgMatch[1].replace('.', '')) : undefined
+
+  // Tenta extrair meses mais baratos
+  const months = [
+    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+  ]
+  const contentLower = result.content.toLowerCase()
+  const cheapMonths = months.filter((m) => {
+    // Procura menções de meses perto de "barato", "econômico", "menor"
+    const idx = contentLower.indexOf(m)
+    if (idx === -1) return false
+    const nearby = contentLower.slice(Math.max(0, idx - 80), idx + 80)
+    return /barat|econôm|menor|cheap|low/i.test(nearby)
+  })
+  const cheapestMonth = cheapMonths[0] || undefined
+
+  // Extrai nomes de cias aéreas mencionadas
+  const knownAirlines = [
+    'LATAM', 'ANA', 'JAL', 'Japan Airlines', 'Emirates', 'Qatar Airways',
+    'Turkish Airlines', 'Ethiopian Airlines', 'Air China', 'Korean Air',
+    'Air France', 'KLM', 'Lufthansa', 'Swiss', 'United', 'Delta',
+    'American Airlines', 'Copa Airlines', 'Gol', 'Azul',
+  ]
+  const airlines = knownAirlines.filter((a) =>
+    result.content.toLowerCase().includes(a.toLowerCase()),
+  )
+
+  return {
+    avgPriceBRL,
+    cheapestMonth,
+    airlines,
+    summary: result.content,
+    citations: result.citations,
+  }
+}
+
+// --- 3. Contexto para digest semanal ---
+export async function getDigestInsights(
+  routes: Array<{ origin: string; destination: string }>,
+  departureMonths?: string[],
+): Promise<string | null> {
+  if (!isPerplexityConfigured() || routes.length === 0) return null
+
+  const routeDescriptions = routes
+    .map((r) => `${r.origin}-${r.destination}`)
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .join(', ')
+
+  const monthContext = departureMonths?.length
+    ? `Meses de embarque monitorados: ${departureMonths.join(', ')}.`
+    : ''
+
+  const systemPrompt = `You are a travel market analyst. Provide brief, actionable intelligence about the flight market. Answer in Portuguese (Brazil). Be very concise — max 5 bullet points.`
+
+  const userPrompt = `Inteligência de mercado para voos do Brasil (rotas: ${routeDescriptions}). ${monthContext}
+
+Responda com 3-5 bullet points cobrindo:
+- Alguma promoção de companhia aérea ativa ou prevista?
+- Tendência de preços (subindo, caindo, estável)?
+- Notícias relevantes (novas rotas, mudanças de cias, etc)?
+- Dica de janela de compra para os próximos meses
+
+Seja direto e objetivo. Cada ponto com no máximo 1-2 linhas.`
+
+  const result = await callPerplexity(systemPrompt, userPrompt, 'digest', {
+    routes: routeDescriptions,
+  })
+  if (!result) return null
+
+  let formatted = `📡 *Inteligência de Mercado*\n\n${result.content}`
+
+  if (result.citations.length > 0) {
+    formatted += '\n\n_Fontes: '
+    const domains = result.citations.slice(0, 3).map((c) => {
+      try { return new URL(c).hostname.replace('www.', '') }
+      catch { return c }
+    })
+    formatted += domains.join(', ')
+    formatted += '_'
+  }
+
+  return formatted
+}
+
+// --- 4. Validador de promoções (anti-falso-positivo) ---
+export interface PromoValidation {
+  isValid: boolean
+  isTransferBonus: boolean // É bônus de transferência Livelo→programa?
+  isActive: boolean // A promoção está ativa agora?
+  summary: string // Resumo do que a promoção realmente é
+  correction?: string // Correção se o alerta original estava errado
+}
+
+export async function validatePromotion(
+  title: string,
+  url: string,
+  description?: string,
+): Promise<PromoValidation | null> {
+  if (!isPerplexityConfigured()) return null
+
+  const systemPrompt = `You are a Brazilian loyalty points expert. Analyze promotions about Livelo, Smiles, LATAM Pass, and airline miles. Be factual and concise. Answer in Portuguese (Brazil).`
+
+  const userPrompt = `Analise esta promoção encontrada em um feed RSS:
+
+Título: "${title}"
+URL: ${url}
+${description ? `Descrição: "${description.slice(0, 300)}"` : ''}
+
+Responda EXATAMENTE neste formato:
+TIPO: [transferência de pontos | compra de milhas | promoção de consumo | outro]
+ATIVA: [sim | não | incerto]
+RESUMO: [1-2 frases explicando o que a promoção realmente é]
+RELEVANTE_LIVELO: [sim | não] (é sobre transferir pontos Livelo para programa aéreo?)
+CORREÇÃO: [se o título é enganoso, explique o que realmente é]`
+
+  const result = await callPerplexity(systemPrompt, userPrompt, 'validate-promo', {
+    title,
+    url,
+  })
+  if (!result) return null
+
+  const content = result.content
+
+  // Parse structured response
+  const tipoMatch = content.match(/TIPO:\s*(.+)/i)
+  const ativaMatch = content.match(/ATIVA:\s*(.+)/i)
+  const resumoMatch = content.match(/RESUMO:\s*(.+)/i)
+  const relevanteMatch = content.match(/RELEVANTE_LIVELO:\s*(.+)/i)
+  const correcaoMatch = content.match(/CORREÇÃO:\s*(.+)/i)
+
+  const tipo = tipoMatch?.[1]?.trim().toLowerCase() || ''
+  const ativa = ativaMatch?.[1]?.trim().toLowerCase() || ''
+  const resumo = resumoMatch?.[1]?.trim() || content.slice(0, 200)
+  const relevante = relevanteMatch?.[1]?.trim().toLowerCase() || ''
+  const correcao = correcaoMatch?.[1]?.trim()
+
+  // RELEVANTE_LIVELO é o sinal principal — é sobre transferir pontos Livelo?
+  const isTransferBonus = relevante.includes('sim')
+  const isActive = ativa.includes('sim')
+  const isValid = isTransferBonus && isActive
+
+  logger.info(
+    `[PromoValidation] "${title}" → tipo=${tipo}, ativa=${ativa}, relevante=${relevante}, valid=${isValid}`,
+  )
+
+  return {
+    isValid,
+    isTransferBonus,
+    isActive,
+    summary: resumo,
+    correction: isValid ? undefined : correcao || undefined,
   }
 }
