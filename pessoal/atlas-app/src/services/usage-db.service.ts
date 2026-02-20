@@ -28,9 +28,11 @@ export interface BudgetCheckResult {
 
 // Custo estimado por provider (USD)
 const COST_PER_CALL: Record<string, number> = {
-  amadeus: 0,    // Free tier
-  serpapi: 0.01, // ~$0.01 per call
-  kiwi: 0,       // Free (unlimited)
+  amadeus: 0,       // Free tier
+  serpapi: 0.01,    // ~$0.01 per call
+  kiwi: 0,          // Free (unlimited)
+  skyscanner: 0,    // Free tier (500/mês)
+  perplexity: 0.005, // ~$0.005 per call
 }
 
 // Limite mensal de calls por provider
@@ -41,6 +43,8 @@ const MONTHLY_LIMITS: Record<string, number> = {
   amadeus: Number(process.env.ATLAS_AMADEUS_MONTHLY_LIMIT) || 500, // Free tier
   serpapi: Number(process.env.ATLAS_SERPAPI_MONTHLY_LIMIT) || 750, // ~$7.50/mês
   kiwi: 999999, // Unlimited
+  skyscanner: Number(process.env.ATLAS_SKYSCANNER_MONTHLY_LIMIT) || 500, // Free tier
+  perplexity: Number(process.env.ATLAS_PERPLEXITY_MONTHLY_LIMIT) || 500, // ~$2.50/mês
 }
 
 // Cache para evitar múltiplas notificações

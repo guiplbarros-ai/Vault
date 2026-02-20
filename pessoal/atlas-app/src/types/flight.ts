@@ -17,7 +17,7 @@ export interface FlightResult {
   duration: number // em minutos
   layovers?: Layover[] // Detalhes das paradas (onde e quanto tempo)
   deepLink?: string
-  provider: 'kiwi' | 'serpapi' | 'amadeus'
+  provider: 'kiwi' | 'serpapi' | 'amadeus' | 'skyscanner' | 'perplexity'
   fetchedAt: Date
 }
 
