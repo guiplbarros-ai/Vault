@@ -28,7 +28,7 @@ const CONSUMPTION_KEYWORDS = [
 
 // Só notifica artigos publicados nos últimos 45 minutos
 // (evita re-envio após deploy — cron roda a cada 30min)
-const MAX_AGE_MS = 45 * 60 * 1000
+const MAX_AGE_MS = (Number(process.env.ATLAS_PROMO_MAX_AGE_MIN) || 45) * 60 * 1000
 
 const FETCH_TIMEOUT_MS = 15000
 
@@ -56,6 +56,46 @@ export function isTransferPromo(title: string, description: string): boolean {
   const hasSmilesBonus = SMILES_BONUS_KEYWORDS.some(k => text.includes(k))
 
   return (hasLivelo && hasTransfer) || (hasSmiles && hasSmilesBonus)
+}
+
+/** Extrai conteúdo de uma tag XML (suporta CDATA) */
+export function extractTag(xml: string, tag: string): string | null {
+  // Tenta CDATA primeiro: <tag><![CDATA[content]]></tag>
+  const cdataRegex = new RegExp(`<${tag}>\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>\\s*</${tag}>`)
+  const cdataMatch = cdataRegex.exec(xml)
+  if (cdataMatch) return cdataMatch[1].trim()
+
+  // Tag normal: <tag>content</tag>
+  const regex = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`)
+  const m = regex.exec(xml)
+  if (m) return m[1].trim()
+
+  return null
+}
+
+/** Parse RSS XML para array de RssItem */
+export function parseRss(xml: string): RssItem[] {
+  const items: RssItem[] = []
+
+  const itemRegex = /<item>([\s\S]*?)<\/item>/g
+  let match: RegExpExecArray | null
+
+  while ((match = itemRegex.exec(xml)) !== null) {
+    const block = match[1]
+
+    const title = extractTag(block, 'title')
+    const link = extractTag(block, 'link')
+    const pubDateStr = extractTag(block, 'pubDate')
+    const description = extractTag(block, 'description')
+
+    if (!title || !link) continue
+
+    const pubDate = pubDateStr ? new Date(pubDateStr) : new Date()
+
+    items.push({ title, link, pubDate, description: description || '' })
+  }
+
+  return items
 }
 
 /** Verifica se é especificamente um bônus de transferência Livelo→Smiles */
@@ -128,49 +168,10 @@ class PromoMonitorService {
       }
 
       const xml = await response.text()
-      return this.parseRss(xml)
+      return parseRss(xml)
     } finally {
       clearTimeout(timeout)
     }
-  }
-
-  private parseRss(xml: string): RssItem[] {
-    const items: RssItem[] = []
-
-    // Extrai blocos <item>...</item>
-    const itemRegex = /<item>([\s\S]*?)<\/item>/g
-    let match: RegExpExecArray | null
-
-    while ((match = itemRegex.exec(xml)) !== null) {
-      const block = match[1]
-
-      const title = this.extractTag(block, 'title')
-      const link = this.extractTag(block, 'link')
-      const pubDateStr = this.extractTag(block, 'pubDate')
-      const description = this.extractTag(block, 'description')
-
-      if (!title || !link) continue
-
-      const pubDate = pubDateStr ? new Date(pubDateStr) : new Date()
-
-      items.push({ title, link, pubDate, description: description || '' })
-    }
-
-    return items
-  }
-
-  private extractTag(xml: string, tag: string): string | null {
-    // Tenta CDATA primeiro: <tag><![CDATA[content]]></tag>
-    const cdataRegex = new RegExp(`<${tag}>\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>\\s*</${tag}>`)
-    const cdataMatch = cdataRegex.exec(xml)
-    if (cdataMatch) return cdataMatch[1].trim()
-
-    // Tag normal: <tag>content</tag>
-    const regex = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`)
-    const m = regex.exec(xml)
-    if (m) return m[1].trim()
-
-    return null
   }
 
   private async notifyAll(alerts: RssItem[]): Promise<void> {

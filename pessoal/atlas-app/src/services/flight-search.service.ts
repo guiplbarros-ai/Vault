@@ -19,7 +19,7 @@ export interface SearchResult {
 }
 
 // --- Cache de buscas (economia ~50% do budget SerpAPI) ---
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000 // 6 horas
+const CACHE_TTL_MS = (Number(process.env.ATLAS_CACHE_TTL_HOURS) || 6) * 60 * 60 * 1000
 const searchCache = new Map<string, { result: SearchResult; timestamp: number }>()
 
 function getCacheKey(params: FlightSearchParams): string {
@@ -35,7 +35,7 @@ function getCachedResult(params: FlightSearchParams): SearchResult | null {
 
   const age = Date.now() - cached.timestamp
   if (age > CACHE_TTL_MS) {
-    searchCache.delete(key)
+    // Não deleta — mantém para fallback stale se todos os provedores falharem
     return null
   }
 
@@ -48,12 +48,17 @@ function setCachedResult(params: FlightSearchParams, result: SearchResult): void
   searchCache.set(key, { result, timestamp: Date.now() })
 
   // Limpa entradas expiradas periodicamente (a cada 50 entradas)
-  if (searchCache.size > 50) {
+  const maxEntries = Number(process.env.ATLAS_CACHE_MAX_ENTRIES) || 50
+  if (searchCache.size > maxEntries) {
     const now = Date.now()
     for (const [k, v] of searchCache) {
       if (now - v.timestamp > CACHE_TTL_MS) searchCache.delete(k)
     }
   }
+}
+
+export function clearSearchCache(): void {
+  searchCache.clear()
 }
 
 export function getCacheStats(): { size: number; entries: string[] } {
@@ -182,6 +187,20 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
     lowestPrice,
     errors,
     budgetWarning,
+  }
+
+  // Se todos falharam, tenta cache expirado como fallback
+  if (results.length === 0 && errors.length > 0) {
+    const key = getCacheKey(params)
+    const stale = searchCache.get(key)
+    if (stale) {
+      const ageMin = Math.round((Date.now() - stale.timestamp) / 60000)
+      logger.warn(`📦 Cache expirado: ${key} (${ageMin}min)`)
+      return {
+        ...stale.result,
+        errors: [...errors, `⚠️ Dados de cache (${ageMin}min atrás)`],
+      }
+    }
   }
 
   // Cache results (only if we got actual results)

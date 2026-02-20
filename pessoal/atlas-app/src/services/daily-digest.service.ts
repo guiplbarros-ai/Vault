@@ -28,7 +28,7 @@ const DEAL_HUNT_CRON = process.env.ATLAS_DEAL_HUNT_CRON || '0 10 * * *'
 // Limpeza de preços antigos: domingo às 04:00
 const CLEANUP_CRON = process.env.ATLAS_CLEANUP_CRON || '0 4 * * 0'
 const CLEANUP_DAYS = Number(process.env.ATLAS_CLEANUP_DAYS) || 90
-const MIN_SAMPLES_RECALIBRATE = 30
+const MIN_SAMPLES_RECALIBRATE = Number(process.env.ATLAS_MIN_SAMPLES_RECALIBRATE) || 30
 
 class DailyDigestService {
   private routesDb = getRoutesDbService()

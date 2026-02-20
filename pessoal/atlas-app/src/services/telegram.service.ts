@@ -31,11 +31,24 @@ function isAuthorized(userId: number): boolean {
   return AUTHORIZED_USERS.includes(userId)
 }
 
+interface QueuedMessage {
+  chatId: number
+  text: string
+  attempts: number
+  nextRetry: number
+}
+
+const MAX_RETRY_ATTEMPTS = 3
+const RETRY_DELAYS = [30_000, 120_000, 600_000] // 30s, 2min, 10min
+const RETRY_INTERVAL_MS = 30_000
+
 class TelegramService {
   private bot: TelegramBot | null = null
   private routesDb = getRoutesDbService()
   private alertsDb = getAlertsDbService()
   private priceAlertService = getPriceAlertService()
+  private messageQueue: QueuedMessage[] = []
+  private retryTimer: ReturnType<typeof setInterval> | null = null
 
   constructor() {
     const token = (process.env.TELEGRAM_BOT_TOKEN || '').trim()
@@ -79,6 +92,7 @@ class TelegramService {
           `/config - Configurar alertas\n` +
           `/budget - Ver uso de API (custos)\n` +
           `/health - Status dos providers\n` +
+          `/stats - Estatísticas gerais\n` +
           `/promos - Status do monitor Livelo\n` +
           `/insights CNF NRT - Inteligência da rota\n` +
           `/digest - Ver configuracao de digest\n` +
@@ -466,6 +480,50 @@ class TelegramService {
       this.sendMessage(msg.chat.id, healthMsg + cacheSection)
     })
 
+    // /stats - Estatísticas gerais
+    this.bot.onText(/\/stats/, async (msg) => {
+      if (!isAuthorized(msg.from?.id || 0)) return
+
+      try {
+        const usageDb = getUsageDbService()
+        const budgets = await usageDb.getBudgetStatus()
+        const cache = getCacheStats()
+        const routes = await getRoutesDbService().getAllActiveRoutes()
+        const promosSeen = getPromoMonitorService().getSeenCount()
+
+        const COST_PER_CALL: Record<string, number> = {
+          serpapi: 0.01, perplexity: 0.005, kiwi: 0, skyscanner: 0, amadeus: 0,
+        }
+
+        let totalCost = 0
+        let message = '📊 *Atlas Stats*\n\n🔎 *Provedores (mês atual)*\n'
+
+        for (const budget of budgets) {
+          const cost = budget.used * (COST_PER_CALL[budget.provider] || 0)
+          totalCost += cost
+
+          let status = '✅'
+          if (budget.percentUsed >= 100) status = '⛔'
+          else if (budget.percentUsed >= 80) status = '⚠️'
+          else if (budget.percentUsed >= 50) status = '🟡'
+
+          const limitStr = budget.limit >= 999999 ? '∞' : String(budget.limit)
+          const costStr = cost > 0 ? ` — $${cost.toFixed(2)}` : ''
+          message += `${status} ${budget.provider.toUpperCase()}: ${budget.used}/${limitStr} (${budget.percentUsed.toFixed(0)}%)${costStr}\n`
+        }
+
+        const uniqueRoutes = [...new Set(routes.map(r => `${r.origin}-${r.destination}`))]
+        message += `\n📦 *Cache:* ${cache.size} entradas`
+        message += `\n🛫 *Rotas:* ${uniqueRoutes.length}`
+        message += `\n📡 *Promos vistas:* ${promosSeen}`
+        message += `\n💰 *Custo mês:* $${totalCost.toFixed(2)}`
+
+        this.sendMessage(msg.chat.id, message)
+      } catch (error) {
+        this.sendMessage(msg.chat.id, `Erro ao buscar stats: ${error}`)
+      }
+    })
+
     // /insights CNF NRT - Inteligência de rota via Perplexity
     this.bot.onText(/\/insights ([A-Za-z]{3}) ([A-Za-z]{3})/, async (msg, match) => {
       if (!isAuthorized(msg.from?.id || 0)) return
@@ -641,7 +699,58 @@ class TelegramService {
       try {
         await this.bot.sendMessage(chatId, text)
       } catch (e) {
-        logger.error(`Erro ao enviar mensagem para ${chatId}: ${e}`)
+        // Adiciona na queue para retry
+        this.enqueueMessage(chatId, text)
+      }
+    }
+  }
+
+  private enqueueMessage(chatId: number, text: string): void {
+    this.messageQueue.push({
+      chatId,
+      text,
+      attempts: 0,
+      nextRetry: Date.now() + RETRY_DELAYS[0],
+    })
+    logger.warn(`[Retry] Mensagem enfileirada para chat ${chatId} (queue: ${this.messageQueue.length})`)
+    this.startRetryQueue()
+  }
+
+  private startRetryQueue(): void {
+    if (this.retryTimer) return
+    this.retryTimer = setInterval(() => this.processRetryQueue(), RETRY_INTERVAL_MS)
+  }
+
+  private stopRetryQueue(): void {
+    if (this.retryTimer) {
+      clearInterval(this.retryTimer)
+      this.retryTimer = null
+    }
+  }
+
+  private async processRetryQueue(): Promise<void> {
+    if (this.messageQueue.length === 0) {
+      this.stopRetryQueue()
+      return
+    }
+
+    const now = Date.now()
+    const pending = this.messageQueue.filter(m => m.nextRetry <= now)
+
+    for (const msg of pending) {
+      msg.attempts++
+      try {
+        await this.bot?.sendMessage(msg.chatId, msg.text)
+        this.messageQueue = this.messageQueue.filter(m => m !== msg)
+        logger.info(`[Retry] Mensagem reenviada para chat ${msg.chatId} (tentativa ${msg.attempts})`)
+      } catch {
+        if (msg.attempts >= MAX_RETRY_ATTEMPTS) {
+          this.messageQueue = this.messageQueue.filter(m => m !== msg)
+          logger.error(`[Retry] Desistindo após ${msg.attempts} tentativas para chat ${msg.chatId}`)
+        } else {
+          msg.nextRetry = now + RETRY_DELAYS[msg.attempts]
+          logger.warn(`[Retry] Falha tentativa ${msg.attempts}/${MAX_RETRY_ATTEMPTS} para chat ${msg.chatId}, próxima em ${RETRY_DELAYS[msg.attempts] / 1000}s`)
+        }
       }
     }
   }
@@ -689,6 +798,7 @@ class TelegramService {
   stopPolling(): void {
     if (!this.bot) return
     this.bot.stopPolling()
+    this.stopRetryQueue()
   }
 }
 

@@ -7,7 +7,7 @@ import type { DealInsight, BenchmarkInsight } from '../types/index.js'
 loadEnv()
 
 const PERPLEXITY_URL = 'https://api.perplexity.ai/chat/completions'
-const TIMEOUT_MS = 30000
+const TIMEOUT_MS = Number(process.env.ATLAS_PERPLEXITY_TIMEOUT_MS) || 30000
 
 interface PerplexityResponse {
   choices?: Array<{

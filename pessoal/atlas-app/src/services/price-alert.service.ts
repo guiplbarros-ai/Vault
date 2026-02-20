@@ -74,7 +74,21 @@ export async function loadChatAlertPrefs(chatId: number): Promise<ChatAlertPrefs
 }
 
 // Países que exigem visto de trânsito para brasileiros
-const VISA_REQUIRED_COUNTRIES = new Set(['US'])
+const VISA_REQUIRED_COUNTRIES = new Set([
+  'US', // Estados Unidos
+  'CA', // Canadá
+  'AU', // Austrália
+  'CN', // China (trânsito sem visto só 144h em alguns aeroportos)
+  'IN', // Índia
+])
+
+const COUNTRY_FLAGS: Record<string, string> = {
+  US: '🇺🇸', CA: '🇨🇦', AU: '🇦🇺', CN: '🇨🇳', IN: '🇮🇳',
+}
+
+function getVisaFlag(countryCode: string): string {
+  return COUNTRY_FLAGS[countryCode] || '⚠️'
+}
 
 // Verifica se um voo transita por país que exige visto
 function hasVisaRequiredTransit(flight: FlightResult): boolean {
@@ -805,13 +819,13 @@ class PriceAlertService {
     message += `✈️ ${flight.airline} | ${durationStr} | ${stopsStr}\n`
 
     // Detalhes das paradas (onde e quanto tempo)
-    const usTransit = hasVisaRequiredTransit(flight)
+    const visaTransit = hasVisaRequiredTransit(flight)
     if (flight.layovers && flight.layovers.length > 0) {
-      message += `\n📍 *Conexões:*${usTransit ? ' 🇺🇸 _requer visto americano_' : ''}\n`
+      message += `\n📍 *Conexões:*${visaTransit ? ' _requer visto de trânsito_' : ''}\n`
       for (const layover of flight.layovers) {
         const layoverAirport = getAirport(layover.airport)
-        const isUs = layoverAirport && VISA_REQUIRED_COUNTRIES.has(layoverAirport.country)
-        const flag = isUs ? ' 🇺🇸' : ''
+        const needsVisa = layoverAirport && VISA_REQUIRED_COUNTRIES.has(layoverAirport.country)
+        const flag = needsVisa ? ` ${getVisaFlag(layoverAirport!.country)}` : ''
         const layoverLabel = layoverAirport
           ? `${layoverAirport.city} (${layover.airport})`
           : layover.city || layover.airport
@@ -863,9 +877,10 @@ class PriceAlertService {
         const altMins = alt.duration % 60
         const altDur = altMins > 0 ? `${altHours}h${altMins}` : `${altHours}h`
         const altStops = alt.stops === 0 ? 'direto' : `${alt.stops}p`
-        const altUsFlag = hasVisaRequiredTransit(alt) ? ' 🇺🇸' : ''
+        const altVisaCountries = alt.layovers?.map(l => getAirport(l.airport)).filter(a => a && VISA_REQUIRED_COUNTRIES.has(a.country))
+        const altVisaFlag = altVisaCountries?.length ? ` ${getVisaFlag(altVisaCountries[0]!.country)}` : ''
         const altPrice = alt.price + surcharge
-        message += `  • R$ ${this.formatPrice(altPrice)} — ${alt.airline} | ${altDur} | ${altStops}${altUsFlag}\n`
+        message += `  • R$ ${this.formatPrice(altPrice)} — ${alt.airline} | ${altDur} | ${altStops}${altVisaFlag}\n`
       }
       message += '\n'
     }
