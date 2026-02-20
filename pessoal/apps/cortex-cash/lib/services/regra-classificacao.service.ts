@@ -377,6 +377,16 @@ class RegraClassificacaoService {
           `Padrão regex inválido: ${error instanceof Error ? error.message : 'erro desconhecido'}`
         )
       }
+
+      // ReDoS protection: reject patterns with nested quantifiers
+      if (/([+*])\)?[+*]/.test(padrao) || /\(\?[^)]*\([^)]*[+*]/.test(padrao)) {
+        throw new ValidationError(
+          'Padrão regex rejeitado: quantificadores aninhados podem causar lentidão extrema (ex: (a+)+)'
+        )
+      }
+      if (padrao.length > 200) {
+        throw new ValidationError('Padrão regex muito longo (máx 200 caracteres)')
+      }
     }
 
     // Validação básica para outros tipos

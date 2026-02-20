@@ -95,8 +95,6 @@ export function FaturaLancamentoForm({
 
   const handleSubmit = methods.handleSubmit(
     async (data: FaturaLancamentoFormData) => {
-      console.log('[FaturaLancamentoForm] Validação passou! Dados:', data)
-
       // Limpar campos de parcelamento se não estiver parcelado
       if (!isParcelado) {
         data.parcela_numero = undefined
@@ -112,14 +110,6 @@ export function FaturaLancamentoForm({
 
       await onSubmit(data)
     },
-    (errors) => {
-      console.error('[FaturaLancamentoForm] Erros de validação:', JSON.stringify(errors, null, 2))
-
-      // Log cada campo com erro
-      Object.keys(errors).forEach((key) => {
-        console.error(`Campo "${key}":`, errors[key as keyof typeof errors])
-      })
-    }
   )
 
   // Agrupar categorias por grupo
@@ -218,7 +208,7 @@ export function FaturaLancamentoForm({
               id="is_parcelado"
               checked={isParcelado}
               onChange={(e) => setIsParcelado(e.target.checked)}
-              className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+              className="rounded border-border text-primary focus:ring-primary"
             />
             <label htmlFor="is_parcelado" className="text-sm text-white cursor-pointer">
               Esta compra foi parcelada
@@ -255,13 +245,9 @@ export function FaturaLancamentoForm({
 
           {isParcelado && (
             <div
-              className="rounded-md p-3"
-              style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-              }}
+              className="rounded-md p-3 bg-[var(--bg-info-subtle)] border border-primary/30"
             >
-              <p className="text-xs text-blue-300">
+              <p className="text-xs text-secondary">
                 💡 <strong>Dica:</strong> Este lançamento representa apenas uma parcela. Você
                 precisará criar lançamentos separados para cada mês das outras parcelas.
               </p>
@@ -288,7 +274,7 @@ export function FaturaLancamentoForm({
               id="is_compra_exterior"
               checked={isCompraExterior}
               onChange={(e) => setIsCompraExterior(e.target.checked)}
-              className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+              className="rounded border-border text-primary focus:ring-primary"
             />
             <label htmlFor="is_compra_exterior" className="text-sm text-white cursor-pointer">
               Compra realizada em moeda estrangeira

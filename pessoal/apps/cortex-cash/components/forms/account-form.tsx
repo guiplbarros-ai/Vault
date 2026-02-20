@@ -78,30 +78,13 @@ export function AccountForm({
 
   const handleSubmit = methods.handleSubmit(
     async (data: AccountFormData) => {
-      console.log('[AccountForm] Validação passou! Dados:', data)
       await onSubmit(data)
-    },
-    (errors) => {
-      console.error('[AccountForm] Erros de validação:', JSON.stringify(errors, null, 2))
-      console.error('[AccountForm] Errors object:', errors)
-
-      // Log cada campo com erro
-      Object.keys(errors).forEach((key) => {
-        console.error(`Campo "${key}":`, (errors as any)[key])
-      })
     }
   )
 
   const watchType = methods.watch('type')
   const watchParentAccount = methods.watch('parentAccount')
 
-  // Debug: Log form values on change
-  React.useEffect(() => {
-    const subscription = methods.watch((value, { name, type }) => {
-      console.log('[AccountForm] Campo alterado:', name, '=', value[name as keyof typeof value])
-    })
-    return () => subscription.unsubscribe()
-  }, [methods])
 
   return (
     <FormProvider {...methods}>

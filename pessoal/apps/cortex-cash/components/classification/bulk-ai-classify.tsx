@@ -16,7 +16,7 @@ import { brandNavyAlpha } from '@/lib/constants/colors'
 import { categoriaService } from '@/lib/services/categoria.service'
 import { transacaoService } from '@/lib/services/transacao.service'
 import { Brain, CheckCircle, FolderX, Loader2, Pause, Play, Power, XCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 interface BulkAIClassifyProps {
@@ -33,6 +33,24 @@ export function BulkAIClassify({
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [paused, setPaused] = useState(false)
+  const pausedRef = useRef(false)
+  const resumeRef = useRef<(() => void) | null>(null)
+
+  const setPausedState = useCallback((value: boolean) => {
+    setPaused(value)
+    pausedRef.current = value
+    if (!value && resumeRef.current) {
+      resumeRef.current()
+      resumeRef.current = null
+    }
+  }, [])
+
+  const waitIfPaused = useCallback((): Promise<void> => {
+    if (!pausedRef.current) return Promise.resolve()
+    return new Promise((resolve) => {
+      resumeRef.current = resolve
+    })
+  }, [])
   const [results, setResults] = useState<{
     success: number
     failed: number
@@ -73,7 +91,7 @@ export function BulkAIClassify({
       setLoading(true)
       setResults(null)
       setProgress(0)
-      setPaused(false)
+      setPausedState(false)
 
       // Busca transações selecionadas
       const allTransactions = await transacaoService.listTransacoes()
@@ -87,12 +105,10 @@ export function BulkAIClassify({
 
       // Processa cada transação com tracking de progresso
       for (let i = 0; i < selectedTransactions.length; i++) {
-        const transaction = selectedTransactions[i]
+        const transaction = selectedTransactions[i]!
 
-        // Aguarda se pausado
-        while (paused) {
-          await new Promise((resolve) => setTimeout(resolve, 100))
-        }
+        // Aguarda se pausado (event-driven, sem polling)
+        await waitIfPaused()
 
         try {
           const response = await fetch('/api/ai/classify', {
@@ -278,7 +294,7 @@ export function BulkAIClassify({
 
             {loading && (
               <Button
-                onClick={() => setPaused(!paused)}
+                onClick={() => setPausedState(!paused)}
                 variant="outline"
                 style={{
                   borderColor: 'rgb(71, 85, 105)',

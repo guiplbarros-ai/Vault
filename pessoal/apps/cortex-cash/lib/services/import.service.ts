@@ -8,6 +8,7 @@
 import { getDB } from '../db/client'
 import { DatabaseError, ValidationError } from '../errors'
 import { generateTransactionHash } from '../import/dedupe'
+import { parseOFX as parseOFXStandalone } from '../import/parsers/ofx'
 import type {
   DedupeResult,
   FileFormat,
@@ -112,7 +113,7 @@ export class ImportService {
       const linhasProcessar = lines.slice(pular_linhas)
 
       for (let i = 0; i < linhasProcessar.length; i++) {
-        const linha = linhasProcessar[i].trim()
+        const linha = linhasProcessar[i]!.trim()
         const numeroLinha = i + pular_linhas + 1
 
         if (!linha) continue
@@ -225,103 +226,10 @@ export class ImportService {
   }
 
   /**
-   * Parse OFX para transações
+   * Parse OFX para transações — delegates to standalone parser
    */
   async parseOFX(fileContent: string): Promise<ParseResult> {
-    const erros: ParseError[] = []
-    const transacoes: ParsedTransacao[] = []
-
-    try {
-      // Extrair transações do OFX usando regex
-      const transactionPattern = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/g
-      const matches = [...fileContent.matchAll(transactionPattern)]
-
-      for (let i = 0; i < matches.length; i++) {
-        const txnBlock = matches[i][1]
-        const numeroLinha = i + 1
-
-        try {
-          // Extrair campos
-          const tipo = this.extractOFXTag(txnBlock, 'TRNTYPE')
-          const data = this.extractOFXTag(txnBlock, 'DTPOSTED')
-          const valor = this.extractOFXTag(txnBlock, 'TRNAMT')
-          const descricao =
-            this.extractOFXTag(txnBlock, 'MEMO') || this.extractOFXTag(txnBlock, 'NAME')
-
-          if (!data || !valor || !descricao) {
-            erros.push({
-              linha: numeroLinha,
-              mensagem: 'Campos obrigatórios faltando em transação OFX',
-              valor_original: txnBlock.substring(0, 100),
-            })
-            continue
-          }
-
-          // Parse data OFX (formato: YYYYMMDD ou YYYYMMDDHHMMSS)
-          const dataParsed = this.parseOFXDate(data)
-          if (!dataParsed || isNaN(dataParsed.getTime())) {
-            erros.push({
-              linha: numeroLinha,
-              campo: 'data',
-              mensagem: `Data OFX inválida: ${data}`,
-              valor_original: data,
-            })
-            continue
-          }
-
-          // Parse valor
-          const valorNum = Number.parseFloat(valor)
-          if (isNaN(valorNum)) {
-            erros.push({
-              linha: numeroLinha,
-              campo: 'valor',
-              mensagem: `Valor inválido: ${valor}`,
-              valor_original: valor,
-            })
-            continue
-          }
-
-          // Determinar tipo
-          const tipoTransacao = valorNum >= 0 ? 'receita' : 'despesa'
-
-          const transacao: ParsedTransacao = {
-            data: dataParsed,
-            descricao: descricao.trim(),
-            valor: Math.abs(valorNum),
-            tipo: tipoTransacao,
-            observacoes: tipo ? `Tipo OFX: ${tipo}` : undefined,
-            linha_original: numeroLinha,
-          }
-
-          transacoes.push(transacao)
-        } catch (error) {
-          erros.push({
-            linha: numeroLinha,
-            mensagem: error instanceof Error ? error.message : 'Erro ao processar transação OFX',
-            valor_original: txnBlock.substring(0, 100),
-          })
-        }
-      }
-
-      const linhasValidas = transacoes.length
-      const linhasInvalidas = erros.length
-
-      return {
-        success: linhasInvalidas === 0,
-        transacoes,
-        erros,
-        resumo: {
-          total_linhas: matches.length,
-          linhas_validas: linhasValidas,
-          linhas_invalidas: linhasInvalidas,
-          duplicatas: 0,
-        },
-      }
-    } catch (error) {
-      throw new ValidationError(
-        `Erro ao fazer parse do OFX: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
-      )
-    }
+    return parseOFXStandalone(fileContent)
   }
 
   /**
@@ -583,10 +491,10 @@ export class ImportService {
         const match = dateStr.match(regex)
         if (match) {
           if (formato === 'dd/MM/yyyy' || formato === 'dd-MM-yyyy') {
-            const [, day, month, year] = match
+            const [, day, month, year] = match as [string, string, string, string]
             return new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
           } else {
-            const [, year, month, day] = match
+            const [, year, month, day] = match as [string, string, string, string]
             return new Date(Number.parseInt(year), Number.parseInt(month) - 1, Number.parseInt(day))
           }
         }
@@ -623,34 +531,6 @@ export class ImportService {
     return isNegative ? -Math.abs(valor) : valor
   }
 
-  /**
-   * Extrai tag de bloco OFX
-   */
-  private extractOFXTag(block: string, tag: string): string | null {
-    const regex = new RegExp(`<${tag}>([^<]+)`, 'i')
-    const match = block.match(regex)
-    return match ? match[1].trim() : null
-  }
-
-  /**
-   * Parse de data OFX (formato YYYYMMDD ou YYYYMMDDHHMMSS)
-   */
-  private parseOFXDate(dateStr: string): Date | null {
-    try {
-      // Remover timezone se presente
-      const cleanDate = dateStr.split('[')[0]
-
-      // Extrair componentes
-      const year = Number.parseInt(cleanDate.substring(0, 4))
-      const month = Number.parseInt(cleanDate.substring(4, 6))
-      const day = Number.parseInt(cleanDate.substring(6, 8))
-
-      const date = new Date(year, month - 1, day)
-      return isNaN(date.getTime()) ? null : date
-    } catch {
-      return null
-    }
-  }
 }
 
 // Singleton instance

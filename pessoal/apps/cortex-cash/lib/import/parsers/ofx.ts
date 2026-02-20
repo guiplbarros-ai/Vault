@@ -184,7 +184,7 @@ function parseOFXv1(content: string): OFXStatement[] {
   const transactions: OFXTransaction[] = []
 
   for (const match of matches) {
-    const block = match[1]
+    const block = match[1]!
 
     const txn: OFXTransaction = {
       TRNTYPE: extractTag(block, 'TRNTYPE') || 'OTHER',
@@ -229,7 +229,7 @@ function parseOFXv2(content: string): OFXStatement[] {
 function extractTag(content: string, tagName: string): string | undefined {
   const regex = new RegExp(`<${tagName}>([^<]+)`, 'i')
   const match = content.match(regex)
-  return match ? match[1].trim() : undefined
+  return match ? match[1]!.trim() : undefined
 }
 
 /**
@@ -242,14 +242,15 @@ function parseDateOFX(dateStr: string): Date | null {
   if (!dateStr) return null
 
   // Remover timezone se houver (ex: 20240115[-3:GMT])
-  const cleaned = dateStr.split('[')[0].trim()
+  const cleaned = dateStr.split('[')[0]!.trim()
 
   // Extrair componentes YYYYMMDD
   const year = Number.parseInt(cleaned.substring(0, 4), 10)
   const month = Number.parseInt(cleaned.substring(4, 6), 10)
   const day = Number.parseInt(cleaned.substring(6, 8), 10)
 
-  if (!year || !month || !day) return null
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null
+  if (year < 1900 || year > 2100) return null
 
   // Validar ranges
   if (month < 1 || month > 12 || day < 1 || day > 31) return null

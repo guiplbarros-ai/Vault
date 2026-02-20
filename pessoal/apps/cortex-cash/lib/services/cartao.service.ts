@@ -286,11 +286,34 @@ export class CartaoService {
   }
 
   /**
-   * Deleta permanentemente um cartão
+   * Deleta permanentemente um cartão e seus dados relacionados
    */
   async hardDeleteCartao(id: string): Promise<void> {
     const db = getDB()
-    await db.cartoes_config.delete(id)
+
+    // Collect related fatura IDs
+    const faturas = await db.faturas.where('cartao_id').equals(id).toArray()
+    const faturaIds = faturas.map((f) => f.id)
+
+    await db.transaction(
+      'rw',
+      [db.cartoes_config, db.faturas, db.faturas_lancamentos],
+      async () => {
+        // Delete lancamentos for all faturas
+        if (faturaIds.length > 0) {
+          const lancamentos = await db.faturas_lancamentos
+            .filter((l) => faturaIds.includes(l.fatura_id))
+            .toArray()
+          await db.faturas_lancamentos.bulkDelete(lancamentos.map((l) => l.id))
+        }
+
+        // Delete faturas
+        await db.faturas.bulkDelete(faturaIds)
+
+        // Delete cartao
+        await db.cartoes_config.delete(id)
+      }
+    )
   }
 
   // ============================================================================
@@ -691,9 +714,6 @@ export class CartaoService {
     let contaPagamentoId = data.conta_pagamento_id
     if (!contaPagamentoId && cartao.conta_pagamento_id) {
       contaPagamentoId = cartao.conta_pagamento_id
-      console.log(
-        `[CartaoService] Usando conta de pagamento configurada no cartão: ${contaPagamentoId}`
-      )
     }
 
     // Validar com dados completos

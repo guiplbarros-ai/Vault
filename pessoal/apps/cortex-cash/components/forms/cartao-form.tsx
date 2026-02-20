@@ -68,11 +68,6 @@ export function CartaoForm({
         setLoadingContas(true)
         const contasData = await contaService.listContas({ incluirInativas: false })
         const contasCorrente = contasData.filter((conta) => conta.tipo === 'corrente')
-        console.log(
-          '[CartaoForm] Contas-corrente carregadas:',
-          contasCorrente.length,
-          contasCorrente
-        )
         setContas(contasCorrente)
         setLoadingContas(false)
       } catch (error) {
@@ -87,23 +82,6 @@ export function CartaoForm({
   const handleSubmit = methods.handleSubmit(
     async (data: CartaoFormData) => {
       await onSubmit(data)
-    },
-    (errors) => {
-      // Log apenas as mensagens de erro, não o objeto completo
-      console.error('[CartaoForm] Erros de validação encontrados:')
-      console.error('Total de erros:', Object.keys(errors).length)
-
-      Object.keys(errors).forEach((key) => {
-        const error = errors[key as keyof typeof errors]
-        console.error(`Campo: ${key}`)
-        console.error(`  Tipo do erro:`, typeof error)
-
-        if (error && typeof error === 'object' && 'message' in error) {
-          console.error(`  ❌ Mensagem: ${error.message}`)
-        } else if (error) {
-          console.error(`  ⚠️ Valor do erro:`, error)
-        }
-      })
     }
   )
 
