@@ -28,7 +28,6 @@ interface BatchClassifyRequest {
   config?: {
     defaultModel?: AIModel
     monthlyCostLimit?: number
-    allowOverride?: boolean
     strategy?: AIStrategy
     concurrency?: number // Número de classificações paralelas (padrão: 5)
   }
@@ -195,11 +194,9 @@ async function classifyOne(
         completion_tokens: usage.completion_tokens,
         total_tokens: usage.total_tokens,
       },
-      metadata: {
-        modelo: config.modelo,
-        prompt,
-        resposta,
-      },
+      ...(process.env.NODE_ENV === 'development' && {
+        metadata: { modelo: config.modelo, prompt, resposta },
+      }),
     }
   } catch (error) {
     console.error(`Error classifying item ${item.id}:`, error)
@@ -261,17 +258,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Batch size exceeds maximum (100 items)' }, { status: 400 })
     }
 
+    // Validate each item
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]!
+      if (!item.id || typeof item.id !== 'string') {
+        return NextResponse.json({ error: `Item ${i}: missing or invalid id` }, { status: 400 })
+      }
+      if (!item.descricao || typeof item.descricao !== 'string') {
+        return NextResponse.json({ error: `Item ${i}: missing or invalid descricao` }, { status: 400 })
+      }
+      if (item.valor === undefined || item.valor === null || typeof item.valor !== 'number') {
+        return NextResponse.json({ error: `Item ${i}: missing or invalid valor` }, { status: 400 })
+      }
+      if (!item.tipo || !['receita', 'despesa'].includes(item.tipo)) {
+        return NextResponse.json({ error: `Item ${i}: missing or invalid tipo` }, { status: 400 })
+      }
+    }
+
     // Extract config
     const modelo = (config?.defaultModel || 'gpt-4o-mini') as AIModel
     const monthlyCostLimit = config?.monthlyCostLimit ?? 10.0
-    const allowOverride = config?.allowOverride ?? false
     const strategy = config?.strategy || 'balanced'
     const concurrency = config?.concurrency ?? 5
 
     // Verifica limite de gastos
     const store = getServerStore()
     const budgetCheck = await checkAIBudgetLimitSafe(store, new Date(), monthlyCostLimit, 0.8)
-    if (budgetCheck.isOverLimit && !allowOverride) {
+    if (budgetCheck.isOverLimit) {
       return NextResponse.json(
         {
           error: 'AI budget limit exceeded',

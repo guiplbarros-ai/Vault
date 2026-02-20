@@ -48,8 +48,10 @@ export class TransacaoService implements ITransacaoService {
         }
       }
     } catch (error) {
-      console.error('Erro ao recalcular orçamentos:', error)
-      // Não propaga o erro para não bloquear a transação
+      console.error(
+        `[TransacaoService] Erro ao recalcular orçamentos (txn=${transacao.id}, cat=${transacao.categoria_id}):`,
+        error instanceof Error ? error.message : error
+      )
     }
   }
 

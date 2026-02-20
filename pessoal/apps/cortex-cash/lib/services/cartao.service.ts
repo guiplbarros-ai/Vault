@@ -936,7 +936,10 @@ export class CartaoService {
           await this.fecharFatura(fatura.id)
           contadorFechadas++
         } catch (error) {
-          console.error(`Erro ao fechar fatura ${fatura.id}:`, error)
+          console.error(
+            `[CartaoService] Erro ao fechar fatura ${fatura.id} (cartão=${fatura.cartao_id}, ref=${fatura.mes_referencia}):`,
+            error instanceof Error ? error.message : error
+          )
         }
       }
     }

@@ -6,9 +6,11 @@
  */
 
 import { getDB } from '../db/client'
+import { getCurrentUserId } from '../db/seed-usuarios'
 import type {
   PatrimonioPorInstituicao,
   PatrimonioPorTipo,
+  PatrimonioSnapshot,
   PatrimonioTotal,
   RentabilidadeHistorico,
   TipoInvestimento,
@@ -33,9 +35,31 @@ export class PatrimonioService {
     const rentabilidade_investimentos =
       valor_aplicado > 0 ? ((saldo_investimentos - valor_aplicado) / valor_aplicado) * 100 : 0
 
-    // TODO: Implementar cálculo de variação mensal quando tivermos histórico
-    const variacao_mes = 0
-    const variacao_mes_percentual = 0
+    // Calculate month variation from snapshots
+    let variacao_mes = 0
+    let variacao_mes_percentual = 0
+    try {
+      const db = getDB()
+      const currentUserId = getCurrentUserId()
+      const now = new Date()
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const prevMes = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`
+      const prevSnapshot = await db.patrimonio_snapshots
+        .filter((s) => s.usuario_id === currentUserId && s.mes === prevMes)
+        .first()
+      if (prevSnapshot) {
+        variacao_mes = patrimonio_total - prevSnapshot.patrimonio_total
+        variacao_mes_percentual =
+          prevSnapshot.patrimonio_total > 0
+            ? (variacao_mes / prevSnapshot.patrimonio_total) * 100
+            : 0
+      }
+    } catch (error) {
+      console.error(
+        '[PatrimonioService] Erro ao calcular variação mensal:',
+        error instanceof Error ? error.message : error
+      )
+    }
 
     return {
       saldo_contas,
@@ -235,6 +259,148 @@ export class PatrimonioService {
       por_tipo_investimento,
       contas_vs_investimentos,
     }
+  }
+
+  // ========================================================================
+  // Snapshots — evolução patrimonial histórica
+  // ========================================================================
+
+  /**
+   * Salva o snapshot do mês atual (upsert — 1 snapshot por mês)
+   */
+  async saveCurrentSnapshot(): Promise<PatrimonioSnapshot> {
+    const db = getDB()
+    const currentUserId = getCurrentUserId()
+    const now = new Date()
+    const mes = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+    const patrimonio = await this.getPatrimonioTotal()
+
+    const snapshot: PatrimonioSnapshot = {
+      id: `snapshot-${currentUserId}-${mes}`,
+      usuario_id: currentUserId,
+      mes,
+      saldo_contas: patrimonio.saldo_contas,
+      saldo_investimentos: patrimonio.saldo_investimentos,
+      patrimonio_total: patrimonio.patrimonio_total,
+      created_at: now,
+    }
+
+    await db.patrimonio_snapshots.put(snapshot)
+    return snapshot
+  }
+
+  /**
+   * Retorna todos os snapshots ordenados por mês
+   */
+  async getSnapshots(): Promise<PatrimonioSnapshot[]> {
+    const db = getDB()
+    const currentUserId = getCurrentUserId()
+
+    const snapshots = await db.patrimonio_snapshots
+      .filter((s) => s.usuario_id === currentUserId)
+      .toArray()
+
+    // Sort by mes string (YYYY-MM sorts naturally)
+    snapshots.sort((a, b) => a.mes.localeCompare(b.mes))
+    return snapshots
+  }
+
+  /**
+   * Gera snapshots retroativos baseado nas transações históricas.
+   * Limited to last 6 months to avoid error accumulation in backward estimation.
+   * For each past month, estimates patrimônio by walking backwards from current balance.
+   */
+  async generateRetroactiveSnapshots(): Promise<number> {
+    const db = getDB()
+    const currentUserId = getCurrentUserId()
+
+    // 1. Get current patrimonio
+    const currentPatrimonio = await this.getPatrimonioTotal()
+
+    // 2. Get all transactions
+    const transacoes = await db.transacoes
+      .filter((t) => t.usuario_id === currentUserId)
+      .toArray()
+
+    if (transacoes.length === 0) return 0
+
+    // 3. Only go back 4 months max (estimation gets unreliable further back)
+    const now = new Date()
+    const maxMonthsBack = 4
+    const startDate = new Date(now.getFullYear(), now.getMonth() - maxMonthsBack, 1)
+
+    // 4. Calculate monthly net flows (receitas - despesas) for recent months only
+    const monthlyNet = new Map<string, number>()
+    for (const tx of transacoes) {
+      const d = tx.data instanceof Date ? tx.data : new Date(tx.data)
+      if (d < startDate) continue
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+
+      const current = monthlyNet.get(monthKey) || 0
+      if (tx.tipo === 'receita') {
+        monthlyNet.set(monthKey, current + Math.abs(tx.valor))
+      } else if (tx.tipo === 'despesa') {
+        monthlyNet.set(monthKey, current - Math.abs(tx.valor))
+      }
+      // transfers don't affect net patrimonio
+    }
+
+    // 5. Generate month list (last 6 months + current)
+    const months: string[] = []
+    const cursor = new Date(startDate)
+    const endMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    while (cursor <= endMonth) {
+      months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`)
+      cursor.setMonth(cursor.getMonth() + 1)
+    }
+
+    // 6. Walk backwards from current month
+    let runningBalance = currentPatrimonio.saldo_contas
+    const snapshotData = new Map<string, { contas: number; investimentos: number }>()
+
+    for (let i = months.length - 1; i >= 0; i--) {
+      const m = months[i]!
+      if (i === months.length - 1) {
+        // Current month = real value
+        snapshotData.set(m, {
+          contas: currentPatrimonio.saldo_contas,
+          investimentos: currentPatrimonio.saldo_investimentos,
+        })
+      } else {
+        // Previous month: subtract the NEXT month's net flow to estimate
+        const nextMonth = months[i + 1]!
+        const nextNet = monthlyNet.get(nextMonth) || 0
+        runningBalance = runningBalance - nextNet
+        snapshotData.set(m, {
+          contas: runningBalance,
+          investimentos: currentPatrimonio.saldo_investimentos,
+        })
+      }
+    }
+
+    // 7. Save snapshots using put (upsert) with deterministic IDs to prevent duplicates
+    let created = 0
+    const existingSnapshots = await this.getSnapshots()
+    const existingMonths = new Set(existingSnapshots.map((s) => s.mes))
+
+    for (const [mes, data] of snapshotData) {
+      if (existingMonths.has(mes)) continue
+
+      const snapshot: PatrimonioSnapshot = {
+        id: `snapshot-${currentUserId}-${mes}`,
+        usuario_id: currentUserId,
+        mes,
+        saldo_contas: data.contas,
+        saldo_investimentos: data.investimentos,
+        patrimonio_total: data.contas + data.investimentos,
+        created_at: new Date(),
+      }
+      await db.patrimonio_snapshots.put(snapshot)
+      created++
+    }
+
+    return created
   }
 
   /**

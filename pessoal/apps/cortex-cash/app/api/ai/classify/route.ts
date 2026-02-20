@@ -29,7 +29,6 @@ interface ClassifyRequest {
   config?: {
     defaultModel?: AIModel
     monthlyCostLimit?: number
-    allowOverride?: boolean
     strategy?: AIStrategy
   }
   // Client-provided categories (required to avoid server-side Dexie)
@@ -68,7 +67,6 @@ export async function POST(request: NextRequest) {
     // Extract config with defaults
     const modelo = (config?.defaultModel || 'gpt-4o-mini') as AIModel
     const monthlyCostLimit = config?.monthlyCostLimit ?? 10.0
-    const allowOverride = config?.allowOverride ?? false
     const strategy = config?.strategy || 'balanced'
 
     // ETAPA 1: Verifica cache primeiro (para economizar custos)
@@ -87,7 +85,7 @@ export async function POST(request: NextRequest) {
     // ETAPA 2: Verifica limite de gastos antes de fazer a chamada
     const store = getServerStore()
     const budgetCheck = await checkAIBudgetLimitSafe(store, new Date(), monthlyCostLimit, 0.8)
-    if (budgetCheck.isOverLimit && !allowOverride) {
+    if (budgetCheck.isOverLimit) {
       return NextResponse.json(
         {
           error: 'AI budget limit exceeded',
@@ -224,11 +222,9 @@ export async function POST(request: NextRequest) {
         completion_tokens: usage.completion_tokens,
         total_tokens: usage.total_tokens,
       },
-      metadata: {
-        modelo,
-        prompt,
-        resposta,
-      },
+      ...(process.env.NODE_ENV === 'development' && {
+        metadata: { modelo, prompt, resposta },
+      }),
     }
 
     return NextResponse.json(response)
