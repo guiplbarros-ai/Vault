@@ -230,6 +230,45 @@ export const createTemplateImportacaoSchema = z.object({
 })
 
 // ============================================================================
+// Update Schemas (partial variants for update operations)
+// ============================================================================
+
+export const updateTransacaoSchema = createTransacaoSchema
+  .partial()
+  .extend({
+    classificacao_origem: z.enum(['manual', 'regra', 'ia']).optional(),
+    classificacao_confianca: z.number().min(0).max(1).optional(),
+    classificacao_confirmada: z.boolean().optional(),
+  })
+
+export const updateContaSchema = createContaSchema
+  .partial()
+  .extend({
+    ativa: z.boolean().optional(),
+  })
+
+export const updateCategoriaSchema = createCategoriaSchema.partial()
+
+export const updateInvestimentoSchema = createInvestimentoSchema.partial()
+
+// ============================================================================
+// Regra de Classificação Schemas
+// ============================================================================
+
+export const tipoRegraSchema = z.enum(['contains', 'starts_with', 'ends_with', 'regex'])
+
+export const createRegraClassificacaoSchema = z.object({
+  categoria_id: z.string().min(1, 'ID de categoria é obrigatório'),
+  nome: z.string().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
+  tipo_regra: tipoRegraSchema,
+  padrao: z.string().min(1, 'Padrão é obrigatório').max(500, 'Padrão muito longo'),
+  prioridade: z.number().int().nonnegative().optional(),
+  ativa: z.boolean().optional(),
+})
+
+export const updateRegraClassificacaoSchema = createRegraClassificacaoSchema.partial()
+
+// ============================================================================
 // Type exports (inferred from schemas)
 // ============================================================================
 
@@ -244,6 +283,12 @@ export type CreateHistoricoInvestimentoDTOValidated = z.infer<
 export type ParseConfigValidated = z.infer<typeof parseConfigSchema>
 export type MapeamentoColunasValidated = z.infer<typeof mapeamentoColunasSchema>
 export type CreateTemplateImportacaoValidated = z.infer<typeof createTemplateImportacaoSchema>
+export type UpdateTransacaoDTOValidated = z.infer<typeof updateTransacaoSchema>
+export type UpdateContaDTOValidated = z.infer<typeof updateContaSchema>
+export type UpdateCategoriaDTOValidated = z.infer<typeof updateCategoriaSchema>
+export type UpdateInvestimentoDTOValidated = z.infer<typeof updateInvestimentoSchema>
+export type CreateRegraClassificacaoDTOValidated = z.infer<typeof createRegraClassificacaoSchema>
+export type UpdateRegraClassificacaoDTOValidated = z.infer<typeof updateRegraClassificacaoSchema>
 
 // ============================================================================
 // Validation helpers

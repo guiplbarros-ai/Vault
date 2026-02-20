@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs'
 import { getDB } from '../db/client'
 import { DatabaseError, NotFoundError, ValidationError } from '../errors'
 import type { Usuario } from '../types'
+import { passwordSchema } from '../validations/common'
 
 const SALT_ROUNDS = 10
 const AUTH_STORAGE_KEY = 'cortex-auth-session'
@@ -45,8 +46,9 @@ export class AuthService {
         throw new ValidationError('Email inválido')
       }
 
-      if (!data.senha || data.senha.length < 6) {
-        throw new ValidationError('Senha deve ter pelo menos 6 caracteres')
+      const passwordResult = passwordSchema.safeParse(data.senha)
+      if (!passwordResult.success) {
+        throw new ValidationError(passwordResult.error.errors[0]?.message || 'Senha inválida')
       }
 
       if (!data.nome || data.nome.trim().length === 0) {
@@ -325,8 +327,9 @@ export class AuthService {
         throw new ValidationError('Usuário não autenticado')
       }
 
-      if (!novaSenha || novaSenha.length < 6) {
-        throw new ValidationError('Nova senha deve ter pelo menos 6 caracteres')
+      const passwordResult = passwordSchema.safeParse(novaSenha)
+      if (!passwordResult.success) {
+        throw new ValidationError(passwordResult.error.errors[0]?.message || 'Senha inválida')
       }
 
       const db = getDB()

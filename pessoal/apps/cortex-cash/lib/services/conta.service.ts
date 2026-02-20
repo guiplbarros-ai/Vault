@@ -9,6 +9,8 @@ import { getDB } from '../db/client'
 import { getCurrentUserId } from '../db/seed-usuarios'
 import { DatabaseError, NotFoundError, ValidationError } from '../errors'
 import type { Conta } from '../types'
+import { roundCurrency } from '../utils/currency'
+import { createContaSchema, updateContaSchema, validateDTO } from '../validations/dtos'
 
 export class ContaService {
   /**
@@ -98,25 +100,11 @@ export class ContaService {
   }
 
   /**
-   * Calcula o saldo de uma conta baseado nas transações
+   * Calcula o saldo de uma conta baseado no saldo de referência + transações.
+   * Delega para calcularSaldoEmData para manter consistência.
    */
   async getSaldoConta(contaId: string): Promise<number> {
-    const db = getDB()
-
-    const transacoes = await db.transacoes.where('conta_id').equals(contaId).toArray()
-
-    return transacoes.reduce((saldo, t) => {
-      if (t.tipo === 'receita') {
-        return saldo + t.valor
-      } else if (t.tipo === 'despesa') {
-        return saldo - t.valor
-      }
-      // Transferências: valor já vem com sinal adequado (origem negativo, destino positivo)
-      if (t.tipo === 'transferencia') {
-        return saldo + t.valor
-      }
-      return saldo
-    }, 0)
+    return this.calcularSaldoEmData(contaId, new Date())
   }
 
   /**
@@ -156,6 +144,9 @@ export class ContaService {
    * Cria uma nova conta
    */
   async createConta(data: Omit<Conta, 'id' | 'created_at' | 'updated_at'>): Promise<Conta> {
+    // Validate input
+    validateDTO(createContaSchema, data)
+
     const db = getDB()
     const currentUserId = getCurrentUserId()
 
@@ -187,6 +178,9 @@ export class ContaService {
     data: Partial<Omit<Conta, 'id' | 'created_at' | 'updated_at'>>
   ): Promise<Conta> {
     try {
+      // Validate input
+      validateDTO(updateContaSchema, data)
+
       const db = getDB()
 
       const existing = await db.contas.get(id)
@@ -292,11 +286,46 @@ export class ContaService {
   }
 
   /**
-   * Deleta permanentemente uma conta
-   * ATENÇÃO: Isso não deleta as transações associadas!
+   * Deleta permanentemente uma conta e todas as suas transações associadas.
+   * Também deleta pernas irmãs de transferências e recalcula contas afetadas.
    */
   async hardDeleteConta(id: string): Promise<void> {
     const db = getDB()
+
+    // Busca todas as transações da conta
+    const transacoes = await db.transacoes.where('conta_id').equals(id).toArray()
+
+    if (transacoes.length > 0) {
+      const idsParaDeletar = new Set(transacoes.map((t) => t.id))
+      const contasParaRecalcular = new Set<string>()
+
+      // Coleta pernas irmãs de transferências
+      for (const t of transacoes) {
+        if (t.transferencia_id) {
+          const sibling = await db.transacoes
+            .where('transferencia_id')
+            .equals(t.transferencia_id)
+            .filter((s) => !idsParaDeletar.has(s.id))
+            .first()
+          if (sibling) {
+            idsParaDeletar.add(sibling.id)
+            contasParaRecalcular.add(sibling.conta_id)
+          }
+        }
+      }
+
+      // Deleta todas as transações (incluindo siblings)
+      await db.transacoes.bulkDelete([...idsParaDeletar])
+
+      // Recalcula saldo das contas afetadas por siblings
+      for (const contaId of contasParaRecalcular) {
+        if (contaId !== id) {
+          await this.recalcularESalvarSaldo(contaId)
+        }
+      }
+    }
+
+    // Deleta orçamentos vinculados à conta (via transações que tinham categorias)
     await db.contas.delete(id)
   }
 
@@ -369,7 +398,7 @@ export class ContaService {
         }
       }
 
-      return saldoCalculado
+      return roundCurrency(saldoCalculado)
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error

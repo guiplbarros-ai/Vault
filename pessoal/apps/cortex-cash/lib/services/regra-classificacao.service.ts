@@ -9,6 +9,11 @@ import { getDB } from '../db/client'
 import { getCurrentUserId } from '../db/seed-usuarios'
 import { DatabaseError, NotFoundError, ValidationError } from '../errors'
 import type { RegraClassificacao, TipoRegra } from '../types'
+import {
+  createRegraClassificacaoSchema,
+  updateRegraClassificacaoSchema,
+  validateDTO,
+} from '../validations/dtos'
 
 export interface CreateRegraClassificacaoDTO {
   categoria_id: string
@@ -52,7 +57,11 @@ class RegraClassificacaoService {
   }): Promise<RegraClassificacao[]> {
     try {
       const db = getDB()
+      const currentUserId = getCurrentUserId()
       let query = db.regras_classificacao.toCollection()
+
+      // Filtro por usuário atual
+      query = query.filter((regra) => regra.usuario_id === currentUserId)
 
       // Filtros
       if (options?.ativa !== undefined) {
@@ -121,20 +130,23 @@ class RegraClassificacaoService {
    */
   async createRegra(data: CreateRegraClassificacaoDTO): Promise<RegraClassificacao> {
     try {
+      // Validate input with Zod schema
+      const validatedData = validateDTO(createRegraClassificacaoSchema, data)
+
       const db = getDB()
 
       // Valida categoria existe
-      const categoria = await db.categorias.get(data.categoria_id)
+      const categoria = await db.categorias.get(validatedData.categoria_id)
       if (!categoria) {
-        throw new ValidationError(`Categoria não encontrada: ${data.categoria_id}`)
+        throw new ValidationError(`Categoria não encontrada: ${validatedData.categoria_id}`)
       }
 
       // Valida padrão baseado no tipo de regra
-      this.validatePadrao(data.tipo_regra, data.padrao)
+      this.validatePadrao(validatedData.tipo_regra, validatedData.padrao)
 
       // Se prioridade não for especificada, define como próxima disponível
-      let prioridade = data.prioridade ?? 0
-      if (data.prioridade === undefined) {
+      let prioridade = validatedData.prioridade ?? 0
+      if (validatedData.prioridade === undefined) {
         const regras = await db.regras_classificacao.toArray()
         prioridade = regras.length > 0 ? Math.max(...regras.map((r) => r.prioridade)) + 1 : 1
       }
@@ -143,12 +155,12 @@ class RegraClassificacaoService {
 
       const regra: RegraClassificacao = {
         id: crypto.randomUUID(),
-        categoria_id: data.categoria_id,
-        nome: data.nome,
-        tipo_regra: data.tipo_regra,
-        padrao: data.padrao,
+        categoria_id: validatedData.categoria_id,
+        nome: validatedData.nome,
+        tipo_regra: validatedData.tipo_regra,
+        padrao: validatedData.padrao,
         prioridade,
-        ativa: data.ativa ?? true,
+        ativa: validatedData.ativa ?? true,
         total_aplicacoes: 0,
         ultima_aplicacao: undefined,
         total_confirmacoes: 0,
@@ -171,26 +183,29 @@ class RegraClassificacaoService {
    */
   async updateRegra(id: string, data: UpdateRegraClassificacaoDTO): Promise<RegraClassificacao> {
     try {
+      // Validate input with Zod schema
+      const validatedData = validateDTO(updateRegraClassificacaoSchema, data)
+
       const db = getDB()
       const regra = await this.getRegraById(id)
 
       // Valida categoria se foi alterada
-      if (data.categoria_id && data.categoria_id !== regra.categoria_id) {
-        const categoria = await db.categorias.get(data.categoria_id)
+      if (validatedData.categoria_id && validatedData.categoria_id !== regra.categoria_id) {
+        const categoria = await db.categorias.get(validatedData.categoria_id)
         if (!categoria) {
-          throw new ValidationError(`Categoria não encontrada: ${data.categoria_id}`)
+          throw new ValidationError(`Categoria não encontrada: ${validatedData.categoria_id}`)
         }
       }
 
       // Valida padrão se tipo ou padrão foram alterados
-      const novoTipo = data.tipo_regra ?? regra.tipo_regra
-      const novoPadrao = data.padrao ?? regra.padrao
-      if (data.tipo_regra || data.padrao) {
+      const novoTipo = validatedData.tipo_regra ?? regra.tipo_regra
+      const novoPadrao = validatedData.padrao ?? regra.padrao
+      if (validatedData.tipo_regra || validatedData.padrao) {
         this.validatePadrao(novoTipo, novoPadrao)
       }
 
       const updates = {
-        ...data,
+        ...validatedData,
         updated_at: new Date(),
       }
 
@@ -261,7 +276,10 @@ class RegraClassificacaoService {
   }> {
     try {
       const db = getDB()
-      const regras = await db.regras_classificacao.toArray()
+      const currentUserId = getCurrentUserId()
+      const regras = (await db.regras_classificacao.toArray()).filter(
+        (r) => r.usuario_id === currentUserId
+      )
 
       const ativas = regras.filter((r) => r.ativa).length
       const total_aplicacoes = regras.reduce((sum, r) => sum + r.total_aplicacoes, 0)
@@ -293,8 +311,11 @@ class RegraClassificacaoService {
       // Valida padrão antes de testar
       this.validatePadrao(tipo_regra, padrao)
 
-      // Busca todas as transações
-      const transacoes = await db.transacoes.toArray()
+      // Busca transações do usuário atual
+      const currentUserId = getCurrentUserId()
+      const transacoes = (await db.transacoes.toArray()).filter(
+        (t) => t.usuario_id === currentUserId
+      )
 
       // Filtra as que casam com a regra
       const matches = transacoes
@@ -311,8 +332,6 @@ class RegraClassificacaoService {
       const total_matches = transacoes.filter((t) =>
         this.testarRegraComPadrao(tipo_regra, padrao, t.descricao)
       ).length
-
-      const currentUserId = getCurrentUserId()
 
       const tempRegra: RegraClassificacao = {
         id: 'preview',

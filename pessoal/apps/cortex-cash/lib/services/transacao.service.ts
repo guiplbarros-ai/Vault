@@ -11,8 +11,9 @@ import { getCurrentUserId } from '../db/seed-usuarios'
 import { DatabaseError, DuplicateError, NotFoundError, ValidationError } from '../errors'
 import { generateTransactionHash } from '../import/dedupe'
 import type { CreateTransacaoDTO, Transacao } from '../types'
+import { roundCurrency } from '../utils/currency'
 import { generateHash } from '../utils/format'
-import { createTransacaoSchema, validateDTO } from '../validations/dtos'
+import { createTransacaoSchema, updateTransacaoSchema, validateDTO } from '../validations/dtos'
 import { contaService } from './conta.service'
 import type { ITransacaoService } from './interfaces'
 import { orcamentoService } from './orcamento.service'
@@ -400,7 +401,7 @@ export class TransacaoService implements ITransacaoService {
 
       return transacao
     } catch (error) {
-      if (error instanceof ValidationError) {
+      if (error instanceof ValidationError || error instanceof DuplicateError) {
         throw error
       }
       throw new DatabaseError('Erro ao criar transação', error as Error)
@@ -412,6 +413,9 @@ export class TransacaoService implements ITransacaoService {
     data: import('../types').UpdateTransacaoDTO
   ): Promise<Transacao> {
     try {
+      // Validate input
+      validateDTO(updateTransacaoSchema, data)
+
       const db = getDB()
 
       const existing = await db.transacoes.get(id)
@@ -514,7 +518,12 @@ export class TransacaoService implements ITransacaoService {
 
       return result
     } catch (error) {
-      if (error instanceof NotFoundError || error instanceof DatabaseError) {
+      if (
+        error instanceof NotFoundError ||
+        error instanceof DatabaseError ||
+        error instanceof ValidationError ||
+        error instanceof DuplicateError
+      ) {
         throw error
       }
       throw new DatabaseError('Erro ao atualizar transação', error as Error)
@@ -535,14 +544,33 @@ export class TransacaoService implements ITransacaoService {
     // Atualiza saldo da conta
     await contaService.recalcularESalvarSaldo(transacao.conta_id)
 
-    // Se for transferência, atualiza também a conta destino
-    if (transacao.tipo === 'transferencia' && transacao.conta_destino_id) {
+    // Se for transferência, deleta a perna irmã e recalcula contas afetadas
+    if (transacao.transferencia_id) {
+      const sibling = await db.transacoes
+        .where('transferencia_id')
+        .equals(transacao.transferencia_id)
+        .first()
+      if (sibling) {
+        await db.transacoes.delete(sibling.id)
+        await contaService.recalcularESalvarSaldo(sibling.conta_id)
+      }
+    } else if (transacao.tipo === 'transferencia' && transacao.conta_destino_id) {
       await contaService.recalcularESalvarSaldo(transacao.conta_destino_id)
     }
+
+    // Recalcula orçamentos relacionados
+    await this.recalcularOrcamentosRelacionados(transacao)
   }
 
   async bulkUpdateCategoria(transacaoIds: string[], categoriaId: string): Promise<number> {
     const db = getDB()
+
+    // Busca transações antes da atualização para saber as categorias antigas
+    const transacoesAntigas = await db.transacoes.bulkGet(transacaoIds)
+    const categoriasAntigas = new Set<string>()
+    for (const t of transacoesAntigas) {
+      if (t?.categoria_id) categoriasAntigas.add(t.categoria_id)
+    }
 
     let count = 0
     for (const id of transacaoIds) {
@@ -559,6 +587,21 @@ export class TransacaoService implements ITransacaoService {
       }
     }
 
+    // Recalcula orçamentos das categorias afetadas (antigas + nova)
+    if (count > 0) {
+      const sampleTx = await db.transacoes.get(transacaoIds[0]!)
+      if (sampleTx) {
+        // Recalcula para a nova categoria
+        await this.recalcularOrcamentosRelacionados(sampleTx)
+        // Recalcula para as categorias antigas
+        for (const catId of categoriasAntigas) {
+          if (catId !== categoriaId) {
+            await this.recalcularOrcamentosRelacionados({ ...sampleTx, categoria_id: catId } as Transacao)
+          }
+        }
+      }
+    }
+
     return count
   }
 
@@ -570,19 +613,36 @@ export class TransacaoService implements ITransacaoService {
 
     // Coleta IDs únicos de todas as contas afetadas
     const contasAfetadas = new Set<string>()
+    const idsParaDeletar = new Set<string>(transacaoIds)
+
     for (const transacao of transacoes) {
       if (transacao) {
         contasAfetadas.add(transacao.conta_id)
 
-        // Se for transferência, adiciona também a conta destino
-        if (transacao.tipo === 'transferencia' && transacao.conta_destino_id) {
+        // Se for transferência, coleta a perna irmã para deletar junto
+        if (transacao.transferencia_id) {
+          const sibling = await db.transacoes
+            .where('transferencia_id')
+            .equals(transacao.transferencia_id)
+            .filter((s) => !idsParaDeletar.has(s.id))
+            .first()
+          if (sibling) {
+            idsParaDeletar.add(sibling.id)
+            contasAfetadas.add(sibling.conta_id)
+          }
+        } else if (transacao.tipo === 'transferencia' && transacao.conta_destino_id) {
           contasAfetadas.add(transacao.conta_destino_id)
+        }
+
+        // Recalcula orçamentos antes de deletar
+        if (transacao.tipo === 'despesa') {
+          await this.recalcularOrcamentosRelacionados(transacao)
         }
       }
     }
 
-    // Executa a deleção em massa
-    await db.transacoes.bulkDelete(transacaoIds)
+    // Executa a deleção em massa (inclui siblings de transferências)
+    await db.transacoes.bulkDelete([...idsParaDeletar])
 
     // Recalcula saldo de todas as contas afetadas
     for (const contaId of contasAfetadas) {
@@ -660,7 +720,7 @@ export class TransacaoService implements ITransacaoService {
           categoria_nome: categoria?.nome || 'Sem categoria',
           categoria_icone: categoria?.icone || '📦',
           categoria_cor: categoria?.cor || '#6B7280',
-          total_gasto: gasto.total,
+          total_gasto: roundCurrency(gasto.total),
           quantidade_transacoes: gasto.quantidade,
         }
       })
@@ -804,10 +864,10 @@ export class TransacaoService implements ITransacaoService {
           categoria_nome: categoria?.nome || 'Sem categoria',
           categoria_icone: categoria?.icone || '📦',
           categoria_cor: categoria?.cor || '#6B7280',
-          total_gasto_atual: gastoAtual,
-          total_gasto_anterior: gastoAnterior,
-          variacao_absoluta: variacaoAbsoluta,
-          variacao_percentual: variacaoPercentual,
+          total_gasto_atual: roundCurrency(gastoAtual),
+          total_gasto_anterior: roundCurrency(gastoAnterior),
+          variacao_absoluta: roundCurrency(variacaoAbsoluta),
+          variacao_percentual: roundCurrency(variacaoPercentual),
           quantidade_transacoes: quantidades.get(categoriaId) || 0,
         }
       })
