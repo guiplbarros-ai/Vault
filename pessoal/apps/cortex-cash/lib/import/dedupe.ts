@@ -5,6 +5,7 @@
 
 import { getDB } from '@/lib/db/client'
 import type { DedupeResult, ParsedTransacao } from '@/lib/types'
+import { roundCurrency } from '@/lib/utils/currency'
 
 /**
  * Gera hash SHA-256 de uma transação para deduplicação
@@ -33,7 +34,7 @@ export async function generateTransactionHash(
     conta_id || '', // Inclui conta_id para evitar duplicatas entre contas
     dataISO,
     transacao.descricao.trim().toUpperCase(),
-    transacao.valor.toFixed(2),
+    roundCurrency(transacao.valor).toFixed(2),
   ].join('|')
 
   // Gerar hash SHA-256

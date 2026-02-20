@@ -641,10 +641,12 @@ export class TransacaoService implements ITransacaoService {
       }
     }
 
-    // Executa a deleção em massa (inclui siblings de transferências)
-    await db.transacoes.bulkDelete([...idsParaDeletar])
+    // Executa a deleção em massa atomicamente (inclui siblings de transferências)
+    await db.transaction('rw', db.transacoes, async () => {
+      await db.transacoes.bulkDelete([...idsParaDeletar])
+    })
 
-    // Recalcula saldo de todas as contas afetadas
+    // Recalcula saldo de todas as contas afetadas (outside txn)
     for (const contaId of contasAfetadas) {
       await contaService.recalcularESalvarSaldo(contaId)
     }

@@ -21,6 +21,20 @@ export interface UpdateTagDTO {
   cor?: string
 }
 
+/**
+ * Safely parse tags JSON string into array.
+ * Returns empty array on invalid/missing input.
+ */
+function safeParseTags(tags: string | undefined | null): string[] {
+  if (!tags || typeof tags !== 'string') return []
+  try {
+    const parsed = JSON.parse(tags)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
 export class TagService {
   /**
    * Lista todas as tags
@@ -31,8 +45,12 @@ export class TagService {
     sortOrder?: 'asc' | 'desc'
   }): Promise<Tag[]> {
     const db = getDB()
+    const currentUserId = getCurrentUserId()
 
     let tags = await db.tags.toArray()
+
+    // Filtrar por usuário
+    tags = tags.filter((t) => t.usuario_id === currentUserId)
 
     // Aplicar filtros
     if (options?.tipo) {
@@ -81,8 +99,11 @@ export class TagService {
    */
   async getTagByNome(nome: string): Promise<Tag | null> {
     const db = getDB()
+    const currentUserId = getCurrentUserId()
     const tags = await db.tags.toArray()
-    const tag = tags.find((t) => t.nome.toLowerCase() === nome.toLowerCase())
+    const tag = tags.find(
+      (t) => t.usuario_id === currentUserId && t.nome.toLowerCase() === nome.toLowerCase()
+    )
     return tag || null
   }
 
@@ -207,21 +228,18 @@ export class TagService {
         throw new ValidationError('Tags do sistema não podem ser deletadas')
       }
 
-      // Remover a tag de todas as transações
-      const transacoes = await db.transacoes.toArray()
+      // Remover a tag de todas as transações do usuário
+      const currentUserId = getCurrentUserId()
+      const transacoes = await db.transacoes
+        .filter((t) => t.usuario_id === currentUserId)
+        .toArray()
       for (const tx of transacoes) {
-        if (tx.tags && typeof tx.tags === 'string') {
-          try {
-            const tagsArray = JSON.parse(tx.tags)
-            if (Array.isArray(tagsArray) && tagsArray.includes(existing.nome)) {
-              const novasTags = tagsArray.filter((t) => t !== existing.nome)
-              await db.transacoes.update(tx.id, {
-                tags: JSON.stringify(novasTags),
-              })
-            }
-          } catch (e) {
-            // Ignorar erros de parse
-          }
+        const tagsArray = safeParseTags(tx.tags as string | undefined)
+        if (tagsArray.includes(existing.nome)) {
+          const novasTags = tagsArray.filter((t) => t !== existing.nome)
+          await db.transacoes.update(tx.id, {
+            tags: JSON.stringify(novasTags),
+          })
         }
       }
 
@@ -240,11 +258,14 @@ export class TagService {
    */
   async searchTags(termo: string): Promise<Tag[]> {
     const db = getDB()
+    const currentUserId = getCurrentUserId()
 
     let tags = await db.tags.toArray()
 
     const termoLower = termo.toLowerCase()
-    tags = tags.filter((t) => t.nome.toLowerCase().includes(termoLower))
+    tags = tags.filter(
+      (t) => t.usuario_id === currentUserId && t.nome.toLowerCase().includes(termoLower)
+    )
 
     // Ordenar por nome
     tags.sort((a, b) => a.nome.localeCompare(b.nome))
@@ -257,19 +278,16 @@ export class TagService {
    */
   async contarTransacoesPorTag(tagNome: string): Promise<number> {
     const db = getDB()
-    const transacoes = await db.transacoes.toArray()
+    const currentUserId = getCurrentUserId()
+    const transacoes = await db.transacoes
+      .filter((t) => t.usuario_id === currentUserId)
+      .toArray()
 
     let count = 0
     for (const tx of transacoes) {
-      if (tx.tags && typeof tx.tags === 'string') {
-        try {
-          const tagsArray = JSON.parse(tx.tags)
-          if (Array.isArray(tagsArray) && tagsArray.includes(tagNome)) {
-            count++
-          }
-        } catch (e) {
-          // Ignorar erros de parse
-        }
+      const tagsArray = safeParseTags(tx.tags as string | undefined)
+      if (tagsArray.includes(tagNome)) {
+        count++
       }
     }
 
@@ -295,13 +313,146 @@ export class TagService {
   }
 
   /**
+   * Define as tags automáticas do sistema com seus critérios
+   */
+  private getAutoTagDefinitions() {
+    return [
+      {
+        nome: 'pix',
+        cor: '#00BFFF',
+        match: (tx: { descricao: string }) =>
+          /\bPIX\b/i.test(tx.descricao),
+      },
+      {
+        nome: 'parcelado',
+        cor: '#FF8C00',
+        match: (tx: { parcelado?: boolean }) =>
+          tx.parcelado === true,
+      },
+      {
+        nome: 'alto-valor',
+        cor: '#FF4444',
+        match: (tx: { valor: number }) =>
+          Math.abs(tx.valor) > 500,
+      },
+      {
+        nome: 'débito-automático',
+        cor: '#9370DB',
+        match: (tx: { descricao: string }) =>
+          /DEB(ITO)?\s*AUT(OMATICO)?|DEBITO AUTOMATICO/i.test(tx.descricao),
+      },
+    ]
+  }
+
+  /**
+   * Cria as tags do sistema se não existirem
+   */
+  async ensureSystemTags(): Promise<Tag[]> {
+    const db = getDB()
+    const currentUserId = getCurrentUserId()
+    const definitions = [
+      ...this.getAutoTagDefinitions(),
+      { nome: 'recorrente', cor: '#32CD32' },
+    ]
+
+    const createdTags: Tag[] = []
+
+    for (const def of definitions) {
+      const existing = await this.getTagByNome(def.nome)
+      if (!existing) {
+        const id = crypto.randomUUID()
+        const tag: Tag = {
+          id,
+          nome: def.nome,
+          cor: def.cor,
+          tipo: 'sistema',
+          is_sistema: true,
+          usuario_id: currentUserId,
+          created_at: new Date(),
+        }
+        await db.tags.add(tag)
+        createdTags.push(tag)
+      }
+    }
+
+    return createdTags
+  }
+
+  /**
+   * Aplica tags automáticas em todas as transações
+   * Retorna o número de transações atualizadas
+   */
+  async autoTagTransacoes(): Promise<{ tagsCreated: number; transacoesTagged: number }> {
+    const db = getDB()
+    const currentUserId = getCurrentUserId()
+
+    // 1. Ensure system tags exist
+    const createdTags = await this.ensureSystemTags()
+
+    // 2. Load all transactions
+    const transacoes = await db.transacoes
+      .filter((t) => t.usuario_id === currentUserId)
+      .toArray()
+
+    // 3. Simple pattern-based auto-tags
+    const autoTagDefs = this.getAutoTagDefinitions()
+    let transacoesTagged = 0
+
+    // 4. Find recurring transactions (same description in 2+ different months)
+    const descMonths = new Map<string, Set<string>>()
+    for (const tx of transacoes) {
+      if (!tx.descricao) continue
+      const key = tx.descricao.trim().toUpperCase()
+      const d = tx.data instanceof Date ? tx.data : new Date(tx.data)
+      const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (!descMonths.has(key)) descMonths.set(key, new Set())
+      descMonths.get(key)!.add(month)
+    }
+    const recurrentDescs = new Set<string>()
+    for (const [desc, months] of descMonths) {
+      if (months.size >= 2) recurrentDescs.add(desc)
+    }
+
+    // 5. Apply tags to each transaction
+    for (const tx of transacoes) {
+      const currentTags = safeParseTags(tx.tags as string | undefined)
+
+      const newTags = new Set(currentTags)
+
+      // Apply pattern-based tags
+      for (const def of autoTagDefs) {
+        if (def.match(tx as any)) {
+          newTags.add(def.nome)
+        }
+      }
+
+      // Apply recurrent tag
+      if (tx.descricao && recurrentDescs.has(tx.descricao.trim().toUpperCase())) {
+        newTags.add('recorrente')
+      }
+
+      // Only update if tags changed
+      const updatedTags = Array.from(newTags)
+      if (updatedTags.length !== currentTags.length || !updatedTags.every((t) => currentTags.includes(t))) {
+        await db.transacoes.update(tx.id, { tags: JSON.stringify(updatedTags) })
+        transacoesTagged++
+      }
+    }
+
+    return { tagsCreated: createdTags.length, transacoesTagged }
+  }
+
+  /**
    * Sincroniza tags das transações com a tabela de tags
    * Cria registros de tags que estão em transações mas não existem na tabela
    */
   async syncTagsFromTransactions(): Promise<number> {
     try {
       const db = getDB()
-      const transacoes = await db.transacoes.toArray()
+      const currentUserId = getCurrentUserId()
+      const transacoes = await db.transacoes
+        .filter((t) => t.usuario_id === currentUserId)
+        .toArray()
       const tagsExistentes = new Set((await this.listTags()).map((t) => t.nome.toLowerCase()))
 
       let tagsAdicionadas = 0
@@ -309,24 +460,15 @@ export class TagService {
 
       // Coletar todas as tags das transações
       for (const tx of transacoes) {
-        if (tx.tags && typeof tx.tags === 'string') {
-          try {
-            const tagsArray = JSON.parse(tx.tags)
-            if (Array.isArray(tagsArray)) {
-              for (const tagNome of tagsArray) {
-                if (tagNome && !tagsExistentes.has(tagNome.toLowerCase())) {
-                  tagsParaCriar.add(tagNome)
-                }
-              }
-            }
-          } catch (e) {
-            // Ignorar erros de parse
+        const tagsArray = safeParseTags(tx.tags as string | undefined)
+        for (const tagNome of tagsArray) {
+          if (tagNome && !tagsExistentes.has(tagNome.toLowerCase())) {
+            tagsParaCriar.add(tagNome)
           }
         }
       }
 
       // Criar tags que não existem
-      const currentUserId = getCurrentUserId()
       for (const tagNome of tagsParaCriar) {
         const id = crypto.randomUUID()
         const now = new Date()

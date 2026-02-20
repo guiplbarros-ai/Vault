@@ -201,8 +201,12 @@ export function formatDaysAgo(days: number): string {
  * Calcula a data de fechamento de fatura baseado no dia de fechamento
  */
 export function calcularDataFechamento(diaFechamento: number, mesReferencia: string): Date {
-  const [ano, mes] = mesReferencia.split('-').map(Number)
-  const data = new Date(ano, mes - 1, diaFechamento)
+  const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
+  // Clamp day to last day of month to avoid JS Date rollover
+  // e.g. new Date(2024, 1, 31) would roll to March 2 without clamping
+  const lastDayOfMonth = new Date(ano, mes, 0).getDate()
+  const dia = Math.min(diaFechamento, lastDayOfMonth)
+  const data = new Date(ano, mes - 1, dia)
   return data
 }
 
@@ -210,15 +214,22 @@ export function calcularDataFechamento(diaFechamento: number, mesReferencia: str
  * Calcula a data de vencimento baseado no dia de vencimento
  */
 export function calcularDataVencimento(diaVencimento: number, dataFechamento: Date): Date {
-  let data = new Date(dataFechamento)
-  data.setDate(diaVencimento)
+  let targetMonth = dataFechamento.getMonth()
+  let targetYear = dataFechamento.getFullYear()
 
   // Se o vencimento é antes do fechamento, é no mês seguinte
   if (diaVencimento < dataFechamento.getDate()) {
-    data = addMonths(data, 1)
+    targetMonth += 1
+    if (targetMonth > 11) {
+      targetMonth = 0
+      targetYear += 1
+    }
   }
 
-  return data
+  // Clamp day to last day of target month
+  const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate()
+  const dia = Math.min(diaVencimento, lastDay)
+  return new Date(targetYear, targetMonth, dia)
 }
 
 /**

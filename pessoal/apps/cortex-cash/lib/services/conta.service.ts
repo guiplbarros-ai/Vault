@@ -295,10 +295,10 @@ export class ContaService {
     // Busca todas as transações da conta
     const transacoes = await db.transacoes.where('conta_id').equals(id).toArray()
 
-    if (transacoes.length > 0) {
-      const idsParaDeletar = new Set(transacoes.map((t) => t.id))
-      const contasParaRecalcular = new Set<string>()
+    const idsParaDeletar = new Set(transacoes.map((t) => t.id))
+    const contasParaRecalcular = new Set<string>()
 
+    if (transacoes.length > 0) {
       // Coleta pernas irmãs de transferências
       for (const t of transacoes) {
         if (t.transferencia_id) {
@@ -313,20 +313,22 @@ export class ContaService {
           }
         }
       }
-
-      // Deleta todas as transações (incluindo siblings)
-      await db.transacoes.bulkDelete([...idsParaDeletar])
-
-      // Recalcula saldo das contas afetadas por siblings
-      for (const contaId of contasParaRecalcular) {
-        if (contaId !== id) {
-          await this.recalcularESalvarSaldo(contaId)
-        }
-      }
     }
 
-    // Deleta orçamentos vinculados à conta (via transações que tinham categorias)
-    await db.contas.delete(id)
+    // Delete transactions and account atomically
+    await db.transaction('rw', [db.transacoes, db.contas], async () => {
+      if (idsParaDeletar.size > 0) {
+        await db.transacoes.bulkDelete([...idsParaDeletar])
+      }
+      await db.contas.delete(id)
+    })
+
+    // Recalcula saldo das contas afetadas por siblings (outside txn — read-only)
+    for (const contaId of contasParaRecalcular) {
+      if (contaId !== id) {
+        await this.recalcularESalvarSaldo(contaId)
+      }
+    }
   }
 
   /**

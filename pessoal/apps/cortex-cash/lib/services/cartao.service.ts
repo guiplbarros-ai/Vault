@@ -48,7 +48,11 @@ export class CartaoService {
     const db = getDB()
     const incluirInativos = options?.incluirInativos || false
 
+    const currentUserId = getCurrentUserId()
     let cartoes: CartaoConfig[] = await db.cartoes_config.toArray()
+
+    // Filtrar por usuário
+    cartoes = cartoes.filter((c) => c.usuario_id === currentUserId)
 
     // Filtrar inativos
     if (!incluirInativos) {
@@ -642,7 +646,7 @@ export class CartaoService {
    * Calcula o ciclo da fatura para um mês específico
    */
   calcularCicloFatura(cartao: CartaoConfig, mesReferencia: string): CicloFatura {
-    const [ano, mes] = mesReferencia.split('-').map(Number)
+    const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
 
     // Data de fechamento: último dia do período
     const dataFechamento = new Date(ano, mes - 1, cartao.dia_fechamento)
@@ -710,47 +714,48 @@ export class CartaoService {
       throw new NotFoundError('Conta', contaPagamentoId)
     }
 
-    // Criar transação de pagamento (despesa na conta)
+    // Criar transação de pagamento e atualizar fatura atomicamente
     const transacaoId = crypto.randomUUID()
     const now = new Date()
     const dataPagamento =
       data.data_pagamento instanceof Date ? data.data_pagamento : new Date(data.data_pagamento)
     const currentUserId = getCurrentUserId()
 
-    await db.transacoes.add({
-      id: transacaoId,
-      conta_id: contaPagamentoId,
-      categoria_id: undefined, // Poderia ter uma categoria específica para pagamento de cartão
-      data: dataPagamento,
-      descricao: `Pagamento Fatura - ${fatura.mes_referencia}`,
-      valor: data.valor_pago,
-      tipo: 'despesa',
-      observacoes: data.observacoes,
-      tags: undefined,
-      transferencia_id: undefined,
-      conta_destino_id: undefined,
-      parcelado: false,
-      parcela_numero: undefined,
-      parcela_total: undefined,
-      grupo_parcelamento_id: undefined,
-      classificacao_confirmada: true,
-      classificacao_origem: 'manual',
-      classificacao_confianca: 1,
-      hash: undefined,
-      origem_arquivo: undefined,
-      origem_linha: undefined,
-      usuario_id: currentUserId,
-      created_at: now,
-      updated_at: now,
-    })
+    await db.transaction('rw', [db.transacoes, db.faturas], async () => {
+      await db.transacoes.add({
+        id: transacaoId,
+        conta_id: contaPagamentoId,
+        categoria_id: undefined,
+        data: dataPagamento,
+        descricao: `Pagamento Fatura - ${fatura.mes_referencia}`,
+        valor: data.valor_pago,
+        tipo: 'despesa',
+        observacoes: data.observacoes,
+        tags: undefined,
+        transferencia_id: undefined,
+        conta_destino_id: undefined,
+        parcelado: false,
+        parcela_numero: undefined,
+        parcela_total: undefined,
+        grupo_parcelamento_id: undefined,
+        classificacao_confirmada: true,
+        classificacao_origem: 'manual',
+        classificacao_confianca: 1,
+        hash: undefined,
+        origem_arquivo: undefined,
+        origem_linha: undefined,
+        usuario_id: currentUserId,
+        created_at: now,
+        updated_at: now,
+      })
 
-    // Atualizar fatura
-    await db.faturas.update(data.fatura_id, {
-      valor_pago: data.valor_pago,
-      data_pagamento: dataPagamento,
-      transacao_pagamento_id: transacaoId,
-      status: data.valor_pago >= fatura.valor_total ? 'paga' : 'fechada',
-      updated_at: new Date(),
+      await db.faturas.update(data.fatura_id, {
+        valor_pago: data.valor_pago,
+        data_pagamento: dataPagamento,
+        transacao_pagamento_id: transacaoId,
+        status: data.valor_pago >= fatura.valor_total ? 'paga' : 'fechada',
+        updated_at: new Date(),
+      })
     })
   }
 
@@ -920,41 +925,70 @@ export class CartaoService {
   }
 
   /**
-   * Calcula limite disponível de um cartão
+   * Calcula limite disponível de um cartão.
+   * Prioriza cálculo real baseado em transações da conta fatura (Pluggy sync),
+   * e usa faturas_lancamentos como fallback.
    */
   async getLimiteDisponivel(cartaoId: string): Promise<{
     limite_total: number
     limite_usado: number
     limite_disponivel: number
     percentual_usado: number
+    gastos_mes: number
   }> {
+    const db = getDB()
     const cartao = await this.getCartaoById(cartaoId)
     if (!cartao) {
       throw new NotFoundError('Cartão', cartaoId)
     }
 
-    try {
-      const faturaAtual = await this.getOrCreateFaturaAtual(cartaoId)
-      const limiteUsado = faturaAtual.valor_total || 0
-      const limiteDisponivel = cartao.limite_total - limiteUsado
-      const percentualUsado =
-        cartao.limite_total > 0 ? (limiteUsado / cartao.limite_total) * 100 : 0
+    let gastosMes = 0
 
-      return {
-        limite_total: cartao.limite_total,
-        limite_usado: limiteUsado,
-        limite_disponivel: limiteDisponivel,
-        percentual_usado: percentualUsado,
+    // Try to calculate from CC fatura account transactions (Pluggy sync)
+    if (cartao.pluggy_id) {
+      const ccPluggyId = `cc_${cartao.pluggy_id}`
+      const ccConta = await db.contas
+        .filter((c) => c.pluggy_id === ccPluggyId)
+        .first()
+
+      if (ccConta) {
+        const now = new Date()
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+
+        const transactions = await db.transacoes
+          .where('conta_id')
+          .equals(ccConta.id)
+          .and((t) => {
+            const d = t.data instanceof Date ? t.data : new Date(t.data)
+            return d >= monthStart && d <= monthEnd && t.tipo === 'despesa'
+          })
+          .toArray()
+
+        gastosMes = transactions.reduce((sum, t) => sum + Math.abs(t.valor), 0)
       }
-    } catch (error) {
-      // Se houver erro ao buscar fatura, retorna limite completo disponível
-      console.error('Erro ao obter fatura atual, usando limite completo:', error)
-      return {
-        limite_total: cartao.limite_total,
-        limite_usado: 0,
-        limite_disponivel: cartao.limite_total,
-        percentual_usado: 0,
+    }
+
+    // Fallback: try from faturas table
+    if (gastosMes === 0) {
+      try {
+        const faturaAtual = await this.getOrCreateFaturaAtual(cartaoId)
+        gastosMes = faturaAtual.valor_total || 0
+      } catch {
+        // No fatura available either
       }
+    }
+
+    const limiteDisponivel = cartao.limite_total > 0 ? cartao.limite_total - gastosMes : 0
+    const percentualUsado =
+      cartao.limite_total > 0 ? (gastosMes / cartao.limite_total) * 100 : 0
+
+    return {
+      limite_total: cartao.limite_total,
+      limite_usado: gastosMes,
+      limite_disponivel: limiteDisponivel,
+      percentual_usado: percentualUsado,
+      gastos_mes: gastosMes,
     }
   }
 }
