@@ -778,27 +778,10 @@ class TelegramService {
   }
 
   async sendAlert(chatId: number, notification: AlertNotification): Promise<void> {
-    let message = ''
-
-    switch (notification.type) {
-      case 'price_drop':
-        message = `🔥 *ALERTA DE PRECO*\n\n`
-        break
-      case 'lowest_ever':
-        message = `⭐ *MENOR PRECO HISTORICO*\n\n`
-        break
-      case 'trend_down':
-        message = `📉 *TENDENCIA DE QUEDA*\n\n`
-        break
-      case 'target_reached':
-        message = `🎯 *PRECO ALVO ATINGIDO*\n\n`
-        break
-    }
-
-    message += notification.message
+    let message = notification.message
 
     if (notification.deepLink) {
-      message += `\n\n[Reservar agora](${notification.deepLink})`
+      message += `\n\n🔗 [Buscar voos](${notification.deepLink})`
     }
 
     await this.sendMessage(chatId, message)

@@ -6,7 +6,7 @@ import { getUsageDbService } from './usage-db.service.js'
 import { getTelegramService } from './telegram.service.js'
 import { searchFlights } from './flight-search.service.js'
 import { logger } from '../utils/logger.js'
-import { formatRoute, formatRouteFull, getAirport } from '../utils/airports.js'
+import { formatRoute, getAirport } from '../utils/airports.js'
 import { ratePriceVsBenchmark, getBenchmark, type PriceRating } from '../utils/price-benchmark.js'
 import { loadEnv } from '../utils/env.js'
 
@@ -714,10 +714,9 @@ class PriceAlertService {
     })
   }
 
-  // Formata notificacao para enviar via Telegram
+  // Formata notificacao para enviar via Telegram (formato compacto)
   formatNotification(deal: DetectedDeal): AlertNotification {
     const routeShort = formatRoute(deal.flight.origin, deal.flight.destination)
-    const routeFull = formatRouteFull(deal.flight.origin, deal.flight.destination)
     const flight = deal.flight
     const price = flight.price
 
@@ -752,186 +751,93 @@ class PriceAlertService {
         break
     }
 
-    // Extrai apenas a parte da data (YYYY-MM-DD), ignorando horário
-    // SerpAPI manda "2026-11-30 10:30", Kiwi manda "2026-11-30T10:30:00.000Z"
+    // Parse departure date
     const depDateStr = String(flight.departureDate)
-    const dateOnly = depDateStr.split(/[T ]/)[0] // separa em T ou espaço
+    const dateOnly = depDateStr.split(/[T ]/)[0]
     const depParts = dateOnly.includes('-') ? dateOnly.split('-') : null
 
-    // Formata data do voo (YYYY-MM-DD -> DD/MM/YYYY)
-    const departureDate = depParts
-      ? `${depParts[2]}/${depParts[1]}/${depParts[0]}`
-      : depDateStr
-
-    // Calcula data de volta (ida + 19 dias de estadia)
-    let returnDateStr = ''
+    // Formata data curta: "01/nov (sáb)"
+    const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+    const DAYS_SHORT = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+    let dateLabel = depDateStr
     if (depParts) {
       const depDate = new Date(Number(depParts[0]), Number(depParts[1]) - 1, Number(depParts[2]))
-      depDate.setDate(depDate.getDate() + 19)
-      returnDateStr = `${String(depDate.getDate()).padStart(2, '0')}/${String(depDate.getMonth() + 1).padStart(2, '0')}/${depDate.getFullYear()}`
+      const dayOfWeek = DAYS_SHORT[depDate.getDay()]
+      dateLabel = `${depParts[2]}/${MONTHS_SHORT[Number(depParts[1]) - 1]} (${dayOfWeek})`
     }
 
-    // Formata duração
-    const hours = Math.floor(flight.duration / 60)
-    const mins = flight.duration % 60
-    const durationStr = mins > 0 ? `${hours}h${mins}min` : `${hours}h`
-
-    // Paradas
-    const stopsStr = flight.stops === 0 ? 'Direto' : `${flight.stops} parada${flight.stops > 1 ? 's' : ''}`
-
-    // Pontos — tabela de custo por ponto por programa
-    // costPerPoint: quanto custa comprar 1 ponto no mercado (R$)
-    // typicalRedemption: quantos pontos tipicamente se gasta para emitir ida+volta Japan
-    const POINTS_PROGRAMS = [
-      { name: 'Smiles', costPerPoint: 0.019, typicalRedemption: 100000, transferBonus: 0 },
-      { name: 'LATAM Pass', costPerPoint: 0.022, typicalRedemption: 110000, transferBonus: 0 },
-      { name: 'Livelo', costPerPoint: 0.020, typicalRedemption: 120000, transferBonus: 0 },
-    ] as const
-    // Valor do ponto quando redimido: quanto cada ponto "vale" em R$ no resgate
-    // Se preço_cash / pontos_necessários > custo_compra_ponto → vale comprar com dinheiro
-    // Se preço_cash / pontos_necessários < custo_compra_ponto → vale usar pontos
+    // Paradas inline
+    const stopsStr = flight.stops === 0 ? 'direto' : `${flight.stops} parada${flight.stops > 1 ? 's' : ''}`
 
     // Custo do trecho doméstico (se origem alternativa)
     const surcharge = deal.surcharge || 0
     const effectivePrice = price + surcharge
-    const domestic = deal.domesticConnection
 
-    // Monta mensagem
-    let message = `${emoji} *${header}*\n`
-    if (surcharge > 0) {
-      message += `*R$ ${this.formatPrice(effectivePrice)}* por pessoa (custo total)\n\n`
-      message += `✈️ *Voo internacional:* R$ ${this.formatPrice(price)}\n`
-      if (domestic) {
-        message += `🏠 *Trecho doméstico ${deal.homeOrigin || 'CNF'}↔${flight.origin}:* R$ ${this.formatPrice(domestic.totalPrice)}\n`
-        if (domestic.outbound) {
-          message += `  Ida: R$ ${this.formatPrice(domestic.outbound.price)} — ${domestic.outbound.airline} às ${domestic.outbound.departureTime}\n`
-        }
-        if (domestic.inbound) {
-          message += `  Volta: R$ ${this.formatPrice(domestic.inbound.price)} — ${domestic.inbound.airline} às ${domestic.inbound.departureTime}\n`
-        }
-      } else {
-        message += `🏠 *Trecho ${deal.homeOrigin || 'CNF'}→${flight.origin}:* ~R$ ${this.formatPrice(surcharge)} (estimativa)\n`
-      }
-      message += '\n'
-    } else {
-      message += `*R$ ${this.formatPrice(price)}* por pessoa\n\n`
-    }
-
-    // Rota com aeroportos explícitos
-    const originAirport = getAirport(flight.origin)
-    const destAirport = getAirport(flight.destination)
-    const originLabel = originAirport
-      ? `${originAirport.city} (${originAirport.iata})`
-      : flight.origin
-    const destLabel = destAirport
-      ? `${destAirport.city} (${destAirport.iata})`
-      : flight.destination
-
-    message += `🛫 *Origem:* ${originLabel}\n`
-    message += `🛬 *Destino:* ${destLabel}\n`
-    message += `📅 ${departureDate}${returnDateStr ? ` → ${returnDateStr}` : ''} (19 dias)\n`
-    message += `✈️ ${flight.airline} | ${durationStr} | ${stopsStr}\n`
-
-    // Detalhes das paradas (onde e quanto tempo)
-    const visaTransit = hasVisaRequiredTransit(flight)
-    if (flight.layovers && flight.layovers.length > 0) {
-      message += `\n📍 *Conexões:*${visaTransit ? ' _requer visto de trânsito_' : ''}\n`
-      for (const layover of flight.layovers) {
-        const layoverAirport = getAirport(layover.airport)
-        const needsVisa = layoverAirport && VISA_REQUIRED_COUNTRIES.has(layoverAirport.country)
-        const flag = needsVisa ? ` ${getVisaFlag(layoverAirport!.country)}` : ''
-        const layoverLabel = layoverAirport
-          ? `${layoverAirport.city} (${layover.airport})`
-          : layover.city || layover.airport
-        const layoverHours = Math.floor(layover.duration / 60)
-        const layoverMins = layover.duration % 60
-        const layoverDur = layoverMins > 0 ? `${layoverHours}h${layoverMins}min` : `${layoverHours}h`
-        message += `  • ${layoverLabel}${flag} — ${layoverDur}\n`
-      }
-    }
-    message += '\n'
-
-    // Comparação com benchmark (se disponível)
+    // Preço com benchmark diff inline
+    let priceLine = `💰 *R$ ${this.formatPrice(effectivePrice)}*`
     if (deal.benchmarkAvg) {
       const diffPercent = ((deal.benchmarkAvg - effectivePrice) / deal.benchmarkAvg * 100).toFixed(0)
-      message += `📊 *vs mercado:* ${diffPercent}% abaixo da média (R$ ${this.formatPrice(deal.benchmarkAvg)})\n`
+      priceLine += ` (−${diffPercent}% vs média)`
     }
 
-    // Tendência de preços (últimos 7 dias do Supabase)
-    if (deal.trendInfo) {
-      const trendArrow = deal.trendInfo.trend === 'down' ? '↘️' : deal.trendInfo.trend === 'up' ? '↗️' : '➡️'
-      const trendLabel = deal.trendInfo.trend === 'down' ? 'caindo' : deal.trendInfo.trend === 'up' ? 'subindo' : 'estável'
-      message += `${trendArrow} *Tendência 7d:* ${trendLabel} | mín R$ ${this.formatPrice(deal.trendInfo.min7d)} | média R$ ${this.formatPrice(deal.trendInfo.avg7d)} (${deal.trendInfo.sampleCount} amostras)\n`
+    // Monta mensagem compacta
+    let message = `${emoji} *${header}*\n\n`
+    message += `✈️ ${flight.origin} → ${flight.destination}\n`
+    message += `📅 ${dateLabel} — ${flight.airline}, ${stopsStr}\n`
+    message += `${priceLine}\n`
+
+    // Trecho doméstico (se houver)
+    if (surcharge > 0) {
+      message += `🏠 +R$ ${this.formatPrice(surcharge)} trecho ${deal.homeOrigin || 'CNF'}↔${flight.origin}\n`
     }
+
+    // Conexões inline com visa warning
+    if (flight.layovers && flight.layovers.length > 0) {
+      const visaTransit = hasVisaRequiredTransit(flight)
+      const layoverNames = flight.layovers.map(l => {
+        const apt = getAirport(l.airport)
+        const needsVisa = apt && VISA_REQUIRED_COUNTRIES.has(apt.country)
+        const flag = needsVisa ? ` ${getVisaFlag(apt!.country)}` : ''
+        const hours = Math.floor(l.duration / 60)
+        const mins = l.duration % 60
+        const dur = mins > 0 ? `${hours}h${mins}` : `${hours}h`
+        return `${l.airport}${flag} ${dur}`
+      })
+      message += `📍 Conexões: ${layoverNames.join(', ')}${visaTransit ? ' _⚠️ visto_' : ''}\n`
+    }
+
     message += '\n'
 
-    // Preços por pessoa (custo total)
-    message += `💰 *Custo total ida e volta, econômica:*\n`
-    message += `  1p: *R$ ${this.formatPrice(effectivePrice)}*\n`
-    message += `  2p: R$ ${this.formatPrice(effectivePrice * 2)}\n`
-    message += `  4p: R$ ${this.formatPrice(effectivePrice * 4)}\n\n`
-
-    // Equivalente em pontos por programa + análise "vale a pena?"
-    message += `🎁 *Em pontos (1 pessoa):*\n`
-    for (const prog of POINTS_PROGRAMS) {
-      const pointsNeeded = Math.round(effectivePrice / prog.costPerPoint)
-      // Valor do ponto no resgate = preço cash / pontos típicos para emitir
-      const redemptionValue = effectivePrice / prog.typicalRedemption
-      const verdict = redemptionValue > prog.costPerPoint ? '💰 _pontos valem mais_' : '💵 _dinheiro melhor_'
-      message += `  ${prog.name}: ~${this.formatPoints(prog.typicalRedemption)} pts | ${verdict}\n`
-      message += `    _(pt vale R$${redemptionValue.toFixed(3)} vs compra R$${prog.costPerPoint.toFixed(3)})_\n`
-    }
-    message += '\n'
-
-    // Outras opções (top 3)
-    if (deal.alternativeFlights && deal.alternativeFlights.length > 0) {
-      message += `✈️ *Outras opções:*\n`
-      for (const alt of deal.alternativeFlights) {
-        const altHours = Math.floor(alt.duration / 60)
-        const altMins = alt.duration % 60
-        const altDur = altMins > 0 ? `${altHours}h${altMins}` : `${altHours}h`
-        const altStops = alt.stops === 0 ? 'direto' : `${alt.stops}p`
-        const altVisaCountries = alt.layovers?.map(l => getAirport(l.airport)).filter(a => a && VISA_REQUIRED_COUNTRIES.has(a.country))
-        const altVisaFlag = altVisaCountries?.length ? ` ${getVisaFlag(altVisaCountries[0]!.country)}` : ''
-        const altPrice = alt.price + surcharge
-        message += `  • R$ ${this.formatPrice(altPrice)} — ${alt.airline} | ${altDur} | ${altStops}${altVisaFlag}\n`
+    // Benchmark e tendência
+    if (deal.benchmarkAvg) {
+      message += `📊 Média: R$ ${this.formatPrice(deal.benchmarkAvg)}`
+      if (deal.trendInfo) {
+        message += ` | Mín hist: R$ ${this.formatPrice(deal.trendInfo.min7d)}`
       }
       message += '\n'
     }
 
-    // Open-jaw: sugere combinação NRT/KIX quando aplicável
-    const OPEN_JAW_PAIRS: Record<string, { alt: string; transport: string }> = {
-      NRT: { alt: 'KIX', transport: 'shinkansen Tóquio→Osaka (~2h30)' },
-      HND: { alt: 'KIX', transport: 'shinkansen Tóquio→Osaka (~2h30)' },
-      KIX: { alt: 'NRT', transport: 'shinkansen Osaka→Tóquio (~2h30)' },
-    }
-    const ojPair = OPEN_JAW_PAIRS[flight.destination]
-    if (ojPair && depParts) {
-      const retDate = new Date(Number(depParts[0]), Number(depParts[1]) - 1, Number(depParts[2]))
-      retDate.setDate(retDate.getDate() + 19)
-      const retIso = `${retDate.getFullYear()}-${String(retDate.getMonth() + 1).padStart(2, '0')}-${String(retDate.getDate()).padStart(2, '0')}`
-      const depIso = `${depParts[0]}-${depParts[1]}-${depParts[2]}`
-      const ojOrigin = surcharge > 0 ? (deal.homeOrigin || flight.origin) : flight.origin
-      const ojUrl = `https://www.google.com/travel/flights?q=Flights+from+${ojOrigin}+to+${flight.destination}+on+${depIso}+then+from+${ojPair.alt}+to+${ojOrigin}+on+${retIso}&curr=BRL&hl=pt-BR`
-      message += `🔄 *Open-jaw:* Ida ${flight.destination}, volta ${ojPair.alt} (${ojPair.transport})\n`
-      message += `  [Buscar multi-cidade no Google Flights](${ojUrl})\n\n`
+    if (deal.trendInfo) {
+      const trendArrow = deal.trendInfo.trend === 'down' ? '📉' : deal.trendInfo.trend === 'up' ? '📈' : '➡️'
+      const trendLabel = deal.trendInfo.trend === 'down' ? 'queda' : deal.trendInfo.trend === 'up' ? 'alta' : 'estável'
+      message += `${trendArrow} Tendência: ${trendLabel} nos últimos 7 dias\n`
     }
 
-    // Janela de compra
-    message += this.getPurchaseWindowAdvice(flight.departureDate)
-    message += '\n\n'
+    // Target reached: mostrar alvo
+    if (deal.type === 'target_reached' && deal.route.targetPrice) {
+      message += `🎯 Alvo: R$ ${this.formatPrice(deal.route.targetPrice)}\n`
+    }
 
     // Link direto para Google Flights
     if (flight.deepLink) {
-      message += `🔗 [Ver no Google Flights](${flight.deepLink})`
+      message += `\n🔗 [Ver no Google Flights](${flight.deepLink})`
     } else if (depParts) {
-      // Gera link de busca no Google Flights como fallback
       const retDate = new Date(Number(depParts[0]), Number(depParts[1]) - 1, Number(depParts[2]))
       retDate.setDate(retDate.getDate() + 19)
       const retIso = `${retDate.getFullYear()}-${String(retDate.getMonth() + 1).padStart(2, '0')}-${String(retDate.getDate()).padStart(2, '0')}`
       const depIso = `${depParts[0]}-${depParts[1]}-${depParts[2]}`
       const gfUrl = `https://www.google.com/travel/flights?q=Flights+from+${flight.origin}+to+${flight.destination}+on+${depIso}+returning+${retIso}&curr=BRL&hl=pt-BR`
-      message += `🔗 [Buscar no Google Flights](${gfUrl})`
+      message += `\n🔗 [Buscar no Google Flights](${gfUrl})`
     }
 
     return {
@@ -949,11 +855,6 @@ class PriceAlertService {
   // Formata preço com separador de milhar
   private formatPrice(price: number): string {
     return price.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-  }
-
-  // Formata pontos com separador de milhar
-  private formatPoints(points: number): string {
-    return points.toLocaleString('pt-BR')
   }
 
   // Retorna datas de busca alvo (configurável via ATLAS_DEPARTURE_DATES)
@@ -992,27 +893,6 @@ class PriceAlertService {
     }
 
     return dates
-  }
-
-  // Avalia janela de compra com base na antecedência até o voo
-  private getPurchaseWindowAdvice(departureDate: Date | string): string {
-    const dep = typeof departureDate === 'string' ? new Date(departureDate) : departureDate
-    const now = new Date()
-    const daysUntilFlight = Math.round((dep.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-
-    if (daysUntilFlight > 180) {
-      return '🟢 _Janela antecipada (6+ meses) — bom momento para monitorar, preços podem cair mais_'
-    }
-    if (daysUntilFlight > 120) {
-      return '🟢 _Janela ideal de compra (4-6 meses) — melhor momento para garantir bom preço_'
-    }
-    if (daysUntilFlight > 60) {
-      return '🟡 _Janela intermediária (2-4 meses) — preços razoáveis, mas compre logo se o preço estiver bom_'
-    }
-    if (daysUntilFlight > 30) {
-      return '🟠 _Janela curta (1-2 meses) — preços tendem a subir, compre se estiver bom_'
-    }
-    return '🔴 _Última hora (<30 dias) — preços altos, compre só se for urgente_'
   }
 
   // Verifica budget antes de executar buscas

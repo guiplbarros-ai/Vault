@@ -224,13 +224,11 @@ class PromoMonitorService {
     if (isSmiles) {
       msg = `🚨🎯 *BÔNUS LIVELO → SMILES!*\n\n`
       msg += `${item.title}\n\n`
-      msg += `💡 _Você tem 150k Livelo. Com bônus de 80% = 270k Smiles (Japão ida+volta custa ~145k)_\n\n`
     } else {
       msg = `🎁 *PROMOÇÃO LIVELO*\n\n`
       msg += `${item.title}\n\n`
     }
 
-    // Adiciona resumo da validação Perplexity
     if (validation) {
       msg += `📋 _${validation.summary}_\n\n`
     }

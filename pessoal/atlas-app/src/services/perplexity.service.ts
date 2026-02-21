@@ -3,7 +3,8 @@ import { logger } from '../utils/logger.js'
 import { sanitizeApiError } from '../utils/sanitize.js'
 import { getUsageDbService } from './usage-db.service.js'
 import { formatAirportFull } from '../utils/airports.js'
-import type { DealInsight, BenchmarkInsight } from '../types/index.js'
+import type { DealInsight, BenchmarkInsight, ParsedDeal } from '../types/index.js'
+import { stripCitations } from '../utils/telegram-format.js'
 
 loadEnv()
 
@@ -109,6 +110,31 @@ async function callPerplexity(
   }
 }
 
+// --- Parse structured deals from Perplexity response ---
+function parseDeals(raw: string): ParsedDeal[] {
+  const cleaned = stripCitations(raw)
+
+  // Try structured DEAL/PRICE/VALIDITY/SOURCE format
+  const dealBlocks = cleaned.split(/(?=DEAL:)/i).filter(b => /DEAL:/i.test(b))
+
+  if (dealBlocks.length > 0) {
+    return dealBlocks.map(block => {
+      const desc = block.match(/DEAL:\s*(.+?)(?=\n|PRICE:|$)/i)?.[1]?.trim() || ''
+      const price = block.match(/PRICE:\s*(.+?)(?=\n|VALIDITY:|SOURCE:|$)/i)?.[1]?.trim() || ''
+      const validity = block.match(/VALIDITY:\s*(.+?)(?=\n|SOURCE:|$)/i)?.[1]?.trim() || ''
+      const source = block.match(/SOURCE:\s*(.+?)(?=\n|$)/i)?.[1]?.trim() || ''
+      return { description: desc, price, validity, source }
+    }).filter(d => d.description.length > 0)
+  }
+
+  // Fallback: return single deal with cleaned text
+  if (cleaned.length > 10 && !/^NONE$/i.test(cleaned.trim())) {
+    return [{ description: cleaned.slice(0, 300), price: '', validity: '', source: '' }]
+  }
+
+  return []
+}
+
 // --- 1. Caçador de promoções ---
 export async function searchFlightDeals(
   routes: Array<{ origin: string; destination: string }>,
@@ -117,7 +143,7 @@ export async function searchFlightDeals(
 
   const routeLabels = routes
     .map((r) => `${r.origin}-${r.destination}`)
-    .filter((v, i, a) => a.indexOf(v) === i) // unique
+    .filter((v, i, a) => a.indexOf(v) === i)
     .join(', ')
 
   const routeDescriptions = routes
@@ -125,48 +151,53 @@ export async function searchFlightDeals(
     .filter((v, i, a) => a.indexOf(v) === i)
     .join(', ')
 
-  const systemPrompt = `You are a flight deal hunter. Search for current promotions, error fares, flash sales, and special offers for flights from Brazil. Report only deals you find with sources. Answer in Portuguese (Brazil).`
+  const systemPrompt = `You are a flight deal researcher. Search for CURRENT flight promotions from Brazil.
 
-  const userPrompt = `Busque promoções e ofertas atuais de passagens aéreas para estas rotas: ${routeDescriptions}.
+RULES:
+- Only report deals with specific prices or points values
+- Never mention aggregators (Google Flights, Kayak, Skyscanner)
+- No generic advice like "book in advance"
+- Answer in Portuguese (Brazil)
+
+FORMAT each deal as:
+DEAL: [description]
+PRICE: [price or points]
+VALIDITY: [dates if known]
+SOURCE: [airline or program name]
+
+If nothing found, reply exactly: NONE`
+
+  const userPrompt = `Busque promoções ATUAIS de passagens aéreas para: ${routeDescriptions}.
 
 Procure por:
 - Promoções de companhias aéreas (LATAM, ANA, JAL, Emirates, Qatar, Turkish, Ethiopian)
-- Ofertas de milhas Smiles e LATAM Pass (pontos necessários, bônus de transferência)
-- Error fares em sites de reserva
-- Flash sales e promoções de cartão de crédito para viagens
-
-Se encontrar promoções, liste cada uma com:
-- Descrição da promoção
-- Preço ou pontos necessários
-- Validade (se disponível)
-- Link da fonte
-
-Se não encontrar nada relevante, diga "Nenhuma promoção encontrada no momento para estas rotas."`
+- Bônus de transferência Livelo, Smiles, LATAM Pass
+- Error fares
+- Flash sales`
 
   const result = await callPerplexity(systemPrompt, userPrompt, 'deals', { routes: routeLabels })
   if (!result) return null
 
-  const noDeal = result.content.toLowerCase().includes('nenhuma promoção encontrada')
+  const deals = parseDeals(result.content)
+  const hasDeal = deals.length > 0
 
-  // Formata citations como links
-  let summary = result.content
-  if (result.citations.length > 0) {
-    summary += '\n\n🔗 *Fontes:*'
-    for (const cite of result.citations.slice(0, 5)) {
-      // Extrai domínio para label curto
-      try {
-        const domain = new URL(cite).hostname.replace('www.', '')
-        summary += `\n• [${domain}](${cite})`
-      } catch {
-        summary += `\n• ${cite}`
-      }
+  // Build clean summary from parsed deals
+  let summary = ''
+  if (hasDeal) {
+    for (const deal of deals) {
+      summary += `${deal.description}`
+      if (deal.price) summary += ` — ${deal.price}`
+      if (deal.validity) summary += ` (${deal.validity})`
+      if (deal.source) summary += ` [${deal.source}]`
+      summary += '\n'
     }
   }
 
   return {
-    summary,
+    summary: summary.trim(),
+    deals,
     citations: result.citations,
-    hasDeal: !noDeal,
+    hasDeal,
   }
 }
 
@@ -255,7 +286,7 @@ export async function getDigestInsights(
     ? `Meses de embarque monitorados: ${departureMonths.join(', ')}.`
     : ''
 
-  const systemPrompt = `You are a travel market analyst. Provide brief, actionable intelligence about the flight market. Answer in Portuguese (Brazil). Be very concise — max 5 bullet points.`
+  const systemPrompt = `You are a travel market analyst. Provide brief, actionable intelligence about the flight market. Answer in Portuguese (Brazil). Be very concise — max 5 bullet points. Format each point starting with an emoji. Max 1 line per point.`
 
   const userPrompt = `Inteligência de mercado para voos do Brasil (rotas: ${routeDescriptions}). ${monthContext}
 
@@ -265,14 +296,15 @@ Responda com 3-5 bullet points cobrindo:
 - Notícias relevantes (novas rotas, mudanças de cias, etc)?
 - Dica de janela de compra para os próximos meses
 
-Seja direto e objetivo. Cada ponto com no máximo 1-2 linhas.`
+Cada ponto com no máximo 1 linha. Sem citações numéricas.`
 
   const result = await callPerplexity(systemPrompt, userPrompt, 'digest', {
     routes: routeDescriptions,
   })
   if (!result) return null
 
-  let formatted = `📡 *Inteligência de Mercado*\n\n${result.content}`
+  const content = stripCitations(result.content)
+  let formatted = `📡 *Inteligência de Mercado*\n\n${content}`
 
   if (result.citations.length > 0) {
     formatted += '\n\n_Fontes: '

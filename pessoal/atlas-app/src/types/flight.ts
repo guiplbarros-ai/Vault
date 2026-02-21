@@ -58,8 +58,16 @@ export interface PriceHistory {
   fetchedAt: Date
 }
 
+export interface ParsedDeal {
+  description: string
+  price: string
+  validity: string
+  source: string
+}
+
 export interface DealInsight {
   summary: string // texto formatado para Telegram
+  deals: ParsedDeal[] // structured deals parsed from Perplexity
   citations: string[] // URLs de fonte
   hasDeal: boolean
 }

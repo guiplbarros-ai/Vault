@@ -8,6 +8,7 @@ import { logger } from '../utils/logger.js'
 import { loadEnv } from '../utils/env.js'
 import { formatRouteFull } from '../utils/airports.js'
 import { getBenchmark, getAllBenchmarks, setBenchmark, saveBenchmarkToSupabase, loadBenchmarksFromSupabase, seedBenchmarksToSupabase, filterPriceOutliers } from '../utils/price-benchmark.js'
+import { fmtPrice, HR } from '../utils/telegram-format.js'
 import { getPromoMonitorService } from './promo-monitor.service.js'
 import { searchFlightDeals, getDigestInsights, getRouteBenchmark, isPerplexityConfigured } from './perplexity.service.js'
 import { addDays, format } from 'date-fns'
@@ -176,18 +177,24 @@ class DailyDigestService {
     return this.sendWeeklyDigests()
   }
 
-  // Gera resumo semanal neutro (apenas dados, sem fanfarra)
+  // Gera resumo semanal compacto (1 linha por mês)
   async generateWeeklyDigest(chatId: number): Promise<string> {
     const routes = await this.routesDb.getRoutesByChat(chatId)
 
     if (routes.length === 0) {
-      return `📊 *Atlas - Resumo Semanal*\n\nNenhuma rota monitorada.\nUse /rota add CNF NRT para começar.`
+      return `📊 *Atlas — Resumo Semanal*\n\nNenhuma rota monitorada.\nUse /rota add CNF NRT para começar.`
     }
 
     const today = new Date()
-    let digest = `📊 *ATLAS - RESUMO SEMANAL*\n`
-    digest += `📅 Semana de ${format(addDays(today, -7), 'dd/MM')} a ${format(today, 'dd/MM/yyyy')}\n`
-    digest += `${'─'.repeat(25)}\n\n`
+    let digest = `📊 *ATLAS — Resumo Semanal*\n`
+    digest += `📅 ${format(addDays(today, -7), 'dd/MM')} a ${format(today, 'dd/MM/yyyy')}\n`
+    digest += `${HR}\n\n`
+
+    const MONTH_NAMES: Record<string, string> = {
+      '01': 'jan', '02': 'fev', '03': 'mar', '04': 'abr',
+      '05': 'mai', '06': 'jun', '07': 'jul', '08': 'ago',
+      '09': 'set', '10': 'out', '11': 'nov', '12': 'dez',
+    }
 
     for (const route of routes) {
       const routeFull = formatRouteFull(route.origin, route.destination)
@@ -195,7 +202,6 @@ class DailyDigestService {
 
       digest += `✈️ *${routeFull}*\n`
 
-      // Busca os melhores preços da semana
       try {
         const weekPrices = await this.pricesDb.getBestPricesLastWeek(route.origin, route.destination)
 
@@ -203,57 +209,44 @@ class DailyDigestService {
           // Agrupa por mês
           const byMonth = new Map<string, typeof weekPrices>()
           for (const p of weekPrices) {
-            const dateStr = String(p.departureDate)
-            const month = dateStr.substring(5, 7)
-            const monthNames: Record<string, string> = {
-              '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
-              '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago',
-              '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
-            }
-            const monthName = monthNames[month] || `M${month}`
-
-            if (!byMonth.has(monthName)) {
-              byMonth.set(monthName, [])
-            }
+            const month = String(p.departureDate).substring(5, 7)
+            const monthName = MONTH_NAMES[month] || month
+            if (!byMonth.has(monthName)) byMonth.set(monthName, [])
             byMonth.get(monthName)!.push(p)
           }
 
+          // 1 linha por mês: "  nov: R$ 4.200 (ANA, 1p) ↓ −12%"
           for (const [monthName, prices] of byMonth) {
             const best = prices.reduce((min, p) => p.price < min.price ? p : min, prices[0])
-            const dateFormatted = String(best.departureDate).split('T')[0].split('-').reverse().join('/')
+            const stopsLabel = best.stops === 0 ? 'direto' : `${best.stops}p`
+            let line = `  ${monthName}: R$ ${fmtPrice(best.price)} (${best.airline}, ${stopsLabel})`
 
-            digest += `\n*${monthName}:* R$ ${this.formatPrice(best.price)}\n`
-            digest += `  ${best.airline} | ${dateFormatted}\n`
-            digest += `  ${best.stops === 0 ? 'Direto' : `${best.stops} parada(s)`}\n`
-            digest += `  2p: R$ ${this.formatPrice(best.price * 2)} | 4p: R$ ${this.formatPrice(best.price * 4)}\n`
-
-            // Referência silenciosa
             if (benchmark) {
-              const diff = ((best.price - benchmark.avgPrice) / benchmark.avgPrice * 100).toFixed(0)
-              const sign = Number(diff) > 0 ? '+' : ''
-              digest += `  _vs média: ${sign}${diff}%_\n`
+              const diff = ((best.price - benchmark.avgPrice) / benchmark.avgPrice * 100)
+              const arrow = diff < -3 ? ' ↓' : diff > 3 ? ' ↗' : ' →'
+              const sign = diff > 0 ? '+' : ''
+              line += `${arrow} ${sign}${diff.toFixed(0)}%`
             }
+
+            digest += `${line}\n`
           }
         } else {
-          digest += `\n_Sem dados esta semana_\n`
+          digest += `  _Sem dados esta semana_\n`
         }
 
-        // Tendência
+        // Tendência da rota
         const trend = await this.pricesDb.getTrend(route.origin, route.destination)
-        if (trend === 'down') {
-          digest += `📉 tendência de queda\n`
-        } else if (trend === 'up') {
-          digest += `📈 tendência de alta\n`
-        }
+        if (trend === 'down') digest += `  📉 Tendência de queda\n`
+        else if (trend === 'up') digest += `  📈 Tendência de alta\n`
 
-      } catch (error) {
-        digest += `\n_Erro ao buscar dados_\n`
+      } catch {
+        digest += `  _Erro ao buscar dados_\n`
       }
 
-      digest += `${'─'.repeat(25)}\n`
+      digest += `\n`
     }
 
-    digest += `\n_Ida e volta (19 dias) | Econômica_`
+    digest += `${HR}\n_Ida e volta (19 dias) | Econômica_`
 
     // Inteligência de mercado via Perplexity
     if (isPerplexityConfigured()) {
@@ -290,16 +283,43 @@ class DailyDigestService {
         )
 
       const insight = await searchFlightDeals(uniqueRoutes)
-      if (!insight || !insight.hasDeal) {
-        logger.info('[DealHunt] Nenhuma promoção encontrada')
+      if (!insight) {
+        logger.info('[DealHunt] Perplexity indisponível')
         return
+      }
+
+      // Formata mensagem
+      let message: string
+      if (insight.hasDeal && insight.deals.length > 0) {
+        message = `🔎 *Promoções Encontradas*\n${HR}\n\n`
+        for (const deal of insight.deals) {
+          message += `💡 ${deal.description}`
+          if (deal.price) message += ` — ${deal.price}`
+          message += '\n'
+          const meta: string[] = []
+          if (deal.validity) meta.push(deal.validity)
+          if (deal.source) meta.push(deal.source)
+          if (meta.length > 0) message += `   _${meta.join(' | ')}_\n`
+          message += '\n'
+        }
+
+        // Citations as compact sources
+        if (insight.citations.length > 0) {
+          const domains = insight.citations.slice(0, 4).map((c) => {
+            try { return new URL(c).hostname.replace('www.', '') }
+            catch { return c }
+          })
+          message += `🔗 _Fontes: ${[...new Set(domains)].join(', ')}_`
+        }
+      } else {
+        message = `🔎 *Promoções*\nNenhuma promoção relevante encontrada para suas rotas hoje.`
       }
 
       // Envia para todos os chats com rotas ativas
       const chatIds = [...new Set(allRoutes.map((r) => r.chatId))]
       for (const chatId of chatIds) {
         try {
-          await this.telegram.sendMessage(chatId, `🔎 *Promoções Encontradas*\n\n${insight.summary}`)
+          await this.telegram.sendMessage(chatId, message)
         } catch (error) {
           logger.error(`[DealHunt] Erro ao enviar para chat ${chatId}: ${error}`)
         }
@@ -400,11 +420,6 @@ class DailyDigestService {
     }
 
     logger.info(`[Benchmark] Recalibração concluída: ${updated} rotas atualizadas`)
-  }
-
-  // Formata preço com separador de milhar
-  private formatPrice(price: number): string {
-    return price.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
   }
 
   // Executa busca manual (chamado via comando)
