@@ -27,6 +27,7 @@ import type {
   LogIA,
   ObjetivoFinanceiro,
   Orcamento,
+  PatrimonioSnapshot,
   RegraClassificacao,
   RendimentoIsentoNaoTributavel,
   RendimentoTributavel,
@@ -64,6 +65,7 @@ export class CortexCashDB extends Dexie {
   cenarios!: EntityTable<Cenario, 'id'>
   configuracoes_comportamento!: EntityTable<ConfiguracaoComportamento, 'id'>
   objetivos_financeiros!: EntityTable<ObjetivoFinanceiro, 'id'>
+  patrimonio_snapshots!: EntityTable<PatrimonioSnapshot, 'id'>
 
   constructor() {
     super('cortex-cash')
@@ -433,6 +435,39 @@ export class CortexCashDB extends Dexie {
     this.version(13).stores({
       templates_importacao: 'id, instituicao_id, nome, tipo_arquivo, usuario_id, is_favorite',
     })
+
+    /**
+     * v14: Adiciona pluggy_id para rastreamento de dados do Open Finance (Pluggy)
+     * Permite upsert por Pluggy ID e identificar origem dos dados
+     */
+    this.version(14).stores({
+      contas:
+        'id, instituicao_id, nome, tipo, ativa, conta_pai_id, data_referencia, usuario_id, pluggy_id',
+      cartoes_config: 'id, instituicao_id, nome, ativo, usuario_id, pluggy_id',
+      investimentos:
+        'id, instituicao_id, nome, tipo, ticker, status, data_aplicacao, conta_origem_id, usuario_id, pluggy_id',
+    })
+
+    /**
+     * v15: Adiciona tabela de snapshots patrimoniais para evolução histórica
+     */
+    this.version(15).stores({
+      patrimonio_snapshots: 'id, usuario_id, mes, [usuario_id+mes]',
+    })
+
+    /**
+     * v16: Compound indexes for performance
+     * - transacoes [usuario_id+data]: date range queries filtered by user
+     * - orcamentos [usuario_id+mes_referencia]: monthly budget queries by user
+     * - faturas usuario_id: multi-tenant filtering
+     */
+    this.version(16).stores({
+      transacoes:
+        'id, conta_id, categoria_id, centro_custo_id, data, tipo, &hash, transferencia_id, conta_destino_id, grupo_parcelamento_id, usuario_id, [usuario_id+data]',
+      orcamentos:
+        'id, nome, tipo, categoria_id, centro_custo_id, mes_referencia, usuario_id, [usuario_id+mes_referencia]',
+      faturas: 'id, cartao_id, mes_referencia, status, usuario_id',
+    })
   }
 }
 
@@ -531,10 +566,6 @@ export function getDB(): CortexCashDB {
     try {
       dbInstance = new CortexCashDB()
       console.log('✅ Instância do banco Dexie criada com sucesso')
-      // Garante que dados de sistema essenciais estejam presentes
-      // (ex.: templates de importação). Executa de forma assíncrona
-      // e idempotente para não bloquear a inicialização.
-      void ensureSystemDataSeeded()
     } catch (err) {
       console.error('❌ Erro ao criar instância do Dexie:', err)
       throw err
@@ -596,6 +627,7 @@ export async function exportDatabase(): Promise<Blob> {
     cenarios: await db.cenarios.toArray(),
     configuracoes_comportamento: await db.configuracoes_comportamento.toArray(),
     objetivos_financeiros: await db.objetivos_financeiros.toArray(),
+    patrimonio_snapshots: await db.patrimonio_snapshots.toArray(),
   }
 
   const json = JSON.stringify(data, null, 2)
@@ -650,6 +682,8 @@ export async function importDatabase(file: File): Promise<void> {
       await db.configuracoes_comportamento.bulkPut(data.configuracoes_comportamento)
     if (data.objetivos_financeiros)
       await db.objetivos_financeiros.bulkPut(data.objetivos_financeiros)
+    if (data.patrimonio_snapshots)
+      await db.patrimonio_snapshots.bulkPut(data.patrimonio_snapshots)
   })
 }
 

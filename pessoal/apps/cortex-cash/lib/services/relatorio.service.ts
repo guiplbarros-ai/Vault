@@ -5,10 +5,12 @@
  * Gera relatórios de gastos, receitas e comparações mensais
  */
 
-import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
+import { endOfMonth, format, getDay, startOfMonth, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { getDB } from '../db/client'
+import { getCurrentUserId } from '../db/seed-usuarios'
 import type { Categoria, Transacao } from '../types'
+import { roundCurrency } from '../utils/currency'
 
 export interface GastoPorCategoria {
   categoria_id: string
@@ -65,6 +67,37 @@ export interface RelatorioComparativo {
   maiores_reducoes: ComparacaoMensal[] // Top 3
 }
 
+export interface GastoRecorrente {
+  descricao: string
+  valor_medio: number
+  meses_presente: number
+  total_meses: number
+  categoria_nome: string
+  categoria_icone?: string
+  ultima_ocorrencia: Date
+}
+
+export interface PadraoDiaSemana {
+  dia: string // 'Dom', 'Seg', etc.
+  dia_index: number
+  total_despesas: number
+  quantidade_transacoes: number
+  media_por_transacao: number
+}
+
+export interface PrevisaoProximoMes {
+  total_previsto: number
+  total_receitas_previsto: number
+  total_despesas_previsto: number
+  categorias: {
+    categoria_nome: string
+    categoria_icone?: string
+    valor_previsto: number
+    tendencia: 'aumento' | 'reducao' | 'estavel'
+  }[]
+  confianca: 'alta' | 'media' | 'baixa' // Based on data consistency
+}
+
 class RelatorioService {
   /**
    * Gera relatório de um mês específico
@@ -75,15 +108,15 @@ class RelatorioService {
     const db = getDB()
 
     // Parse data
-    const [ano, mes] = mesReferencia.split('-').map(Number)
+    const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
     const dataInicio = startOfMonth(new Date(ano, mes - 1))
     const dataFim = endOfMonth(new Date(ano, mes - 1))
 
-    // Busca transações do mês
-    const transacoes = await db.transacoes
-      .where('data')
-      .between(dataInicio, dataFim, true, true)
-      .toArray()
+    // Busca transações do mês (filtrado por usuário atual)
+    const currentUserId = getCurrentUserId()
+    const transacoes = (
+      await db.transacoes.where('data').between(dataInicio, dataFim, true, true).toArray()
+    ).filter((t) => t.usuario_id === currentUserId)
 
     // Busca todas as categorias (para nomes)
     const categorias = await db.categorias.toArray()
@@ -95,10 +128,12 @@ class RelatorioService {
     const transferencias = transacoes.filter((t) => t.tipo === 'transferencia')
 
     // Calcula totais
-    const total_receitas = receitas.reduce((sum, t) => sum + Math.abs(t.valor), 0)
-    const total_despesas = despesas.reduce((sum, t) => sum + Math.abs(t.valor), 0)
-    const total_transferencias = transferencias.reduce((sum, t) => sum + Math.abs(t.valor), 0)
-    const saldo_liquido = total_receitas - total_despesas
+    const total_receitas = roundCurrency(receitas.reduce((sum, t) => sum + Math.abs(t.valor), 0))
+    const total_despesas = roundCurrency(despesas.reduce((sum, t) => sum + Math.abs(t.valor), 0))
+    const total_transferencias = roundCurrency(
+      transferencias.reduce((sum, t) => sum + Math.abs(t.valor), 0)
+    )
+    const saldo_liquido = roundCurrency(total_receitas - total_despesas)
 
     // Agrupa gastos por categoria
     const gastos_por_categoria = this.agruparPorCategoria(despesas, categoriasMap, total_despesas)
@@ -131,7 +166,7 @@ class RelatorioService {
     const mes_atual = await this.gerarRelatorioMensal(mesReferencia)
 
     // Calcula mês anterior
-    const [ano, mes] = mesReferencia.split('-').map(Number)
+    const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
     const dataAtual = new Date(ano, mes - 1)
     const dataAnterior = subMonths(dataAtual, 1)
     const mesAnteriorRef = format(dataAnterior, 'yyyy-MM')
@@ -307,6 +342,195 @@ class RelatorioService {
   }
 
   /**
+   * Identifica gastos recorrentes (mesma descrição em 2+ meses dos últimos 3)
+   */
+  async getGastosRecorrentes(mesReferencia: string): Promise<GastoRecorrente[]> {
+    const db = getDB()
+    const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
+    const baseDate = new Date(ano, mes - 1)
+
+    // Fetch 3 months of transactions in a single range query (avoids 3 separate queries)
+    const currentUserId = getCurrentUserId()
+    const rangeStart = startOfMonth(subMonths(baseDate, 2))
+    const rangeEnd = endOfMonth(baseDate)
+
+    const allTx = (
+      await db.transacoes
+        .where('data')
+        .between(rangeStart, rangeEnd, true, true)
+        .toArray()
+    ).filter((t) => t.usuario_id === currentUserId)
+
+    const despesas = allTx.filter((t) => t.tipo === 'despesa')
+
+    // Group by normalized description
+    const byDesc = new Map<string, { months: Set<string>; txs: Transacao[] }>()
+    for (const tx of despesas) {
+      const key = tx.descricao.trim().toUpperCase()
+      if (!byDesc.has(key)) {
+        byDesc.set(key, { months: new Set(), txs: [] })
+      }
+      const group = byDesc.get(key)!
+      const txDate = tx.data instanceof Date ? tx.data : new Date(tx.data)
+      group.months.add(format(txDate, 'yyyy-MM'))
+      group.txs.push(tx)
+    }
+
+    // Get categories for name lookup
+    const categorias = await db.categorias.toArray()
+    const catMap = new Map(categorias.map((c) => [c.id, c]))
+
+    const result: GastoRecorrente[] = []
+    for (const [_key, group] of byDesc) {
+      if (group.months.size < 2) continue
+
+      const valores = group.txs.map((t) => Math.abs(t.valor))
+      const valor_medio = valores.reduce((a, b) => a + b, 0) / valores.length
+      const cat = group.txs[0]?.categoria_id ? catMap.get(group.txs[0].categoria_id) : null
+      const dates = group.txs.map((t) => (t.data instanceof Date ? t.data : new Date(t.data)))
+      const ultima = dates.sort((a, b) => b.getTime() - a.getTime())[0]!
+
+      result.push({
+        descricao: group.txs[0]!.descricao,
+        valor_medio,
+        meses_presente: group.months.size,
+        total_meses: 3,
+        categoria_nome: cat?.nome || 'Sem Categoria',
+        categoria_icone: cat?.icone,
+        ultima_ocorrencia: ultima,
+      })
+    }
+
+    result.sort((a, b) => b.valor_medio - a.valor_medio)
+    return result
+  }
+
+  /**
+   * Padrão de gastos por dia da semana (mês selecionado)
+   */
+  async getPadraoPorDiaDaSemana(mesReferencia: string): Promise<PadraoDiaSemana[]> {
+    const db = getDB()
+    const currentUserId = getCurrentUserId()
+    const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
+    const dataInicio = startOfMonth(new Date(ano, mes - 1))
+    const dataFim = endOfMonth(new Date(ano, mes - 1))
+
+    const transacoes = (
+      await db.transacoes.where('data').between(dataInicio, dataFim, true, true).toArray()
+    ).filter((t) => t.usuario_id === currentUserId)
+
+    const despesas = transacoes.filter((t) => t.tipo === 'despesa')
+
+    const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    const byDay = new Map<number, { total: number; count: number }>()
+    for (let i = 0; i < 7; i++) {
+      byDay.set(i, { total: 0, count: 0 })
+    }
+
+    for (const tx of despesas) {
+      const d = tx.data instanceof Date ? tx.data : new Date(tx.data)
+      const dayIndex = getDay(d)
+      const entry = byDay.get(dayIndex)!
+      entry.total += Math.abs(tx.valor)
+      entry.count += 1
+    }
+
+    return DIAS.map((dia, i) => {
+      const entry = byDay.get(i)!
+      return {
+        dia,
+        dia_index: i,
+        total_despesas: entry.total,
+        quantidade_transacoes: entry.count,
+        media_por_transacao: entry.count > 0 ? entry.total / entry.count : 0,
+      }
+    })
+  }
+
+  /**
+   * Previsão do próximo mês (média ponderada dos últimos 3 meses)
+   */
+  async getPrevisaoProximoMes(mesReferencia: string): Promise<PrevisaoProximoMes> {
+    const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
+    const baseDate = new Date(ano, mes - 1)
+
+    // Get 3 months of reports (weights: 50% most recent, 30% middle, 20% oldest)
+    const weights = [0.2, 0.3, 0.5]
+    const meses = [subMonths(baseDate, 2), subMonths(baseDate, 1), baseDate]
+
+    const reports = await Promise.all(
+      meses.map((m) => this.gerarRelatorioMensal(format(m, 'yyyy-MM')))
+    )
+
+    // Weighted average totals
+    const total_receitas_previsto = reports.reduce(
+      (sum, r, i) => sum + r.total_receitas * weights[i]!,
+      0
+    )
+    const total_despesas_previsto = reports.reduce(
+      (sum, r, i) => sum + r.total_despesas * weights[i]!,
+      0
+    )
+    const total_previsto = total_receitas_previsto - total_despesas_previsto
+
+    // Per-category forecast (use expense categories)
+    const allCatIds = new Set<string>()
+    for (const r of reports) {
+      for (const g of r.gastos_por_categoria) {
+        allCatIds.add(g.categoria_id)
+      }
+    }
+
+    const categorias: PrevisaoProximoMes['categorias'] = []
+    for (const catId of allCatIds) {
+      const valores = reports.map((r) => {
+        const g = r.gastos_por_categoria.find((x) => x.categoria_id === catId)
+        return g?.valor_total || 0
+      })
+
+      const valor_previsto = valores.reduce((sum, v, i) => sum + v * weights[i]!, 0)
+      if (valor_previsto < 10) continue // Skip negligible
+
+      const catInfo = reports
+        .flatMap((r) => r.gastos_por_categoria)
+        .find((g) => g.categoria_id === catId)
+
+      // Trend: compare latest month vs weighted average of previous 2
+      const recentVal = valores[2] || 0
+      const olderAvg = (valores[0]! + valores[1]!) / 2
+      const changePct = olderAvg > 0 ? ((recentVal - olderAvg) / olderAvg) * 100 : 0
+      const tendencia: 'aumento' | 'reducao' | 'estavel' =
+        changePct > 10 ? 'aumento' : changePct < -10 ? 'reducao' : 'estavel'
+
+      categorias.push({
+        categoria_nome: catInfo?.categoria_nome || 'Sem Categoria',
+        categoria_icone: catInfo?.categoria_icone,
+        valor_previsto,
+        tendencia,
+      })
+    }
+
+    categorias.sort((a, b) => b.valor_previsto - a.valor_previsto)
+
+    // Confidence: based on how consistent the 3 months are
+    const stdDev =
+      Math.sqrt(
+        reports.reduce((sum, r) => sum + (r.total_despesas - total_despesas_previsto) ** 2, 0) / 3
+      ) / total_despesas_previsto
+
+    const confianca: 'alta' | 'media' | 'baixa' =
+      stdDev < 0.15 ? 'alta' : stdDev < 0.35 ? 'media' : 'baixa'
+
+    return {
+      total_previsto,
+      total_receitas_previsto,
+      total_despesas_previsto,
+      categorias: categorias.slice(0, 8),
+      confianca,
+    }
+  }
+
+  /**
    * Helper: Agrupa transações por categoria
    */
   private agruparPorCategoria(
@@ -330,8 +554,10 @@ class RelatorioService {
 
     grupos.forEach((transacoesCategoria, catId) => {
       const categoria = categoriasMap.get(catId)
-      const valor_total = transacoesCategoria.reduce((sum, t) => sum + Math.abs(t.valor), 0)
-      const percentual = total > 0 ? (valor_total / total) * 100 : 0
+      const valor_total = roundCurrency(
+        transacoesCategoria.reduce((sum, t) => sum + Math.abs(t.valor), 0)
+      )
+      const percentual = total > 0 ? roundCurrency((valor_total / total) * 100) : 0
 
       resultado.push({
         categoria_id: catId,

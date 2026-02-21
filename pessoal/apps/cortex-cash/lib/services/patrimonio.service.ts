@@ -8,6 +8,7 @@
 import { getDB } from '../db/client'
 import { getCurrentUserId } from '../db/seed-usuarios'
 import type {
+  Instituicao,
   PatrimonioPorInstituicao,
   PatrimonioPorTipo,
   PatrimonioSnapshot,
@@ -130,11 +131,20 @@ export class PatrimonioService {
     contas.forEach((c) => instituicaoIds.add(c.instituicao_id))
     investimentos.forEach((i) => instituicaoIds.add(i.instituicao_id))
 
+    // Fetch all institutions in a single query (avoid N+1)
+    const instituicaoIdList = [...instituicaoIds]
+    const instituicoesList = await db.instituicoes.bulkGet(instituicaoIdList)
+    const instituicoesMap = new Map<string, Instituicao>()
+    for (let i = 0; i < instituicaoIdList.length; i++) {
+      const inst = instituicoesList[i]
+      if (inst) instituicoesMap.set(instituicaoIdList[i]!, inst)
+    }
+
     const result: PatrimonioPorInstituicao[] = []
     let patrimonio_total = 0
 
     for (const inst_id of instituicaoIds) {
-      const instituicao = await db.instituicoes.get(inst_id)
+      const instituicao = instituicoesMap.get(inst_id)
       if (!instituicao) continue
 
       const contas_instituicao = contas.filter((c) => c.instituicao_id === inst_id)

@@ -296,15 +296,31 @@ export class TagService {
 
   /**
    * Lista tags mais usadas
+   * Single-pass: loads all transactions once and counts all tags in one loop (avoids N+1)
    */
   async getTagsMaisUsadas(limit = 10): Promise<Array<{ tag: Tag; count: number }>> {
+    const db = getDB()
+    const currentUserId = getCurrentUserId()
     const tags = await this.listTags()
-    const counts: Array<{ tag: Tag; count: number }> = []
 
-    for (const tag of tags) {
-      const count = await this.contarTransacoesPorTag(tag.nome)
-      counts.push({ tag, count })
+    // Single pass through all transactions to count every tag
+    const transacoes = await db.transacoes
+      .filter((t) => t.usuario_id === currentUserId)
+      .toArray()
+
+    const tagCounts = new Map<string, number>()
+    for (const tx of transacoes) {
+      const tagsArray = safeParseTags(tx.tags as string | undefined)
+      for (const tagNome of tagsArray) {
+        tagCounts.set(tagNome, (tagCounts.get(tagNome) || 0) + 1)
+      }
     }
+
+    // Match counts to tag records
+    const counts = tags.map((tag) => ({
+      tag,
+      count: tagCounts.get(tag.nome) || 0,
+    }))
 
     // Ordenar por contagem decrescente
     counts.sort((a, b) => b.count - a.count)
