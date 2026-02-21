@@ -11,6 +11,18 @@
 
   "models": {
     "providers": {
+      "claude-relay": {
+        "baseUrl": "http://127.0.0.1:18790/v1",
+        "apiKey": "relay-local",
+        "api": "openai-completions",
+        "models": [
+          { "id": "relay/backstage", "name": "Relay Backstage (Sonnet via CLI)", "contextWindow": 200000, "maxTokens": 16384, "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 } },
+          { "id": "relay/data",      "name": "Relay Data (Opus via CLI)",      "contextWindow": 200000, "maxTokens": 16384, "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 } },
+          { "id": "relay/review",    "name": "Relay Review (Sonnet via CLI)",  "contextWindow": 200000, "maxTokens": 16384, "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 } },
+          { "id": "relay/ops",       "name": "Relay Ops (Haiku via CLI)",      "contextWindow": 200000, "maxTokens": 16384, "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 } },
+          { "id": "relay/pessoal",   "name": "Relay Pessoal (Sonnet via CLI)", "contextWindow": 200000, "maxTokens": 16384, "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 } }
+        ]
+      },
       "anthropic": {
         "apiKey": "${ANTHROPIC_API_KEY}"
       },
@@ -23,7 +35,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "claude-sonnet-4-6"
+        "primary": "relay/backstage"
       },
       "maxConcurrent": 4,
       "subagents": {
@@ -34,7 +46,7 @@
       {
         "id": "backstage",
         "workspace": "~/.openclaw/workspace-backstage",
-        "model": { "primary": "claude-sonnet-4-6" },
+        "model": { "primary": "relay/backstage" },
         "tools": {
           "allow": ["exec", "read", "write", "edit", "web_browse", "memory"],
           "deny": []
@@ -43,7 +55,7 @@
       {
         "id": "data",
         "workspace": "~/.openclaw/workspace-data",
-        "model": { "primary": "claude-opus-4-6" },
+        "model": { "primary": "relay/data" },
         "tools": {
           "allow": ["exec", "read", "write", "edit", "memory"],
           "deny": ["web_browse"]
@@ -52,7 +64,7 @@
       {
         "id": "review",
         "workspace": "~/.openclaw/workspace-review",
-        "model": { "primary": "claude-sonnet-4-6" },
+        "model": { "primary": "relay/review" },
         "tools": {
           "allow": ["exec", "read", "memory", "web_browse"],
           "deny": ["write", "edit"]
@@ -61,7 +73,7 @@
       {
         "id": "ops",
         "workspace": "~/.openclaw/workspace-ops",
-        "model": { "primary": "claude-haiku-4-5-20251001" },
+        "model": { "primary": "relay/ops" },
         "tools": {
           "allow": ["exec", "read", "memory"],
           "deny": ["write", "edit"]
@@ -70,7 +82,7 @@
       {
         "id": "pessoal",
         "workspace": "~/.openclaw/workspace-pessoal",
-        "model": { "primary": "claude-sonnet-4-6" },
+        "model": { "primary": "relay/pessoal" },
         "tools": {
           "allow": ["exec", "read", "write", "edit", "web_browse", "memory"],
           "deny": []
