@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getChartColors } from '@/lib/constants/colors'
+import { CHART_COLORS } from '@/lib/utils/chart-theme'
 import type { OrcamentoComProgresso } from '@/lib/services/orcamento.service'
 import { PieChart as PieChartIcon } from 'lucide-react'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
@@ -61,10 +62,10 @@ export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartP
           >
             {data.icone} {data.name}
           </p>
-          <p style={{ fontSize: '11px', color: '#6CCB8C', marginBottom: '2px' }}>
+          <p style={{ fontSize: '11px', color: CHART_COLORS.income, marginBottom: '2px' }}>
             Realizado: {formatCurrency(data.value)}
           </p>
-          <p style={{ fontSize: '11px', color: '#D4AF37' }}>
+          <p style={{ fontSize: '11px', color: CHART_COLORS.gold }}>
             {data.percentual.toFixed(1)}% do total
           </p>
         </div>
@@ -192,7 +193,7 @@ export function BudgetDistributionChart({ orcamentos }: BudgetDistributionChartP
               dataKey="value"
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]!} />
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />

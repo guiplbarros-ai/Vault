@@ -164,7 +164,7 @@ export function ClassifyButton({
   // Determina cor da confiança
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'bg-green-500/20 text-green-300 border-green-500/30'
-    if (confidence >= 0.6) return 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+    if (confidence >= 0.6) return 'bg-primary/20 text-primary border-primary/30'
     if (confidence >= 0.5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
     return 'bg-red-500/20 text-red-300 border-red-500/30'
   }
@@ -232,7 +232,7 @@ export function ClassifyButton({
                           result.confianca >= 0.8
                             ? 'bg-green-500'
                             : result.confianca >= 0.6
-                              ? 'bg-blue-500'
+                              ? 'bg-primary'
                               : result.confianca >= 0.5
                                 ? 'bg-yellow-500'
                                 : 'bg-red-500'
@@ -248,9 +248,9 @@ export function ClassifyButton({
 
                 {/* Cache indicator */}
                 {result.cached && (
-                  <Alert className="border-blue-500/30 bg-blue-500/10">
-                    <Zap className="h-4 w-4 text-blue-500" />
-                    <AlertDescription className="text-blue-300">
+                  <Alert className="border-primary/30 bg-primary/10">
+                    <Zap className="h-4 w-4 text-primary" />
+                    <AlertDescription className="text-secondary">
                       Resposta em cache (sem custo de API)
                     </AlertDescription>
                   </Alert>
@@ -369,7 +369,7 @@ export function ClassifyButton({
                         result.confianca >= 0.8
                           ? 'bg-green-500'
                           : result.confianca >= 0.6
-                            ? 'bg-blue-500'
+                            ? 'bg-primary'
                             : result.confianca >= 0.5
                               ? 'bg-yellow-500'
                               : 'bg-red-500'
@@ -385,9 +385,9 @@ export function ClassifyButton({
 
               {/* Cache indicator */}
               {result.cached && (
-                <Alert className="border-blue-500/30 bg-blue-500/10">
-                  <Zap className="h-4 w-4 text-blue-500" />
-                  <AlertDescription className="text-blue-300">
+                <Alert className="border-primary/30 bg-primary/10">
+                  <Zap className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-secondary">
                     Resposta em cache (sem custo de API)
                   </AlertDescription>
                 </Alert>

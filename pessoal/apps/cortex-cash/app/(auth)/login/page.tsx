@@ -55,31 +55,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background:
-          'radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%)',
-        backgroundAttachment: 'fixed',
-      }}
-    >
-      <Card
-        className="w-full max-w-md"
-        style={{
-          backgroundColor: '#1a362f',
-          border: '1px solid #2d5247',
-          borderRadius: '18px',
-          boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
-        }}
-      >
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <img src="/logo.png" alt="Cortex Cash" className="h-16 w-16 object-contain" />
           </div>
-          <CardTitle className="text-2xl font-bold" style={{ color: '#F7FAF9' }}>
-            Bem-vindo de volta
-          </CardTitle>
-          <CardDescription style={{ color: '#BBC5C2' }}>
+          <CardTitle className="text-2xl font-bold">Bem-vindo de volta</CardTitle>
+          <CardDescription>
             Entre com seu email e senha para acessar sua conta
           </CardDescription>
         </CardHeader>
@@ -87,23 +70,14 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             {error && (
-              <Alert
-                variant="destructive"
-                style={{
-                  backgroundColor: '#2e1f1f',
-                  border: '1px solid #F07167',
-                  borderRadius: '14px',
-                }}
-              >
-                <AlertCircle className="h-4 w-4" style={{ color: '#F07167' }} />
-                <AlertDescription style={{ color: '#F07167' }}>{error}</AlertDescription>
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email" style={{ color: '#F7FAF9' }}>
-                Email
-              </Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -113,19 +87,11 @@ export default function LoginPage() {
                 required
                 autoFocus
                 disabled={isLoading}
-                style={{
-                  backgroundColor: '#13251f',
-                  border: '1px solid #2d5247',
-                  color: '#F7FAF9',
-                  borderRadius: '10px',
-                }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="senha" style={{ color: '#F7FAF9' }}>
-                Senha
-              </Label>
+              <Label htmlFor="senha">Senha</Label>
               <Input
                 id="senha"
                 type="password"
@@ -134,28 +100,12 @@ export default function LoginPage() {
                 onChange={(e) => setSenha(e.target.value)}
                 required
                 disabled={isLoading}
-                style={{
-                  backgroundColor: '#13251f',
-                  border: '1px solid #2d5247',
-                  color: '#F7FAF9',
-                  borderRadius: '10px',
-                }}
               />
             </div>
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4 pt-6">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-              style={{
-                backgroundColor: '#3A8F6E',
-                color: '#F7FAF9',
-                borderRadius: '12px',
-                border: 'none',
-              }}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -166,13 +116,9 @@ export default function LoginPage() {
               )}
             </Button>
 
-            <div className="text-sm text-center" style={{ color: '#94a8a1' }}>
+            <div className="text-sm text-center text-muted-foreground">
               Não tem uma conta?{' '}
-              <Link
-                href="/register"
-                className="hover:underline font-medium"
-                style={{ color: '#8FCDBD' }}
-              >
+              <Link href="/register" className="hover:underline font-medium text-secondary">
                 Cadastre-se
               </Link>
             </div>

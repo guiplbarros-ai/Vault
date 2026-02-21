@@ -55,7 +55,10 @@ import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
-const getAccountIcon = (type: string) => {
+const isCreditCardAccount = (account: Conta) => account.pluggy_id?.startsWith('cc_')
+
+const getAccountIcon = (type: string, account?: Conta) => {
+  if (account && isCreditCardAccount(account)) return CreditCard
   const icons = {
     corrente: Building2,
     poupanca: PiggyBank,
@@ -68,6 +71,12 @@ const getAccountIcon = (type: string) => {
     cash: Wallet,
   }
   return icons[type as keyof typeof icons] || Wallet
+}
+
+const getAccountTypeLabel = (account: Conta) => {
+  if (isCreditCardAccount(account)) return 'Fatura Cartão'
+  const formType = mapDBAccountTypeToFormType(account.tipo)
+  return ACCOUNT_TYPE_LABELS[formType]
 }
 
 export default function AccountsPage() {
@@ -308,8 +317,12 @@ export default function AccountsPage() {
   }
 
   const totalBalance = accounts
-    .filter((account) => account.ativa) // Só soma contas ativas
+    .filter((account) => account.ativa && !isCreditCardAccount(account))
     .reduce((sum, account) => sum + (account.saldo_atual || 0), 0)
+
+  const totalFaturas = accounts
+    .filter((account) => account.ativa && isCreditCardAccount(account))
+    .reduce((sum, account) => sum + Math.abs(account.saldo_atual || 0), 0)
 
   const typeFilters = [
     { value: 'all', label: 'Todas', icon: Wallet },
@@ -363,9 +376,16 @@ export default function AccountsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold text-gold">{formatCurrency(totalBalance)}</div>
-            <p className="text-sm mt-2 text-muted-foreground">
-              {accounts.filter((a) => a.ativa).length} contas ativas
-            </p>
+            <div className="flex items-center gap-4 mt-2">
+              <p className="text-sm text-muted-foreground">
+                {accounts.filter((a) => a.ativa && !isCreditCardAccount(a)).length} contas ativas
+              </p>
+              {totalFaturas > 0 && (
+                <p className="text-sm text-destructive font-medium">
+                  Faturas: {formatCurrency(totalFaturas)}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -417,8 +437,7 @@ export default function AccountsPage() {
             </div>
           ) : (
             filteredAccounts.map((account) => {
-              const Icon = getAccountIcon(account.tipo)
-              const formType = mapDBAccountTypeToFormType(account.tipo)
+              const Icon = getAccountIcon(account.tipo, account)
               const contaPai = getContaPai(account)
               const isLinkedAccount = !!account.conta_pai_id
               return (
@@ -448,7 +467,7 @@ export default function AccountsPage() {
                           <CardDescription
                             className={`${isLinkedAccount ? 'text-[11px]' : 'text-xs'} text-muted-foreground`}
                           >
-                            {ACCOUNT_TYPE_LABELS[formType]}
+                            {getAccountTypeLabel(account)}
                           </CardDescription>
                           {contaPai && (
                             <div
@@ -513,9 +532,15 @@ export default function AccountsPage() {
                       {/* Saldo e Status */}
                       <div className="flex items-baseline justify-between">
                         <span
-                          className={`${isLinkedAccount ? 'text-lg' : 'text-2xl'} font-bold text-gold`}
+                          className={`${isLinkedAccount ? 'text-lg' : 'text-2xl'} font-bold ${
+                            isCreditCardAccount(account) && account.saldo_atual < 0
+                              ? 'text-destructive'
+                              : 'text-gold'
+                          }`}
                         >
-                          {formatCurrency(account.saldo_atual || 0)}
+                          {isCreditCardAccount(account) && account.saldo_atual < 0
+                            ? formatCurrency(Math.abs(account.saldo_atual))
+                            : formatCurrency(account.saldo_atual || 0)}
                         </span>
                         <Badge
                           variant={account.ativa ? 'success' : 'secondary'}
@@ -606,7 +631,7 @@ export default function AccountsPage() {
                       {selectedAccount.nome}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {ACCOUNT_TYPE_LABELS[mapDBAccountTypeToFormType(selectedAccount.tipo)]}
+                      {getAccountTypeLabel(selectedAccount)}
                     </p>
                   </div>
                   <Badge

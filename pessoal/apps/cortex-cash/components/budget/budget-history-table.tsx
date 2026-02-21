@@ -35,7 +35,7 @@ export function BudgetHistoryTable({ mesReferencia }: BudgetHistoryTableProps) {
       setLoading(true)
 
       // Carrega dados dos últimos 12 meses
-      const [ano, mes] = mesReferencia.split('-').map(Number)
+      const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
       const mesAtual = new Date(ano, mes - 1)
       const meses = []
 
@@ -50,10 +50,8 @@ export function BudgetHistoryTable({ mesReferencia }: BudgetHistoryTableProps) {
         meses.map(async (mes) => {
           try {
             const resumo = await orcamentoService.getResumoMensal(mes)
-            const mesDate = new Date(
-              mes.split('-').map(Number)[0],
-              mes.split('-').map(Number)[1] - 1
-            )
+            const [y, m] = mes.split('-').map(Number) as [number, number]
+            const mesDate = new Date(y, m - 1)
             const mesLabel = format(mesDate, 'MMM/yy', { locale: ptBR })
 
             let status: 'ok' | 'atencao' | 'excedido' = 'ok'

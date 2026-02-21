@@ -4,6 +4,7 @@ import { useSetting } from '@/app/providers/settings-provider'
 import { useLocalizationSettings } from '@/app/providers/settings-provider'
 import { Card } from '@/components/ui/card'
 import { getChartColors } from '@/lib/constants/colors'
+import { CHART_COLORS, CHART_THEME } from '@/lib/utils/chart-theme'
 import { transacaoService } from '@/lib/services/transacao.service'
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -55,7 +56,7 @@ export function BudgetProjectionChart({ mesReferencia }: BudgetProjectionChartPr
 
       // Pega transações dos últimos 4 meses (incluindo o atual)
       const now = new Date()
-      const [ano, mes] = mesReferencia.split('-').map(Number)
+      const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
       const mesAtual = new Date(ano, mes - 1)
 
       const meses = [3, 2, 1, 0].map((offset) => subMonths(mesAtual, offset))
@@ -86,8 +87,9 @@ export function BudgetProjectionChart({ mesReferencia }: BudgetProjectionChartPr
       const media = valores.slice(0, -1).reduce((a, b) => a + b, 0) / 3
 
       // Monta dados para o gráfico
-      const chartData = Object.entries(gastosPorMes).map(([mes, realizado], index) => {
-        const isCurrentMonth = index === gastosPorMes.length - 1
+      const entries = Object.entries(gastosPorMes)
+      const chartData = entries.map(([mes, realizado], index) => {
+        const isCurrentMonth = index === entries.length - 1
         return {
           mes,
           realizado: isCurrentMonth ? realizado : realizado,
@@ -126,15 +128,28 @@ export function BudgetProjectionChart({ mesReferencia }: BudgetProjectionChartPr
         <>
           <ResponsiveContainer width="100%" height={320}>
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mes" />
-              <YAxis />
-              <Tooltip formatter={(value) => (value ? formatCurrency(value as number) : '-')} />
-              <Legend />
+              <CartesianGrid strokeDasharray={CHART_THEME.grid.strokeDasharray} stroke={CHART_THEME.grid.stroke} />
+              <XAxis
+                dataKey="mes"
+                tick={CHART_THEME.axis.tick}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                tick={CHART_THEME.axis.tick}
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip
+                formatter={(value) => (value ? formatCurrency(value as number) : '-')}
+                contentStyle={CHART_THEME.tooltip.contentStyle}
+                labelStyle={CHART_THEME.tooltip.labelStyle}
+              />
+              <Legend wrapperStyle={CHART_THEME.legend.wrapperStyle} />
               <Line
                 type="monotone"
                 dataKey="realizado"
-                stroke={COLORS[0]}
+                stroke={CHART_COLORS.expense}
                 strokeWidth={2}
                 name="Realizado"
                 connectNulls
@@ -142,7 +157,7 @@ export function BudgetProjectionChart({ mesReferencia }: BudgetProjectionChartPr
               <Line
                 type="monotone"
                 dataKey="projetado"
-                stroke={COLORS[2]}
+                stroke={CHART_COLORS.investment}
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 name="Projetado"
@@ -150,9 +165,9 @@ export function BudgetProjectionChart({ mesReferencia }: BudgetProjectionChartPr
             </LineChart>
           </ResponsiveContainer>
 
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg flex gap-2">
-            <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-blue-900 dark:text-blue-200">
+          <div className="mt-4 p-3 bg-muted rounded-lg flex gap-2">
+            <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground">
               A projeção é calculada com base na <strong>média dos últimos 3 meses</strong>. Ajuste
               seus hábitos se a tendência for crescente.
             </p>

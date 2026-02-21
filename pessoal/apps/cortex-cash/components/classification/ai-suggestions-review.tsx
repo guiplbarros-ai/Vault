@@ -54,7 +54,7 @@ export function AISuggestionsReview({
     await transacaoService.updateTransacao(transacaoId, {
       categoria_id: categoriaId,
       classificacao_origem: 'ia',
-      classificacao_confianca: currentSuggestion.confianca,
+      classificacao_confianca: currentSuggestion?.confianca,
     })
 
     setProcessed((prev) => ({ ...prev, [transacaoId]: 'accepted' }))
@@ -81,9 +81,10 @@ export function AISuggestionsReview({
   }
 
   const handleComplete = () => {
+    const txId = currentSuggestion?.transacaoId
     const stats = {
-      accepted: acceptedCount + (processed[currentSuggestion.transacaoId] === 'accepted' ? 1 : 0),
-      rejected: rejectedCount + (processed[currentSuggestion.transacaoId] === 'rejected' ? 1 : 0),
+      accepted: acceptedCount + (txId && processed[txId] === 'accepted' ? 1 : 0),
+      rejected: rejectedCount + (txId && processed[txId] === 'rejected' ? 1 : 0),
     }
 
     toast.success('Revisão concluída!', {

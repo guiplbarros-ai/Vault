@@ -177,7 +177,7 @@ export function BulkCategoryAssign({
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Tag className="w-5 h-5 text-blue-500" />
+            <Tag className="w-5 h-5 text-primary" />
             <span className="text-white font-medium">
               {selectedTransactionIds.length}{' '}
               {selectedTransactionIds.length === 1
@@ -253,10 +253,7 @@ export function BulkCategoryAssign({
             <Button
               onClick={handleApply}
               disabled={!categoriaId || loading}
-              style={{
-                backgroundColor: 'rgb(59, 130, 246)',
-                color: 'white',
-              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {loading ? (
                 <>

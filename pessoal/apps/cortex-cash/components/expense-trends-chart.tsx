@@ -120,12 +120,12 @@ export function ExpenseTrendsChart() {
       topCategories.forEach((catId, index) => {
         if (catId === 'sem-categoria') {
           names.push('Sem Categoria')
-          colors['Sem Categoria'] = COLORS[index]
+          colors['Sem Categoria'] = COLORS[index]!
         } else {
           const categoria = categorias.find((c) => c.id === catId)
           const name = categoria?.nome || 'Sem categoria'
           names.push(name)
-          colors[name] = categoria?.cor || COLORS[index]
+          colors[name] = categoria?.cor || COLORS[index]!
         }
       })
 
@@ -251,8 +251,8 @@ export function ExpenseTrendsChart() {
           <p className="text-sm text-secondary">Nenhuma despesa encontrada</p>
         </div>
       ) : (
-        <div className="flex-1 flex items-center min-h-0">
-          <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+        <div className="flex-1 flex items-center">
+          <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid
                 strokeDasharray="3 3"

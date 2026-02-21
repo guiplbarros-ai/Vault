@@ -21,8 +21,8 @@ function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
     <thead
       data-slot="table-header"
       className={cn(
-        '[&_tr]:border-b [&_tr]:border-zinc-200/80 dark:[&_tr]:border-zinc-700/60',
-        '[&_tr]:bg-zinc-50/90 dark:[&_tr]:bg-zinc-800/70',
+        '[&_tr]:border-b [&_tr]:border-border/50',
+        '[&_tr]:bg-muted',
         className
       )}
       {...props}
@@ -58,9 +58,9 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
         // Fundo opaco nas linhas
         'bg-transparent',
         // Hover com fundo mais definido
-        'hover:bg-zinc-50/90 dark:hover:bg-zinc-800/60',
-        'data-[state=selected]:bg-zinc-100 dark:data-[state=selected]:bg-zinc-800',
-        'border-b border-zinc-200/60 dark:border-zinc-700/40',
+        'hover:bg-accent',
+        'data-[state=selected]:bg-accent',
+        'border-b border-border/50',
         'transition-colors duration-150',
         className
       )}

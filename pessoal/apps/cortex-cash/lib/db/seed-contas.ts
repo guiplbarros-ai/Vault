@@ -98,7 +98,7 @@ export async function seedContas(): Promise<void> {
   const contas: Conta[] = []
 
   for (let i = 0; i < CONTAS_MOCK.length; i++) {
-    const contaMock = CONTAS_MOCK[i]
+    const contaMock = CONTAS_MOCK[i]!
     const instituicaoId = instituicaoMap.get(contaMock.instituicao_codigo)
 
     if (!instituicaoId) {

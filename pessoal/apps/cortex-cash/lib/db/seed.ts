@@ -844,7 +844,7 @@ export async function seedMockData(db: any): Promise<void> {
     const contas = [
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[0].id, // Nubank
+        instituicao_id: instituicoes[0]!.id, // Nubank
         nome: 'Nubank - Conta Corrente',
         tipo: 'corrente',
         saldo_referencia: 5000.0, // User é soberano!
@@ -856,7 +856,7 @@ export async function seedMockData(db: any): Promise<void> {
       },
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[1].id, // Bradesco
+        instituicao_id: instituicoes[1]!.id, // Bradesco
         nome: 'Bradesco - Poupança',
         tipo: 'poupanca',
         saldo_referencia: 15000.0,
@@ -868,7 +868,7 @@ export async function seedMockData(db: any): Promise<void> {
       },
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[2].id, // Inter
+        instituicao_id: instituicoes[2]!.id, // Inter
         nome: 'Inter - Investimentos',
         tipo: 'investimento',
         saldo_referencia: 50000.0,
@@ -880,7 +880,7 @@ export async function seedMockData(db: any): Promise<void> {
       },
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[0].id, // Nubank
+        instituicao_id: instituicoes[0]!.id, // Nubank
         nome: 'Nubank - Carteira Digital',
         tipo: 'outros',
         saldo_referencia: 1200.0,
@@ -946,7 +946,7 @@ export async function seedMockData(db: any): Promise<void> {
 
       transacoes.push({
         id: crypto.randomUUID(),
-        conta_id: contas[0].id,
+        conta_id: contas[0]!.id,
         categoria_id: getCategoriaByNome('Salário', 'receita'),
         data: salarioDate,
         tipo: 'receita',
@@ -993,7 +993,7 @@ export async function seedMockData(db: any): Promise<void> {
 
         transacoes.push({
           id: crypto.randomUUID(),
-          conta_id: contas[0].id,
+          conta_id: contas[0]!.id,
           categoria_id: getCategoriaByNome(despesa.categoria, 'despesa'),
           data: dataTransacao,
           tipo: 'despesa',
@@ -1036,7 +1036,7 @@ export async function seedMockData(db: any): Promise<void> {
 
       for (let i = 0; i < numDespesasVariaveis; i++) {
         const despesaTemplate =
-          despesasVariaveis[Math.floor(Math.random() * despesasVariaveis.length)]
+          despesasVariaveis[Math.floor(Math.random() * despesasVariaveis.length)]!
         const descricao =
           despesaTemplate.descricoes[Math.floor(Math.random() * despesaTemplate.descricoes.length)]
         const valor = -(despesaTemplate.valorBase * (0.5 + Math.random()))
@@ -1047,7 +1047,7 @@ export async function seedMockData(db: any): Promise<void> {
 
         transacoes.push({
           id: crypto.randomUUID(),
-          conta_id: contas[0].id,
+          conta_id: contas[0]!.id,
           categoria_id: getCategoriaByNome(despesaTemplate.categoria, 'despesa'),
           data: dataTransacao,
           tipo: 'despesa',
@@ -1089,7 +1089,7 @@ export async function seedMockData(db: any): Promise<void> {
 
       transacoes.push({
         id: crypto.randomUUID(),
-        conta_id: contas[1].id, // Bradesco Poupança
+        conta_id: contas[1]!.id, // Bradesco Poupança
         categoria_id: getCategoriaByNome(categoria, 'receita'),
         data: mesDate,
         tipo: 'receita',
@@ -1116,7 +1116,7 @@ export async function seedMockData(db: any): Promise<void> {
 
       transacoes.push({
         id: crypto.randomUUID(),
-        conta_id: contas[2].id, // Inter Investimentos
+        conta_id: contas[2]!.id, // Inter Investimentos
         categoria_id: getCategoriaByNome('Investimentos', 'despesa'),
         data: investDate,
         tipo: 'despesa',
@@ -1187,7 +1187,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
       // Renda Fixa
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[1].id, // Bradesco
+        instituicao_id: instituicoes[1]!.id, // Bradesco
         nome: 'CDB Bradesco 125% CDI',
         tipo: 'renda_fixa',
         ticker: null,
@@ -1208,7 +1208,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
       },
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[2].id, // Inter
+        instituicao_id: instituicoes[2]!.id, // Inter
         nome: 'Tesouro Selic 2027',
         tipo: 'renda_fixa',
         ticker: 'SELIC2027',
@@ -1229,7 +1229,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
       },
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[1].id, // Bradesco
+        instituicao_id: instituicoes[1]!.id, // Bradesco
         nome: 'LCI Bradesco 95% CDI',
         tipo: 'renda_fixa',
         ticker: null,
@@ -1252,7 +1252,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
       // Renda Variável
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[2].id, // Inter
+        instituicao_id: instituicoes[2]!.id, // Inter
         nome: 'Petrobras PN',
         tipo: 'renda_variavel',
         ticker: 'PETR4',
@@ -1273,7 +1273,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
       },
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[2].id, // Inter
+        instituicao_id: instituicoes[2]!.id, // Inter
         nome: 'Itaúsa PN',
         tipo: 'renda_variavel',
         ticker: 'ITSA4',
@@ -1294,7 +1294,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
       },
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[2].id, // Inter
+        instituicao_id: instituicoes[2]!.id, // Inter
         nome: 'FII HGLG11',
         tipo: 'renda_variavel',
         ticker: 'HGLG11',
@@ -1317,7 +1317,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
       // Fundos de Investimento
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[1].id, // Bradesco
+        instituicao_id: instituicoes[1]!.id, // Bradesco
         nome: 'Bradesco FIC RF Referenciado DI',
         tipo: 'fundo_investimento',
         ticker: null,
@@ -1340,7 +1340,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
       // Previdência
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[1].id, // Bradesco
+        instituicao_id: instituicoes[1]!.id, // Bradesco
         nome: 'PGBL Bradesco Previdência',
         tipo: 'previdencia',
         ticker: null,
@@ -1363,7 +1363,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
       // Criptomoedas
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[0].id, // Nubank
+        instituicao_id: instituicoes[0]!.id, // Nubank
         nome: 'Bitcoin',
         tipo: 'criptomoeda',
         ticker: 'BTC',
@@ -1475,7 +1475,7 @@ export async function seedCartoes(db: any) {
     const cartoes = [
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[0].id, // Nubank
+        instituicao_id: instituicoes[0]!.id, // Nubank
         conta_pagamento_id: contaCorrente?.id || null,
         nome: 'Nubank Mastercard',
         ultimos_digitos: '4523',
@@ -1490,7 +1490,7 @@ export async function seedCartoes(db: any) {
       },
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[1].id, // Bradesco
+        instituicao_id: instituicoes[1]!.id, // Bradesco
         conta_pagamento_id: contaCorrente?.id || null,
         nome: 'Bradesco Visa Platinum',
         ultimos_digitos: '8971',
@@ -1505,7 +1505,7 @@ export async function seedCartoes(db: any) {
       },
       {
         id: crypto.randomUUID(),
-        instituicao_id: instituicoes[2].id, // Inter
+        instituicao_id: instituicoes[2]!.id, // Inter
         conta_pagamento_id: contaCorrente?.id || null,
         nome: 'Inter Mastercard Gold',
         ultimos_digitos: '3456',

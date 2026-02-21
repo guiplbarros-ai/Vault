@@ -224,7 +224,7 @@ export function formatColor(color: string): string {
  */
 export function getInitials(name: string, maxLength = 2): string {
   const words = name.trim().split(' ').filter(Boolean)
-  const initials = words.map((word) => word[0].toUpperCase()).join('')
+  const initials = words.map((word) => word[0]!.toUpperCase()).join('')
   return initials.slice(0, maxLength)
 }
 

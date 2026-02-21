@@ -63,14 +63,14 @@ export class SettingsService {
     let current: any = this.settings
 
     for (let i = 0; i < keys.length - 1; i++) {
-      const key = keys[i]
+      const key = keys[i]!
       if (!(key in current)) {
         current[key] = {}
       }
       current = current[key]
     }
 
-    current[keys[keys.length - 1]] = value
+    current[keys[keys.length - 1]!] = value
 
     // Persiste
     await this.saveSettings()

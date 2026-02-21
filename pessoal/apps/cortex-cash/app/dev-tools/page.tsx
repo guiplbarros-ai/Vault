@@ -185,7 +185,7 @@ export default function DevToolsPage() {
       if (!acc[tool.category]) {
         acc[tool.category] = []
       }
-      acc[tool.category].push(tool)
+      acc[tool.category]!.push(tool)
       return acc
     },
     {} as Record<string, DevTool[]>

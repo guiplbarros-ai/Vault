@@ -83,7 +83,7 @@ export async function seedDemoData() {
     // 8. Recalcular saldos de todas as contas
     console.log('[DEMO SEED] Passo 8: Recalculando saldos...')
     for (let i = 0; i < contas.length; i++) {
-      const conta = contas[i]
+      const conta = contas[i]!
       console.log(
         `[DEMO SEED] Recalculando saldo da conta ${i + 1}/${contas.length}: ${conta.nome}`
       )
@@ -257,7 +257,7 @@ async function seedContas(instituicoes: Instituicao[]): Promise<Conta[]> {
     numero?: string
   }> = [
     {
-      instituicao_id: instituicoes[0].id, // Nubank
+      instituicao_id: instituicoes[0]!.id, // Nubank
       nome: 'Conta Corrente Nubank',
       tipo: 'corrente',
       saldo_inicial: 5420.5,
@@ -266,14 +266,14 @@ async function seedContas(instituicoes: Instituicao[]): Promise<Conta[]> {
       numero: '12345678-9',
     },
     {
-      instituicao_id: instituicoes[0].id, // Nubank
+      instituicao_id: instituicoes[0]!.id, // Nubank
       nome: 'Poupança Nubank',
       tipo: 'poupanca',
       saldo_inicial: 12000.0,
       cor: '#8A05BE',
     },
     {
-      instituicao_id: instituicoes[1].id, // Banco do Brasil
+      instituicao_id: instituicoes[1]!.id, // Banco do Brasil
       nome: 'Conta Salário BB',
       tipo: 'corrente',
       saldo_inicial: 850.0,
@@ -282,21 +282,21 @@ async function seedContas(instituicoes: Instituicao[]): Promise<Conta[]> {
       numero: '56789-0',
     },
     {
-      instituicao_id: instituicoes[2].id, // Itaú
+      instituicao_id: instituicoes[2]!.id, // Itaú
       nome: 'Investimentos Itaú',
       tipo: 'investimento',
       saldo_inicial: 25000.0,
       cor: '#EC7000',
     },
     {
-      instituicao_id: instituicoes[3].id, // Inter
+      instituicao_id: instituicoes[3]!.id, // Inter
       nome: 'Conta Digital Inter',
       tipo: 'corrente',
       saldo_inicial: 3200.0,
       cor: '#FF7A00',
     },
     {
-      instituicao_id: instituicoes[0].id, // Nubank (carteira)
+      instituicao_id: instituicoes[0]!.id, // Nubank (carteira)
       nome: 'Carteira',
       tipo: 'carteira',
       saldo_inicial: 350.0,

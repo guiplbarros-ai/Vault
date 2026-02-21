@@ -358,10 +358,10 @@ export class ProjecaoService {
     }
 
     const patrimonio_inicial =
-      projecoes[0].patrimonio_acumulado -
-      projecoes[0].saving -
-      projecoes[0].rendimento_investimentos
-    const patrimonio_final = projecoes[projecoes.length - 1].patrimonio_acumulado
+      projecoes[0]!.patrimonio_acumulado -
+      projecoes[0]!.saving -
+      projecoes[0]!.rendimento_investimentos
+    const patrimonio_final = projecoes[projecoes.length - 1]!.patrimonio_acumulado
     const saving_acumulado = projecoes.reduce((acc, p) => acc + p.saving, 0)
     const receita_total = projecoes.reduce((acc, p) => acc + p.receitas.total, 0)
     const despesa_total = projecoes.reduce((acc, p) => acc + p.despesas.total, 0)
@@ -372,11 +372,11 @@ export class ProjecaoService {
     // Encontrar melhor e pior mês
     const melhorProjecao = projecoes.reduce(
       (best, p) => (p.saving > best.saving ? p : best),
-      projecoes[0]
+      projecoes[0]!
     )
     const piorProjecao = projecoes.reduce(
       (worst, p) => (p.saving < worst.saving ? p : worst),
-      projecoes[0]
+      projecoes[0]!
     )
 
     return {
@@ -477,13 +477,13 @@ export class ProjecaoService {
 
     const maxPatrimonio = Math.max(...patrimonios)
     const minPatrimonio = Math.min(...patrimonios)
-    const idMaxPatrimonio = cenarioIds[patrimonios.indexOf(maxPatrimonio)]
-    const idMinPatrimonio = cenarioIds[patrimonios.indexOf(minPatrimonio)]
+    const idMaxPatrimonio = cenarioIds[patrimonios.indexOf(maxPatrimonio)]!
+    const idMinPatrimonio = cenarioIds[patrimonios.indexOf(minPatrimonio)]!
 
     const maxSaving = Math.max(...savings)
     const minSaving = Math.min(...savings)
-    const idMaxSaving = cenarioIds[savings.indexOf(maxSaving)]
-    const idMinSaving = cenarioIds[savings.indexOf(minSaving)]
+    const idMaxSaving = cenarioIds[savings.indexOf(maxSaving)]!
+    const idMinSaving = cenarioIds[savings.indexOf(minSaving)]!
 
     return {
       cenarios,

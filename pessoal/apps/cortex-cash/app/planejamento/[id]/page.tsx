@@ -235,8 +235,7 @@ export default function EditCenarioPage() {
             variant="ghost"
             size="icon"
             onClick={() => router.push('/planejamento')}
-            className="hover:bg-[#1D3A34]"
-            style={{ color: '#F2F7F5' }}
+            className="hover:bg-accent"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -249,14 +248,7 @@ export default function EditCenarioPage() {
             />
           </div>
           {cenario.tipo === 'base' && (
-            <Badge
-              variant="secondary"
-              style={{
-                backgroundColor: '#213A34',
-                color: '#F2F7F5',
-                borderColor: '#2A4942',
-              }}
-            >
+            <Badge variant="secondary">
               Cenário Base
             </Badge>
           )}
@@ -264,33 +256,24 @@ export default function EditCenarioPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="comportamento" className="w-full">
-          <TabsList
-            className="grid w-full grid-cols-3"
-            style={{
-              backgroundColor: '#142A25',
-              borderColor: '#2A4942',
-            }}
-          >
+          <TabsList className="grid w-full grid-cols-3 bg-muted">
             <TabsTrigger
               value="comportamento"
-              className="data-[state=active]:bg-[#3A8F6E]"
-              style={{ color: '#B2BDB9' }}
+              className="text-muted-foreground data-[state=active]:bg-primary"
             >
               <Settings className="h-4 w-4 mr-2" />
               Comportamento
             </TabsTrigger>
             <TabsTrigger
               value="objetivos"
-              className="data-[state=active]:bg-[#3A8F6E]"
-              style={{ color: '#B2BDB9' }}
+              className="text-muted-foreground data-[state=active]:bg-primary"
             >
               <Target className="h-4 w-4 mr-2" />
               Objetivos
             </TabsTrigger>
             <TabsTrigger
               value="eventos"
-              className="data-[state=active]:bg-[#3A8F6E]"
-              style={{ color: '#B2BDB9' }}
+              className="text-muted-foreground data-[state=active]:bg-primary"
             >
               <Zap className="h-4 w-4 mr-2" />
               Eventos
@@ -302,56 +285,30 @@ export default function EditCenarioPage() {
             <div className="grid grid-cols-2 gap-6">
               {/* Coluna Esquerda: Formulário */}
               <div className="space-y-6">
-                <Card
-                  style={{
-                    backgroundColor: '#18322C',
-                    borderColor: '#2A4942',
-                    borderWidth: '1px',
-                    borderRadius: '18px',
-                    boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
-                  }}
-                >
+                <Card className="rounded-[18px]">
                   <CardHeader>
-                    <CardTitle style={{ color: '#F2F7F5' }}>Nova Configuração</CardTitle>
-                    <CardDescription style={{ color: '#B2BDB9' }}>
+                    <CardTitle>Nova Configuração</CardTitle>
+                    <CardDescription>
                       Configure mudanças no comportamento financeiro
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label style={{ color: '#F2F7F5' }}>Tipo</Label>
+                        <Label>Tipo</Label>
                         <Select
                           value={novaConfig.tipo}
                           onValueChange={(value) =>
                             setNovaConfig({ ...novaConfig, tipo: value as TipoConfiguracao })
                           }
                         >
-                          <SelectTrigger
-                            style={{
-                              backgroundColor: '#142A25',
-                              borderColor: '#2A4942',
-                              color: '#F2F7F5',
-                              borderRadius: '10px',
-                            }}
-                          >
+                          <SelectTrigger className="bg-muted rounded-[10px]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent
-                            style={{
-                              backgroundColor: '#142A25',
-                              borderColor: '#2A4942',
-                            }}
-                          >
-                            <SelectItem value="receita" style={{ color: '#F2F7F5' }}>
-                              Receita
-                            </SelectItem>
-                            <SelectItem value="despesa" style={{ color: '#F2F7F5' }}>
-                              Despesa
-                            </SelectItem>
-                            <SelectItem value="investimento" style={{ color: '#F2F7F5' }}>
-                              Investimento
-                            </SelectItem>
+                          <SelectContent className="bg-muted">
+                            <SelectItem value="receita">Receita</SelectItem>
+                            <SelectItem value="despesa">Despesa</SelectItem>
+                            <SelectItem value="investimento">Investimento</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -359,34 +316,21 @@ export default function EditCenarioPage() {
                       {(novaConfig.tipo === 'receita' || novaConfig.tipo === 'despesa') && (
                         <>
                           <div className="space-y-2">
-                            <Label style={{ color: '#F2F7F5' }}>Categoria</Label>
+                            <Label>Categoria</Label>
                             <Select
                               value={novaConfig.categoria_id}
                               onValueChange={(value) =>
                                 setNovaConfig({ ...novaConfig, categoria_id: value })
                               }
                             >
-                              <SelectTrigger
-                                style={{
-                                  backgroundColor: '#142A25',
-                                  borderColor: '#2A4942',
-                                  color: '#F2F7F5',
-                                  borderRadius: '10px',
-                                }}
-                              >
+                              <SelectTrigger className="bg-muted rounded-[10px]">
                                 <SelectValue placeholder="Selecione uma categoria" />
                               </SelectTrigger>
-                              <SelectContent
-                                style={{ backgroundColor: '#142A25', borderColor: '#2A4942' }}
-                              >
+                              <SelectContent className="bg-muted">
                                 {categorias
                                   .filter((c) => c.tipo === novaConfig.tipo)
                                   .map((cat) => (
-                                    <SelectItem
-                                      key={cat.id}
-                                      value={cat.id}
-                                      style={{ color: '#F2F7F5' }}
-                                    >
+                                    <SelectItem key={cat.id} value={cat.id}>
                                       {cat.icone} {cat.nome}
                                     </SelectItem>
                                   ))}
@@ -395,42 +339,27 @@ export default function EditCenarioPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label style={{ color: '#F2F7F5' }}>Modo de Alteração</Label>
+                            <Label>Modo de Alteração</Label>
                             <Select
                               value={novaConfig.modo}
                               onValueChange={(value) =>
                                 setNovaConfig({ ...novaConfig, modo: value as ModoBehavior })
                               }
                             >
-                              <SelectTrigger
-                                style={{
-                                  backgroundColor: '#142A25',
-                                  borderColor: '#2A4942',
-                                  color: '#F2F7F5',
-                                  borderRadius: '10px',
-                                }}
-                              >
+                              <SelectTrigger className="bg-muted rounded-[10px]">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent
-                                style={{ backgroundColor: '#142A25', borderColor: '#2A4942' }}
-                              >
-                                <SelectItem value="percentual" style={{ color: '#F2F7F5' }}>
-                                  Percentual (%)
-                                </SelectItem>
-                                <SelectItem value="valor_fixo" style={{ color: '#F2F7F5' }}>
-                                  Valor Fixo
-                                </SelectItem>
-                                <SelectItem value="zerar" style={{ color: '#F2F7F5' }}>
-                                  Zerar
-                                </SelectItem>
+                              <SelectContent className="bg-muted">
+                                <SelectItem value="percentual">Percentual (%)</SelectItem>
+                                <SelectItem value="valor_fixo">Valor Fixo</SelectItem>
+                                <SelectItem value="zerar">Zerar</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
 
                           {novaConfig.modo === 'percentual' && (
                             <div className="space-y-2">
-                              <Label style={{ color: '#F2F7F5' }}>Percentual de Mudança (%)</Label>
+                              <Label>Percentual de Mudança (%)</Label>
                               <Input
                                 type="number"
                                 placeholder="Ex: -20 (reduz 20%) ou +30 (aumenta 30%)"
@@ -441,20 +370,14 @@ export default function EditCenarioPage() {
                                     percentual_mudanca: Number.parseFloat(e.target.value) || 0,
                                   })
                                 }
-                                style={{
-                                  backgroundColor: '#142A25',
-                                  borderColor: '#2A4942',
-                                  color: '#F2F7F5',
-                                  borderRadius: '10px',
-                                }}
-                                className="placeholder:text-[#8CA39C]"
+                                className="bg-muted rounded-[10px] placeholder:text-muted-foreground"
                               />
                             </div>
                           )}
 
                           {novaConfig.modo === 'valor_fixo' && (
                             <div className="space-y-2">
-                              <Label style={{ color: '#F2F7F5' }}>Novo Valor Fixo</Label>
+                              <Label>Novo Valor Fixo</Label>
                               <Input
                                 type="number"
                                 placeholder="Ex: 5000"
@@ -465,13 +388,7 @@ export default function EditCenarioPage() {
                                     valor_fixo: Number.parseFloat(e.target.value) || 0,
                                   })
                                 }
-                                style={{
-                                  backgroundColor: '#142A25',
-                                  borderColor: '#2A4942',
-                                  color: '#F2F7F5',
-                                  borderRadius: '10px',
-                                }}
-                                className="placeholder:text-[#8CA39C]"
+                                className="bg-muted rounded-[10px] placeholder:text-muted-foreground"
                               />
                             </div>
                           )}
@@ -481,7 +398,7 @@ export default function EditCenarioPage() {
                       {novaConfig.tipo === 'investimento' && (
                         <>
                           <div className="space-y-2">
-                            <Label style={{ color: '#F2F7F5' }}>% do Saving para Investir</Label>
+                            <Label>% do Saving para Investir</Label>
                             <Input
                               type="number"
                               placeholder="Ex: 30"
@@ -492,17 +409,11 @@ export default function EditCenarioPage() {
                                   percentual_saving: Number.parseFloat(e.target.value) || 0,
                                 })
                               }
-                              style={{
-                                backgroundColor: '#142A25',
-                                borderColor: '#2A4942',
-                                color: '#F2F7F5',
-                                borderRadius: '10px',
-                              }}
-                              className="placeholder:text-[#8CA39C]"
+                              className="bg-muted rounded-[10px] placeholder:text-muted-foreground"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label style={{ color: '#F2F7F5' }}>Taxa de Retorno Mensal (%)</Label>
+                            <Label>Taxa de Retorno Mensal (%)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -519,13 +430,7 @@ export default function EditCenarioPage() {
                                     (Number.parseFloat(e.target.value) || 0) / 100,
                                 })
                               }
-                              style={{
-                                backgroundColor: '#142A25',
-                                borderColor: '#2A4942',
-                                color: '#F2F7F5',
-                                borderRadius: '10px',
-                              }}
-                              className="placeholder:text-[#8CA39C]"
+                              className="bg-muted rounded-[10px] placeholder:text-muted-foreground"
                             />
                           </div>
                         </>
@@ -535,12 +440,7 @@ export default function EditCenarioPage() {
                     <Button
                       onClick={handleAddConfiguracao}
                       disabled={saving || !novaConfig.tipo}
-                      className="w-full hover:bg-[#2E7D6B]"
-                      style={{
-                        backgroundColor: '#3A8F6E',
-                        color: '#F2F7F5',
-                        borderRadius: '12px',
-                      }}
+                      className="w-full rounded-xl"
                     >
                       {saving ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -561,7 +461,6 @@ export default function EditCenarioPage() {
                     className="border-white/20"
                     style={{
                       background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                      backgroundColor: '#3B5563',
                     }}
                   >
                     <CardHeader>
@@ -578,29 +477,20 @@ export default function EditCenarioPage() {
                           >
                             <div className="flex items-center gap-2">
                               {config.tipo === 'receita' && (
-                                <TrendingUp
-                                  className="h-3 w-3"
-                                  style={{ color: 'hsl(var(--success))' }}
-                                />
+                                <TrendingUp className="h-3 w-3 text-success" />
                               )}
                               {config.tipo === 'despesa' && (
-                                <TrendingDown
-                                  className="h-3 w-3"
-                                  style={{ color: 'hsl(var(--destructive))' }}
-                                />
+                                <TrendingDown className="h-3 w-3 text-destructive" />
                               )}
                               {config.tipo === 'investimento' && (
-                                <TrendingUp
-                                  className="h-3 w-3"
-                                  style={{ color: 'hsl(var(--secondary))' }}
-                                />
+                                <TrendingUp className="h-3 w-3 text-secondary" />
                               )}
-                              <span style={{ color: '#B2BDB9' }}>
+                              <span className="text-muted-foreground">
                                 {config.categoria_id
                                   ? categorias.find((c) => c.id === config.categoria_id)?.nome
                                   : config.tipo}
                               </span>
-                              <span style={{ color: '#8CA39C' }}>
+                              <span className="text-muted-foreground">
                                 {config.modo === 'percentual' &&
                                   `${config.percentual_mudanca! > 0 ? '+' : ''}${config.percentual_mudanca}%`}
                                 {config.modo === 'valor_fixo' &&
@@ -624,18 +514,10 @@ export default function EditCenarioPage() {
                 )}
 
                 {/* Projeção Mensal */}
-                <Card
-                  style={{
-                    backgroundColor: '#18322C',
-                    borderColor: '#2A4942',
-                    borderWidth: '1px',
-                    borderRadius: '18px',
-                    boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
-                  }}
-                >
+                <Card className="rounded-[18px]">
                   <CardHeader>
-                    <CardTitle style={{ color: '#F2F7F5' }}>Projeção Mensal</CardTitle>
-                    <CardDescription style={{ color: '#B2BDB9' }}>
+                    <CardTitle>Projeção Mensal</CardTitle>
+                    <CardDescription>
                       Próximos 12 meses com as configurações aplicadas
                     </CardDescription>
                   </CardHeader>
@@ -682,28 +564,16 @@ export default function EditCenarioPage() {
                                     year: 'numeric',
                                   })}
                                 </td>
-                                <td
-                                  className="text-right py-2 px-2"
-                                  style={{ color: 'hsl(var(--success))' }}
-                                >
+                                <td className="text-right py-2 px-2 text-success">
                                   {formatCurrency(mes.receitas.total)}
                                 </td>
-                                <td
-                                  className="text-right py-2 px-2"
-                                  style={{ color: 'hsl(var(--destructive))' }}
-                                >
+                                <td className="text-right py-2 px-2 text-destructive">
                                   {formatCurrency(mes.despesas.total)}
                                 </td>
-                                <td
-                                  className="text-right py-2 px-2"
-                                  style={{ color: 'hsl(var(--success))' }}
-                                >
+                                <td className="text-right py-2 px-2 text-success">
                                   {formatCurrency(mes.saving)}
                                 </td>
-                                <td
-                                  className="text-right py-2 px-2 font-medium"
-                                  style={{ color: 'hsl(var(--gold))' }}
-                                >
+                                <td className="text-right py-2 px-2 font-medium text-gold">
                                   {formatCurrency(mes.patrimonio_acumulado)}
                                 </td>
                               </tr>
@@ -723,43 +593,29 @@ export default function EditCenarioPage() {
             <div className="grid grid-cols-2 gap-6">
               {/* Coluna Esquerda: Formulário */}
               <div className="space-y-6">
-                <Card
-                  style={{
-                    backgroundColor: '#18322C',
-                    borderColor: '#2A4942',
-                    borderWidth: '1px',
-                    borderRadius: '18px',
-                    boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
-                  }}
-                >
+                <Card className="rounded-[18px]">
                   <CardHeader>
-                    <CardTitle style={{ color: '#F2F7F5' }}>Novo Objetivo</CardTitle>
-                    <CardDescription style={{ color: '#B2BDB9' }}>
+                    <CardTitle>Novo Objetivo</CardTitle>
+                    <CardDescription>
                       Defina uma meta financeira para este cenário
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label style={{ color: '#F2F7F5' }}>Nome do Objetivo</Label>
+                        <Label>Nome do Objetivo</Label>
                         <Input
                           placeholder="Ex: Comprar casa, Aposentadoria, Viagem"
                           value={novoObjetivo.nome || ''}
                           onChange={(e) =>
                             setNovoObjetivo({ ...novoObjetivo, nome: e.target.value })
                           }
-                          style={{
-                            backgroundColor: '#142A25',
-                            borderColor: '#2A4942',
-                            color: '#F2F7F5',
-                            borderRadius: '10px',
-                          }}
-                          className="placeholder:text-[#8CA39C]"
+                          className="bg-muted rounded-[10px] placeholder:text-muted-foreground"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label style={{ color: '#F2F7F5' }}>Valor Alvo</Label>
+                        <Label>Valor Alvo</Label>
                         <Input
                           type="number"
                           placeholder="Ex: 500000"
@@ -770,18 +626,12 @@ export default function EditCenarioPage() {
                               valor_alvo: Number.parseFloat(e.target.value) || 0,
                             })
                           }
-                          style={{
-                            backgroundColor: '#142A25',
-                            borderColor: '#2A4942',
-                            color: '#F2F7F5',
-                            borderRadius: '10px',
-                          }}
-                          className="placeholder:text-[#8CA39C]"
+                          className="bg-muted rounded-[10px] placeholder:text-muted-foreground"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label style={{ color: '#F2F7F5' }}>Data Alvo</Label>
+                        <Label>Data Alvo</Label>
                         <Input
                           type="date"
                           value={
@@ -795,17 +645,12 @@ export default function EditCenarioPage() {
                               data_alvo: new Date(e.target.value),
                             })
                           }
-                          style={{
-                            backgroundColor: '#142A25',
-                            borderColor: '#2A4942',
-                            color: '#F2F7F5',
-                            borderRadius: '10px',
-                          }}
+                          className="bg-muted rounded-[10px]"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label style={{ color: '#F2F7F5' }}>Categoria</Label>
+                        <Label>Categoria</Label>
                         <Select
                           value={novoObjetivo.categoria}
                           onValueChange={(value) =>
@@ -815,43 +660,22 @@ export default function EditCenarioPage() {
                             })
                           }
                         >
-                          <SelectTrigger
-                            style={{
-                              backgroundColor: '#142A25',
-                              borderColor: '#2A4942',
-                              color: '#F2F7F5',
-                              borderRadius: '10px',
-                            }}
-                          >
+                          <SelectTrigger className="bg-muted rounded-[10px]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent
-                            style={{ backgroundColor: '#142A25', borderColor: '#2A4942' }}
-                          >
-                            <SelectItem value="casa" style={{ color: '#F2F7F5' }}>
-                              Casa
-                            </SelectItem>
-                            <SelectItem value="carro" style={{ color: '#F2F7F5' }}>
-                              Carro
-                            </SelectItem>
-                            <SelectItem value="viagem" style={{ color: '#F2F7F5' }}>
-                              Viagem
-                            </SelectItem>
-                            <SelectItem value="educacao" style={{ color: '#F2F7F5' }}>
-                              Educação
-                            </SelectItem>
-                            <SelectItem value="aposentadoria" style={{ color: '#F2F7F5' }}>
-                              Aposentadoria
-                            </SelectItem>
-                            <SelectItem value="outro" style={{ color: '#F2F7F5' }}>
-                              Outro
-                            </SelectItem>
+                          <SelectContent className="bg-muted">
+                            <SelectItem value="casa">Casa</SelectItem>
+                            <SelectItem value="carro">Carro</SelectItem>
+                            <SelectItem value="viagem">Viagem</SelectItem>
+                            <SelectItem value="educacao">Educação</SelectItem>
+                            <SelectItem value="aposentadoria">Aposentadoria</SelectItem>
+                            <SelectItem value="outro">Outro</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
                       <div className="space-y-2">
-                        <Label style={{ color: '#F2F7F5' }}>Prioridade</Label>
+                        <Label>Prioridade</Label>
                         <Select
                           value={novoObjetivo.prioridade}
                           onValueChange={(value) =>
@@ -861,28 +685,13 @@ export default function EditCenarioPage() {
                             })
                           }
                         >
-                          <SelectTrigger
-                            style={{
-                              backgroundColor: '#142A25',
-                              borderColor: '#2A4942',
-                              color: '#F2F7F5',
-                              borderRadius: '10px',
-                            }}
-                          >
+                          <SelectTrigger className="bg-muted rounded-[10px]">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent
-                            style={{ backgroundColor: '#142A25', borderColor: '#2A4942' }}
-                          >
-                            <SelectItem value="alta" style={{ color: '#F2F7F5' }}>
-                              Alta
-                            </SelectItem>
-                            <SelectItem value="media" style={{ color: '#F2F7F5' }}>
-                              Média
-                            </SelectItem>
-                            <SelectItem value="baixa" style={{ color: '#F2F7F5' }}>
-                              Baixa
-                            </SelectItem>
+                          <SelectContent className="bg-muted">
+                            <SelectItem value="alta">Alta</SelectItem>
+                            <SelectItem value="media">Média</SelectItem>
+                            <SelectItem value="baixa">Baixa</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -891,12 +700,7 @@ export default function EditCenarioPage() {
                     <Button
                       onClick={handleAddObjetivo}
                       disabled={saving || !novoObjetivo.nome || !novoObjetivo.valor_alvo}
-                      className="w-full hover:bg-[#2E7D6B]"
-                      style={{
-                        backgroundColor: '#3A8F6E',
-                        color: '#F2F7F5',
-                        borderRadius: '12px',
-                      }}
+                      className="w-full rounded-xl"
                     >
                       {saving ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -911,20 +715,10 @@ export default function EditCenarioPage() {
 
               {/* Coluna Direita: Preview */}
               <div className="space-y-6">
-                <Card
-                  style={{
-                    backgroundColor: '#18322C',
-                    borderColor: '#2A4942',
-                    borderWidth: '1px',
-                    borderRadius: '18px',
-                    boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
-                  }}
-                >
+                <Card className="rounded-[18px]">
                   <CardHeader>
-                    <CardTitle style={{ color: '#F2F7F5' }}>
-                      Preview - Objetivos Definidos
-                    </CardTitle>
-                    <CardDescription style={{ color: '#B2BDB9' }}>
+                    <CardTitle>Preview - Objetivos Definidos</CardTitle>
+                    <CardDescription>
                       {objetivos.length === 0
                         ? 'Nenhum objetivo definido'
                         : `${objetivos.length} objetivo(s) cadastrado(s)`}
@@ -946,7 +740,7 @@ export default function EditCenarioPage() {
                           >
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center gap-2">
-                                <Target className="h-4 w-4 text-[#18B0A4]" />
+                                <Target className="h-4 w-4 text-secondary" />
                                 <h4 className="text-white font-medium">{objetivo.nome}</h4>
                               </div>
                               <div className="flex items-center gap-2">
@@ -974,23 +768,20 @@ export default function EditCenarioPage() {
                             </div>
                             <div className="space-y-2 text-sm">
                               <div className="flex items-center gap-2 text-white/90">
-                                <span style={{ color: '#8CA39C' }}>Valor:</span>
-                                <span
-                                  className="font-semibold"
-                                  style={{ color: 'hsl(var(--gold))' }}
-                                >
+                                <span className="text-muted-foreground">Valor:</span>
+                                <span className="font-semibold text-gold">
                                   {formatCurrency(objetivo.valor_alvo)}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 text-white/90">
                                 <Calendar className="h-3 w-3 text-white/60" />
-                                <span style={{ color: '#8CA39C' }}>Data:</span>
+                                <span className="text-muted-foreground">Data:</span>
                                 <span>
                                   {new Date(objetivo.data_alvo).toLocaleDateString('pt-BR')}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 text-white/90">
-                                <span style={{ color: '#8CA39C' }}>Categoria:</span>
+                                <span className="text-muted-foreground">Categoria:</span>
                                 <span className="capitalize">{objetivo.categoria}</span>
                               </div>
                             </div>
@@ -1010,12 +801,11 @@ export default function EditCenarioPage() {
               className="border-white/20"
               style={{
                 background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-                backgroundColor: '#3B5563',
               }}
             >
               <CardHeader>
-                <CardTitle style={{ color: '#F2F7F5' }}>Eventos Únicos</CardTitle>
-                <CardDescription style={{ color: '#B2BDB9' }}>
+                <CardTitle>Eventos Únicos</CardTitle>
+                <CardDescription>
                   Em breve: adicione eventos pontuais como bônus, 13º, compras grandes, etc.
                 </CardDescription>
               </CardHeader>
@@ -1028,13 +818,7 @@ export default function EditCenarioPage() {
           <Button
             onClick={() => router.push('/planejamento')}
             variant="outline"
-            className="hover:bg-[#1D3A34]"
-            style={{
-              backgroundColor: '#142A25',
-              borderColor: '#2A4942',
-              color: '#F2F7F5',
-              borderRadius: '12px',
-            }}
+            className="bg-muted hover:bg-accent rounded-xl"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar para Cenários

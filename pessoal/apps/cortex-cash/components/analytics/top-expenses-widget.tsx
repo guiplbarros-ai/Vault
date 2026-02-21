@@ -91,7 +91,12 @@ export function TopExpensesWidget() {
 
       <div className="space-y-3">
         {expenses.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Nenhuma despesa este mês</p>
+          <div className="text-center py-8">
+            <p className="text-sm text-muted-foreground">Nenhuma despesa encontrada este mês</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              As despesas aparecerão aqui após a importação de transações
+            </p>
+          </div>
         ) : (
           expenses.map((expense, index) => {
             const percentage = (expense.valor / totalExpenses) * 100

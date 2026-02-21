@@ -8,6 +8,7 @@ import { transacaoService } from '@/lib/services/transacao.service'
 import { endOfMonth, startOfMonth } from 'date-fns'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { CHART_THEME } from '@/lib/utils/chart-theme'
 import { ResponsiveContainer, Sankey, Tooltip } from 'recharts'
 
 interface SankeyNode {
@@ -219,7 +220,7 @@ export function SankeyFlowChart() {
             margin={{ top: 20, right: 200, bottom: 20, left: 200 }}
           >
             <Tooltip
-              contentStyle={{ backgroundColor: colors.node, border: '1px solid ' + colors.link }}
+              contentStyle={CHART_THEME.tooltip.contentStyle}
             />
           </Sankey>
         </ResponsiveContainer>

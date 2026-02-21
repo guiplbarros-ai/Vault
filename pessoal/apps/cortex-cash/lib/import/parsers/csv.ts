@@ -92,7 +92,7 @@ export async function parseCSV(
   let invalidRows = 0
 
   for (let i = 0; i < dataLines.length; i++) {
-    const line = dataLines[i]
+    const line = dataLines[i]!
     const rowNumber = startRow + i + 1
 
     try {

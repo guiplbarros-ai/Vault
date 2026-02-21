@@ -135,18 +135,18 @@ export const getChartColors = (): string[] => {
 // Baseado em docs/features/TEMA.md - "Tema — Orientação de UI (Dark, sólido)"
 export const THEME_COLORS = {
   // Base (Backgrounds e superfícies sólidas - sem translucência)
-  bgApp: '#132421', // --bg-app: Fundo principal
-  bgCard: '#18322C', // --bg-card: Superfície
-  bgCard2: '#142A25', // --bg-card-2: Superfície aninhada
-  border: '#2A4942', // --border: Contorno 1px
-  divider: '#213A34', // --divider: Linhas internas
-  hover: '#1D3A34', // --hover: Hover de linhas/itens
+  bgApp: '#0e1411', // --bg-app: Fundo principal
+  bgCard: '#2f3734', // --bg-card: Superfície
+  bgCard2: '#202725', // --bg-card-2: Superfície aninhada (muted)
+  border: '#4e5653', // --border: Contorno 1px
+  divider: '#424a47', // --divider: Linhas internas
+  hover: '#3e4744', // --hover: Hover de linhas/itens
   focus: '#3A8F6E', // --focus: Anel de foco
 
   // Texto
-  fgPrimary: '#F2F7F5', // --fg-primary
-  fgSecondary: '#B2BDB9', // --fg-secondary
-  fgMuted: '#8CA39C', // --fg-muted
+  fgPrimary: '#eaedeb', // --fg-primary
+  fgSecondary: '#939f9a', // --fg-secondary
+  fgMuted: '#7d8884', // --fg-muted
 
   // Ação / Marca
   accent: '#3A8F6E', // --accent: Primário (adição/confirmar)
@@ -159,15 +159,22 @@ export const THEME_COLORS = {
   warning: '#E0B257', // --warning
   error: '#F07167', // --error
 
-  // Inputs e Seleções
-  inputBorder: '#3a4a43', // Cor para borders de input/select
+  // Inputs
+  inputBorder: '#525b58',
+  inputBg: '#202725',
+
+  // Semantic background tints
+  bgSuccessSubtle: '#162b22',
+  bgErrorSubtle: '#2a1c1c',
+  bgWarningSubtle: '#2a2417',
+  bgInfoSubtle: '#182329',
 
   // Compatibilidade com código existente (aliases)
-  background: '#132421',
-  card: '#18322C',
-  muted: '#1D3A34',
-  foreground: '#F2F7F5',
-  secondary: '#8FCDBD',
+  background: '#0e1411',
+  card: '#2f3734',
+  muted: '#3e4744',
+  foreground: '#eaedeb',
+  secondary: '#7bbfa8',
   primary: '#3A8F6E',
   gold: '#D4AF37',
   destructive: '#F07167',

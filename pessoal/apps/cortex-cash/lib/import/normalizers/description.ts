@@ -136,8 +136,8 @@ export function extractMetadata(description: string): {
   // Extrair localização (geralmente após hífen ou após cidade/estado)
   const locationMatch = description.match(/\s+-\s+([A-Z\s]+(?:\/[A-Z]{2})?)/)
   if (locationMatch) {
-    result.location = locationMatch[1].trim()
-    result.description = result.description.replace(locationMatch[0], '').trim()
+    result.location = locationMatch[1]!.trim()
+    result.description = result.description.replace(locationMatch[0]!, '').trim()
   }
 
   // Extrair número de referência

@@ -3,6 +3,7 @@
 import { useSetting } from '@/app/providers/settings-provider'
 import { Card } from '@/components/ui/card'
 import { THEME_COLORS } from '@/lib/constants/colors'
+import { CHART_COLORS } from '@/lib/utils/chart-theme'
 import { patrimonioService } from '@/lib/services/patrimonio.service'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -24,6 +25,8 @@ interface WealthDataPoint {
   investimentos: number
 }
 
+const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
 export function WealthEvolutionChart() {
   const [data, setData] = useState<WealthDataPoint[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,59 +44,40 @@ export function WealthEvolutionChart() {
       try {
         setLoading(true)
 
-        // Get current patrimônio
-        const currentPatrimonio = await patrimonioService.getPatrimonioTotal()
+        // Ensure current month has a snapshot + generate retroactive if needed
+        await patrimonioService.generateRetroactiveSnapshots()
+        await patrimonioService.saveCurrentSnapshot()
 
-        // For now, we'll create mock historical data
-        // TODO: Implement proper historical tracking in the database
-        const months = [
-          'Jan',
-          'Fev',
-          'Mar',
-          'Abr',
-          'Mai',
-          'Jun',
-          'Jul',
-          'Ago',
-          'Set',
-          'Out',
-          'Nov',
-          'Dez',
-        ]
+        const snapshots = await patrimonioService.getSnapshots()
 
-        const currentMonth = new Date().getMonth()
-        const mockData: WealthDataPoint[] = []
-
-        // Generate last 6 months of data
-        for (let i = 5; i >= 0; i--) {
-          const monthIndex = (currentMonth - i + 12) % 12
-          const monthName = months[monthIndex]
-
-          // Generate realistic progression towards current value
-          const factor = (6 - i) / 6
-          const randomVariation = 0.9 + Math.random() * 0.2 // ±10% variation
-
-          const patrimonio = currentPatrimonio.patrimonio_total * factor * randomVariation
-          const contas = currentPatrimonio.saldo_contas * factor * randomVariation
-          const investimentos = currentPatrimonio.saldo_investimentos * factor * randomVariation
-
-          mockData.push({
-            month: monthName,
-            patrimonio: Math.round(patrimonio * 100) / 100,
-            contas: Math.round(contas * 100) / 100,
-            investimentos: Math.round(investimentos * 100) / 100,
-          })
+        if (snapshots.length === 0) {
+          // Fallback: show single current point
+          const current = await patrimonioService.getPatrimonioTotal()
+          const currentMonth = new Date().getMonth()
+          setData([{
+            month: MONTH_LABELS[currentMonth]!,
+            patrimonio: current.patrimonio_total,
+            contas: current.saldo_contas,
+            investimentos: current.saldo_investimentos,
+          }])
+          return
         }
 
-        // Add current month with actual data
-        mockData.push({
-          month: months[currentMonth],
-          patrimonio: currentPatrimonio.patrimonio_total,
-          contas: currentPatrimonio.saldo_contas,
-          investimentos: currentPatrimonio.saldo_investimentos,
+        // Convert snapshots to chart data
+        const chartData: WealthDataPoint[] = snapshots.map((s) => {
+          const parts = s.mes.split('-')
+          const monthIndex = (Number(parts[1]) || 1) - 1
+          const year = parts[0] || ''
+          const shortYear = year.slice(2)
+          return {
+            month: `${MONTH_LABELS[monthIndex]}/${shortYear}`,
+            patrimonio: s.patrimonio_total,
+            contas: s.saldo_contas,
+            investimentos: s.saldo_investimentos,
+          }
         })
 
-        setData(mockData)
+        setData(chartData)
       } catch (error) {
         console.error('Erro ao carregar evolução patrimonial:', error)
       } finally {
@@ -165,16 +149,18 @@ export function WealthEvolutionChart() {
     )
   }
 
+  const subtitle = data.length > 1
+    ? `${data.length} meses de histórico`
+    : 'Posição atual — histórico disponível após 2+ meses de uso'
+
   return (
     <Card className="glass-card-3d p-6 flex flex-col h-full" style={{ minHeight: '420px' }}>
       <div className="mb-6 flex-shrink-0">
         <h3 className="text-lg font-bold text-foreground">Evolução Patrimonial</h3>
-        <p className="text-sm text-secondary">
-          Acompanhe o crescimento do seu patrimônio nos últimos 6 meses
-        </p>
+        <p className="text-sm text-secondary">{subtitle}</p>
       </div>
-      <div className="flex-1 flex items-center min-h-0">
-        <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+      <div className="flex-1 flex items-center">
+        <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
             <CartesianGrid
               strokeDasharray="3 3"
@@ -214,27 +200,27 @@ export function WealthEvolutionChart() {
               type="monotone"
               dataKey="patrimonio"
               name="Patrimônio Total"
-              stroke="hsl(var(--gold))"
+              stroke={CHART_COLORS.gold}
               strokeWidth={3}
-              dot={{ fill: 'hsl(var(--gold))', r: 4 }}
+              dot={{ fill: CHART_COLORS.gold, r: 4 }}
               activeDot={{ r: 6 }}
             />
             <Line
               type="monotone"
               dataKey="contas"
               name="Contas"
-              stroke="hsl(var(--success))"
+              stroke={CHART_COLORS.income}
               strokeWidth={2}
-              dot={{ fill: 'hsl(var(--success))', r: 3 }}
+              dot={{ fill: CHART_COLORS.income, r: 3 }}
               activeDot={{ r: 5 }}
             />
             <Line
               type="monotone"
               dataKey="investimentos"
               name="Investimentos"
-              stroke="hsl(var(--primary))"
+              stroke={CHART_COLORS.primary}
               strokeWidth={2}
-              dot={{ fill: 'hsl(var(--primary))', r: 3 }}
+              dot={{ fill: CHART_COLORS.primary, r: 3 }}
               activeDot={{ r: 5 }}
             />
           </LineChart>
@@ -244,5 +230,5 @@ export function WealthEvolutionChart() {
   )
 }
 
-// ✅ Default export para dynamic import
+// Default export for dynamic import
 export default WealthEvolutionChart

@@ -50,7 +50,7 @@ export function SmartSuggestions({ mesReferencia }: SmartSuggestionsProps) {
       const suggestionsArray: Suggestion[] = []
 
       // Período atual e anterior
-      const [ano, mes] = mesReferencia.split('-').map(Number)
+      const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
       const mesAtual = new Date(ano, mes - 1)
       const mesPrevio = subMonths(mesAtual, 1)
 
@@ -180,7 +180,7 @@ export function SmartSuggestions({ mesReferencia }: SmartSuggestionsProps) {
       case 'opportunity':
         return 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800'
       case 'good-control':
-        return 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
+        return 'bg-primary/5 dark:bg-primary/10 border-primary/20 dark:border-primary/30'
       default:
         return 'bg-secondary/50'
     }

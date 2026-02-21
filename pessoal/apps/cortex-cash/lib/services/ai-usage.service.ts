@@ -229,7 +229,7 @@ export async function getAIUsageByPeriod(
       let period: string
 
       if (groupBy === 'day') {
-        period = date.toISOString().split('T')[0] // YYYY-MM-DD
+        period = date.toISOString().split('T')[0]! // YYYY-MM-DD
       } else {
         period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` // YYYY-MM
       }

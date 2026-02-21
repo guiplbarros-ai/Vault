@@ -106,11 +106,11 @@ export default function AnalyticsPage() {
       </Tabs>
 
       {/* Seção de Info */}
-      <div className="mt-12 p-6 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+      <div className="mt-12 p-6 bg-muted rounded-lg border border-border">
+        <h3 className="text-lg font-semibold text-foreground mb-2">
           💡 Dicas de Análise Financeira
         </h3>
-        <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+        <ul className="text-sm text-muted-foreground space-y-2">
           <li>
             • <strong>Evolução de Gastos:</strong> Identifique padrões sazonais e categorias que
             crescem

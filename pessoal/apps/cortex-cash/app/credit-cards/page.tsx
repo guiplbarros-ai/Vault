@@ -155,7 +155,7 @@ export default function CreditCardsPage() {
           return
         }
 
-        const instituicaoId = instituicoes[0].id
+        const instituicaoId = instituicoes[0]!.id
         await cartaoService.createCartao({
           ...data,
           instituicao_id: instituicaoId,
@@ -219,8 +219,8 @@ export default function CreditCardsPage() {
 
   // Calcular totais
   const totalLimite = cartoes.reduce((sum, c) => sum + c.limite_total, 0)
-  const totalUsado = Object.values(limites).reduce((sum, l) => sum + (l?.limite_usado || 0), 0)
-  const totalDisponivel = totalLimite - totalUsado
+  const totalUsado = Object.values(limites).reduce((sum, l) => sum + (l?.gastos_mes || l?.limite_usado || 0), 0)
+  const totalDisponivel = totalLimite > 0 ? totalLimite - totalUsado : 0
   const percentualUsado = totalLimite > 0 ? (totalUsado / totalLimite) * 100 : 0
 
   if (loading) {
@@ -281,7 +281,7 @@ export default function CreditCardsPage() {
                     </CardDescription>
                   </div>
                   <CardTitle className="text-3xl font-bold text-foreground">
-                    {formatCurrency(totalLimite)}
+                    {totalLimite > 0 ? formatCurrency(totalLimite) : 'Não informado'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -298,7 +298,7 @@ export default function CreditCardsPage() {
                       <CreditCard className="h-4 w-4 text-warning" />
                     </div>
                     <CardDescription className="text-muted-foreground text-sm">
-                      Limite Usado
+                      Gastos no Mês
                     </CardDescription>
                   </div>
                   <CardTitle className="text-3xl font-bold text-warning">
@@ -307,7 +307,7 @@ export default function CreditCardsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs text-muted-foreground">
-                    {percentualUsado.toFixed(1)}% do limite total
+                    {totalLimite > 0 ? `${percentualUsado.toFixed(1)}% do limite total` : 'Baseado nas transações do mês'}
                   </p>
                 </CardContent>
               </Card>
@@ -323,7 +323,7 @@ export default function CreditCardsPage() {
                     </CardDescription>
                   </div>
                   <CardTitle className="text-3xl font-bold text-success">
-                    {formatCurrency(totalDisponivel)}
+                    {totalLimite > 0 ? formatCurrency(totalDisponivel) : 'Não informado'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -391,7 +391,7 @@ export default function CreditCardsPage() {
                                   <div>
                                     <p className="text-xs opacity-75">Limite Total</p>
                                     <p className="text-xl font-bold">
-                                      {formatCurrency(cartao.limite_total)}
+                                      {cartao.limite_total > 0 ? formatCurrency(cartao.limite_total) : 'Não informado'}
                                     </p>
                                   </div>
                                 </div>
@@ -448,25 +448,29 @@ export default function CreditCardsPage() {
                                 {limite && (
                                   <>
                                     <div className="flex items-center justify-between text-sm">
-                                      <span className="text-muted-foreground">Usado</span>
+                                      <span className="text-muted-foreground">Gastos este mês</span>
                                       <span className="font-semibold text-warning">
-                                        {formatCurrency(limite.limite_usado)}
+                                        {formatCurrency(limite.gastos_mes || limite.limite_usado)}
                                       </span>
                                     </div>
-                                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                                      <div
-                                        className="h-full bg-gradient-to-r from-success to-warning transition-all duration-300"
-                                        style={{
-                                          width: `${Math.min(limite.percentual_usado, 100)}%`,
-                                        }}
-                                      />
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                      <span className="text-muted-foreground">Disponível</span>
-                                      <span className="font-semibold text-success">
-                                        {formatCurrency(limite.limite_disponivel)}
-                                      </span>
-                                    </div>
+                                    {cartao.limite_total > 0 && (
+                                      <>
+                                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                                          <div
+                                            className="h-full bg-gradient-to-r from-success to-warning transition-all duration-300"
+                                            style={{
+                                              width: `${Math.min(limite.percentual_usado, 100)}%`,
+                                            }}
+                                          />
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                          <span className="text-muted-foreground">Disponível</span>
+                                          <span className="font-semibold text-success">
+                                            {formatCurrency(limite.limite_disponivel)}
+                                          </span>
+                                        </div>
+                                      </>
+                                    )}
                                   </>
                                 )}
                               </div>

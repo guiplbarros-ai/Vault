@@ -46,7 +46,7 @@ export function FaturaCard({
   }
 
   const formatMesReferencia = (mesRef: string) => {
-    const [ano, mes] = mesRef.split('-')
+    const [ano, mes] = mesRef.split('-') as [string, string]
     const date = new Date(Number.parseInt(ano), Number.parseInt(mes) - 1)
     return date.toLocaleDateString('pt-BR', {
       month: 'long',

@@ -3,6 +3,7 @@
 import { useSetting } from '@/app/providers/settings-provider'
 import { Card } from '@/components/ui/card'
 import { getChartColors } from '@/lib/constants/colors'
+import { CHART_THEME } from '@/lib/utils/chart-theme'
 import { categoriaService } from '@/lib/services/categoria.service'
 import { transacaoService } from '@/lib/services/transacao.service'
 import { format, subMonths } from 'date-fns'
@@ -96,10 +97,8 @@ export function ExpenseEvolutionChart() {
           }
         }
 
-        if (!categoryExpenses[monthKey][categoryId]) {
-          categoryExpenses[monthKey][categoryId] = 0
-        }
-        categoryExpenses[monthKey][categoryId] += Math.abs(Number(t.valor) || 0)
+        const monthData = categoryExpenses[monthKey]!
+        monthData[categoryId] = (monthData[categoryId] ?? 0) + Math.abs(Number(t.valor) || 0)
       })
 
       // Coleta todas as categorias únicas
@@ -112,7 +111,7 @@ export function ExpenseEvolutionChart() {
       const colorMap: Record<string, string> = {}
       const categoryList = Array.from(allCategories)
       categoryList.forEach((cat, index) => {
-        colorMap[cat] = COLORS[index % COLORS.length]
+        colorMap[cat] = COLORS[index % COLORS.length]!
       })
 
       // Monta dados para o gráfico
@@ -120,7 +119,7 @@ export function ExpenseEvolutionChart() {
         const monthData: MonthData = { month: m.month }
         const monthKey = m.monthKey as string
         categoryList.forEach((cat) => {
-          monthData[cat] = categoryExpenses[monthKey][cat] || 0
+          monthData[cat] = categoryExpenses[monthKey]?.[cat] ?? 0
         })
         return monthData
       })
@@ -164,11 +163,24 @@ export function ExpenseEvolutionChart() {
       </div>
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis />
-          <Tooltip formatter={(value) => `R$ ${(value as number).toFixed(2)}`} />
-          <Legend />
+          <CartesianGrid strokeDasharray={CHART_THEME.grid.strokeDasharray} stroke={CHART_THEME.grid.stroke} />
+          <XAxis
+            dataKey="month"
+            tick={CHART_THEME.axis.tick}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            tick={CHART_THEME.axis.tick}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip
+            formatter={(value) => `R$ ${(value as number).toFixed(2)}`}
+            contentStyle={CHART_THEME.tooltip.contentStyle}
+            labelStyle={CHART_THEME.tooltip.labelStyle}
+          />
+          <Legend wrapperStyle={CHART_THEME.legend.wrapperStyle} />
           {categoryNames.map((catId) => (
             <Line
               key={catId}
@@ -177,13 +189,7 @@ export function ExpenseEvolutionChart() {
               stroke={categoryColors[catId]}
               strokeWidth={2}
               dot={{ r: 4 }}
-              name={
-                catId === 'sem-categoria'
-                  ? 'Sem categoria'
-                  : Object.values(categoryColors).includes(categoryColors[catId])
-                    ? catId
-                    : catId
-              }
+              name={catId === 'sem-categoria' ? 'Sem categoria' : catId}
             />
           ))}
         </LineChart>

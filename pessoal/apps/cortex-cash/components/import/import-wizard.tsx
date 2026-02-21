@@ -92,7 +92,7 @@ export function ImportWizard({
       const listaContas = await contaService.listContas({ incluirInativas: false })
       setContas(listaContas)
       if (listaContas.length > 0) {
-        setContaSelecionada(listaContas[0].id)
+        setContaSelecionada(listaContas[0]!.id)
       }
     } catch (error) {
       console.error('Erro ao carregar contas:', error)
@@ -176,7 +176,7 @@ export function ImportWizard({
           toast.error('Nenhuma transação válida encontrada', {
             description:
               result.erros.length > 0
-                ? `Verifique: ${result.erros[0].mensagem}`
+                ? `Verifique: ${result.erros[0]!.mensagem}`
                 : 'Verifique o mapeamento de colunas e o formato do arquivo',
             duration: 5000,
           })
@@ -213,7 +213,7 @@ export function ImportWizard({
         const separador = formato.detectado.separador || ','
 
         // Pegar headers
-        const headerLine = lines[0].split(separador).map((h) => h.trim())
+        const headerLine = lines[0]!.split(separador).map((h) => h.trim())
         setHeaders(headerLine)
 
         // Pegar amostra de dados (linhas 1-5)
@@ -259,7 +259,7 @@ export function ImportWizard({
 
       if (result.erros.length > 0) {
         toast.error(`${result.erros.length} erros encontrados durante o parse`, {
-          description: result.erros[0].mensagem,
+          description: result.erros[0]!.mensagem,
         })
       }
 
@@ -302,7 +302,7 @@ export function ImportWizard({
 
       if (result.erros.length > 0) {
         toast.error(`${result.erros.length} erros encontrados durante o parse OFX`, {
-          description: result.erros[0].mensagem,
+          description: result.erros[0]!.mensagem,
         })
       }
 
@@ -367,7 +367,7 @@ export function ImportWizard({
         toast.warning(
           `${result.importadas} transações importadas com ${result.erros.length} erros`,
           {
-            description: result.erros[0].mensagem,
+            description: result.erros[0]!.mensagem,
             duration: 5000,
           }
         )
@@ -561,16 +561,10 @@ export function ImportWizard({
             {/* Indicador de Template Selecionado */}
             {step === 'upload' && templateSelecionado && (
               <div
-                className="p-4 rounded-lg flex items-center justify-between"
-                style={{
-                  backgroundColor: 'rgb(30, 58, 138, 0.3)',
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: 'rgb(59, 130, 246)',
-                }}
+                className="p-4 rounded-lg flex items-center justify-between bg-primary/10 border border-primary/50"
               >
                 <div className="flex items-center gap-3">
-                  <Sparkles className="w-5 h-5 text-blue-400" />
+                  <Sparkles className="w-5 h-5 text-primary" />
                   <div>
                     <p className="text-white font-medium">{templateSelecionado.nome}</p>
                     <p className="text-sm text-gray-300">
@@ -585,7 +579,7 @@ export function ImportWizard({
                     setTemplateSelecionado(null)
                     setStep('template')
                   }}
-                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-950/20"
+                  className="text-primary hover:text-primary/80 hover:bg-primary/10"
                 >
                   Trocar
                 </Button>
@@ -618,7 +612,7 @@ export function ImportWizard({
                     variant="link"
                     size="sm"
                     onClick={() => setStep('template')}
-                    className="mt-2 text-blue-400 hover:text-blue-300"
+                    className="mt-2 text-primary hover:text-primary/80"
                   >
                     ← Voltar para seleção de template
                   </Button>

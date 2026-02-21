@@ -239,11 +239,11 @@ export function FinancialCalendar() {
                       day.isCurrentMonth
                         ? {
                             backgroundColor: isHovered
-                              ? '#2d5f52'
+                              ? 'hsl(var(--accent))'
                               : isToday
-                                ? '#2a5649'
-                                : '#265045',
-                            borderColor: isHovered ? '#3a6456' : undefined,
+                                ? 'hsl(var(--accent))'
+                                : 'hsl(var(--card))',
+                            borderColor: isHovered ? 'hsl(var(--border))' : undefined,
                           }
                         : undefined
                     }

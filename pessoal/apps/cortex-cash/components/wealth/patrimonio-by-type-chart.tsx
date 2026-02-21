@@ -3,6 +3,7 @@
 import { useSettings } from '@/app/providers/settings-provider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getChartColors } from '@/lib/constants/colors'
+import { CHART_COLORS } from '@/lib/utils/chart-theme'
 import { patrimonioService } from '@/lib/services/patrimonio.service'
 import type { PatrimonioPorTipo } from '@/lib/types'
 import { TrendingUp } from 'lucide-react'
@@ -64,7 +65,7 @@ export function PatrimonioByTypeChart() {
     }).format(value)
   }
 
-  const CHART_COLORS = useMemo(() => getChartColors(), [])
+  const PIE_COLORS = useMemo(() => getChartColors(), [])
 
   const renderCustomLabel = ({
     cx,
@@ -144,7 +145,7 @@ export function PatrimonioByTypeChart() {
           <p style={{ fontSize: '11px', color: payload[0].payload.fill, marginBottom: '2px' }}>
             Valor: {formatCurrency(payload[0].value)}
           </p>
-          <p style={{ fontSize: '11px', color: '#6CCB8C' }}>
+          <p style={{ fontSize: '11px', color: CHART_COLORS.income }}>
             Rentabilidade: {payload[0].payload.percentual >= 0 ? '+' : ''}
             {payload[0].payload.percentual.toFixed(2)}%
           </p>
@@ -216,7 +217,7 @@ export function PatrimonioByTypeChart() {
               dataKey="value"
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]!} />
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />

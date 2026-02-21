@@ -4,6 +4,7 @@ import { useSetting } from '@/app/providers/settings-provider'
 import { useLocalizationSettings } from '@/app/providers/settings-provider'
 import { Card } from '@/components/ui/card'
 import { getChartColors } from '@/lib/constants/colors'
+import { CHART_COLORS, CHART_THEME } from '@/lib/utils/chart-theme'
 import { orcamentoService } from '@/lib/services/orcamento.service'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -108,20 +109,30 @@ export function BudgetComparisonCard({ mesReferencia }: BudgetComparisonCardProp
       ) : (
         <ResponsiveContainer width="100%" height={350}>
           <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray={CHART_THEME.grid.strokeDasharray} stroke={CHART_THEME.grid.stroke} />
             <XAxis
               dataKey="category"
               angle={-45}
               textAnchor="end"
               height={120}
               interval={0}
-              tick={{ fontSize: 12 }}
+              tick={CHART_THEME.axis.tick}
+              tickLine={false}
+              axisLine={false}
             />
-            <YAxis />
-            <Tooltip formatter={(value) => formatCurrency(value as number)} />
-            <Legend />
-            <Bar dataKey="planejado" fill={COLORS[0]} name="Planejado" />
-            <Bar dataKey="realizado" fill={COLORS[1]} name="Realizado" />
+            <YAxis
+              tick={CHART_THEME.axis.tick}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip
+              formatter={(value) => formatCurrency(value as number)}
+              contentStyle={CHART_THEME.tooltip.contentStyle}
+              labelStyle={CHART_THEME.tooltip.labelStyle}
+            />
+            <Legend wrapperStyle={CHART_THEME.legend.wrapperStyle} />
+            <Bar dataKey="planejado" fill={CHART_COLORS.neutral} name="Planejado" />
+            <Bar dataKey="realizado" fill={CHART_COLORS.expense} name="Realizado" />
           </BarChart>
         </ResponsiveContainer>
       )}

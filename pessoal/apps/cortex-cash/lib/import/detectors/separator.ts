@@ -29,10 +29,10 @@ export function detectSeparator(sample: string): CSVSeparator {
 
     // Verifica consistência (mesmo número de separadores por linha)
     const uniqueCounts = new Set(counts)
-    if (uniqueCounts.size === 1 && counts[0] > 0) {
+    if (uniqueCounts.size === 1 && counts[0]! > 0) {
       // Consistente! Score = número de colunas
-      scores.set(sep, counts[0])
-    } else if (uniqueCounts.size <= 2 && counts[0] > 0) {
+      scores.set(sep, counts[0]!)
+    } else if (uniqueCounts.size <= 2 && counts[0]! > 0) {
       // Quase consistente (pode ter linhas vazias)
       scores.set(sep, Math.max(...counts) * 0.8)
     } else {
@@ -69,5 +69,5 @@ export function validateSeparator(sample: string, separator: CSVSeparator): bool
   const uniqueCounts = new Set(counts)
 
   // Válido se a maioria das linhas tem o mesmo número de separadores
-  return uniqueCounts.size <= 2 && counts[0] > 0
+  return uniqueCounts.size <= 2 && counts[0]! > 0
 }

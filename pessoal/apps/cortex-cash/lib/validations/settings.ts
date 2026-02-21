@@ -198,7 +198,7 @@ export function validateSettingValue(
     advanced: advancedSettingsSchema,
   }
 
-  const categorySchema = schemas[category]
+  const categorySchema = schemas[category!]
   if (!categorySchema) {
     return { success: false, error: 'Categoria inválida' }
   }
@@ -209,10 +209,10 @@ export function validateSettingValue(
   const keys = key.split('.')
 
   for (let i = 0; i < keys.length - 1; i++) {
-    current[keys[i]] = {}
-    current = current[keys[i]]
+    current[keys[i]!] = {}
+    current = current[keys[i]!]
   }
-  current[keys[keys.length - 1]] = value
+  current[keys[keys.length - 1]!] = value
 
   const result = (categorySchema as any).partial().safeParse(testObject)
 

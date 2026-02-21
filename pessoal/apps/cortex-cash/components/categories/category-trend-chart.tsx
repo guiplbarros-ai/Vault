@@ -6,7 +6,9 @@
  */
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { THEME_COLORS } from '@/lib/constants/colors'
 import { transacaoService } from '@/lib/services/transacao.service'
+import { CHART_COLORS, CHART_THEME } from '@/lib/utils/chart-theme'
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Loader2, Minus, TrendingDown, TrendingUp } from 'lucide-react'
@@ -120,12 +122,12 @@ export function CategoryTrendChart({
     return (
       <Card
         style={{
-          backgroundColor: 'rgb(15, 23, 42)',
-          borderColor: 'rgb(30, 41, 59)',
+          backgroundColor: THEME_COLORS.bgCard,
+          borderColor: THEME_COLORS.border,
         }}
       >
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </CardContent>
       </Card>
     )
@@ -148,8 +150,8 @@ export function CategoryTrendChart({
       {/* Header com Estatísticas */}
       <Card
         style={{
-          backgroundColor: 'rgb(15, 23, 42)',
-          borderColor: 'rgb(30, 41, 59)',
+          backgroundColor: THEME_COLORS.bgCard,
+          borderColor: THEME_COLORS.border,
         }}
       >
         <CardHeader>
@@ -158,7 +160,7 @@ export function CategoryTrendChart({
               {categoriaIcone && <span className="text-3xl">{categoriaIcone}</span>}
               <div>
                 <CardTitle className="text-white">{categoriaNome}</CardTitle>
-                <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>
+                <CardDescription style={{ color: THEME_COLORS.fgSecondary }}>
                   Evolução dos últimos 12 meses
                 </CardDescription>
               </div>
@@ -181,51 +183,49 @@ export function CategoryTrendChart({
       {/* Gráfico de Evolução */}
       <Card
         style={{
-          backgroundColor: 'rgb(15, 23, 42)',
-          borderColor: 'rgb(30, 41, 59)',
+          backgroundColor: THEME_COLORS.bgCard,
+          borderColor: THEME_COLORS.border,
         }}
       >
         <CardHeader>
           <CardTitle className="text-white text-lg">Evolução Mensal</CardTitle>
-          <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>
+          <CardDescription style={{ color: THEME_COLORS.fgSecondary }}>
             Total gasto por mês
           </CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <CartesianGrid strokeDasharray={CHART_THEME.grid.strokeDasharray} stroke={CHART_THEME.grid.stroke} />
               <XAxis
                 dataKey="mesLabel"
-                tick={{ fill: '#9CA3AF' }}
+                tick={{ fill: CHART_THEME.axis.tick.fill, fontSize: CHART_THEME.axis.tick.fontSize }}
+                tickLine={false}
+                axisLine={false}
                 angle={-45}
                 textAnchor="end"
                 height={80}
               />
-              <YAxis tick={{ fill: '#9CA3AF' }} tickFormatter={(value) => formatCurrency(value)} />
-              <Tooltip
-                formatter={(value: number) => formatCurrency(value)}
-                labelFormatter={(label) => `Mês: ${label}`}
-                contentStyle={{
-                  backgroundColor: 'rgba(18, 50, 44, 0.99)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
-                  border: '2px solid hsl(var(--border))',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'hsl(var(--fg-primary))',
-                  boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
-                  padding: '14px',
-                }}
-                labelStyle={{ color: 'hsl(var(--fg-primary))', fontWeight: 600 }}
+              <YAxis
+                tick={{ fill: CHART_THEME.axis.tick.fill, fontSize: CHART_THEME.axis.tick.fontSize }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => formatCurrency(value)}
               />
-              <Legend wrapperStyle={{ color: 'white' }} />
+              <Tooltip
+                formatter={(value) => formatCurrency(value as number)}
+                labelFormatter={(label) => `Mês: ${label}`}
+                contentStyle={CHART_THEME.tooltip.contentStyle}
+                labelStyle={CHART_THEME.tooltip.labelStyle}
+              />
+              <Legend wrapperStyle={CHART_THEME.legend.wrapperStyle} />
               <Line
                 type="monotone"
                 dataKey="total"
                 name="Gasto Total"
-                stroke="#3B82F6"
+                stroke={CHART_COLORS.primary}
                 strokeWidth={3}
-                dot={{ fill: '#3B82F6', r: 4 }}
+                dot={{ fill: CHART_COLORS.primary, r: 4 }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>
@@ -242,7 +242,7 @@ export function CategoryTrendChart({
           }}
         >
           <CardHeader className="pb-3">
-            <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>Média Mensal</CardDescription>
+            <CardDescription style={{ color: THEME_COLORS.fgSecondary }}>Média Mensal</CardDescription>
             <CardTitle className="text-2xl text-white">{formatCurrency(stats.media)}</CardTitle>
           </CardHeader>
         </Card>
@@ -254,7 +254,7 @@ export function CategoryTrendChart({
           }}
         >
           <CardHeader className="pb-3">
-            <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>Maior Gasto</CardDescription>
+            <CardDescription style={{ color: THEME_COLORS.fgSecondary }}>Maior Gasto</CardDescription>
             <CardTitle className="text-2xl text-red-400">
               {formatCurrency(stats.maiorGasto)}
             </CardTitle>
@@ -268,7 +268,7 @@ export function CategoryTrendChart({
           }}
         >
           <CardHeader className="pb-3">
-            <CardDescription style={{ color: 'rgb(148, 163, 184)' }}>Menor Gasto</CardDescription>
+            <CardDescription style={{ color: THEME_COLORS.fgSecondary }}>Menor Gasto</CardDescription>
             <CardTitle className="text-2xl text-green-400">
               {formatCurrency(stats.menorGasto)}
             </CardTitle>

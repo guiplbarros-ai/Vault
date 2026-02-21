@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/dialog'
 import { PageHeader } from '@/components/ui/page-header'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { THEME_COLORS } from '@/lib/constants/colors'
 import { investimentoService } from '@/lib/services/investimento.service'
 import { patrimonioService } from '@/lib/services/patrimonio.service'
 import type { Investimento, PatrimonioTotal } from '@/lib/types'
@@ -204,10 +203,7 @@ export default function WealthPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        <div
-                          className="flex items-center justify-between border-b pb-3"
-                          style={{ borderColor: THEME_COLORS.divider }}
-                        >
+                        <div className="flex items-center justify-between border-b pb-3">
                           <div className="text-sm font-medium text-foreground">
                             Contas Bancárias
                           </div>
@@ -219,10 +215,7 @@ export default function WealthPage() {
                             })}
                           </div>
                         </div>
-                        <div
-                          className="flex items-center justify-between border-b pb-3"
-                          style={{ borderColor: THEME_COLORS.divider }}
-                        >
+                        <div className="flex items-center justify-between border-b pb-3">
                           <div className="text-sm font-medium text-foreground">Investimentos</div>
                           <div className="text-sm text-foreground">
                             R${' '}
@@ -276,7 +269,7 @@ export default function WealthPage() {
                           return (
                             <div
                               key={inv.id}
-                              className="flex cursor-pointer items-center justify-between rounded-[12px] border border-transparent p-3 transition-colors hover:border-border hover:bg-[#1D3A34]"
+                              className="flex cursor-pointer items-center justify-between rounded-[12px] border border-transparent p-3 transition-colors hover:border-border hover:bg-accent"
                               onClick={() => handleViewDetails(inv.id)}
                             >
                               <div className="space-y-1 flex-1">

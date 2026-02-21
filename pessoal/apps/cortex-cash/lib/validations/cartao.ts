@@ -45,7 +45,7 @@ export const faturaSchema = z.object({
     .regex(/^\d{4}-\d{2}$/, 'Formato deve ser YYYY-MM')
     .refine(
       (val) => {
-        const [year, month] = val.split('-').map(Number)
+        const [year, month] = val.split('-').map(Number) as [number, number]
         return month >= 1 && month <= 12 && year >= 2000 && year <= 2100
       },
       { message: 'Mês de referência inválido' }

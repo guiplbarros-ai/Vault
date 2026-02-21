@@ -9,6 +9,7 @@ import { getDB } from '../db/client'
 import { getCurrentUserId } from '../db/seed-usuarios'
 import { DatabaseError, NotFoundError, ValidationError } from '../errors'
 import type { Orcamento } from '../types'
+import { roundCurrency } from '../utils/currency'
 
 export interface CreateOrcamentoDTO {
   nome: string
@@ -407,7 +408,7 @@ export class OrcamentoService {
     }
 
     // Extrair ano e mês do mes_referencia (formato: YYYY-MM)
-    const [ano, mes] = orcamento.mes_referencia.split('-').map(Number)
+    const [ano, mes] = orcamento.mes_referencia.split('-').map(Number) as [number, number]
     const dataInicio = new Date(ano, mes - 1, 1)
     const dataFim = new Date(ano, mes, 0, 23, 59, 59)
 
@@ -433,9 +434,9 @@ export class OrcamentoService {
       valorRealizado = transacoes.reduce((sum, t) => sum + Math.abs(t.valor), 0)
     }
 
-    // Atualizar valor_realizado
+    // Atualizar valor_realizado (arredondado para evitar erros de ponto flutuante)
     await db.orcamentos.update(orcamentoId, {
-      valor_realizado: valorRealizado,
+      valor_realizado: roundCurrency(valorRealizado),
       updated_at: new Date(),
     })
 
@@ -645,6 +646,145 @@ export class OrcamentoService {
         console.error(`Erro ao recalcular orçamento ${orcamento.id}:`, error)
       }
     }
+
+    return count
+  }
+
+  // ============================================================================
+  // AUTO-GERAÇÃO DE ORÇAMENTOS
+  // ============================================================================
+
+  /**
+   * Gera sugestões de orçamento baseadas nos gastos dos últimos 3 meses.
+   * Analisa transações de despesa agrupadas por categoria e retorna
+   * sugestões com a média mensal arredondada.
+   *
+   * @param mesReferencia - Mês alvo para os orçamentos (YYYY-MM)
+   * @returns Array de sugestões com dados da categoria e valor sugerido
+   */
+  async gerarSugestoesOrcamento(mesReferencia: string): Promise<
+    Array<{
+      categoria_id: string
+      categoria_nome: string
+      categoria_icone?: string
+      media_mensal: number
+      valor_sugerido: number
+      total_transacoes: number
+      meses_com_gasto: number
+    }>
+  > {
+    const db = getDB()
+    const currentUserId = getCurrentUserId()
+
+    // Calcular range dos últimos 3 meses antes do mês de referência
+    const parts = mesReferencia.split('-').map(Number)
+    const ano = parts[0] ?? 2026
+    const mes = parts[1] ?? 1
+    const dataFim = new Date(ano, mes - 1, 0, 23, 59, 59) // último dia do mês anterior
+    const dataInicio = new Date(ano, mes - 4, 1) // 3 meses antes
+
+    // Buscar todas as despesas do período
+    const transacoes = await db.transacoes
+      .where('data')
+      .between(dataInicio, dataFim, true, true)
+      .and((t) => t.tipo === 'despesa' && !!t.categoria_id && t.usuario_id === currentUserId)
+      .toArray()
+
+    // Agrupar por categoria
+    const porCategoria = new Map<
+      string,
+      { total: number; count: number; meses: Set<string> }
+    >()
+
+    for (const t of transacoes) {
+      const catId = t.categoria_id!
+      const d = t.data instanceof Date ? t.data : new Date(t.data)
+      const mesKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+
+      if (!porCategoria.has(catId)) {
+        porCategoria.set(catId, { total: 0, count: 0, meses: new Set() })
+      }
+      const entry = porCategoria.get(catId)!
+      entry.total += Math.abs(t.valor)
+      entry.count++
+      entry.meses.add(mesKey)
+    }
+
+    // Filtrar: mínimo 3 transações no período
+    const categoriasValidas = Array.from(porCategoria.entries()).filter(
+      ([, data]) => data.count >= 3
+    )
+
+    // Buscar dados das categorias
+    const categoriaIds = categoriasValidas.map(([id]) => id)
+    const categorias = await db.categorias.bulkGet(categoriaIds)
+    const categoriaMap = new Map(
+      categorias.filter(Boolean).map((c) => [c!.id, c!])
+    )
+
+    // Verificar quais já têm orçamento no mês alvo
+    const orcamentosExistentes = await this.listOrcamentos({ mesReferencia })
+    const categoriasComOrcamento = new Set(
+      orcamentosExistentes
+        .filter((o) => o.tipo === 'categoria' && o.categoria_id)
+        .map((o) => o.categoria_id!)
+    )
+
+    // Montar sugestões (excluindo categorias que já têm orçamento)
+    const sugestoes = categoriasValidas
+      .filter(([catId]) => !categoriasComOrcamento.has(catId))
+      .map(([catId, data]) => {
+        const cat = categoriaMap.get(catId)
+        const mesesAtivos = Math.max(data.meses.size, 1)
+        const mediaMensal = data.total / mesesAtivos
+
+        // Arredondar para cima ao múltiplo de 50 mais próximo
+        const valorSugerido = Math.ceil(mediaMensal / 50) * 50
+
+        return {
+          categoria_id: catId,
+          categoria_nome: cat?.nome || 'Desconhecida',
+          categoria_icone: cat?.icone,
+          media_mensal: Math.round(mediaMensal * 100) / 100,
+          valor_sugerido: valorSugerido,
+          total_transacoes: data.count,
+          meses_com_gasto: data.meses.size,
+        }
+      })
+      .sort((a, b) => b.valor_sugerido - a.valor_sugerido)
+
+    return sugestoes
+  }
+
+  /**
+   * Cria orçamentos em lote a partir de sugestões aprovadas.
+   *
+   * @param sugestoes - Array com categoria_id e valor_planejado
+   * @param mesReferencia - Mês alvo (YYYY-MM)
+   * @returns Número de orçamentos criados
+   */
+  async criarOrcamentosEmLote(
+    sugestoes: Array<{ categoria_id: string; categoria_nome: string; valor_planejado: number }>,
+    mesReferencia: string
+  ): Promise<number> {
+    let count = 0
+    for (const s of sugestoes) {
+      try {
+        await this.createOrcamento({
+          nome: s.categoria_nome,
+          tipo: 'categoria',
+          categoria_id: s.categoria_id,
+          mes_referencia: mesReferencia,
+          valor_planejado: s.valor_planejado,
+        })
+        count++
+      } catch (error) {
+        console.error(`Erro ao criar orçamento para ${s.categoria_nome}:`, error)
+      }
+    }
+
+    // Recalcular todos para ter valores realizados corretos
+    await this.recalcularTodosDoMes(mesReferencia)
 
     return count
   }

@@ -42,7 +42,7 @@ export function SettingsSlider({
       <div className="flex items-center gap-3 w-[200px]">
         <Slider
           value={[value]}
-          onValueChange={(values) => onChange(values[0])}
+          onValueChange={(values) => onChange(values[0]!)}
           min={min}
           max={max}
           step={step}

@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { THEME_COLORS } from '@/lib/constants/colors'
+import { CHART_COLORS } from '@/lib/utils/chart-theme'
 import type { OrcamentoComProgresso } from '@/lib/services/orcamento.service'
 import { TrendingUp } from 'lucide-react'
 import {
@@ -71,13 +72,13 @@ export function BudgetProgressChart({ orcamentos }: BudgetProgressChartProps) {
           >
             {data.icone} {data.nome}
           </p>
-          <p style={{ fontSize: '11px', color: '#6CCB8C', marginBottom: '2px' }}>
+          <p style={{ fontSize: '11px', color: CHART_COLORS.income, marginBottom: '2px' }}>
             Realizado: {formatCurrency(data.realizado)}
           </p>
           <p style={{ fontSize: '11px', color: 'hsl(var(--fg-secondary))', marginBottom: '2px' }}>
             Planejado: {formatCurrency(data.planejado)}
           </p>
-          <p style={{ fontSize: '11px', color: '#D4AF37', marginTop: '4px' }}>
+          <p style={{ fontSize: '11px', color: CHART_COLORS.gold, marginTop: '4px' }}>
             {data.percentual.toFixed(1)}% usado
           </p>
         </div>

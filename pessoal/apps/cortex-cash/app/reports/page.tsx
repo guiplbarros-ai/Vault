@@ -15,13 +15,27 @@ import { MonthPicker } from '@/components/ui/month-picker'
 import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCard } from '@/components/ui/stat-card'
-import { brandNavyAlpha } from '@/lib/constants/colors'
 import { logAIUsage } from '@/lib/services/ai-usage.service'
 import { relatorioService } from '@/lib/services/relatorio.service'
-import type { RelatorioComparativo } from '@/lib/services/relatorio.service'
+import type {
+  GastoRecorrente,
+  PadraoDiaSemana,
+  PrevisaoProximoMes,
+  RelatorioComparativo,
+} from '@/lib/services/relatorio.service'
 import { cn } from '@/lib/utils'
 import { format, subMonths } from 'date-fns'
-import { DollarSign, Download, Minus, TrendingDown, TrendingUp } from 'lucide-react'
+import {
+  BarChart3,
+  Calendar,
+  DollarSign,
+  Download,
+  Minus,
+  Repeat,
+  Target,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -36,6 +50,9 @@ export default function ReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
 
   const [relatorio, setRelatorio] = useState<RelatorioComparativo | null>(null)
+  const [recorrentes, setRecorrentes] = useState<GastoRecorrente[]>([])
+  const [padraoDia, setPadraoDia] = useState<PadraoDiaSemana[]>([])
+  const [previsao, setPrevisao] = useState<PrevisaoProximoMes | null>(null)
   const [loading, setLoading] = useState(true)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<{
@@ -53,10 +70,17 @@ export default function ReportsPage() {
   const loadRelatorio = async () => {
     try {
       setLoading(true)
-      const data = await relatorioService.gerarRelatorioComparativo(
-        format(selectedMonth, 'yyyy-MM')
-      )
+      const mesRef = format(selectedMonth, 'yyyy-MM')
+      const [data, rec, dia, prev] = await Promise.all([
+        relatorioService.gerarRelatorioComparativo(mesRef),
+        relatorioService.getGastosRecorrentes(mesRef),
+        relatorioService.getPadraoPorDiaDaSemana(mesRef),
+        relatorioService.getPrevisaoProximoMes(mesRef),
+      ])
       setRelatorio(data)
+      setRecorrentes(rec)
+      setPadraoDia(dia)
+      setPrevisao(prev)
     } catch (error) {
       console.error('Erro ao carregar relatório:', error)
       toast.error('Erro ao carregar relatório')
@@ -324,6 +348,18 @@ export default function ReportsPage() {
             </div>
           </div>
           <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="rounded-lg p-4 mb-6" style={{ backgroundColor: 'hsl(var(--bg-card-2))' }}>
+                <BarChart3 className="h-12 w-12 text-foreground" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-2">Nenhum dado para este período</h3>
+              <p className="text-muted-foreground text-center mb-6 max-w-md">
+                Não há transações suficientes para gerar o relatório deste mês.
+                Selecione outro mês ou importe transações.
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
                 <CardTitle className="text-base">Análise por IA (3 meses)</CardTitle>
@@ -376,42 +412,21 @@ export default function ReportsPage() {
             value={`R$ ${relatorio.mes_atual.total_receitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
             icon={TrendingUp}
             description={`${relatorio.variacao_total_receitas >= 0 ? '+' : ''}R$ ${relatorio.variacao_total_receitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} vs mês anterior`}
-            iconColor="#4ADE80"
-            iconBgColor="rgba(74, 222, 128, 0.15)"
-            titleColor="#4ADE80"
-            valueClassName="text-[#4ADE80]"
-            cardBgColor="#3B5563"
-            bottomBarColor={brandNavyAlpha(0.3)}
+            variant="success"
           />
           <StatCard
             title="Despesas"
             value={`R$ ${relatorio.mes_atual.total_despesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
             icon={TrendingDown}
             description={`${relatorio.variacao_total_despesas >= 0 ? '+' : ''}R$ ${relatorio.variacao_total_despesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} vs mês anterior`}
-            iconColor="#FA6B6B"
-            iconBgColor="rgba(250, 107, 107, 0.15)"
-            titleColor="#FA6B6B"
-            valueClassName="text-[#FA6B6B]"
-            cardBgColor="#3B5563"
-            bottomBarColor={brandNavyAlpha(0.3)}
+            variant="error"
           />
           <StatCard
             title="Saldo Líquido"
             value={`R$ ${relatorio.mes_atual.saldo_liquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
             icon={DollarSign}
             description={`${relatorio.variacao_saldo_liquido >= 0 ? '+' : ''}R$ ${relatorio.variacao_saldo_liquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} vs mês anterior`}
-            iconColor={relatorio.mes_atual.saldo_liquido >= 0 ? '#4ADE80' : '#FA6B6B'}
-            iconBgColor={
-              relatorio.mes_atual.saldo_liquido >= 0
-                ? 'rgba(74, 222, 128, 0.15)'
-                : 'rgba(250, 107, 107, 0.15)'
-            }
-            titleColor={relatorio.mes_atual.saldo_liquido >= 0 ? '#4ADE80' : '#FA6B6B'}
-            valueClassName={
-              relatorio.mes_atual.saldo_liquido >= 0 ? 'text-[#4ADE80]' : 'text-[#FA6B6B]'
-            }
-            cardBgColor="#3B5563"
-            bottomBarColor={relatorio.mes_atual.saldo_liquido >= 0 ? '#4ADE80' : '#FA6B6B'}
+            variant={relatorio.mes_atual.saldo_liquido >= 0 ? 'success' : 'error'}
           />
         </div>
 
@@ -566,6 +581,195 @@ export default function ReportsPage() {
             )}
           </div>
         )}
+
+        {/* Gastos Recorrentes */}
+        {recorrentes.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Repeat className="h-5 w-5 text-gold" />
+                <div>
+                  <CardTitle>Gastos Recorrentes</CardTitle>
+                  <CardDescription>
+                    {recorrentes.length} despesas que se repetem mensalmente
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recorrentes.slice(0, 10).map((rec) => (
+                  <div
+                    key={rec.descricao}
+                    className="flex items-center justify-between p-3 border rounded-lg bg-card"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {rec.categoria_icone && (
+                        <span className="text-lg shrink-0">{rec.categoria_icone}</span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground truncate">{rec.descricao}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {rec.categoria_nome} · Presente em {rec.meses_presente}/{rec.total_meses} meses
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 ml-4">
+                      <p className="font-semibold text-foreground">
+                        R$ {rec.valor_medio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">média/mês</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {recorrentes.length > 10 && (
+                <p className="text-sm text-muted-foreground mt-3 text-center">
+                  +{recorrentes.length - 10} outros gastos recorrentes
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Padrão por Dia da Semana + Previsão Próximo Mês */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Padrão por Dia da Semana */}
+          {padraoDia.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle>Padrão por Dia da Semana</CardTitle>
+                    <CardDescription>Quando você mais gasta</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const maxVal = Math.max(...padraoDia.map((d) => d.total_despesas))
+                  return (
+                    <div className="space-y-3">
+                      {padraoDia.map((dia) => (
+                        <div key={dia.dia} className="flex items-center gap-3">
+                          <span className="text-sm font-medium w-8 shrink-0 text-foreground">
+                            {dia.dia}
+                          </span>
+                          <div className="flex-1">
+                            <div
+                              className="h-6 rounded bg-primary"
+                              style={{
+                                width: `${maxVal > 0 ? (dia.total_despesas / maxVal) * 100 : 0}%`,
+                                minWidth: dia.total_despesas > 0 ? '4px' : '0',
+                              }}
+                            />
+                          </div>
+                          <div className="text-right shrink-0 w-28">
+                            <span className="text-sm font-medium text-foreground">
+                              R$ {dia.total_despesas.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({dia.quantidade_transacoes})
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Previsão Próximo Mês */}
+          {previsao && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-gold" />
+                  <div>
+                    <CardTitle>Previsão Próximo Mês</CardTitle>
+                    <CardDescription>
+                      Estimativa baseada nos últimos 3 meses · Confiança:{' '}
+                      <span
+                        className={cn(
+                          'font-medium',
+                          previsao.confianca === 'alta'
+                            ? 'text-success'
+                            : previsao.confianca === 'media'
+                              ? 'text-gold'
+                              : 'text-destructive'
+                        )}
+                      >
+                        {previsao.confianca}
+                      </span>
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Summary */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-2 rounded border">
+                      <p className="text-xs text-muted-foreground">Receitas</p>
+                      <p className="text-sm font-semibold text-success">
+                        R$ {previsao.total_receitas_previsto.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                    <div className="text-center p-2 rounded border">
+                      <p className="text-xs text-muted-foreground">Despesas</p>
+                      <p className="text-sm font-semibold text-destructive">
+                        R$ {previsao.total_despesas_previsto.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                    <div className="text-center p-2 rounded border">
+                      <p className="text-xs text-muted-foreground">Resultado</p>
+                      <p
+                        className={cn(
+                          'text-sm font-semibold',
+                          previsao.total_previsto >= 0 ? 'text-success' : 'text-destructive'
+                        )}
+                      >
+                        R$ {previsao.total_previsto.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Per-category forecast */}
+                  <div className="space-y-2">
+                    {previsao.categorias.map((cat) => (
+                      <div
+                        key={cat.categoria_nome}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          {cat.categoria_icone && <span>{cat.categoria_icone}</span>}
+                          <span className="text-foreground">{cat.categoria_nome}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-foreground font-medium">
+                            R$ {cat.valor_previsto.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </span>
+                          {cat.tendencia === 'aumento' && (
+                            <TrendingUp className="h-3 w-3 text-red-500" />
+                          )}
+                          {cat.tendencia === 'reducao' && (
+                            <TrendingDown className="h-3 w-3 text-green-500" />
+                          )}
+                          {cat.tendencia === 'estavel' && (
+                            <Minus className="h-3 w-3 text-muted-foreground" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         {/* Quadro final: Relatório por IA (3 meses) + gráficos (somente após gerar) */}
         <Card>

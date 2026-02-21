@@ -76,7 +76,7 @@ export function SavingRateCard() {
 
       // Define o mês atual como o último da lista
       const current = data[data.length - 1]
-      setCurrentSaving(current)
+      setCurrentSaving(current ?? null)
 
       // Calcula taxa média
       const avgR = data.reduce((acc, d) => acc + d.rate, 0) / data.length
@@ -153,13 +153,13 @@ export function SavingRateCard() {
           </div>
 
           {/* Taxa média */}
-          <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <div className="bg-muted rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
+              <p className="text-sm font-medium text-foreground">
                 Taxa média: <span className="text-lg font-bold">{avgRate.toFixed(1)}%</span>
               </p>
-              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {avgRate >= 20
                   ? '✓ Excelente taxa de economias!'
                   : avgRate >= 10
@@ -200,9 +200,14 @@ export function SavingRateCard() {
       )}
 
       {!currentSaving && savingData.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-8">
-          Sem dados de transações para análise
-        </p>
+        <div className="text-center py-8">
+          <p className="text-sm text-muted-foreground">
+            Sem dados suficientes para calcular a taxa de poupança
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Importe transações de receita e despesa para ver a análise
+          </p>
+        </div>
       )}
     </Card>
   )

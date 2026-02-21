@@ -179,34 +179,33 @@ export function CategoryForm({
         className="space-y-6"
         style={
           {
-            '--label-color': '#F2F7F5',
-            '--description-color': '#B2BDB9',
+            '--label-color': 'hsl(var(--foreground))',
+            '--description-color': 'hsl(var(--muted-foreground))',
           } as React.CSSProperties
         }
       >
         {/* Informação de subcategoria */}
         {categoriaPai && (
           <div
-            className="p-3 rounded-lg space-y-2"
-            style={{ backgroundColor: '#142A25', borderColor: '#2A4942', borderWidth: '1px' }}
+            className="p-3 rounded-lg space-y-2 bg-muted border border-border"
           >
-            <p className="text-sm" style={{ color: '#B2BDB9' }}>
+            <p className="text-sm text-muted-foreground">
               Subcategoria de:{' '}
-              <span className="font-medium" style={{ color: '#F2F7F5' }}>
+              <span className="font-medium text-foreground">
                 {categoriaPai.icone} {categoriaPai.nome}
               </span>
             </p>
             {categoriaPai.cor && (
-              <p className="text-xs flex items-center gap-2" style={{ color: '#8CA39C' }}>
+              <p className="text-xs flex items-center gap-2 text-muted-foreground">
                 <span
-                  className="w-4 h-4 rounded border"
-                  style={{ backgroundColor: categoriaPai.cor, borderColor: '#2A4942' }}
+                  className="w-4 h-4 rounded border border-border"
+                  style={{ backgroundColor: categoriaPai.cor }}
                 />
                 Cor base da categoria
                 <span className="mx-1">→</span>
                 <span
-                  className="w-4 h-4 rounded border"
-                  style={{ backgroundColor: corPadrao, borderColor: '#2A4942' }}
+                  className="w-4 h-4 rounded border border-border"
+                  style={{ backgroundColor: corPadrao }}
                 />
                 Cor derivada (mais clara)
               </p>
@@ -217,10 +216,10 @@ export function CategoryForm({
         {/* Informações Básicas */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium" style={{ color: '#F2F7F5' }}>
+            <h3 className="text-sm font-medium text-foreground">
               Informações Básicas
             </h3>
-            <Separator style={{ backgroundColor: '#2A4942' }} />
+            <Separator className="bg-border" />
           </div>
 
           <div className="form-dark-input">
@@ -229,7 +228,7 @@ export function CategoryForm({
               label="Nome"
               placeholder="Ex: Alimentação, Transporte..."
               required
-              className="!bg-[#142A25] !text-[#F2F7F5] !border-[#2A4942] placeholder:!text-[#8CA39C]"
+              className="bg-muted text-foreground border-border placeholder:text-muted-foreground"
               description="Nome da categoria"
             />
           </div>
@@ -251,7 +250,7 @@ export function CategoryForm({
               name="grupo"
               label="Grupo (opcional)"
               placeholder="Ex: Moradia, Lazer..."
-              className="!bg-[#142A25] !text-[#F2F7F5] !border-[#2A4942] placeholder:!text-[#8CA39C]"
+              className="bg-muted text-foreground border-border placeholder:text-muted-foreground"
               description="Use para agrupar categorias relacionadas"
             />
           </div>
@@ -260,15 +259,15 @@ export function CategoryForm({
         {/* Personalização */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium" style={{ color: '#F2F7F5' }}>
+            <h3 className="text-sm font-medium text-foreground">
               Personalização
             </h3>
-            <Separator style={{ backgroundColor: '#2A4942' }} />
+            <Separator className="bg-border" />
           </div>
 
           {/* Seletor de Ícone */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium" style={{ color: '#F2F7F5' }}>
+            <Label className="text-sm font-medium text-foreground">
               Ícone
             </Label>
             <div className="grid grid-cols-9 gap-2">
@@ -279,8 +278,8 @@ export function CategoryForm({
                   onClick={() => setIcone(i)}
                   className="p-2 text-2xl rounded-lg border-2 transition-all hover:scale-[1.02]"
                   style={{
-                    backgroundColor: icone === i ? '#213A34' : '#142A25',
-                    borderColor: icone === i ? '#3A8F6E' : '#2A4942',
+                    backgroundColor: icone === i ? 'hsl(var(--accent))' : 'hsl(var(--muted))',
+                    borderColor: icone === i ? 'hsl(var(--primary))' : 'hsl(var(--border))',
                     transform: icone === i ? 'scale(1.02)' : 'scale(1)',
                   }}
                 >
@@ -291,11 +290,7 @@ export function CategoryForm({
 
             {/* Input customizado para emoji */}
             <div
-              className="flex items-center gap-3 p-3 rounded-lg border"
-              style={{
-                backgroundColor: '#142A25',
-                borderColor: '#2A4942',
-              }}
+              className="flex items-center gap-3 p-3 rounded-lg border bg-muted border-border"
             >
               <span className="text-3xl">{icone}</span>
               <input
@@ -304,14 +299,10 @@ export function CategoryForm({
                 onChange={(e) => setIcone(e.target.value)}
                 placeholder="Ou digite um emoji..."
                 maxLength={10}
-                className="flex-1 bg-transparent outline-none text-sm"
-                style={{
-                  backgroundColor: 'transparent',
-                  color: '#F2F7F5',
-                }}
+                className="flex-1 bg-transparent outline-none text-sm text-foreground"
               />
             </div>
-            <p className="text-xs" style={{ color: '#8CA39C' }}>
+            <p className="text-xs text-muted-foreground">
               Selecione um ícone ou digite qualquer emoji
             </p>
           </div>
@@ -327,27 +318,20 @@ export function CategoryForm({
         </div>
 
         {/* Buttons */}
-        <div className="flex justify-end gap-3 pt-6" style={{ borderTop: '1px solid #213A34' }}>
+        <div className="flex justify-end gap-3 pt-6 border-t border-border">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
             disabled={submitting || isLoading}
-            style={{
-              borderColor: '#2A4942',
-              color: '#F2F7F5',
-            }}
+            className="border-border text-foreground"
           >
             Cancelar
           </Button>
           <Button
             type="submit"
             disabled={submitting || isLoading}
-            className="min-w-[120px]"
-            style={{
-              backgroundColor: '#3A8F6E',
-              color: '#F2F7F5',
-            }}
+            className="min-w-[120px] bg-primary text-primary-foreground"
           >
             {submitting || isLoading ? (
               <>

@@ -56,6 +56,7 @@ export interface Conta {
   icone?: string
   observacoes?: string
   conta_pai_id?: string // FK para conta pai (para contas vinculadas - poupança, investimento, cartões)
+  pluggy_id?: string // Pluggy account ID for Open Finance sync tracking
   usuario_id?: string // FK para usuário (multi-tenant) - opcional por enquanto
   created_at: Date
   updated_at: Date
@@ -208,6 +209,7 @@ export interface CartaoConfig {
   dia_vencimento: number
   ativo: boolean
   cor?: string
+  pluggy_id?: string // Pluggy account ID (credit card type) for Open Finance sync tracking
   usuario_id?: string // FK para usuário (multi-tenant) - opcional por enquanto
   created_at: Date
   updated_at: Date
@@ -295,6 +297,7 @@ export interface Investimento {
   conta_origem_id?: string // Conta que originou o investimento
   observacoes?: string
   cor?: string
+  pluggy_id?: string // Pluggy investment ID for Open Finance sync tracking
   usuario_id?: string // FK para usuário (multi-tenant) - opcional por enquanto
   created_at: Date
   updated_at: Date
@@ -588,6 +591,16 @@ export interface PatrimonioTotal {
   variacao_mes_percentual: number
   rentabilidade_investimentos: number // (valor_atual - valor_aplicado) / valor_aplicado * 100
   ultima_atualizacao: Date
+}
+
+export interface PatrimonioSnapshot {
+  id: string
+  usuario_id: string
+  mes: string // 'YYYY-MM'
+  saldo_contas: number
+  saldo_investimentos: number
+  patrimonio_total: number
+  created_at: Date
 }
 
 export interface PatrimonioPorTipo {

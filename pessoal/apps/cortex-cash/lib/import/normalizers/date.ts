@@ -22,7 +22,7 @@ export function normalizeDate(dateStr: string): string | null {
     const match = trimmed.match(pattern)
     if (match) {
       if (pattern.source.startsWith('^(\\d{2})')) {
-        let [, day, month, year] = match
+        let [, day, month, year] = match as [string, string, string, string]
         if (year.length === 2) {
           year = Number.parseInt(year, 10) < 50 ? `20${year}` : `19${year}`
         }
@@ -30,7 +30,7 @@ export function normalizeDate(dateStr: string): string | null {
         if (isValidDate(isoDate)) return isoDate
       }
       if (pattern.source.startsWith('^(\\d{4})')) {
-        const [, year, month, day] = match
+        const [, year, month, day] = match as [string, string, string, string]
         const isoDate = `${year}-${month}-${day}`
         if (isValidDate(isoDate)) return isoDate
       }
@@ -46,7 +46,7 @@ export function normalizeDate(dateStr: string): string | null {
  * ao invés de new Date(isoString) que usa UTC
  */
 function isValidDate(isoDate: string): boolean {
-  const [year, month, day] = isoDate.split('-').map(Number)
+  const [year, month, day] = isoDate.split('-').map(Number) as [number, number, number]
 
   // Validar ranges básicos
   if (month < 1 || month > 12 || day < 1 || day > 31) return false

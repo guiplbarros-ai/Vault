@@ -11,9 +11,19 @@ import { DashboardLayout } from '@/components/dashboard-layout'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { formatCurrency } from '@/lib/utils/format'
 import { orcamentoService } from '@/lib/services/orcamento.service'
 import type { OrcamentoComProgresso } from '@/lib/services/orcamento.service'
 import { addMonths, format, subMonths } from 'date-fns'
@@ -24,12 +34,14 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  Loader2,
   Plus,
   RefreshCw,
+  Sparkles,
   XCircle,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 // Lazy load budget components
@@ -64,6 +76,23 @@ export default function BudgetsPage() {
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [recalculando, setRecalculando] = useState(false)
+
+  // Auto-budget dialog state
+  const [showAutoDialog, setShowAutoDialog] = useState(false)
+  const [autoLoading, setAutoLoading] = useState(false)
+  const [autoSaving, setAutoSaving] = useState(false)
+  const [sugestoes, setSugestoes] = useState<
+    Array<{
+      categoria_id: string
+      categoria_nome: string
+      categoria_icone?: string
+      media_mensal: number
+      valor_sugerido: number
+      total_transacoes: number
+      meses_com_gasto: number
+      enabled: boolean
+    }>
+  >([])
 
   useEffect(() => {
     loadOrcamentos()
@@ -101,14 +130,58 @@ export default function BudgetsPage() {
     }
   }
 
+  const handleAutoGenerate = useCallback(async () => {
+    setAutoLoading(true)
+    setShowAutoDialog(true)
+    try {
+      const result = await orcamentoService.gerarSugestoesOrcamento(mesReferencia)
+      setSugestoes(result.map((s) => ({ ...s, enabled: true })))
+    } catch (error) {
+      console.error('Erro ao gerar sugestões:', error)
+      toast.error('Erro ao analisar transações')
+      setShowAutoDialog(false)
+    } finally {
+      setAutoLoading(false)
+    }
+  }, [mesReferencia])
+
+  const handleSaveSugestoes = useCallback(async () => {
+    const ativas = sugestoes.filter((s) => s.enabled)
+    if (ativas.length === 0) {
+      toast.error('Selecione ao menos uma categoria')
+      return
+    }
+
+    setAutoSaving(true)
+    try {
+      const count = await orcamentoService.criarOrcamentosEmLote(
+        ativas.map((s) => ({
+          categoria_id: s.categoria_id,
+          categoria_nome: s.categoria_nome,
+          valor_planejado: s.valor_sugerido,
+        })),
+        mesReferencia
+      )
+      toast.success(`${count} orçamentos criados com sucesso!`)
+      setShowAutoDialog(false)
+      setSugestoes([])
+      await loadOrcamentos()
+    } catch (error) {
+      console.error('Erro ao salvar orçamentos:', error)
+      toast.error('Erro ao salvar orçamentos')
+    } finally {
+      setAutoSaving(false)
+    }
+  }, [sugestoes, mesReferencia])
+
   const handleMesAnterior = () => {
-    const [ano, mes] = mesReferencia.split('-').map(Number)
+    const [ano = 0, mes = 0] = mesReferencia.split('-').map(Number)
     const nova = subMonths(new Date(ano, mes - 1), 1)
     setMesReferencia(format(nova, 'yyyy-MM'))
   }
 
   const handleProximoMes = () => {
-    const [ano, mes] = mesReferencia.split('-').map(Number)
+    const [ano = 0, mes = 0] = mesReferencia.split('-').map(Number)
     const nova = addMonths(new Date(ano, mes - 1), 1)
     const hoje = new Date()
 
@@ -121,10 +194,9 @@ export default function BudgetsPage() {
   }
 
   const getStatusIcon = (status: 'ok' | 'atencao' | 'excedido') => {
-    if (status === 'ok') return <CheckCircle className="h-5 w-5" style={{ color: '#6CCB8C' }} />
-    if (status === 'atencao')
-      return <AlertTriangle className="h-5 w-5" style={{ color: '#E0B257' }} />
-    return <XCircle className="h-5 w-5" style={{ color: '#F07167' }} />
+    if (status === 'ok') return <CheckCircle className="h-5 w-5 text-success" />
+    if (status === 'atencao') return <AlertTriangle className="h-5 w-5 text-warning" />
+    return <XCircle className="h-5 w-5 text-destructive" />
   }
 
   const getStatusText = (status: 'ok' | 'atencao' | 'excedido') => {
@@ -133,11 +205,10 @@ export default function BudgetsPage() {
     return 'Excedido'
   }
 
-  const mesFormatado = format(
-    new Date(mesReferencia.split('-').map(Number)[0], mesReferencia.split('-').map(Number)[1] - 1),
-    "MMMM 'de' yyyy",
-    { locale: ptBR }
-  )
+  const mesFormatado = (() => {
+    const [a = 0, m = 0] = mesReferencia.split('-').map(Number)
+    return format(new Date(a, m - 1), "MMMM 'de' yyyy", { locale: ptBR })
+  })()
 
   if (loading) {
     return (
@@ -159,49 +230,38 @@ export default function BudgetsPage() {
           description="Acompanhe seu planejamento vs. realizado"
           actions={
             <div className="flex gap-2">
-              <Button onClick={handleRecalcular} variant="outline" disabled={recalculando}>
-                {recalculando ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Recalculando...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Recalcular
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={() => {
-                  toast.info('Funcionalidade em desenvolvimento')
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Orçamento
+              {orcamentos.length > 0 && (
+                <Button onClick={handleRecalcular} variant="outline" disabled={recalculando}>
+                  {recalculando ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Recalculando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Recalcular
+                    </>
+                  )}
+                </Button>
+              )}
+              <Button onClick={handleAutoGenerate}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Gerar Orçamentos
               </Button>
             </div>
           }
         />
 
         {/* TEMA.md: Month selector - solid bg-card, shadow-1 */}
-        <Card
-          style={{
-            backgroundColor: '#18322C',
-            borderColor: '#2A4942',
-            borderWidth: '1px',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
-          }}
-        >
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleMesAnterior}
-                style={{ color: '#F2F7F5' }}
-                className="hover:bg-[#1D3A34]"
+                className="hover:bg-accent"
                 aria-label="Mês anterior"
               >
                 <ChevronLeft className="h-5 w-5" />
@@ -209,8 +269,8 @@ export default function BudgetsPage() {
               </Button>
 
               <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" style={{ color: '#8CA39C' }} />
-                <span className="text-lg font-semibold capitalize" style={{ color: '#F2F7F5' }}>
+                <Calendar className="h-5 w-5 text-muted-foreground" />
+                <span className="text-lg font-semibold capitalize">
                   {mesFormatado}
                 </span>
               </div>
@@ -219,8 +279,7 @@ export default function BudgetsPage() {
                 variant="ghost"
                 size="icon"
                 onClick={handleProximoMes}
-                style={{ color: '#F2F7F5' }}
-                className="hover:bg-[#1D3A34]"
+                className="hover:bg-accent"
                 aria-label="Próximo mês"
               >
                 <ChevronRight className="h-5 w-5" />
@@ -233,102 +292,58 @@ export default function BudgetsPage() {
         {/* TEMA.md: Summary stats - KPI cards with shadow-2 and icon pills 36px */}
         {resumo && (
           <div className="grid gap-4 md:grid-cols-4">
-            <Card
-              style={{
-                backgroundColor: '#18322C',
-                borderColor: '#2A4942',
-                borderWidth: '1px',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
-              }}
-            >
+            <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3 mb-2">
-                  <div
-                    className="h-9 w-9 rounded-xl flex items-center justify-center"
-                    style={{
-                      backgroundColor: '#142A25',
-                      border: '1px solid #2A4942',
-                    }}
-                  >
-                    <Calendar className="h-4 w-4" style={{ color: '#D4AF37' }} />
+                  <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-muted border border-border">
+                    <Calendar className="h-4 w-4 text-gold" />
                   </div>
-                  <CardDescription className="text-sm" style={{ color: '#B2BDB9' }}>
+                  <CardDescription className="text-sm text-muted-foreground">
                     Planejado
                   </CardDescription>
                 </div>
-                <CardTitle className="text-3xl font-bold" style={{ color: '#D4AF37' }}>
+                <CardTitle className="text-3xl font-bold text-gold">
                   R$ {resumo.total_planejado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card
-              style={{
-                backgroundColor: '#18322C',
-                borderColor: '#2A4942',
-                borderWidth: '1px',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
-              }}
-            >
+            <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3 mb-2">
-                  <div
-                    className="h-9 w-9 rounded-xl flex items-center justify-center"
-                    style={{
-                      backgroundColor: '#142A25',
-                      border: '1px solid #2A4942',
-                    }}
-                  >
-                    <CheckCircle className="h-4 w-4" style={{ color: '#3A8F6E' }} />
+                  <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-muted border border-border">
+                    <CheckCircle className="h-4 w-4 text-primary" />
                   </div>
-                  <CardDescription className="text-sm" style={{ color: '#B2BDB9' }}>
+                  <CardDescription className="text-sm text-muted-foreground">
                     Realizado
                   </CardDescription>
                 </div>
-                <CardTitle className="text-3xl font-bold" style={{ color: '#F2F7F5' }}>
+                <CardTitle className="text-3xl font-bold">
                   R$ {resumo.total_realizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <Progress value={resumo.percentual_usado} className="mb-2" />
-                <p className="text-xs" style={{ color: '#8CA39C' }}>
+                <p className="text-xs text-muted-foreground">
                   {resumo.percentual_usado.toFixed(1)}% usado
                 </p>
               </CardContent>
             </Card>
 
-            <Card
-              style={{
-                backgroundColor: '#18322C',
-                borderColor: '#2A4942',
-                borderWidth: '1px',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
-              }}
-            >
+            <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3 mb-2">
-                  <div
-                    className="h-9 w-9 rounded-xl flex items-center justify-center"
-                    style={{
-                      backgroundColor: '#142A25',
-                      border: '1px solid #2A4942',
-                    }}
-                  >
+                  <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-muted border border-border">
                     <AlertTriangle
-                      className="h-4 w-4"
-                      style={{ color: resumo.total_restante >= 0 ? '#6CCB8C' : '#F07167' }}
+                      className={`h-4 w-4 ${resumo.total_restante >= 0 ? 'text-success' : 'text-destructive'}`}
                     />
                   </div>
-                  <CardDescription className="text-sm" style={{ color: '#B2BDB9' }}>
+                  <CardDescription className="text-sm text-muted-foreground">
                     Restante
                   </CardDescription>
                 </div>
                 <CardTitle
-                  className="text-3xl font-bold"
-                  style={{ color: resumo.total_restante >= 0 ? '#6CCB8C' : '#F07167' }}
+                  className={`text-3xl font-bold ${resumo.total_restante >= 0 ? 'text-success' : 'text-destructive'}`}
                 >
                   R${' '}
                   {Math.abs(resumo.total_restante).toLocaleString('pt-BR', {
@@ -338,35 +353,27 @@ export default function BudgetsPage() {
               </CardHeader>
             </Card>
 
-            <Card
-              style={{
-                backgroundColor: '#18322C',
-                borderColor: '#2A4942',
-                borderWidth: '1px',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 10px 18px rgba(0,0,0,.28)',
-              }}
-            >
+            <Card>
               <CardHeader className="pb-3">
-                <CardDescription className="text-sm mb-3" style={{ color: '#B2BDB9' }}>
+                <CardDescription className="text-sm mb-3 text-muted-foreground">
                   Status Geral
                 </CardDescription>
                 <div className="flex gap-4 text-sm">
                   <div className="flex items-center gap-1.5">
-                    <CheckCircle className="h-4 w-4" style={{ color: '#6CCB8C' }} />
-                    <span className="font-semibold" style={{ color: '#F2F7F5' }}>
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="font-semibold">
                       {resumo.orcamentos_ok}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <AlertTriangle className="h-4 w-4" style={{ color: '#E0B257' }} />
-                    <span className="font-semibold" style={{ color: '#F2F7F5' }}>
+                    <AlertTriangle className="h-4 w-4 text-warning" />
+                    <span className="font-semibold">
                       {resumo.orcamentos_atencao}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <XCircle className="h-4 w-4" style={{ color: '#F07167' }} />
-                    <span className="font-semibold" style={{ color: '#F2F7F5' }}>
+                    <XCircle className="h-4 w-4 text-destructive" />
+                    <span className="font-semibold">
                       {resumo.orcamentos_excedidos}
                     </span>
                   </div>
@@ -377,37 +384,35 @@ export default function BudgetsPage() {
         )}
 
         {/* TEMA.md: Main budgets list - solid bg-card */}
-        <Card
-          style={{
-            backgroundColor: '#18322C',
-            borderColor: '#2A4942',
-            borderWidth: '1px',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: '0 1px 0 rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.25)',
-          }}
-        >
+        <Card>
           <CardHeader className="pb-4">
-            <CardTitle style={{ color: '#F2F7F5' }}>Orçamentos do Mês</CardTitle>
-            <CardDescription style={{ color: '#B2BDB9' }}>
+            <CardTitle>Orçamentos do Mês</CardTitle>
+            <CardDescription className="text-muted-foreground">
               {orcamentos.length} orçamento{orcamentos.length !== 1 ? 's' : ''} cadastrado
               {orcamentos.length !== 1 ? 's' : ''}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {orcamentos.length === 0 ? (
-              <div className="text-center py-12">
-                <p style={{ color: '#8CA39C' }}>Nenhum orçamento cadastrado para este mês</p>
+              <div className="text-center py-12 space-y-4">
+                <Sparkles className="h-12 w-12 mx-auto text-muted-foreground" />
+                <p className="text-lg font-medium text-muted-foreground">
+                  Nenhum orçamento cadastrado
+                </p>
+                <p className="text-sm max-w-md mx-auto text-muted-foreground">
+                  Gere orçamentos automaticamente com base nos seus gastos dos últimos 3 meses
+                </p>
+                <Button onClick={handleAutoGenerate} size="lg" className="mt-2">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Gerar Orçamentos Automáticos
+                </Button>
               </div>
             ) : (
               <div className="space-y-4">
                 {orcamentos.map((orcamento) => (
                   <div
                     key={orcamento.id}
-                    className="flex items-center gap-4 p-4 rounded-lg hover:bg-[#1D3A34] transition-all"
-                    style={{
-                      backgroundColor: '#142A25',
-                      border: '1px solid #2A4942',
-                    }}
+                    className="flex items-center gap-4 p-4 rounded-lg bg-muted border border-border hover:bg-accent transition-all"
                   >
                     <div className="flex-shrink-0">{getStatusIcon(orcamento.status)}</div>
 
@@ -416,16 +421,12 @@ export default function BudgetsPage() {
                         {orcamento.categoria_icone && (
                           <span className="text-lg">{orcamento.categoria_icone}</span>
                         )}
-                        <h4 className="font-semibold truncate" style={{ color: '#F2F7F5' }}>
+                        <h4 className="font-semibold truncate">
                           {orcamento.nome}
                         </h4>
                         <Badge
                           variant="outline"
-                          className="text-xs"
-                          style={{
-                            color: '#8CA39C',
-                            borderColor: '#2A4942',
-                          }}
+                          className="text-xs text-muted-foreground"
                         >
                           {orcamento.categoria_nome || orcamento.centro_custo_nome}
                         </Badge>
@@ -433,8 +434,7 @@ export default function BudgetsPage() {
 
                       <div className="mt-2">
                         <div
-                          className="flex items-center justify-between text-sm mb-1"
-                          style={{ color: '#B2BDB9' }}
+                          className="flex items-center justify-between text-sm mb-1 text-muted-foreground"
                         >
                           <span>
                             R${' '}
@@ -448,20 +448,17 @@ export default function BudgetsPage() {
                           </span>
                           <span>{orcamento.percentual_usado.toFixed(1)}%</span>
                         </div>
-                        <div
-                          className="h-2 rounded-full overflow-hidden"
-                          style={{ backgroundColor: '#2A4942' }}
-                        >
+                        <div className="h-2 rounded-full overflow-hidden bg-muted">
                           <div
-                            className="h-full transition-all"
+                            className={`h-full transition-all ${
+                              orcamento.status === 'ok'
+                                ? 'bg-success'
+                                : orcamento.status === 'atencao'
+                                  ? 'bg-warning'
+                                  : 'bg-destructive'
+                            }`}
                             style={{
                               width: `${Math.min(orcamento.percentual_usado, 100)}%`,
-                              backgroundColor:
-                                orcamento.status === 'ok'
-                                  ? '#6CCB8C'
-                                  : orcamento.status === 'atencao'
-                                    ? '#E0B257'
-                                    : '#F07167',
                             }}
                           />
                         </div>
@@ -470,15 +467,14 @@ export default function BudgetsPage() {
 
                     <div className="flex-shrink-0 text-right">
                       <p
-                        className="text-lg font-bold"
-                        style={{ color: orcamento.valor_restante >= 0 ? '#6CCB8C' : '#F07167' }}
+                        className={`text-lg font-bold ${orcamento.valor_restante >= 0 ? 'text-success' : 'text-destructive'}`}
                       >
                         {orcamento.valor_restante >= 0 ? '+' : '-'}R${' '}
                         {Math.abs(orcamento.valor_restante).toLocaleString('pt-BR', {
                           minimumFractionDigits: 2,
                         })}
                       </p>
-                      <p className="text-xs" style={{ color: '#8CA39C' }}>
+                      <p className="text-xs text-muted-foreground">
                         {getStatusText(orcamento.status)}
                       </p>
                     </div>
@@ -501,6 +497,125 @@ export default function BudgetsPage() {
         {/* Budget History */}
         <BudgetHistoryTable mesReferencia={mesReferencia} />
       </div>
+
+      {/* Auto-Budget Dialog */}
+      <Dialog open={showAutoDialog} onOpenChange={setShowAutoDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Gerar Orçamentos Automáticos</DialogTitle>
+            <DialogDescription>
+              Baseado nos seus gastos dos últimos 3 meses. Ajuste os valores antes de confirmar.
+            </DialogDescription>
+          </DialogHeader>
+
+          {autoLoading ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Analisando transações...</p>
+            </div>
+          ) : sugestoes.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                Nenhuma categoria com transações suficientes (mín. 3) nos últimos 3 meses.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                <span>{sugestoes.filter((s) => s.enabled).length} de {sugestoes.length} selecionados</span>
+                <span>
+                  Total: {formatCurrency(
+                    sugestoes.filter((s) => s.enabled).reduce((sum, s) => sum + s.valor_sugerido, 0)
+                  )}
+                </span>
+              </div>
+
+              {sugestoes.map((s, idx) => (
+                <div
+                  key={s.categoria_id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    s.enabled
+                      ? 'border-border bg-card'
+                      : 'border-border/50 bg-muted/30 opacity-60'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSugestoes((prev) =>
+                        prev.map((item, i) =>
+                          i === idx ? { ...item, enabled: !item.enabled } : item
+                        )
+                      )
+                    }}
+                    className={`flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${
+                      s.enabled
+                        ? 'bg-primary border-primary text-primary-foreground'
+                        : 'border-muted-foreground'
+                    }`}
+                  >
+                    {s.enabled && <CheckCircle className="h-3 w-3" />}
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      {s.categoria_icone && <span className="text-base">{s.categoria_icone}</span>}
+                      <span className="font-medium text-sm truncate">{s.categoria_nome}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {s.total_transacoes} tx / {s.meses_com_gasto} {s.meses_com_gasto === 1 ? 'mês' : 'meses'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Média: {formatCurrency(s.media_mensal)}/mês
+                    </p>
+                  </div>
+
+                  <div className="flex-shrink-0 w-28">
+                    <Input
+                      type="number"
+                      value={s.valor_sugerido}
+                      onChange={(e) => {
+                        const val = Number(e.target.value)
+                        if (val >= 0) {
+                          setSugestoes((prev) =>
+                            prev.map((item, i) =>
+                              i === idx ? { ...item, valor_sugerido: val } : item
+                            )
+                          )
+                        }
+                      }}
+                      className="text-right text-sm h-8"
+                      disabled={!s.enabled}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAutoDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveSugestoes}
+              disabled={autoSaving || autoLoading || sugestoes.filter((s) => s.enabled).length === 0}
+            >
+              {autoSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Criar {sugestoes.filter((s) => s.enabled).length} Orçamentos
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }

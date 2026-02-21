@@ -57,7 +57,7 @@ export async function seedMockTransactions(): Promise<void> {
       console.log('⚠️ Conta padrão já existe, usando existente...')
     }
   } else {
-    contaPrincipal = contas[0]
+    contaPrincipal = contas[0]!
   }
 
   // Mapear categorias por nome para facilitar
@@ -330,7 +330,7 @@ export async function seedMockTransactions(): Promise<void> {
       data: addDays(inicioMes, 5),
       tipo: 'receita',
       categoria_id:
-        catMap['Salário'] || categorias.find((c) => c.tipo === 'receita')?.id || categorias[0].id,
+        catMap['Salário'] || categorias.find((c) => c.tipo === 'receita')?.id || categorias[0]!.id,
       conta_id: contaPrincipal.id,
       tags: ['Essencial', 'Recorrente'],
     },
@@ -343,7 +343,7 @@ export async function seedMockTransactions(): Promise<void> {
         catMap['Trabalho Autônomo'] ||
         catMap['Salário'] ||
         categorias.find((c) => c.tipo === 'receita')?.id ||
-        categorias[0].id,
+        categorias[0]!.id,
       conta_id: contaPrincipal.id,
       tags: ['Importante', 'Extraordinário'],
       observacoes: 'Desenvolvimento de landing page',
@@ -354,7 +354,7 @@ export async function seedMockTransactions(): Promise<void> {
       data: subDays(hoje, 10),
       tipo: 'receita',
       categoria_id:
-        catMap['Vendas'] || categorias.find((c) => c.tipo === 'receita')?.id || categorias[0].id,
+        catMap['Vendas'] || categorias.find((c) => c.tipo === 'receita')?.id || categorias[0]!.id,
       conta_id: contaPrincipal.id,
       tags: ['Extraordinário'],
     },

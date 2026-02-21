@@ -26,8 +26,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TagBadge } from '@/components/ui/tag-badge'
 import { tagService } from '@/lib/services/tag.service'
 import type { Tag } from '@/lib/types'
-import { Hash, Palette, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Hash, Loader2, Palette, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 export default function TagsPage() {
@@ -44,9 +44,30 @@ export default function TagsPage() {
   const [tagParaDeletar, setTagParaDeletar] = useState<Tag | undefined>()
 
   const [tagUsage, setTagUsage] = useState<Map<string, number>>(new Map())
+  const [autoTagging, setAutoTagging] = useState(false)
 
   useEffect(() => {
     loadTags()
+  }, [])
+
+  const handleAutoTag = useCallback(async () => {
+    try {
+      setAutoTagging(true)
+      const result = await tagService.autoTagTransacoes()
+      if (result.tagsCreated > 0 || result.transacoesTagged > 0) {
+        toast.success(
+          `${result.tagsCreated} tags criadas, ${result.transacoesTagged} transações classificadas`
+        )
+      } else {
+        toast.info('Todas as tags automáticas já estão aplicadas')
+      }
+      await loadTags()
+    } catch (error) {
+      console.error('Erro ao auto-tag:', error)
+      toast.error('Erro ao aplicar tags automáticas')
+    } finally {
+      setAutoTagging(false)
+    }
   }, [])
 
   const loadTags = async () => {
@@ -170,14 +191,28 @@ export default function TagsPage() {
           title="Tags"
           description="Gerencie tags para organizar e filtrar suas transações"
           actions={
-            <Button
-              onClick={handleCreate}
-              className="h-10 px-16 font-medium gap-2 text-white"
-              style={{ backgroundColor: '#1a402f' }}
-            >
-              <Plus className="h-4 w-4 flex-shrink-0 text-white" />
-              Nova Tag
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleAutoTag}
+                disabled={autoTagging}
+                variant="outline"
+                className="h-10 px-4 font-medium gap-2 border-secondary/50 text-secondary hover:bg-secondary/10"
+              >
+                {autoTagging ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                Auto-Tag
+              </Button>
+              <Button
+                onClick={handleCreate}
+                className="h-10 px-6 font-medium gap-2 text-white bg-primary"
+              >
+                <Plus className="h-4 w-4 flex-shrink-0 text-white" />
+                Nova Tag
+              </Button>
+            </div>
           }
         />
 
@@ -250,13 +285,25 @@ export default function TagsPage() {
           <CardContent>
             {filteredTags.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Hash className="h-12 w-12 mb-4 text-secondary" />
+                <Sparkles className="h-12 w-12 mb-4 text-secondary" />
                 <h3 className="font-semibold text-lg mb-2 text-foreground">
                   Nenhuma tag encontrada
                 </h3>
-                <p className="text-sm max-w-sm text-muted-foreground">
-                  Crie sua primeira tag customizada para organizar suas transações.
+                <p className="text-sm max-w-sm text-muted-foreground mb-4">
+                  Use o Auto-Tag para classificar suas transações automaticamente com base em padrões como PIX, parcelamento, valor alto e mais.
                 </p>
+                <Button
+                  onClick={handleAutoTag}
+                  disabled={autoTagging}
+                  className="gap-2 text-white bg-primary"
+                >
+                  {autoTagging ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  Classificar Transações Automaticamente
+                </Button>
               </div>
             ) : (
               <div className="overflow-x-auto">

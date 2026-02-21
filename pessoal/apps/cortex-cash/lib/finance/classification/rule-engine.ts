@@ -145,7 +145,7 @@ export async function classifyBatch(
   let unclassified = 0
 
   for (let i = 0; i < request.transacoes.length; i++) {
-    const transacao = request.transacoes[i]
+    const transacao = request.transacoes[i]!
 
     const result = await classifyTransaction(transacao, request.useAI ?? true, request.aiConfig)
 

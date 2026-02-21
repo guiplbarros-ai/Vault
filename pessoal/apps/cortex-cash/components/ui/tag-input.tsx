@@ -66,12 +66,12 @@ export function TagInput({
     if (e.key === 'Enter') {
       e.preventDefault()
       if (showSuggestions && suggestions.length > 0) {
-        addTag(suggestions[selectedIndex].nome)
+        addTag(suggestions[selectedIndex]!.nome)
       } else if (inputValue.trim()) {
         addTag(inputValue)
       }
     } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
-      removeTag(tags[tags.length - 1])
+      removeTag(tags[tags.length - 1]!)
     } else if (e.key === 'ArrowDown' && showSuggestions) {
       e.preventDefault()
       setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : prev))

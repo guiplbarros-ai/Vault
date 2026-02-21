@@ -9,7 +9,6 @@
 
 import { getDB } from '@/lib/db/client'
 import type { CortexCashDB } from '@/lib/db/client'
-import { initializeDatabase } from '@/lib/db/initialize'
 import type React from 'react'
 import { createContext, useContext, useEffect, useState } from 'react'
 
@@ -118,18 +117,6 @@ export function DBProvider({ children }: DBProviderProps) {
         }
 
         console.log('✅ Cortex Cash pronto para uso!')
-
-        // Inicializa dados padrão em background (não bloqueia a UI) e preferencialmente quando o thread estiver ocioso
-        const scheduleSeed = () => {
-          initializeDatabase()
-            .then(() => console.log('✅ Inicialização de dados completa'))
-            .catch((err) => console.error('⚠️ Erro na inicialização (não crítico):', err))
-        }
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          ;(window as any).requestIdleCallback(scheduleSeed, { timeout: 3000 })
-        } else {
-          setTimeout(scheduleSeed, 0)
-        }
       } catch (err) {
         console.error('❌ Erro ao inicializar banco de dados:', err)
         clearTimeout(timeoutId)

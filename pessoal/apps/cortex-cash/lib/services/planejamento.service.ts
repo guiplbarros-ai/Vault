@@ -5,7 +5,7 @@
  * Gerencia cenários de planejamento financeiro e suas configurações
  */
 
-import { addMonths, format, isAfter, isBefore } from 'date-fns'
+import { addMonths, endOfMonth, format, isAfter, isBefore, startOfMonth, subMonths } from 'date-fns'
 import { nanoid } from 'nanoid'
 import { getDB } from '../db/client'
 import { NotFoundError, ValidationError } from '../errors'
@@ -402,6 +402,191 @@ export class PlanejamentoService {
 
     await this.db.objetivos_financeiros.put(updated)
     return updated
+  }
+
+  // ============================================================================
+  // Auto-Generated Scenarios
+  // ============================================================================
+
+  /**
+   * Creates a "Minha Situação Atual" base scenario from real transaction data.
+   * Called automatically when user visits Planning page with 0 scenarios.
+   * Analyzes last 3 months of transactions to set baseline configurations.
+   */
+  private static _creatingDefault: Promise<Cenario> | null = null
+
+  async createDefaultScenario(): Promise<Cenario> {
+    // Prevent concurrent creation (React StrictMode double-render)
+    if (PlanejamentoService._creatingDefault) {
+      return PlanejamentoService._creatingDefault
+    }
+
+    PlanejamentoService._creatingDefault = this._doCreateDefaultScenario()
+    try {
+      return await PlanejamentoService._creatingDefault
+    } finally {
+      PlanejamentoService._creatingDefault = null
+    }
+  }
+
+  private async _doCreateDefaultScenario(): Promise<Cenario> {
+    const db = getDB()
+    const now = new Date()
+
+    // Guard: check if a base scenario already exists
+    const existing = await db.cenarios.filter((c) => c.tipo === 'base').first()
+    if (existing) return existing
+
+    // 1. Create the base scenario
+    const cenario: Cenario = {
+      id: nanoid(),
+      nome: 'Minha Situação Atual',
+      descricao:
+        'Cenário gerado automaticamente com base nos últimos 3 meses de transações reais.',
+      tipo: 'base',
+      horizonte_anos: 1,
+      data_inicio: now,
+      created_at: now,
+      updated_at: now,
+    }
+
+    await db.cenarios.add(cenario)
+
+    // 2. Analyze last 3 months of transactions for baseline
+    const months = [subMonths(now, 2), subMonths(now, 1), now]
+    const allTx: { tipo: string; valor: number; categoria_id?: string }[] = []
+
+    for (const m of months) {
+      const txs = await db.transacoes
+        .where('data')
+        .between(startOfMonth(m), endOfMonth(m), true, true)
+        .toArray()
+      allTx.push(...txs.map((t) => ({ tipo: t.tipo, valor: t.valor, categoria_id: t.categoria_id })))
+    }
+
+    if (allTx.length === 0) return cenario
+
+    // 3. Calculate monthly averages
+    const receitas = allTx.filter((t) => t.tipo === 'receita')
+    const despesas = allTx.filter((t) => t.tipo === 'despesa')
+
+    const avgReceita = receitas.reduce((s, t) => s + Math.abs(t.valor), 0) / 3
+    const avgDespesa = despesas.reduce((s, t) => s + Math.abs(t.valor), 0) / 3
+    const savingRate = avgReceita > 0 ? ((avgReceita - avgDespesa) / avgReceita) * 100 : 0
+
+    // 4. Add baseline configuration for income
+    const receitaConfig: ConfiguracaoComportamento = {
+      id: nanoid(),
+      cenario_id: cenario.id,
+      tipo: 'receita',
+      modo: 'valor_fixo',
+      valor_fixo: Math.round(avgReceita),
+      created_at: now,
+      updated_at: now,
+    }
+    await db.configuracoes_comportamento.add(receitaConfig)
+
+    // 5. Add per-category expense configurations (top categories)
+    const despesaPorCat = new Map<string, number>()
+    for (const tx of despesas) {
+      const catId = tx.categoria_id || 'sem_categoria'
+      despesaPorCat.set(catId, (despesaPorCat.get(catId) || 0) + Math.abs(tx.valor))
+    }
+
+    // Get category names
+    const categorias = await db.categorias.toArray()
+    const catMap = new Map(categorias.map((c) => [c.id, c]))
+
+    const sortedCats = [...despesaPorCat.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+
+    for (const [catId, total] of sortedCats) {
+      const monthlyAvg = total / 3
+      if (monthlyAvg < 50) continue
+
+      const config: ConfiguracaoComportamento = {
+        id: nanoid(),
+        cenario_id: cenario.id,
+        tipo: 'despesa',
+        categoria_id: catId === 'sem_categoria' ? undefined : catId,
+        modo: 'valor_fixo',
+        valor_fixo: Math.round(monthlyAvg),
+        created_at: now,
+        updated_at: now,
+      }
+      await db.configuracoes_comportamento.add(config)
+    }
+
+    // 6. Add saving/investment config
+    if (savingRate > 0) {
+      const investConfig: ConfiguracaoComportamento = {
+        id: nanoid(),
+        cenario_id: cenario.id,
+        tipo: 'investimento',
+        modo: 'percentual',
+        percentual_saving: Math.round(savingRate),
+        taxa_retorno_mensal: 0.8, // ~10% a.a. CDI estimate
+        created_at: now,
+        updated_at: now,
+      }
+      await db.configuracoes_comportamento.add(investConfig)
+    }
+
+    return cenario
+  }
+
+  /**
+   * Creates an optimized copy of a scenario, reducing non-essential expenses by 10%.
+   * Non-essential = everything except Moradia and Saúde.
+   */
+  async createOptimizedScenario(baseScenarioId: string): Promise<Cenario> {
+    const db = getDB()
+    const baseCenario = await this.getCenario(baseScenarioId)
+
+    // Get category names to identify essential ones
+    const categorias = await db.categorias.toArray()
+    const essentialNames = new Set(['moradia', 'saúde', 'saude'])
+    const essentialIds = new Set(
+      categorias
+        .filter((c) => essentialNames.has(c.nome.toLowerCase()))
+        .map((c) => c.id)
+    )
+
+    // Clone the scenario
+    const novoCenario = await this.createCenario({
+      nome: `${baseCenario.nome} (Otimizado -10%)`,
+      descricao:
+        'Cenário otimizado: despesas não-essenciais reduzidas em 10% para aumentar taxa de economia.',
+      horizonte_anos: baseCenario.horizonte_anos,
+    })
+
+    // Copy configs with 10% reduction on non-essential expenses
+    const configs = await this.listConfiguracoes(baseScenarioId)
+    for (const config of configs) {
+      const isEssential = config.categoria_id && essentialIds.has(config.categoria_id)
+      const isExpense = config.tipo === 'despesa'
+      const reduction = isExpense && !isEssential ? 0.9 : 1
+
+      const dto: CreateConfiguracaoDTO = {
+        cenario_id: novoCenario.id,
+        tipo: config.tipo,
+        categoria_id: config.categoria_id,
+        modo: config.modo,
+        percentual_mudanca: config.percentual_mudanca,
+        valor_fixo: config.valor_fixo ? Math.round(config.valor_fixo * reduction) : undefined,
+        data_aplicacao: config.data_aplicacao,
+        percentual_saving: config.percentual_saving,
+        taxa_retorno_mensal: config.taxa_retorno_mensal,
+        evento_descricao: config.evento_descricao,
+        evento_valor: config.evento_valor,
+        evento_data: config.evento_data,
+        evento_tipo: config.evento_tipo,
+      }
+      await this.addConfiguracao(novoCenario.id, dto)
+    }
+
+    return novoCenario
   }
 }
 

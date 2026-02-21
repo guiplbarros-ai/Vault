@@ -11,7 +11,7 @@ function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {
         'focus-visible:border-primary',
         className
       )}
-      style={{ borderColor: '#3a4a43', ...props.style }}
+      style={props.style}
       {...props}
     />
   )

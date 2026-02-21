@@ -114,7 +114,7 @@ export function CategoryTree({
               'text-xs px-2 py-0.5 rounded',
               categoria.tipo === 'receita' && 'bg-green-500/10 text-green-600',
               categoria.tipo === 'despesa' && 'bg-red-500/10 text-red-600',
-              categoria.tipo === 'transferencia' && 'bg-blue-500/10 text-blue-600'
+              categoria.tipo === 'transferencia' && 'bg-primary/10 text-primary'
             )}
           >
             {categoria.tipo === 'receita' && 'Receita'}

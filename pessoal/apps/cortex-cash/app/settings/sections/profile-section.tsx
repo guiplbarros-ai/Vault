@@ -63,7 +63,7 @@ export function ProfileSection() {
           cpf: user.cpf || '',
           biografia: user.biografia || '',
           data_nascimento: user.data_nascimento
-            ? new Date(user.data_nascimento).toISOString().split('T')[0]
+            ? new Date(user.data_nascimento).toISOString().split('T')[0]!
             : '',
         })
         setPreviewUrl(user.avatar_url)
@@ -188,7 +188,7 @@ export function ProfileSection() {
             />
             <Button
               onClick={() => fileInputRef.current?.click()}
-              className="bg-[#3a4a43] text-foreground hover:bg-[#3a4a43]/80 transition-all"
+              className="bg-accent text-foreground hover:bg-accent/80 transition-all"
             >
               <Camera className="w-4 h-4 mr-2" />
               Alterar foto

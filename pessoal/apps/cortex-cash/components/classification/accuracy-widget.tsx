@@ -113,7 +113,7 @@ export function AccuracyWidget() {
             <div className="flex items-center gap-2">
               <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-blue-500"
+                  className="h-full bg-primary"
                   style={{
                     width: `${(stats.por_regra / stats.classificadas) * 100}%`,
                   }}

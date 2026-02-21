@@ -103,17 +103,10 @@ export default function SetupPage() {
 
   if (loading) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{
-          background:
-            'radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%)',
-          backgroundAttachment: 'fixed',
-        }}
-      >
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: '#3A8F6E' }} />
-          <p style={{ color: '#BBC5C2' }}>Verificando sistema...</p>
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Verificando sistema...</p>
         </div>
       </div>
     )
@@ -121,48 +114,21 @@ export default function SetupPage() {
 
   if (hasAdmin) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{
-          background:
-            'radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%)',
-          backgroundAttachment: 'fixed',
-        }}
-      >
-        <Card
-          className="w-full max-w-md"
-          style={{
-            backgroundColor: '#1a362f',
-            border: '1px solid #2d5247',
-            borderRadius: '18px',
-            boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
-          }}
-        >
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mb-4 flex justify-center">
-              <div className="p-4 rounded-full" style={{ backgroundColor: '#1a3329' }}>
-                <CheckCircle className="h-12 w-12" style={{ color: '#5FC883' }} />
+              <div className="p-4 rounded-full bg-muted">
+                <CheckCircle className="h-12 w-12 text-success" />
               </div>
             </div>
-            <CardTitle className="text-2xl" style={{ color: '#F7FAF9' }}>
-              Sistema Configurado
-            </CardTitle>
-            <CardDescription style={{ color: '#BBC5C2' }}>
+            <CardTitle className="text-2xl">Sistema Configurado</CardTitle>
+            <CardDescription>
               O sistema já possui um administrador configurado.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
-            <Button
-              onClick={() => router.push('/')}
-              style={{
-                backgroundColor: '#3A8F6E',
-                color: '#F7FAF9',
-                borderRadius: '12px',
-                border: 'none',
-              }}
-            >
-              Ir para o Dashboard
-            </Button>
+            <Button onClick={() => router.push('/')}>Ir para o Dashboard</Button>
           </CardContent>
         </Card>
       </div>
@@ -170,42 +136,23 @@ export default function SetupPage() {
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-6"
-      style={{
-        background:
-          'radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%)',
-        backgroundAttachment: 'fixed',
-      }}
-    >
-      <Card
-        className="w-full max-w-md"
-        style={{
-          backgroundColor: '#1a362f',
-          border: '1px solid #2d5247',
-          borderRadius: '18px',
-          boxShadow: '0 1px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.3)',
-        }}
-      >
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mb-4 flex justify-center">
             <div className="w-20 h-20 relative">
               <Image src="/logo.png" alt="Cortex Cash" fill className="object-contain" />
             </div>
           </div>
-          <CardTitle className="text-2xl" style={{ color: '#F7FAF9' }}>
-            Configuração Inicial
-          </CardTitle>
-          <CardDescription style={{ color: '#BBC5C2' }}>
+          <CardTitle className="text-2xl">Configuração Inicial</CardTitle>
+          <CardDescription>
             Crie o primeiro usuário administrador do sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="nome" style={{ color: '#F7FAF9' }}>
-                Nome Completo
-              </Label>
+              <Label htmlFor="nome">Nome Completo</Label>
               <Input
                 id="nome"
                 type="text"
@@ -214,19 +161,11 @@ export default function SetupPage() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 disabled={submitting}
                 required
-                style={{
-                  backgroundColor: '#13251f',
-                  border: '1px solid #2d5247',
-                  color: '#F7FAF9',
-                  borderRadius: '10px',
-                }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" style={{ color: '#F7FAF9' }}>
-                Email
-              </Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -235,19 +174,11 @@ export default function SetupPage() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 disabled={submitting}
                 required
-                style={{
-                  backgroundColor: '#13251f',
-                  border: '1px solid #2d5247',
-                  color: '#F7FAF9',
-                  borderRadius: '10px',
-                }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="senha" style={{ color: '#F7FAF9' }}>
-                Senha
-              </Label>
+              <Label htmlFor="senha">Senha</Label>
               <Input
                 id="senha"
                 type="password"
@@ -257,19 +188,11 @@ export default function SetupPage() {
                 disabled={submitting}
                 required
                 minLength={6}
-                style={{
-                  backgroundColor: '#13251f',
-                  border: '1px solid #2d5247',
-                  color: '#F7FAF9',
-                  borderRadius: '10px',
-                }}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmarSenha" style={{ color: '#F7FAF9' }}>
-                Confirmar Senha
-              </Label>
+              <Label htmlFor="confirmarSenha">Confirmar Senha</Label>
               <Input
                 id="confirmarSenha"
                 type="password"
@@ -279,26 +202,10 @@ export default function SetupPage() {
                 disabled={submitting}
                 required
                 minLength={6}
-                style={{
-                  backgroundColor: '#13251f',
-                  border: '1px solid #2d5247',
-                  color: '#F7FAF9',
-                  borderRadius: '10px',
-                }}
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={submitting}
-              style={{
-                backgroundColor: '#3A8F6E',
-                color: '#F7FAF9',
-                borderRadius: '12px',
-                border: 'none',
-              }}
-            >
+            <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -310,15 +217,8 @@ export default function SetupPage() {
             </Button>
           </form>
 
-          <div
-            className="mt-6 p-4 rounded-lg"
-            style={{
-              backgroundColor: '#152b26',
-              border: '1px solid #2d5247',
-              borderRadius: '14px',
-            }}
-          >
-            <p className="text-xs" style={{ color: '#94a8a1' }}>
+          <div className="mt-6 p-4 rounded-lg bg-muted border">
+            <p className="text-xs text-muted-foreground">
               Este será o primeiro usuário do sistema com privilégios de administrador. Você poderá
               criar mais usuários posteriormente através das configurações.
             </p>

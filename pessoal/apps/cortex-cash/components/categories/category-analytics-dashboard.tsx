@@ -9,7 +9,9 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { getChartColors } from '@/lib/constants/colors'
 import { transacaoService } from '@/lib/services/transacao.service'
+import { CHART_COLORS, CHART_THEME } from '@/lib/utils/chart-theme'
 import type { Categoria } from '@/lib/types'
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -137,22 +139,13 @@ export function CategoryAnalyticsDashboard({
     }).format(value)
   }
 
-  const COLORS = [
-    '#3B82F6', // blue
-    '#10B981', // green
-    '#F59E0B', // amber
-    '#EF4444', // red
-    '#8B5CF6', // purple
-    '#EC4899', // pink
-    '#14B8A6', // teal
-    '#F97316', // orange
-  ]
+  const COLORS = getChartColors()
 
   // Preparar dados para o gráfico de pizza
   const pieChartData = gastosPorCategoria.slice(0, 8).map((cat, index) => ({
     name: cat.categoria_nome,
     value: cat.total_gasto,
-    fill: COLORS[index % COLORS.length],
+    fill: COLORS[index % COLORS.length]!,
   }))
 
   // Preparar dados para o gráfico de barras (variações)
@@ -286,18 +279,9 @@ export function CategoryAnalyticsDashboard({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{
-                    backgroundColor: 'rgba(18, 50, 44, 0.99)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    border: '2px solid hsl(var(--border))',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'hsl(var(--fg-primary))',
-                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
-                    padding: '14px',
-                  }}
-                  labelStyle={{ color: 'hsl(var(--fg-primary))', fontWeight: 600 }}
+                  formatter={(value) => formatCurrency(value as number)}
+                  contentStyle={CHART_THEME.tooltip.contentStyle}
+                  labelStyle={CHART_THEME.tooltip.labelStyle}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -349,7 +333,7 @@ export function CategoryAnalyticsDashboard({
                         className="h-2 rounded-full"
                         style={{
                           width: `${percentual}%`,
-                          backgroundColor: COLORS[index % COLORS.length],
+                          backgroundColor: COLORS[index % COLORS.length]!,
                         }}
                       />
                       <span className="text-muted-foreground text-xs">
@@ -383,22 +367,13 @@ export function CategoryAnalyticsDashboard({
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: 'rgba(18, 50, 44, 0.99)',
-                      backdropFilter: 'blur(16px)',
-                      WebkitBackdropFilter: 'blur(16px)',
-                      border: '2px solid hsl(var(--border))',
-                      borderRadius: 'var(--radius-md)',
-                      color: 'hsl(var(--fg-primary))',
-                      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
-                      padding: '14px',
-                    }}
-                    labelStyle={{ color: 'hsl(var(--fg-primary))', fontWeight: 600 }}
+                    formatter={(value) => formatCurrency(value as number)}
+                    contentStyle={CHART_THEME.tooltip.contentStyle}
+                    labelStyle={CHART_THEME.tooltip.labelStyle}
                   />
                   <Legend />
-                  <Bar dataKey="anterior" name="Mês Anterior" fill="#6B7280" />
-                  <Bar dataKey="atual" name="Mês Atual" fill="#3B82F6" />
+                  <Bar dataKey="anterior" name="Mês Anterior" fill={CHART_COLORS.neutral} />
+                  <Bar dataKey="atual" name="Mês Atual" fill={CHART_COLORS.primary} />
                 </BarChart>
               </ResponsiveContainer>
 

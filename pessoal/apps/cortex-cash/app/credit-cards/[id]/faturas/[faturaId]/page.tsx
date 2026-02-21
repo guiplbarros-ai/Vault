@@ -180,15 +180,15 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      aberta: { label: 'Aberta', color: '#3B82F6' },
-      fechada: { label: 'Fechada', color: '#F59E0B' },
-      paga: { label: 'Paga', color: '#10B981' },
-      vencida: { label: 'Vencida', color: '#EF4444' },
+      aberta: { label: 'Aberta', className: 'bg-blue-500 text-white' },
+      fechada: { label: 'Fechada', className: 'bg-warning text-white' },
+      paga: { label: 'Paga', className: 'bg-success text-white' },
+      vencida: { label: 'Vencida', className: 'bg-destructive text-white' },
     }
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.aberta
 
-    return <Badge style={{ backgroundColor: config.color, color: '#ffffff' }}>{config.label}</Badge>
+    return <Badge className={config.className}>{config.label}</Badge>
   }
 
   // Calcular estatísticas
@@ -263,8 +263,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
           actions={
             <Button
               onClick={handleNewLancamento}
-              className="text-white"
-              style={{ backgroundColor: '#18B0A4', color: '#ffffff' }}
+              className="bg-primary text-white"
             >
               <Plus className="mr-2 h-4 w-4" />
               Novo Lançamento
@@ -274,12 +273,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
 
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-            }}
-          >
+          <Card className="bg-card">
             <CardHeader className="pb-3">
               <CardDescription className="text-white/70">Status</CardDescription>
               <div className="mt-2">{getStatusBadge(fatura.status)}</div>
@@ -291,12 +285,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          <Card
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-            }}
-          >
+          <Card className="bg-card">
             <CardHeader className="pb-3">
               <CardDescription className="text-white/70">Valor Total</CardDescription>
               <CardTitle className="text-3xl text-white">
@@ -308,12 +297,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          <Card
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-            }}
-          >
+          <Card className="bg-card">
             <CardHeader className="pb-3">
               <CardDescription className="text-white/70">Valor Pago</CardDescription>
               <CardTitle className="text-3xl text-green-400">
@@ -325,12 +309,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          <Card
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-            }}
-          >
+          <Card className="bg-card">
             <CardHeader className="pb-3">
               <CardDescription className="text-white/70">Valor Pendente</CardDescription>
               <CardTitle className="text-3xl text-amber-400">
@@ -345,12 +324,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
 
         {/* Categorias */}
         {categoriasSorted.length > 0 && (
-          <Card
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-            }}
-          >
+          <Card className="bg-card">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <PieChart className="h-5 w-5" />
@@ -379,7 +353,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
                           className="h-full transition-all"
                           style={{
                             width: `${percentual}%`,
-                            backgroundColor: data.categoria?.cor || '#18B0A4',
+                            backgroundColor: data.categoria?.cor || 'hsl(var(--primary))',
                           }}
                         />
                       </div>
@@ -392,12 +366,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
         )}
 
         {/* Lançamentos */}
-        <Card
-          style={{
-            background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-            backgroundColor: '#3B5563',
-          }}
-        >
+        <Card className="bg-card">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <Receipt className="h-5 w-5" />
@@ -417,8 +386,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
                 </p>
                 <Button
                   onClick={handleNewLancamento}
-                  className="text-white"
-                  style={{ backgroundColor: '#18B0A4', color: '#ffffff' }}
+                  className="bg-primary text-white"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Adicionar Primeiro Lançamento
@@ -466,10 +434,8 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
                           {categoria ? (
                             <Badge
                               variant="outline"
-                              style={{
-                                borderColor: categoria.cor || '#18B0A4',
-                                color: '#ffffff',
-                              }}
+                              className="text-foreground"
+                              style={{ borderColor: categoria.cor || 'hsl(var(--primary))' }}
                             >
                               {categoria.icone} {categoria.nome}
                             </Badge>
@@ -493,24 +459,18 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               align="end"
-                              className="!bg-gray-800 !border-gray-700"
-                              style={{
-                                backgroundColor: '#1f2937',
-                                borderColor: '#374151',
-                              }}
+                              className="bg-popover border-border"
                             >
                               <DropdownMenuItem
                                 onClick={() => handleEdit(lancamento)}
-                                className="!text-white hover:!bg-gray-700 cursor-pointer"
-                                style={{ color: '#ffffff' }}
+                                className="text-foreground hover:bg-accent cursor-pointer"
                               >
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Editar
                               </DropdownMenuItem>
-                              <DropdownMenuSeparator className="!bg-gray-600" />
+                              <DropdownMenuSeparator className="bg-border" />
                               <DropdownMenuItem
-                                className="!text-red-400 hover:!bg-gray-700 cursor-pointer"
-                                style={{ color: '#f87171' }}
+                                className="text-destructive hover:bg-accent cursor-pointer"
                                 onClick={() => {
                                   setLancamentoToDelete(lancamento.id)
                                   setDeleteDialogOpen(true)
@@ -534,12 +494,7 @@ export default function FaturaDetalhesPage({ params }: PageProps) {
         {/* Form Dialog */}
         <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
           <DialogContent
-            className="max-w-2xl max-h-[90vh] overflow-y-auto"
-            style={{
-              background: 'linear-gradient(135deg, #3B5563 0%, #334455 100%)',
-              backgroundColor: '#3B5563',
-              borderColor: '#374151',
-            }}
+            className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border-border"
           >
             <DialogHeader>
               <DialogTitle className="text-white">

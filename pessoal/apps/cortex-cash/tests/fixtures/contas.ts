@@ -75,8 +75,8 @@ export const contas: Conta[] = [
   },
 ]
 
-export const contaAtiva = contas[0]
-export const contaPoupanca = contas[1]
-export const contaInvestimento = contas[2]
-export const contaCarteira = contas[3]
-export const contaInativa = contas[4]
+export const contaAtiva = contas[0]!
+export const contaPoupanca = contas[1]!
+export const contaInvestimento = contas[2]!
+export const contaCarteira = contas[3]!
+export const contaInativa = contas[4]!

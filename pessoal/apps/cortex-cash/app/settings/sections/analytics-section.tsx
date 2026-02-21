@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { getDB } from '@/lib/db/client'
+import { CHART_COLORS, CHART_THEME } from '@/lib/utils/chart-theme'
 import { cn } from '@/lib/utils'
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -165,9 +166,9 @@ export function AnalyticsSection() {
       }
 
       const performance = [
-        { name: 'Regras', value: byRules, color: '#3B82F6' },
-        { name: 'IA', value: byAI, color: '#A855F7' },
-        { name: 'Manual', value: manual, color: '#6B7280' },
+        { name: 'Regras', value: byRules, color: CHART_COLORS.investment },
+        { name: 'IA', value: byAI, color: CHART_COLORS.result },
+        { name: 'Manual', value: manual, color: CHART_COLORS.neutral },
       ]
 
       setData({
@@ -262,12 +263,12 @@ export function AnalyticsSection() {
         >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2 text-white">
-              <Target className="w-4 h-4" style={{ color: '#18B0A4' }} />
+              <Target className="w-4 h-4 text-primary" />
               Total de Classificações
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold" style={{ color: '#18B0A4' }}>
+            <div className="text-3xl font-bold text-primary">
               {overview.total_classifications}
             </div>
             <p className="text-xs text-white/60 mt-1">
@@ -380,9 +381,9 @@ export function AnalyticsSection() {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="rules" name="Regras" fill="#3B82F6" stackId="a" />
-                  <Bar dataKey="ai" name="IA" fill="#A855F7" stackId="a" />
-                  <Bar dataKey="manual" name="Manual" fill="#6B7280" stackId="a" />
+                  <Bar dataKey="rules" name="Regras" fill={CHART_COLORS.investment} stackId="a" />
+                  <Bar dataKey="ai" name="IA" fill={CHART_COLORS.result} stackId="a" />
+                  <Bar dataKey="manual" name="Manual" fill={CHART_COLORS.neutral} stackId="a" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -419,9 +420,9 @@ export function AnalyticsSection() {
                     type="monotone"
                     dataKey="accuracy"
                     name="Acurácia (%)"
-                    stroke="#10B981"
+                    stroke={CHART_COLORS.income}
                     strokeWidth={2}
-                    dot={{ fill: '#10B981', r: 4 }}
+                    dot={{ fill: CHART_COLORS.income, r: 4 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -456,10 +457,10 @@ export function AnalyticsSection() {
                       border: '1px solid rgba(255,255,255,0.2)',
                       borderRadius: '8px',
                     }}
-                    formatter={(value: number) => `$${value.toFixed(3)}`}
+                    formatter={(value) => `$${(value as number).toFixed(3)}`}
                   />
                   <Legend />
-                  <Bar dataKey="cost" name="Custo (USD)" fill="#FBBF24" />
+                  <Bar dataKey="cost" name="Custo (USD)" fill={CHART_COLORS.result} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>

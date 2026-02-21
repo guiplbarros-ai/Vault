@@ -94,7 +94,7 @@ export function ExpenseDistributionChart() {
           return {
             name: 'Sem Categoria',
             value: Math.round(value),
-            color: COLORS[index % COLORS.length],
+            color: COLORS[index % COLORS.length]!,
             percentage: Math.round((value / total) * 100),
           }
         }
@@ -103,7 +103,7 @@ export function ExpenseDistributionChart() {
         return {
           name: categoria?.nome || 'Sem categoria',
           value: Math.round(value),
-          color: categoria?.cor || COLORS[index % COLORS.length],
+          color: categoria?.cor || COLORS[index % COLORS.length]!,
           percentage: Math.round((value / total) * 100),
         }
       })
@@ -235,8 +235,8 @@ export function ExpenseDistributionChart() {
           <p className="text-sm text-secondary">Nenhuma despesa encontrada</p>
         </div>
       ) : (
-        <div className="flex-1 flex items-center min-h-0">
-          <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+        <div className="flex-1 flex items-center">
+          <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
                 data={data}

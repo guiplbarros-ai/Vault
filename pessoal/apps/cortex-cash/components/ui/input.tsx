@@ -13,7 +13,7 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
         'aria-invalid:border-destructive aria-invalid:shadow-[0_0_0_2px_rgba(240,113,103,0.15)]',
         className
       )}
-      style={{ borderColor: '#3a4a43', ...props.style }}
+      style={props.style}
       {...props}
     />
   )

@@ -169,8 +169,7 @@ export function AdminSection() {
           <Button
             onClick={promoteToAdmin}
             disabled={loading}
-            className="w-full"
-            style={{ backgroundColor: '#18B0A4' }}
+            className="w-full bg-primary"
           >
             {loading ? 'Processando...' : 'Promover a Administrador'}
           </Button>

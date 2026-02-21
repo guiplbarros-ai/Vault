@@ -266,7 +266,7 @@ export default function ClassificationRulesPage() {
               }}
             >
               <div className="text-white/60 text-sm font-medium">Total de Aplicações</div>
-              <div className="text-2xl font-bold" style={{ color: '#18B0A4' }}>
+              <div className="text-2xl font-bold text-primary">
                 {stats.total_aplicacoes}
               </div>
             </div>

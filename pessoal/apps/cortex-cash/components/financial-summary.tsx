@@ -249,7 +249,7 @@ export function FinancialSummary() {
             <CreditCard className="h-4 w-4" />
             Limite de Crédito
           </CardDescription>
-          <CardTitle className="text-3xl text-blue-400">
+          <CardTitle className="text-3xl text-primary">
             {formatCurrency(data.creditAvailable)}
           </CardTitle>
         </CardHeader>

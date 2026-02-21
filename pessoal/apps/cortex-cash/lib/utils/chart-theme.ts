@@ -3,11 +3,21 @@
  * "Tema — Orientação de UI (Dark, sólido)"
  */
 
+export const CHART_COLORS = {
+  income: '#6CCB8C',     // success green
+  expense: '#F07167',    // destructive red
+  investment: '#7AA6BF', // info blue
+  result: '#E0B257',     // warning yellow
+  gold: '#D4AF37',       // gold
+  primary: '#3A8F6E',    // primary green
+  neutral: '#9AA4AD',    // neutral gray
+} as const
+
 export const CHART_THEME = {
   // Card styles (superfície sólida, sem gradientes)
   card: {
-    backgroundColor: '#18322C', // --bg-card
-    borderColor: '#2A4942', // --border
+    backgroundColor: '#2f3734', // --bg-card
+    borderColor: '#4e5653', // --border
     borderWidth: '1px',
     borderRadius: 'var(--radius-lg)',
     boxShadow: 'var(--shadow-1)',
@@ -15,26 +25,26 @@ export const CHART_THEME = {
 
   // Typography
   title: {
-    color: '#F2F7F5', // --fg-primary
+    color: '#eaedeb', // --fg-primary
     fontSize: '1.125rem',
     fontWeight: 700,
     letterSpacing: '-0.2px',
   },
 
   subtitle: {
-    color: '#B2BDB9', // --fg-secondary
+    color: '#939f9a', // --fg-secondary
     fontSize: '0.875rem',
   },
 
   // Grid e eixos
   grid: {
-    stroke: '#1A3530', // splitLine do TEMA.md
+    stroke: '#333b38', // grid line
     strokeDasharray: '3 3',
   },
 
   axis: {
     tick: {
-      fill: '#B2BDB9', // --fg-secondary
+      fill: '#939f9a', // --fg-secondary
       fontSize: 12,
     },
     line: false,
@@ -44,20 +54,20 @@ export const CHART_THEME = {
   // Tooltip
   tooltip: {
     contentStyle: {
-      backgroundColor: '#142A25', // --bg-card-2
-      border: '1px solid #2A4942', // --border
+      backgroundColor: '#202725', // --bg-card-2 (muted)
+      border: '1px solid #4e5653', // --border
       borderRadius: 'var(--radius-md)',
-      color: '#F2F7F5', // --fg-primary
+      color: '#eaedeb', // --fg-primary
       boxShadow: 'var(--shadow-2)',
       padding: '8px 12px',
     },
     labelStyle: {
-      color: '#F2F7F5', // --fg-primary
+      color: '#eaedeb', // --fg-primary
       fontWeight: 600,
       marginBottom: '4px',
     },
     cursor: {
-      fill: '#1D3A34', // --hover
+      fill: '#3e4744', // --hover (accent)
       opacity: 0.3,
     },
   },
@@ -66,14 +76,14 @@ export const CHART_THEME = {
   legend: {
     wrapperStyle: {
       paddingTop: '15px',
-      color: '#F2F7F5', // --fg-primary
+      color: '#eaedeb', // --fg-primary
     },
     iconType: 'circle' as const,
   },
 
   // Loading skeleton
   skeleton: {
-    color: '#8CA39C', // --fg-muted
+    color: '#7d8884', // --fg-muted
   },
 } as const
 

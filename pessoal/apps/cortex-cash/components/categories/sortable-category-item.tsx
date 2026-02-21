@@ -185,7 +185,7 @@ export function SortableCategoryItem({
           'text-xs font-medium px-3 py-1 rounded-full',
           categoria.tipo === 'receita' && 'bg-green-500/90 text-white',
           categoria.tipo === 'despesa' && 'bg-red-500/90 text-white',
-          categoria.tipo === 'transferencia' && 'bg-blue-500/90 text-white'
+          categoria.tipo === 'transferencia' && 'bg-primary/90 text-white'
         )}
       >
         {categoria.tipo === 'receita' && 'Receita'}

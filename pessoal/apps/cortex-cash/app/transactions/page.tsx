@@ -563,16 +563,8 @@ export default function TransactionsPage() {
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <div
-              className="animate-spin rounded-full h-12 w-12 mx-auto mb-4"
-              style={{
-                borderWidth: '2px',
-                borderStyle: 'solid',
-                borderColor: 'transparent',
-                borderBottomColor: '#3A8F6E',
-              }}
-            ></div>
-            <p style={{ color: '#B2BDB9' }}>Carregando transações...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-transparent border-b-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando transações...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -661,14 +653,13 @@ export default function TransactionsPage() {
                   >
                     <DialogTrigger asChild>
                       <Button
-                        className="h-10 font-medium gap-2 text-white"
-                        style={{ backgroundColor: '#1a402f' }}
+                        className="h-10 font-medium gap-2"
                         onClick={() => {
                           setEditMode(false)
                           setTransactionToEdit(null)
                         }}
                       >
-                        <Plus className="h-4 w-4 flex-shrink-0 text-white" />
+                        <Plus className="h-4 w-4 flex-shrink-0" />
                         Nova Transação Manual
                       </Button>
                     </DialogTrigger>
@@ -739,7 +730,6 @@ export default function TransactionsPage() {
                       setSelectedTag('all')
                       setSelectedSubcategory('all')
                     }}
-                    style={{ backgroundColor: '#1a402f' }}
                   >
                     Todas
                   </Button>
@@ -750,7 +740,6 @@ export default function TransactionsPage() {
                       setSelectedCategory('all')
                       setSelectedSubcategory('all')
                     }}
-                    style={{ backgroundColor: '#1a402f' }}
                   >
                     Receitas
                   </Button>
@@ -761,7 +750,6 @@ export default function TransactionsPage() {
                       setSelectedCategory('all')
                       setSelectedSubcategory('all')
                     }}
-                    style={{ backgroundColor: '#1a402f' }}
                   >
                     Despesas
                   </Button>

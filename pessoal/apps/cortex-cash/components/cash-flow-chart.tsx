@@ -3,6 +3,7 @@
 import { useLocalizationSettings, useSetting } from '@/app/providers/settings-provider'
 import { Card } from '@/components/ui/card'
 import { THEME_COLORS } from '@/lib/constants/colors'
+import { CHART_COLORS } from '@/lib/utils/chart-theme'
 import { contaService } from '@/lib/services/conta.service'
 import { transacaoService } from '@/lib/services/transacao.service'
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
@@ -45,13 +46,12 @@ export function CashFlowChart() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   }, [theme])
 
-  // ✅ Compute colors from new color scheme
   const colors = useMemo(
     () => ({
-      income: '#6CCB8C', // Verde (Receitas)
-      expenses: '#F07167', // Vermelho (Despesas)
-      investments: '#4A90E2', // Azul (Investimentos)
-      result: '#E0B257', // Amarelo (Resultado)
+      income: CHART_COLORS.income,
+      expenses: CHART_COLORS.expense,
+      investments: CHART_COLORS.investment,
+      result: CHART_COLORS.result,
     }),
     []
   )
@@ -200,8 +200,8 @@ export function CashFlowChart() {
           <p className="text-sm text-secondary">Nenhuma transação encontrada</p>
         </div>
       ) : (
-        <div className="-mx-2 -mb-6 flex-1 flex items-center min-h-0">
-          <ResponsiveContainer width="100%" height="100%" minHeight={350}>
+        <div className="-mx-2 -mb-6 flex-1 flex items-center">
+          <ResponsiveContainer width="100%" height={350}>
             <ComposedChart
               data={data}
               barGap={8}

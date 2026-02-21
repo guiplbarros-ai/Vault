@@ -1,16 +1,15 @@
 'use client'
 
-import { useLocalizationSettings, useSettings } from '@/app/providers/settings-provider'
+import { useLocalizationSettings } from '@/app/providers/settings-provider'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { MonthPicker } from '@/components/ui/month-picker'
 import { PageHeader } from '@/components/ui/page-header'
 import { StatCard } from '@/components/ui/stat-card'
-import { THEME_COLORS } from '@/lib/constants/colors'
 import { contaService } from '@/lib/services/conta.service'
 import { transacaoService } from '@/lib/services/transacao.service'
-import { endOfMonth, startOfMonth } from 'date-fns'
+import { endOfMonth, getDaysInMonth, isSameMonth, startOfMonth } from 'date-fns'
 import {
   ArrowRight,
   Database,
@@ -47,6 +46,10 @@ const WealthEvolutionChart = dynamic(() => import('@/components/wealth-evolution
   loading: () => <ChartSkeleton />,
   ssr: false,
 })
+const FinancialHealthScore = dynamic(() => import('@/components/financial-health-score'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false,
+})
 
 // ✅ Lazy load other heavy components
 const RecentTransactions = dynamic(() => import('@/components/recent-transactions'), {
@@ -77,6 +80,8 @@ interface DashboardStats {
   monthlyIncome: number
   monthlyExpenses: number
   monthlyResult: number
+  projectedExpenses: number | null
+  projectedResult: number | null
 }
 
 export default function DashboardPage() {
@@ -87,12 +92,12 @@ export default function DashboardPage() {
     monthlyIncome: 0,
     monthlyExpenses: 0,
     monthlyResult: 0,
+    projectedExpenses: null,
+    projectedResult: null,
   })
   const [loading, setLoading] = useState(true)
   const [hasData, setHasData] = useState(false)
-  const { getSetting } = useSettings()
   const { formatCurrency } = useLocalizationSettings()
-  const theme = getSetting<'light' | 'dark' | 'auto'>('appearance.theme')
 
   useEffect(() => {
     let mounted = true
@@ -153,12 +158,29 @@ export default function DashboardPage() {
         // Positivo = Saving, Negativo = Queima de caixa
         const monthlyResult = monthlyIncome - monthlyExpenses
 
+        // Projeção: se é o mês atual e ainda não acabou, projeta despesas
+        let projectedExpenses: number | null = null
+        let projectedResult: number | null = null
+        const now = new Date()
+        const isCurrentMonth = isSameMonth(selectedMonth, now)
+        if (isCurrentMonth && monthlyExpenses > 0) {
+          const dayOfMonth = now.getDate()
+          const totalDays = getDaysInMonth(now)
+          if (dayOfMonth < totalDays) {
+            const dailyAvg = monthlyExpenses / dayOfMonth
+            projectedExpenses = dailyAvg * totalDays
+            projectedResult = monthlyIncome - projectedExpenses
+          }
+        }
+
         if (mounted) {
           setStats({
             totalBalance,
             monthlyIncome,
             monthlyExpenses,
             monthlyResult,
+            projectedExpenses,
+            projectedResult,
           })
         }
       } catch (error) {
@@ -177,70 +199,59 @@ export default function DashboardPage() {
     }
   }, [selectedMonth, dateRange])
 
-  // Detecta se está em dark mode (reativo a mudanças de tema)
-  const isDark = useMemo(() => {
-    if (typeof window === 'undefined') return false
-    if (theme === 'dark') return true
-    if (theme === 'light') return false
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-  }, [theme])
+  // Determine result variant based on projected or actual result
+  const resultVariant: 'success' | 'error' = useMemo(() => {
+    if (stats.projectedResult != null) {
+      return stats.projectedResult >= 0 ? 'success' : 'error'
+    }
+    return stats.monthlyResult >= 0 ? 'success' : 'error'
+  }, [stats.projectedResult, stats.monthlyResult])
 
-  // ✅ Memoizar statsCards para evitar recriação a cada render
-  // Cores baseadas em TEMA.md: superfícies sólidas sem translucência
+  function getResultDescription(): string | undefined {
+    if (loading) return undefined
+    if (stats.projectedResult != null) {
+      const label =
+        stats.projectedResult > 0 ? 'Saving' : stats.projectedResult < 0 ? 'Queima' : 'Neutro'
+      return `Projeção: ${formatCurrency(stats.projectedResult)} (${label})`
+    }
+    if (stats.monthlyResult > 0) return 'Saving'
+    if (stats.monthlyResult < 0) return 'Queima de caixa'
+    return 'Neutro'
+  }
+
   const statsCards = useMemo(
     () => [
       {
         title: 'Saldo Total',
         value: loading ? 'Carregando...' : formatCurrency(stats.totalBalance),
         icon: Wallet,
-        iconColor: THEME_COLORS.money,
-        iconBgColor: THEME_COLORS.bgCard2, // Superfície aninhada sólida
-        titleColor: THEME_COLORS.fgSecondary,
-        valueClassName: 'text-gold',
-        cardBgColor: THEME_COLORS.bgCard, // Superfície sólida
-        bottomBarColor: THEME_COLORS.divider,
+        variant: 'gold' as const,
       },
       {
         title: 'Receitas do Mês',
         value: loading ? 'Carregando...' : formatCurrency(stats.monthlyIncome),
         icon: TrendingUp,
-        iconColor: THEME_COLORS.success,
-        iconBgColor: THEME_COLORS.bgCard2,
-        titleColor: THEME_COLORS.fgSecondary,
-        valueClassName: 'text-success',
-        cardBgColor: THEME_COLORS.bgCard,
-        bottomBarColor: THEME_COLORS.divider,
+        variant: 'success' as const,
       },
       {
         title: 'Despesas do Mês',
         value: loading ? 'Carregando...' : formatCurrency(stats.monthlyExpenses),
+        description:
+          !loading && stats.projectedExpenses != null
+            ? `Projeção: ~${formatCurrency(stats.projectedExpenses)}`
+            : undefined,
         icon: TrendingDown,
-        iconColor: THEME_COLORS.error,
-        iconBgColor: THEME_COLORS.bgCard2,
-        titleColor: THEME_COLORS.fgSecondary,
-        valueClassName: 'text-destructive',
-        cardBgColor: THEME_COLORS.bgCard,
-        bottomBarColor: THEME_COLORS.divider,
+        variant: 'error' as const,
       },
       {
         title: 'Resultado',
         value: loading ? 'Carregando...' : formatCurrency(stats.monthlyResult),
-        description:
-          stats.monthlyResult > 0
-            ? 'Saving'
-            : stats.monthlyResult < 0
-              ? 'Queima de caixa'
-              : 'Neutro',
+        description: getResultDescription(),
         icon: PiggyBank,
-        iconColor: stats.monthlyResult >= 0 ? THEME_COLORS.success : THEME_COLORS.error,
-        iconBgColor: THEME_COLORS.bgCard2,
-        titleColor: THEME_COLORS.fgSecondary,
-        valueColor: stats.monthlyResult >= 0 ? THEME_COLORS.success : THEME_COLORS.error,
-        cardBgColor: THEME_COLORS.bgCard,
-        bottomBarColor: stats.monthlyResult >= 0 ? THEME_COLORS.success : THEME_COLORS.error,
+        variant: resultVariant,
       },
     ],
-    [stats, loading, formatCurrency]
+    [stats, loading, formatCurrency, resultVariant]
   )
 
   return (
@@ -278,10 +289,7 @@ export default function DashboardPage() {
         {!loading && !hasData && (
           <Card className="glass-card-3d">
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <div
-                className="rounded-lg p-4 mb-6"
-                style={{ backgroundColor: 'hsl(var(--bg-card-2))' }}
-              >
+              <div className="rounded-lg p-4 mb-6 bg-muted">
                 <Database className="h-12 w-12 text-foreground" />
               </div>
               <h3 className="text-2xl font-bold text-foreground mb-2">Nenhum dado encontrado</h3>
@@ -291,14 +299,7 @@ export default function DashboardPage() {
               </p>
               <div className="flex flex-col gap-3 items-center">
                 <Link href="/admin-settings?tab=demoMode">
-                  <Button
-                    size="lg"
-                    style={{
-                      backgroundColor: 'hsl(var(--primary))',
-                      color: '#F7FAF9',
-                      borderRadius: '8px',
-                    }}
-                  >
+                  <Button size="lg">
                     <ShieldCheck className="mr-2 h-5 w-5" />
                     Ir para Admin → Modo Demo
                     <ArrowRight className="ml-2 h-5 w-5" />
@@ -314,6 +315,9 @@ export default function DashboardPage() {
 
         {!loading && hasData && (
           <>
+            {/* Score de Saúde Financeira */}
+            <FinancialHealthScore />
+
             {/* Fluxo de Caixa (full width) */}
             <CashFlowChart />
 

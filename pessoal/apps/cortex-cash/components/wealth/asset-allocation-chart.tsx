@@ -215,7 +215,7 @@ export function AssetAllocationChart() {
                 paddingAngle={5}
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]!} />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
@@ -228,7 +228,7 @@ export function AssetAllocationChart() {
               <div key={entry.name} className="flex items-center gap-2">
                 <div
                   className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  style={{ backgroundColor: COLORS[index % COLORS.length]! }}
                 />
                 <span className="text-sm text-foreground">{entry.name}</span>
                 <span className="text-sm font-semibold text-foreground">

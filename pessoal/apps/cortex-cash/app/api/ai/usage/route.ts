@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     // Retorna apenas o total do período como um único dia
     if (summary.total_requests > 0) {
       byDay.push({
-        date: endDate.toISOString().split('T')[0],
+        date: endDate.toISOString().split('T')[0] ?? '',
         requests: summary.total_requests,
         tokens: summary.total_tokens,
         cost_usd: summary.total_cost_usd,

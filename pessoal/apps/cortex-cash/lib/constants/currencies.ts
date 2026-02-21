@@ -76,5 +76,5 @@ export const CURRENCY_OPTIONS = Object.values(CURRENCIES).map((currency) => ({
 }))
 
 export const getCurrency = (code: string): Currency => {
-  return CURRENCIES[code] || CURRENCIES[DEFAULT_CURRENCY]
+  return CURRENCIES[code] ?? CURRENCIES[DEFAULT_CURRENCY]!
 }

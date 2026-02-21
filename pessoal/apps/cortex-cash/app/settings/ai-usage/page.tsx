@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select'
 import { getDB } from '@/lib/db/client'
 import type { LogIA } from '@/lib/types'
+import { CHART_COLORS } from '@/lib/utils/chart-theme'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -286,10 +287,10 @@ export default function AIUsagePage() {
               }}
             >
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-5 h-5" style={{ color: '#18B0A4' }} />
+                <TrendingUp className="w-5 h-5 text-primary" />
                 <div className="text-white/60 text-sm font-medium">Confiança Média</div>
               </div>
-              <div className="text-2xl font-bold" style={{ color: '#18B0A4' }}>
+              <div className="text-2xl font-bold text-primary">
                 {(stats.average_confidence * 100).toFixed(0)}%
               </div>
               <div className="text-xs text-white/40 mt-1">
@@ -335,7 +336,7 @@ export default function AIUsagePage() {
                       format(new Date(value as string), "dd 'de' MMMM", { locale: ptBR })
                     }
                   />
-                  <Line type="monotone" dataKey="requests" stroke="#18B0A4" strokeWidth={2} />
+                  <Line type="monotone" dataKey="requests" stroke={CHART_COLORS.primary} strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -368,9 +369,9 @@ export default function AIUsagePage() {
                     labelFormatter={(value) =>
                       format(new Date(value as string), "dd 'de' MMMM", { locale: ptBR })
                     }
-                    formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+                    formatter={(value) => `R$ ${(value as number).toFixed(2)}`}
                   />
-                  <Bar dataKey="cost_brl" fill="#10b981" />
+                  <Bar dataKey="cost_brl" fill={CHART_COLORS.income} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

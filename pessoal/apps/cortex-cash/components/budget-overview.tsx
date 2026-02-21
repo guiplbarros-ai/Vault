@@ -326,7 +326,7 @@ export function BudgetOverview() {
                                 ? 'border-red-500/50 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400'
                                 : budget.tendencia === 'controlada'
                                   ? 'border-green-500/50 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400'
-                                  : 'border-blue-500/50 bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400'
+                                  : 'border-primary/50 bg-primary/5 text-primary dark:bg-primary/10 dark:text-primary'
                             )}
                           >
                             {budget.tendencia === 'acelerada' && <TrendingUp className="w-3 h-3" />}

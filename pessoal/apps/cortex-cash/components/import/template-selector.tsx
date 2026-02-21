@@ -81,7 +81,7 @@ export function TemplateSelector({ onSelectTemplate, selectedTemplateId }: Templ
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     )
   }
@@ -152,7 +152,7 @@ export function TemplateSelector({ onSelectTemplate, selectedTemplateId }: Templ
             </p>
             <p className="text-sm text-gray-500 mt-2">
               Acesse{' '}
-              <a href="/dev/seed-templates" className="text-blue-400 hover:underline">
+              <a href="/dev/seed-templates" className="text-secondary hover:underline">
                 /dev/seed-templates
               </a>{' '}
               para popular os templates

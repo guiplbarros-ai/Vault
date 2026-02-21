@@ -33,7 +33,7 @@ export function normalizeValue(valueStr: string | number): number | null {
   } else if (hasComma) {
     // Apenas vírgula: verifica se é decimal ou separador de milhar
     const parts = cleaned.split(',')
-    if (parts.length === 2 && parts[1].length <= 2) {
+    if (parts.length === 2 && parts[1]!.length <= 2) {
       // Provavelmente decimal (ex: 1234,56)
       cleaned = cleaned.replace(',', '.')
     } else {

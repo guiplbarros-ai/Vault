@@ -14,7 +14,7 @@ export const transacoes: Transacao[] = [
   {
     id: 'trans-1',
     conta_id: contaAtiva.id,
-    categoria_id: categoriasDespesa[0].id, // Alimentação
+    categoria_id: categoriasDespesa[0]!.id, // Alimentação
     data: new Date('2025-01-15'),
     descricao: 'IFOOD RESTAURANTE',
     valor: 45.5,
@@ -30,7 +30,7 @@ export const transacoes: Transacao[] = [
   {
     id: 'trans-2',
     conta_id: contaAtiva.id,
-    categoria_id: categoriasDespesa[1].id, // Transporte
+    categoria_id: categoriasDespesa[1]!.id, // Transporte
     data: new Date('2025-01-16'),
     descricao: 'UBER VIAGEM',
     valor: 28.9,
@@ -46,7 +46,7 @@ export const transacoes: Transacao[] = [
   {
     id: 'trans-3',
     conta_id: contaAtiva.id,
-    categoria_id: categoriasDespesa[2].id, // Saúde
+    categoria_id: categoriasDespesa[2]!.id, // Saúde
     data: new Date('2025-01-17'),
     descricao: 'FARMACIA POPULAR',
     valor: 87.3,
@@ -62,7 +62,7 @@ export const transacoes: Transacao[] = [
   {
     id: 'trans-4',
     conta_id: contaAtiva.id,
-    categoria_id: categoriasDespesa[3].id, // Moradia
+    categoria_id: categoriasDespesa[3]!.id, // Moradia
     data: new Date('2025-01-10'),
     descricao: 'ALUGUEL JAN/2025',
     valor: 1500.0,
@@ -81,7 +81,7 @@ export const transacoes: Transacao[] = [
   {
     id: 'trans-5',
     conta_id: contaAtiva.id,
-    categoria_id: categoriasReceita[0].id, // Salário
+    categoria_id: categoriasReceita[0]!.id, // Salário
     data: new Date('2025-01-05'),
     descricao: 'SALARIO JAN/2025',
     valor: 5000.0,
@@ -97,7 +97,7 @@ export const transacoes: Transacao[] = [
   {
     id: 'trans-6',
     conta_id: contaAtiva.id,
-    categoria_id: categoriasReceita[1].id, // Freelance
+    categoria_id: categoriasReceita[1]!.id, // Freelance
     data: new Date('2025-01-20'),
     descricao: 'FREELANCE PROJETO X',
     valor: 1200.0,
@@ -150,7 +150,7 @@ export const transacoes: Transacao[] = [
   {
     id: 'trans-8',
     conta_id: contaAtiva.id,
-    categoria_id: categoriasDespesa[4].id, // Lazer
+    categoria_id: categoriasDespesa[4]!.id, // Lazer
     data: new Date('2025-01-08'),
     descricao: 'PLAYSTATION STORE',
     valor: 99.97,
