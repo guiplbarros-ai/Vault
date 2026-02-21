@@ -50,3 +50,6 @@ Thumbs.db
 # pnpm local store (if present in repo)
 .pnpm-store/
 .DS_Store
+
+# bank statements (sensitive data)
+imports/
