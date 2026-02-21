@@ -71,7 +71,17 @@ export default function CategoriesPage() {
   const loadCategorias = async () => {
     try {
       setLoading(true)
-      const arvore = await categoriaService.getArvoreHierarquica()
+      let arvore = await categoriaService.getArvoreHierarquica()
+
+      // Auto-seed subcategories if none exist
+      const totalSubs = arvore.reduce((sum, c) => sum + c.subcategorias.length, 0)
+      if (totalSubs === 0 && arvore.length > 0) {
+        const created = await categoriaService.seedSubcategorias()
+        if (created > 0) {
+          arvore = await categoriaService.getArvoreHierarquica()
+        }
+      }
+
       setCategorias(arvore)
       setFilteredCategorias(arvore)
     } catch (error) {
@@ -237,15 +247,9 @@ export default function CategoriesPage() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div
-              className="animate-spin rounded-full h-12 w-12 mx-auto mb-4"
-              style={{
-                borderWidth: '2px',
-                borderStyle: 'solid',
-                borderColor: 'transparent',
-                borderBottomColor: '#3A8F6E',
-              }}
+              className="animate-spin rounded-full h-12 w-12 mx-auto mb-4 border-2 border-transparent border-b-primary"
             ></div>
-            <p style={{ color: '#B2BDB9' }}>Carregando categorias...</p>
+            <p className="text-muted-foreground">Carregando categorias...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -259,70 +263,44 @@ export default function CategoriesPage() {
           title="Categorias"
           description="Organize suas transações em categorias e subcategorias"
           actions={
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" />
-                Exportar
-              </Button>
-            </div>
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              Exportar
+            </Button>
           }
         />
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card
-            style={{
-              backgroundColor: '#18332C',
-              borderColor: '#2A4942',
-              borderWidth: '1px',
-              borderRadius: 'var(--radius-lg)',
-              boxShadow: 'var(--shadow-1)',
-            }}
-          >
+          <Card>
             <CardHeader className="pb-3">
-              <CardDescription style={{ color: '#B2BDB9' }}>Total de Categorias</CardDescription>
-              <CardTitle className="text-3xl" style={{ color: '#F2F7F5' }}>
+              <CardDescription className="text-muted-foreground">Total de Categorias</CardDescription>
+              <CardTitle className="text-3xl">
                 {statsGeral.total}
               </CardTitle>
-              <CardDescription className="text-sm mt-2" style={{ color: '#8CA39C' }}>
+              <CardDescription className="text-sm mt-2 text-muted-foreground">
                 {statsGeral.categorias} categorias • {statsGeral.subcategorias} subcategorias
               </CardDescription>
             </CardHeader>
           </Card>
-          <Card
-            style={{
-              backgroundColor: '#18332C',
-              borderColor: '#2A4942',
-              borderWidth: '1px',
-              borderRadius: 'var(--radius-lg)',
-              boxShadow: 'var(--shadow-1)',
-            }}
-          >
+          <Card>
             <CardHeader className="pb-3">
-              <CardDescription style={{ color: '#B2BDB9' }}>Categorias de Receita</CardDescription>
-              <CardTitle className="text-3xl" style={{ color: '#6CCB8C' }}>
+              <CardDescription className="text-muted-foreground">Categorias de Receita</CardDescription>
+              <CardTitle className="text-3xl text-success">
                 {statsReceitas.total}
               </CardTitle>
-              <CardDescription className="text-sm mt-2" style={{ color: '#8CA39C' }}>
+              <CardDescription className="text-sm mt-2 text-muted-foreground">
                 {statsReceitas.categorias} categorias • {statsReceitas.subcategorias} subcategorias
               </CardDescription>
             </CardHeader>
           </Card>
-          <Card
-            style={{
-              backgroundColor: '#18332C',
-              borderColor: '#2A4942',
-              borderWidth: '1px',
-              borderRadius: 'var(--radius-lg)',
-              boxShadow: 'var(--shadow-1)',
-            }}
-          >
+          <Card>
             <CardHeader className="pb-3">
-              <CardDescription style={{ color: '#B2BDB9' }}>Categorias de Despesa</CardDescription>
-              <CardTitle className="text-3xl" style={{ color: '#F07167' }}>
+              <CardDescription className="text-muted-foreground">Categorias de Despesa</CardDescription>
+              <CardTitle className="text-3xl text-destructive">
                 {statsDespesas.total}
               </CardTitle>
-              <CardDescription className="text-sm mt-2" style={{ color: '#8CA39C' }}>
+              <CardDescription className="text-sm mt-2 text-muted-foreground">
                 {statsDespesas.categorias} categorias • {statsDespesas.subcategorias} subcategorias
               </CardDescription>
             </CardHeader>
@@ -332,28 +310,18 @@ export default function CategoriesPage() {
         {/* Tabs para Plano de Contas e Análise de Gastos */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList
-            className="grid w-full grid-cols-2"
-            style={{
-              backgroundColor: '#142A25',
-              borderColor: '#2A4942',
-            }}
+            className="grid w-full grid-cols-2 bg-muted"
           >
             <TabsTrigger
               value="plan"
-              style={{
-                color: '#B2BDB9',
-              }}
-              className="data-[state=active]:text-white"
+              className="text-muted-foreground data-[state=active]:text-white"
               data-active={activeTab === 'plan'}
             >
               Plano de Contas
             </TabsTrigger>
             <TabsTrigger
               value="analytics"
-              style={{
-                color: '#B2BDB9',
-              }}
-              className="data-[state=active]:text-white"
+              className="text-muted-foreground data-[state=active]:text-white"
               data-active={activeTab === 'analytics'}
             >
               Análise de Gastos
@@ -362,18 +330,10 @@ export default function CategoriesPage() {
 
           {/* Tab: Plano de Contas */}
           <TabsContent value="plan" className="space-y-4">
-            <Card
-              style={{
-                backgroundColor: '#18332C',
-                borderColor: '#2A4942',
-                borderWidth: '1px',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-1)',
-              }}
-            >
+            <Card>
               <CardHeader>
-                <CardTitle style={{ color: '#F2F7F5' }}>Plano de Contas</CardTitle>
-                <CardDescription style={{ color: '#B2BDB9' }}>
+                <CardTitle>Plano de Contas</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   Clique em uma categoria para selecioná-la ou use o menu para ações
                 </CardDescription>
               </CardHeader>
@@ -382,20 +342,13 @@ export default function CategoriesPage() {
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="relative flex-1">
                     <Search
-                      className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
-                      style={{ color: '#8CA39C' }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
                     />
                     <Input
                       placeholder="Buscar categorias..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                      style={{
-                        backgroundColor: '#142A25',
-                        borderColor: '#2A4942',
-                        color: '#F2F7F5',
-                        height: '40px',
-                      }}
+                      className="pl-9 h-10"
                     />
                   </div>
                   <Select
@@ -403,44 +356,28 @@ export default function CategoriesPage() {
                     onValueChange={(v) => setTipoFiltro(v as TipoTransacao | 'todas')}
                   >
                     <SelectTrigger
-                      className="w-full sm:w-[180px]"
-                      style={{
-                        backgroundColor: '#142A25',
-                        borderColor: '#2A4942',
-                        color: '#F2F7F5',
-                        height: '40px',
-                      }}
+                      className="w-full sm:w-[180px] h-10"
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent
-                      style={{
-                        backgroundColor: '#142A25',
-                        borderColor: '#2A4942',
-                      }}
-                    >
-                      <SelectItem value="todas" style={{ color: '#F2F7F5' }}>
+                    <SelectContent>
+                      <SelectItem value="todas">
                         Todas
                       </SelectItem>
-                      <SelectItem value="receita" style={{ color: '#F2F7F5' }}>
+                      <SelectItem value="receita">
                         Receitas
                       </SelectItem>
-                      <SelectItem value="despesa" style={{ color: '#F2F7F5' }}>
+                      <SelectItem value="despesa">
                         Despesas
                       </SelectItem>
-                      <SelectItem value="transferencia" style={{ color: '#F2F7F5' }}>
+                      <SelectItem value="transferencia">
                         Transferências
                       </SelectItem>
                     </SelectContent>
                   </Select>
                   <Button
                     onClick={handleCreate}
-                    className="w-full sm:w-auto"
-                    style={{
-                      backgroundColor: '#3A8F6E',
-                      color: '#F2F7F5',
-                      height: '40px',
-                    }}
+                    className="w-full sm:w-auto h-10"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     Nova Categoria
@@ -456,21 +393,16 @@ export default function CategoriesPage() {
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <h3
-                            className="text-sm font-medium uppercase tracking-wider"
-                            style={{ color: '#6CCB8C' }}
+                            className="text-sm font-medium uppercase tracking-wider text-success"
                           >
                             Receitas
                           </h3>
-                          <span className="text-xs" style={{ color: '#8CA39C' }}>
+                          <span className="text-xs text-muted-foreground">
                             {categoriasReceita.length} categorias
                           </span>
                         </div>
                         <div
-                          className="rounded-lg border"
-                          style={{
-                            borderColor: '#2A4942',
-                            backgroundColor: '#142A25',
-                          }}
+                          className="rounded-lg border border-border bg-muted"
                         >
                           <div className="p-2">
                             <SortableCategoryTree
@@ -494,21 +426,16 @@ export default function CategoriesPage() {
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <h3
-                            className="text-sm font-medium uppercase tracking-wider"
-                            style={{ color: '#8FCDBD' }}
+                            className="text-sm font-medium uppercase tracking-wider text-muted-foreground"
                           >
                             Transferências
                           </h3>
-                          <span className="text-xs" style={{ color: '#8CA39C' }}>
+                          <span className="text-xs text-muted-foreground">
                             {categoriasTransferencia.length} categorias
                           </span>
                         </div>
                         <div
-                          className="rounded-lg border"
-                          style={{
-                            borderColor: '#2A4942',
-                            backgroundColor: '#142A25',
-                          }}
+                          className="rounded-lg border border-border bg-muted"
                         >
                           <div className="p-2">
                             <SortableCategoryTree
@@ -534,21 +461,16 @@ export default function CategoriesPage() {
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <h3
-                            className="text-sm font-medium uppercase tracking-wider"
-                            style={{ color: '#F07167' }}
+                            className="text-sm font-medium uppercase tracking-wider text-destructive"
                           >
                             Despesas
                           </h3>
-                          <span className="text-xs" style={{ color: '#8CA39C' }}>
+                          <span className="text-xs text-muted-foreground">
                             {categoriasDespesa.length} categorias
                           </span>
                         </div>
                         <div
-                          className="rounded-lg border"
-                          style={{
-                            borderColor: '#2A4942',
-                            backgroundColor: '#142A25',
-                          }}
+                          className="rounded-lg border border-border bg-muted"
                         >
                           <div className="p-2">
                             <SortableCategoryTree
@@ -587,20 +509,14 @@ export default function CategoriesPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent
             className="max-w-2xl max-h-[90vh] overflow-y-auto"
-            style={{
-              backgroundColor: '#18332C',
-              borderColor: '#2A4942',
-              borderWidth: '1px',
-              boxShadow: 'var(--shadow-2)',
-            }}
           >
             <DialogHeader>
-              <DialogTitle style={{ color: '#F2F7F5' }}>
+              <DialogTitle>
                 {dialogMode === 'create' && 'Nova Categoria'}
                 {dialogMode === 'edit' && 'Editar Categoria'}
                 {dialogMode === 'subcategoria' && 'Nova Subcategoria'}
               </DialogTitle>
-              <DialogDescription style={{ color: '#B2BDB9' }}>
+              <DialogDescription className="text-muted-foreground">
                 {dialogMode === 'create' &&
                   'Crie uma nova categoria para organizar suas transações.'}
                 {dialogMode === 'edit' && 'Atualize as informações da categoria.'}
@@ -619,17 +535,10 @@ export default function CategoriesPage() {
 
         {/* Delete Confirmation */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent
-            style={{
-              backgroundColor: '#18332C',
-              borderColor: '#2A4942',
-              borderWidth: '1px',
-              boxShadow: 'var(--shadow-2)',
-            }}
-          >
+          <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle style={{ color: '#F2F7F5' }}>Desativar Categoria</AlertDialogTitle>
-              <AlertDialogDescription style={{ color: '#B2BDB9' }}>
+              <AlertDialogTitle>Desativar Categoria</AlertDialogTitle>
+              <AlertDialogDescription className="text-muted-foreground">
                 Tem certeza que deseja desativar a categoria{' '}
                 <strong>{categoriaParaDeletar?.nome}</strong>? As transações associadas não serão
                 excluídas, mas ficarão sem categoria. Esta ação pode ser revertida reativando a
@@ -637,13 +546,10 @@ export default function CategoriesPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel style={{ color: '#F2F7F5' }}>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmDelete}
-                style={{
-                  backgroundColor: '#F07167',
-                  color: '#F2F7F5',
-                }}
+                className="bg-destructive"
               >
                 Desativar
               </AlertDialogAction>

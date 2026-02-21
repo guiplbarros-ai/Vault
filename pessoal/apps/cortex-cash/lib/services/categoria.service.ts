@@ -458,145 +458,46 @@ export class CategoriaService implements ICategoriaService {
 
   /**
    * Subcategories definition per parent category name.
-   * Each entry maps a parent category name to its subcategories with icon, color, and keywords.
+   * Each entry maps a parent category name to its subcategories with icon and color.
+   * Keyword-based classification is now handled by classification-rules.ts.
    */
   private static readonly SUBCATEGORIAS_DEFINICAO: Record<
     string,
-    { nome: string; icone: string; cor: string; keywords: string[] }[]
+    { nome: string; icone: string; cor: string }[]
   > = {
     Alimentação: [
-      {
-        nome: 'Restaurantes',
-        icone: '🍴',
-        cor: '#f87171',
-        keywords: ['RESTAURANTE', 'TASTE', 'OUTBACK', 'BURGER', 'SUSHI', 'LANCHONETE', 'REDENTOR', 'ALLFACE', 'CHURRASCARIA'],
-      },
-      {
-        nome: 'Supermercado',
-        icone: '🛒',
-        cor: '#fca5a5',
-        keywords: ['SUPERMERCADO', 'HORTIFRUTI', 'MERCADOSAUTONOMOS', 'EPA ', 'EXTRA ', 'CARREFOUR', 'ATACADAO'],
-      },
-      {
-        nome: 'Delivery',
-        icone: '🛵',
-        cor: '#fb923c',
-        keywords: ['IFOOD', 'IFD*', 'RAPPI', 'ZEDEL', 'UBER EATS'],
-      },
-      {
-        nome: 'Café/Padaria',
-        icone: '☕',
-        cor: '#fdba74',
-        keywords: ['CAFE', 'CAFEZIN', 'PADARIA', 'MRB CAFE', 'GUJOCAFE', 'OOPCAFE', 'STARBUCKS', 'CONFEITARIA'],
-      },
+      { nome: 'Restaurantes', icone: '🍴', cor: '#f87171' },
+      { nome: 'Supermercado', icone: '🛒', cor: '#fca5a5' },
+      { nome: 'Delivery', icone: '🛵', cor: '#fb923c' },
+      { nome: 'Café/Padaria', icone: '☕', cor: '#fdba74' },
     ],
     Transporte: [
-      {
-        nome: 'Uber/99',
-        icone: '🚘',
-        cor: '#fbbf24',
-        keywords: ['UBER', '99POP', '99APP', '99 ', 'CABIFY'],
-      },
-      {
-        nome: 'Combustível',
-        icone: '⛽',
-        cor: '#fcd34d',
-        keywords: ['POSTO', 'SHELL', 'IPIRANGA', 'BR DISTRIBUIDORA', 'GASOLINA', 'COMBUSTIVEL'],
-      },
-      {
-        nome: 'Estacionamento',
-        icone: '🅿️',
-        cor: '#fde68a',
-        keywords: ['ESTACIONAMENTO', 'ESTAPAR', 'PARKING'],
-      },
-      {
-        nome: 'Pedágio',
-        icone: '🛣️',
-        cor: '#fef08a',
-        keywords: ['SEM PARAR', 'PEDAGIO', 'PEDÁGIO', 'CONECTCAR', 'VELOE'],
-      },
+      { nome: 'Uber/99', icone: '🚘', cor: '#fbbf24' },
+      { nome: 'Combustível', icone: '⛽', cor: '#fcd34d' },
+      { nome: 'Estacionamento', icone: '🅿️', cor: '#fde68a' },
+      { nome: 'Pedágio', icone: '🛣️', cor: '#fef08a' },
     ],
     Compras: [
-      {
-        nome: 'Marketplace',
-        icone: '📦',
-        cor: '#86efac',
-        keywords: ['AMAZON BR', 'AMAZON MARKETPLACE', 'MERCADO LIVRE', 'SHOPEE', 'ALIEXPRESS', 'MAGAZINE'],
-      },
-      {
-        nome: 'Roupas',
-        icone: '👕',
-        cor: '#a7f3d0',
-        keywords: ['ZARA', 'C&A', 'RENNER', 'RIACHUELO', 'HERING', 'SHEIN'],
-      },
-      {
-        nome: 'Eletrônicos',
-        icone: '📱',
-        cor: '#6ee7b7',
-        keywords: ['APPLE STORE', 'SAMSUNG', 'KABUM', 'PICHAU'],
-      },
+      { nome: 'Marketplace', icone: '📦', cor: '#86efac' },
+      { nome: 'Roupas', icone: '👕', cor: '#a7f3d0' },
+      { nome: 'Eletrônicos', icone: '📱', cor: '#6ee7b7' },
     ],
     Saúde: [
-      {
-        nome: 'Farmácia',
-        icone: '💊',
-        cor: '#f472b6',
-        keywords: ['FARMACIA', 'DROGARIA', 'DROGA', 'RDSAUDE', 'DROGASIL', 'PANVEL'],
-      },
-      {
-        nome: 'Plano de Saúde',
-        icone: '🏥',
-        cor: '#f9a8d4',
-        keywords: ['UNIMED', 'HAPVIDA', 'AMIL', 'BRADESCO SAUDE', 'SULAMERICA'],
-      },
-      {
-        nome: 'Consultas',
-        icone: '👨‍⚕️',
-        cor: '#fbcfe8',
-        keywords: ['CLINICA', 'MEDICO', 'HOSPITAL', 'LABORATORIO', 'EXAME', 'DOUTOR'],
-      },
+      { nome: 'Farmácia', icone: '💊', cor: '#f472b6' },
+      { nome: 'Plano de Saúde', icone: '🏥', cor: '#f9a8d4' },
+      { nome: 'Consultas', icone: '👨‍⚕️', cor: '#fbcfe8' },
     ],
     Contas: [
-      {
-        nome: 'Energia',
-        icone: '⚡',
-        cor: '#c4b5fd',
-        keywords: ['CEMIG', 'CPFL', 'ENEL', 'CONTA DE LUZ', 'ENERGISA', 'CELPE'],
-      },
-      {
-        nome: 'Telefone/Internet',
-        icone: '📶',
-        cor: '#ddd6fe',
-        keywords: ['CLARO', 'VIVO', 'TIM ', 'OI ', 'CONTA DE TELEFONE', 'NET '],
-      },
+      { nome: 'Energia', icone: '⚡', cor: '#c4b5fd' },
+      { nome: 'Telefone/Internet', icone: '📶', cor: '#ddd6fe' },
     ],
     Assinaturas: [
-      {
-        nome: 'Streaming',
-        icone: '▶️',
-        cor: '#22d3ee',
-        keywords: ['NETFLIX', 'SPOTIFY', 'YOUTUBE', 'DISNEY', 'HBO', 'AMAZON MUSIC', 'AMAZONPRIME', 'PRIMEVIDEO', 'DEEZER', 'CRUNCHYROLL'],
-      },
-      {
-        nome: 'Software',
-        icone: '💻',
-        cor: '#67e8f9',
-        keywords: ['GITHUB', 'GOOGLE', 'MICROSOFT', 'ADOBE', 'OPENAI', 'NOTION', 'APPLE.COM/BILL'],
-      },
+      { nome: 'Streaming', icone: '▶️', cor: '#22d3ee' },
+      { nome: 'Software', icone: '💻', cor: '#67e8f9' },
     ],
     Lazer: [
-      {
-        nome: 'Entretenimento',
-        icone: '📺',
-        cor: '#2dd4bf',
-        keywords: ['CINEMA', 'TEATRO', 'SHOW', 'INGRESSO', 'TICKETMASTER'],
-      },
-      {
-        nome: 'Viagens',
-        icone: '✈️',
-        cor: '#5eead4',
-        keywords: ['HOTEL', 'AIRBNB', 'BOOKING', 'LATAM', 'GOL ', 'AZUL ', 'DECOLAR', 'SMILES'],
-      },
+      { nome: 'Entretenimento', icone: '📺', cor: '#2dd4bf' },
+      { nome: 'Viagens', icone: '✈️', cor: '#5eead4' },
     ],
   }
 
@@ -659,70 +560,6 @@ export class CategoriaService implements ICategoriaService {
     }
 
     return created
-  }
-
-  /**
-   * Re-classifies transactions from parent categories into subcategories based on keywords.
-   * Only moves transactions that are currently assigned to a parent category (not already in a subcategory).
-   * Returns the number of transactions reclassified.
-   */
-  async reclassifyByKeywords(): Promise<number> {
-    const db = getDB()
-    let reclassified = 0
-
-    // Build keyword → subcategory_id map
-    const allCats = await db.categorias.toArray()
-    const parentsByName = new Map(allCats.filter((c) => !c.pai_id && c.ativa).map((c) => [c.nome, c]))
-    const subsByParent = new Map<string, Categoria[]>()
-    for (const cat of allCats) {
-      if (!cat.pai_id || !cat.ativa) continue
-      const subs = subsByParent.get(cat.pai_id) || []
-      subs.push(cat)
-      subsByParent.set(cat.pai_id, subs)
-    }
-
-    // Build lookup: parent_id → { keyword: subcategory_id }[]
-    const keywordMap: { parentId: string; keyword: string; subId: string }[] = []
-
-    for (const [parentName, subcatDefs] of Object.entries(CategoriaService.SUBCATEGORIAS_DEFINICAO)) {
-      const parent = parentsByName.get(parentName)
-      if (!parent) continue
-
-      const subs = subsByParent.get(parent.id) || []
-      const subsByName = new Map(subs.map((s) => [s.nome, s]))
-
-      for (const def of subcatDefs) {
-        const sub = subsByName.get(def.nome)
-        if (!sub) continue
-
-        for (const kw of def.keywords) {
-          keywordMap.push({ parentId: parent.id, keyword: kw.toUpperCase(), subId: sub.id })
-        }
-      }
-    }
-
-    // Get all parent category IDs that have subcategories
-    const parentIdsWithSubs = new Set(keywordMap.map((k) => k.parentId))
-
-    // Process transactions in batches per parent category
-    for (const parentId of parentIdsWithSubs) {
-      const txs = await db.transacoes.where('categoria_id').equals(parentId).toArray()
-      const rules = keywordMap.filter((k) => k.parentId === parentId)
-
-      for (const tx of txs) {
-        const desc = (tx.descricao || '').toUpperCase()
-        const match = rules.find((r) => desc.includes(r.keyword))
-        if (match) {
-          await db.transacoes.update(tx.id, {
-            categoria_id: match.subId,
-            updated_at: new Date(),
-          })
-          reclassified++
-        }
-      }
-    }
-
-    return reclassified
   }
 
   /**
