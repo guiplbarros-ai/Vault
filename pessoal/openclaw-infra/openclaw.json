@@ -1,0 +1,195 @@
+{
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "mode": "token",
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    }
+  },
+
+  "models": {
+    "providers": {
+      "anthropic": {
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      },
+      "openai": {
+        "apiKey": "${OPENAI_API_KEY}"
+      }
+    }
+  },
+
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "claude-sonnet-4-6"
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      }
+    },
+    "list": [
+      {
+        "id": "backstage",
+        "workspace": "~/.openclaw/workspace-backstage",
+        "model": { "primary": "claude-sonnet-4-6" },
+        "tools": {
+          "allow": ["exec", "read", "write", "edit", "web_browse", "memory"],
+          "deny": []
+        }
+      },
+      {
+        "id": "data",
+        "workspace": "~/.openclaw/workspace-data",
+        "model": { "primary": "claude-opus-4-6" },
+        "tools": {
+          "allow": ["exec", "read", "write", "edit", "memory"],
+          "deny": ["web_browse"]
+        }
+      },
+      {
+        "id": "review",
+        "workspace": "~/.openclaw/workspace-review",
+        "model": { "primary": "claude-sonnet-4-6" },
+        "tools": {
+          "allow": ["exec", "read", "memory", "web_browse"],
+          "deny": ["write", "edit"]
+        }
+      },
+      {
+        "id": "ops",
+        "workspace": "~/.openclaw/workspace-ops",
+        "model": { "primary": "claude-haiku-4-5-20251001" },
+        "tools": {
+          "allow": ["exec", "read", "memory"],
+          "deny": ["write", "edit"]
+        }
+      },
+      {
+        "id": "pessoal",
+        "workspace": "~/.openclaw/workspace-pessoal",
+        "model": { "primary": "claude-sonnet-4-6" },
+        "tools": {
+          "allow": ["exec", "read", "write", "edit", "web_browse", "memory"],
+          "deny": []
+        }
+      }
+    ]
+  },
+
+  "bindings": [
+    {
+      "agentId": "backstage",
+      "match": { "channel": "discord", "accountId": "backstage" }
+    },
+    {
+      "agentId": "data",
+      "match": { "channel": "discord", "accountId": "data" }
+    },
+    {
+      "agentId": "review",
+      "match": { "channel": "discord", "accountId": "review" }
+    },
+    {
+      "agentId": "ops",
+      "match": { "channel": "discord", "accountId": "ops" }
+    },
+    {
+      "agentId": "pessoal",
+      "match": { "channel": "discord", "accountId": "pessoal" }
+    }
+  ],
+
+  "channels": {
+    "discord": {
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "streamMode": "partial",
+      "draftChunk": {
+        "minChars": 200,
+        "maxChars": 800,
+        "breakPreference": "paragraph"
+      },
+      "accounts": {
+        "backstage": {
+          "token": "${DISCORD_BOT_BACKSTAGE}",
+          "guilds": {
+            "1474803246022266911": {
+              "requireMention": false,
+              "users": ["703006877700587622"],
+              "channels": {
+                "backstage": { "allow": true },
+                "financeiro": { "allow": true }
+              }
+            }
+          }
+        },
+        "data": {
+          "token": "${DISCORD_BOT_DATA}",
+          "guilds": {
+            "1474803246022266911": {
+              "requireMention": false,
+              "users": ["703006877700587622"],
+              "channels": {
+                "data": { "allow": true },
+                "schemas": { "allow": true }
+              }
+            }
+          }
+        },
+        "review": {
+          "token": "${DISCORD_BOT_REVIEW}",
+          "guilds": {
+            "1474803246022266911": {
+              "requireMention": false,
+              "users": ["703006877700587622"],
+              "channels": {
+                "review": { "allow": true }
+              }
+            }
+          }
+        },
+        "ops": {
+          "token": "${DISCORD_BOT_OPS}",
+          "guilds": {
+            "1474803246022266911": {
+              "requireMention": false,
+              "users": ["703006877700587622"],
+              "channels": {
+                "ops": { "allow": true },
+                "status": { "allow": true }
+              }
+            }
+          }
+        },
+        "pessoal": {
+          "token": "${DISCORD_BOT_PESSOAL}",
+          "guilds": {
+            "1474803246022266911": {
+              "requireMention": false,
+              "users": ["703006877700587622"],
+              "channels": {
+                "cortex-app": { "allow": true },
+                "cortex-cash": { "allow": true },
+                "atlas": { "allow": true }
+              }
+            }
+          }
+        }
+      },
+      "execApprovals": {
+        "enabled": true,
+        "approvers": ["703006877700587622"],
+        "target": "channel"
+      }
+    }
+  },
+
+  "skills": {
+    "load": {
+      "extraDirs": ["~/.openclaw/skills-freelaw"]
+    }
+  }
+}

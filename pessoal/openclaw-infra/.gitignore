@@ -1,0 +1,10 @@
+# Secrets - NUNCA commitar
+.tokens
+.env
+
+# Runtime
+sessions/
+agents/
+
+# Override root .gitignore rule that blocks data/ directories
+!workspaces/data/
