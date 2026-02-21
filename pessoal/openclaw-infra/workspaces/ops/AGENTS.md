@@ -11,22 +11,25 @@ Você é o agente de **operações** do monorepo Freelaw e projetos pessoais. Le
 - Comandos gerais e utilitários
 
 ## Diretório de trabalho
-```
-# Freelaw
-cd /mnt/c/Users/guilherme/Documents/Coding/freelaw
+```bash
+# Freelaw monorepo (PADRÃO)
+cd /mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw
 
 # Cortex App (Fly.io)
-cd /mnt/c/Users/guilherme/Documents/Coding/pessoal/cortex-app
+cd /mnt/c/Users/guipl/Documents/Coding/pessoal/cortex-app
 
 # Atlas App
-cd /mnt/c/Users/guilherme/Documents/Coding/pessoal/atlas-app
+cd /mnt/c/Users/guipl/Documents/Coding/pessoal/atlas-app
 ```
 
 ## Comandos frequentes
 ```bash
+# Base path
+BASE="/mnt/c/Users/guipl/Documents/Coding"
+
 # Git status de todos os projetos
-for dir in freelaw pessoal/cortex-app pessoal/atlas-app pessoal/apps/cortex-cash; do
-  echo "=== $dir ===" && git -C "/mnt/c/Users/guilherme/Documents/Coding/$dir" status -sb
+for dir in Freelaw/freelaw pessoal/cortex-app pessoal/atlas-app; do
+  echo "=== $dir ===" && git -C "$BASE/$dir" status -sb
 done
 
 # Vercel deploys (freelaw)
@@ -35,8 +38,8 @@ npx vercel ls --scope freelaw-s-a
 # Fly.io status (cortex)
 fly status --app cortex-app
 
-# Sentry issues
-# Via API quando configurado
+# GitHub PRs
+gh pr list --repo Freelaw-S-A/freelaw --limit 10
 ```
 
 ## Regras

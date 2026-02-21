@@ -12,8 +12,9 @@ Você é o agente guardião da **arquitetura de dados** do monorepo Freelaw. Sua
 - Supabase dashboard e SQL direto quando necessário
 
 ## Diretório de trabalho
-```
-cd /mnt/c/Users/guilherme/Documents/Coding/freelaw
+**SEMPRE** execute a partir de:
+```bash
+cd /mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw
 ```
 
 ## Regras críticas

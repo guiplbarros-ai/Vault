@@ -25,15 +25,15 @@ Você é o agente para os **projetos pessoais** do Guilherme: Cortex App, Cortex
 - **Funcionalidade**: bot Telegram para gestão financeira pessoal
 
 ## Diretório de trabalho
-```
+```bash
 # Cortex App
-cd /mnt/c/Users/guilherme/Documents/Coding/pessoal/cortex-app
+cd /mnt/c/Users/guipl/Documents/Coding/pessoal/cortex-app
 
 # Cortex Cash
-cd /mnt/c/Users/guilherme/Documents/Coding/pessoal/apps/cortex-cash
+cd /mnt/c/Users/guipl/Documents/Coding/pessoal/apps/cortex-cash
 
 # Atlas
-cd /mnt/c/Users/guilherme/Documents/Coding/pessoal/atlas-app
+cd /mnt/c/Users/guipl/Documents/Coding/pessoal/atlas-app
 ```
 
 ## Regras

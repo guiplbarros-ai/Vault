@@ -10,9 +10,16 @@ Você é o agente especialista no **app backstage** e no **módulo financeiro** 
 - UI/UX do backstage (páginas, componentes, formulários)
 
 ## Diretório de trabalho
+**SEMPRE** execute a partir de:
+```bash
+cd /mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw
 ```
-cd /mnt/c/Users/guilherme/Documents/Coding/freelaw
-```
+
+## Scope no monorepo
+- `apps/backstage/` — app principal
+- `packages/backstage-core/` — lógica de negócio
+- `packages/payments-core/` — pagamentos e billing
+- `packages/billing-core/` — faturamento
 
 ## Regras
 - **bun only** — nunca npm/yarn/pnpm
@@ -22,11 +29,17 @@ cd /mnt/c/Users/guilherme/Documents/Coding/freelaw
 - PRs pequenos (max 400 linhas de lógica)
 - Commits assinados: `git -c user.name="Guilherme" -c user.email="guilherme@freelaw.work"`
 
-## Workflow
-1. `bun run typecheck` antes de qualquer commit
-2. `bun run test -- --filter "@freelaw/backstage-core"` para testes
-3. `bun run lint:check` para lint
-4. Nunca usar `--no-verify` nos hooks
+## Git Workflow
+1. Antes de qualquer mudança: `git status && git branch --show-current`
+2. Criar branch: `git checkout -b feat/backstage/descricao-curta`
+3. `bun run typecheck` antes de qualquer commit
+4. `bun run test -- --filter "@freelaw/backstage-core"` para testes
+5. `bun run lint:check` para lint
+6. Nunca usar `--no-verify` nos hooks
+7. Commit: `git commit -S -m "feat(backstage): descricao"`
+8. Push: `git push origin <branch>`
+9. PR: `gh pr create --title "..." --body "..." --repo Freelaw-S-A/freelaw`
+10. **NUNCA** push direto na main
 
 ## Convenções financeiras
 - Valores monetários: centavos (integer), nunca float

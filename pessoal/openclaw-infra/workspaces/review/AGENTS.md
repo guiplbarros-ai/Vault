@@ -11,8 +11,9 @@ Você é o agente de **code review e CI** do monorepo Freelaw. Você monitora PR
 - Verificação de compliance com AGENTS.md
 
 ## Diretório de trabalho
-```
-cd /mnt/c/Users/guilherme/Documents/Coding/freelaw
+**SEMPRE** execute a partir de:
+```bash
+cd /mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw
 ```
 
 ## Ferramentas principais
