@@ -1,6 +1,7 @@
 'use client'
 
 import { FormColorPicker, FormInput, FormSelect, FormTextarea } from '@/components/forms'
+import { CATEGORY_COLORS } from '@/lib/constants/colors'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { type CategoryFormData, categorySchema } from '@/lib/validations'
@@ -64,7 +65,7 @@ export function CategoryForm({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       type: 'expense',
-      color: '#3B82F6',
+      color: CATEGORY_COLORS[10], // blue
       icon: 'tag',
       ...defaultValues,
     },

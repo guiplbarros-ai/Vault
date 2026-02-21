@@ -8,6 +8,7 @@
  */
 
 import { useAuth } from '@/app/providers/auth-provider'
+import { THEME_COLORS } from '@/lib/constants/colors'
 import { useDB } from '@/app/providers/db-provider'
 import { contaService } from '@/lib/services/conta.service'
 import { usuarioService } from '@/lib/services/usuario.service'
@@ -109,14 +110,13 @@ export function OnboardingCheck({ children }: OnboardingCheckProps) {
       <div
         className="min-h-screen flex items-center justify-center"
         style={{
-          background:
-            'radial-gradient(ellipse at center, #152821 0%, #111f1c 40%, #0e1c19 70%, #0a1512 100%)',
+          background: `radial-gradient(ellipse at center, ${THEME_COLORS.bgCard2} 0%, ${THEME_COLORS.bgApp} 70%)`,
           backgroundAttachment: 'fixed',
         }}
       >
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: '#3A8F6E' }} />
-          <p style={{ color: '#BBC5C2' }}>Verificando configuração...</p>
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: THEME_COLORS.accent }} />
+          <p style={{ color: THEME_COLORS.fgSecondary }}>Verificando configuração...</p>
         </div>
       </div>
     )

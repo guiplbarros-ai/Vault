@@ -174,19 +174,14 @@ export function DataTable<T extends Record<string, any>>({
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search
-              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
-              style={{ color: '#8CA39C' }}
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             />
             <Input
               placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-              style={{
-                backgroundColor: '#142A25',
-                borderColor: '#2A4942',
-                color: '#F2F7F5',
-              }}
+              className="pl-9 bg-muted border-border text-foreground"
+              aria-label={searchPlaceholder}
             />
           </div>
         </div>
@@ -194,29 +189,40 @@ export function DataTable<T extends Record<string, any>>({
 
       {/* Table (TEMA.md: superfície sólida) */}
       <div
-        className="overflow-hidden"
+        className="overflow-hidden rounded-md border border-border bg-card"
         style={{
-          backgroundColor: '#18332C',
-          borderColor: '#2A4942',
-          borderWidth: '1px',
-          borderStyle: 'solid',
-          borderRadius: 'var(--radius-md)',
           boxShadow: 'var(--shadow-1)',
         }}
       >
         <Table>
           <TableHeader>
-            <TableRow style={{ backgroundColor: '#162B26', borderColor: '#2A4942' }}>
+            <TableRow className="bg-muted border-border">
               {columns.map((column) => (
                 <TableHead
                   key={column.id}
-                  style={{
-                    width: column.width,
-                    color: '#F2F7F5',
-                    fontWeight: 600,
-                  }}
-                  className={cn(column.sortable && 'cursor-pointer select-none')}
+                  style={{ width: column.width }}
+                  className={cn(
+                    'text-foreground font-semibold',
+                    column.sortable && 'cursor-pointer select-none',
+                  )}
                   onClick={() => column.sortable && handleSort(column.id)}
+                  onKeyDown={(e) => {
+                    if (column.sortable && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      handleSort(column.id)
+                    }
+                  }}
+                  tabIndex={column.sortable ? 0 : undefined}
+                  role={column.sortable ? 'button' : undefined}
+                  aria-sort={
+                    column.sortable && sortColumn === column.id
+                      ? sortDirection === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : column.sortable
+                        ? 'none'
+                        : undefined
+                  }
                 >
                   <div className="flex items-center">
                     {column.header}
@@ -231,8 +237,8 @@ export function DataTable<T extends Record<string, any>>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
-                  style={{ color: '#8CA39C' }}
+                  className="h-24 text-center text-muted-foreground"
+                  role="status"
                 >
                   {emptyMessage}
                 </TableCell>
@@ -242,21 +248,29 @@ export function DataTable<T extends Record<string, any>>({
                 <TableRow
                   key={rowIndex}
                   onClick={() => onRowClick?.(row)}
-                  className={cn(onRowClick && 'cursor-pointer')}
+                  onKeyDown={onRowClick ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onRowClick(row)
+                    }
+                  } : undefined}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? 'button' : undefined}
+                  className={cn('border-border', onRowClick && 'cursor-pointer')}
                   style={{
-                    backgroundColor: rowIndex % 2 === 0 ? '#18332C' : '#142A25',
-                    borderColor: '#2A4942',
+                    backgroundColor:
+                      rowIndex % 2 === 0 ? 'hsl(var(--card))' : 'hsl(var(--muted))',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#1D3A34'
+                    e.currentTarget.style.backgroundColor = 'hsl(var(--accent))'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor =
-                      rowIndex % 2 === 0 ? '#18332C' : '#142A25'
+                      rowIndex % 2 === 0 ? 'hsl(var(--card))' : 'hsl(var(--muted))'
                   }}
                 >
                   {columns.map((column) => (
-                    <TableCell key={column.id} style={{ color: '#F2F7F5' }}>
+                    <TableCell key={column.id} className="text-foreground">
                       {column.cell
                         ? column.cell(row)
                         : column.accessorKey
@@ -275,7 +289,7 @@ export function DataTable<T extends Record<string, any>>({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <p className="text-sm" style={{ color: '#B2BDB9' }}>
+            <p className="text-sm text-muted-foreground">
               Exibindo {startIndex + 1} a {endIndex} de {sortedData.length} resultados
             </p>
             <Select
@@ -285,7 +299,7 @@ export function DataTable<T extends Record<string, any>>({
                 setCurrentPage(1)
               }}
             >
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className="w-[100px]" aria-label="Itens por página">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -314,6 +328,7 @@ export function DataTable<T extends Record<string, any>>({
               size="sm"
               onClick={() => setCurrentPage(1)}
               disabled={currentPage === 1}
+              aria-label="Primeira página"
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
@@ -322,10 +337,11 @@ export function DataTable<T extends Record<string, any>>({
               size="sm"
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
+              aria-label="Página anterior"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm" style={{ color: '#F2F7F5' }}>
+            <span className="text-sm text-foreground" aria-live="polite">
               Página {currentPage} de {totalPages}
             </span>
             <Button
@@ -333,6 +349,7 @@ export function DataTable<T extends Record<string, any>>({
               size="sm"
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
+              aria-label="Próxima página"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -341,6 +358,7 @@ export function DataTable<T extends Record<string, any>>({
               size="sm"
               onClick={() => setCurrentPage(totalPages)}
               disabled={currentPage === totalPages}
+              aria-label="Última página"
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>

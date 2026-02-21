@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { THEME_COLORS } from '@/lib/constants/colors'
 import { LogOut, Settings } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -65,31 +66,31 @@ export function ProfileMenu() {
         sideOffset={5}
         className="w-56"
         style={{
-          backgroundColor: '#1a362f',
-          border: '1px solid #2d5247',
+          backgroundColor: THEME_COLORS.bgCard2,
+          border: `1px solid ${THEME_COLORS.border}`,
           borderRadius: '14px',
           boxShadow: '0 2px 0 rgba(0,0,0,.45), 0 12px 24px rgba(0,0,0,.35)',
         }}
       >
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none" style={{ color: '#F7FAF9' }}>
+            <p className="text-sm font-medium leading-none" style={{ color: THEME_COLORS.fgPrimary }}>
               {user.nome}
             </p>
-            <p className="text-xs leading-none" style={{ color: '#94a8a1' }}>
+            <p className="text-xs leading-none" style={{ color: THEME_COLORS.fgSecondary }}>
               {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
 
-        <DropdownMenuSeparator style={{ backgroundColor: '#2d5247' }} />
+        <DropdownMenuSeparator style={{ backgroundColor: THEME_COLORS.divider }} />
 
         <DropdownMenuItem
           onClick={() => router.push('/settings')}
           className="cursor-pointer"
-          style={{ color: '#F7FAF9' }}
+          style={{ color: THEME_COLORS.fgPrimary }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#1d3a33'
+            e.currentTarget.style.backgroundColor = THEME_COLORS.hover
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent'
@@ -99,14 +100,14 @@ export function ProfileMenu() {
           Configurações
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator style={{ backgroundColor: '#2d5247' }} />
+        <DropdownMenuSeparator style={{ backgroundColor: THEME_COLORS.divider }} />
 
         <DropdownMenuItem
           onClick={handleLogout}
           className="cursor-pointer"
-          style={{ color: '#F07167' }}
+          style={{ color: THEME_COLORS.error }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#2e1f1f'
+            e.currentTarget.style.backgroundColor = THEME_COLORS.bgErrorSubtle
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent'

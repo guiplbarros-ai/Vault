@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { THEME_COLORS } from '@/lib/constants/colors'
 import type { Instituicao } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import * as React from 'react'
@@ -49,10 +50,9 @@ export const FormInstitutionSelect = React.forwardRef<
         <Label
           htmlFor={name}
           className={cn(
-            'text-white',
             required && 'after:content-["*"] after:ml-0.5 after:text-red-400'
           )}
-          style={{ color: '#ffffff !important' } as React.CSSProperties}
+          style={{ color: THEME_COLORS.fgPrimary }}
         >
           {label}
         </Label>
@@ -66,27 +66,20 @@ export const FormInstitutionSelect = React.forwardRef<
               ref={ref}
               id={name}
               className={cn(
-                '!bg-[#1e293b] !text-white !border-white/20',
                 error && 'border-destructive',
                 className
               )}
-              style={
-                {
-                  backgroundColor: '#1e293b !important',
-                  color: '#ffffff !important',
-                  borderColor: 'rgba(255, 255, 255, 0.2) !important',
-                } as React.CSSProperties
-              }
+              style={{
+                backgroundColor: THEME_COLORS.inputBg,
+                color: THEME_COLORS.fgPrimary,
+                borderColor: THEME_COLORS.inputBorder,
+              }}
               aria-invalid={error ? 'true' : 'false'}
               aria-describedby={
                 error ? `${name}-error` : description ? `${name}-description` : undefined
               }
             >
-              <SelectValue
-                placeholder={placeholder}
-                className="!text-white/70"
-                style={{ color: 'rgba(255, 255, 255, 0.7) !important' } as React.CSSProperties}
-              >
+              <SelectValue placeholder={placeholder}>
                 {selectedValue === 'other' ? (
                   <div className="flex items-center gap-2">
                     <div className="flex h-6 w-6 items-center justify-center text-lg">🏢</div>
@@ -102,25 +95,22 @@ export const FormInstitutionSelect = React.forwardRef<
                     <span>{selectedInstitution.nome}</span>
                   </div>
                 ) : (
-                  <span className="text-white/50">{placeholder}</span>
+                  <span style={{ color: THEME_COLORS.fgMuted }}>{placeholder}</span>
                 )}
               </SelectValue>
             </SelectTrigger>
             <SelectContent
-              className="!bg-gray-800 !border-gray-700"
-              style={
-                {
-                  backgroundColor: '#1f2937 !important',
-                  borderColor: '#374151 !important',
-                } as React.CSSProperties
-              }
+              style={{
+                backgroundColor: THEME_COLORS.bgCard,
+                borderColor: THEME_COLORS.border,
+              }}
             >
               {institutions.map((institution) => (
                 <SelectItem
                   key={institution.id}
                   value={institution.id}
-                  className="!text-white hover:!bg-gray-700 cursor-pointer"
-                  style={{ color: '#ffffff !important' } as React.CSSProperties}
+                  className="cursor-pointer"
+                  style={{ color: THEME_COLORS.fgPrimary }}
                 >
                   <div className="flex items-center gap-2">
                     <BankLogo
@@ -134,8 +124,8 @@ export const FormInstitutionSelect = React.forwardRef<
               ))}
               <SelectItem
                 value="other"
-                className="!text-white hover:!bg-gray-700 cursor-pointer"
-                style={{ color: '#ffffff !important' } as React.CSSProperties}
+                className="cursor-pointer"
+                style={{ color: THEME_COLORS.fgPrimary }}
               >
                 <div className="flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center text-lg">🏢</div>
@@ -149,8 +139,8 @@ export const FormInstitutionSelect = React.forwardRef<
       {description && !error && (
         <p
           id={`${name}-description`}
-          className="text-sm text-white/70"
-          style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+          className="text-sm"
+          style={{ color: THEME_COLORS.fgMuted }}
         >
           {description}
         </p>
@@ -158,8 +148,8 @@ export const FormInstitutionSelect = React.forwardRef<
       {error && (
         <p
           id={`${name}-error`}
-          className="text-sm font-medium text-red-400"
-          style={{ color: '#f87171' }}
+          className="text-sm font-medium"
+          style={{ color: THEME_COLORS.error }}
         >
           {error.message as string}
         </p>

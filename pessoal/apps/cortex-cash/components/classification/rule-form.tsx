@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { THEME_COLORS } from '@/lib/constants/colors'
 import { categoriaService } from '@/lib/services/categoria.service'
 import { regraClassificacaoService } from '@/lib/services/regra-classificacao.service'
 import type { Categoria, RegraClassificacao, TipoRegra } from '@/lib/types'
@@ -320,18 +321,18 @@ export function RuleForm({ open, onOpenChange, rule, onSuccess }: RuleFormProps)
             <div
               className="p-4 rounded-lg border border-white/20"
               style={{
-                background: 'linear-gradient(135deg, #2C3E50 0%, #1a252f 100%)',
+                background: `linear-gradient(135deg, ${THEME_COLORS.bgCard} 0%, ${THEME_COLORS.bgCard2} 100%)`,
               }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <HelpCircle className="w-5 h-5" style={{ color: '#18B0A4' }} />
+                <HelpCircle className="w-5 h-5" style={{ color: THEME_COLORS.link }} />
                 <h4 className="font-semibold text-white">Preview da Regra</h4>
               </div>
 
               <div className="space-y-2">
                 <p className="text-white/80">
                   Esta regra casaria com{' '}
-                  <Badge className="bg-[#18B0A4] text-white">{previewData.matches}</Badge>{' '}
+                  <Badge style={{ backgroundColor: THEME_COLORS.accent, color: 'white' }}>{previewData.matches}</Badge>{' '}
                   {previewData.matches === 1 ? 'transação' : 'transações'} existentes
                 </p>
 
@@ -360,7 +361,7 @@ export function RuleForm({ open, onOpenChange, rule, onSuccess }: RuleFormProps)
             onClick={handleSubmit}
             disabled={loading}
             style={{
-              background: 'linear-gradient(135deg, #18B0A4 0%, #16a89d 100%)',
+              background: `linear-gradient(135deg, ${THEME_COLORS.accent} 0%, ${THEME_COLORS.accentEmph} 100%)`,
               color: 'white',
             }}
           >
