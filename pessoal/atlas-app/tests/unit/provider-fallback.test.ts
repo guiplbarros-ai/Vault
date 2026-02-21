@@ -40,6 +40,7 @@ vi.mock('../../src/services/usage-db.service.js', () => ({
 
 vi.mock('../../src/services/health.service.js', () => ({
   getHealthService: vi.fn(() => ({
+    isHealthy: vi.fn(() => true),
     recordSuccess: vi.fn(),
     recordFailure: vi.fn(async () => {}),
   })),

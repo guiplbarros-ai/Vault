@@ -2,6 +2,7 @@ import { format } from 'date-fns'
 import type { FlightResult, FlightSearchParams } from '../types/index.js'
 import { loadEnv } from '../utils/env.js'
 import { logger } from '../utils/logger.js'
+import { sanitizeApiError } from '../utils/sanitize.js'
 
 loadEnv()
 
@@ -111,7 +112,7 @@ export async function searchFlightsKiwi(params: FlightSearchParams): Promise<Fli
 
     if (!response.ok) {
       const text = await response.text()
-      throw new Error(`Kiwi API error: ${response.status} - ${text.slice(0, 200)}`)
+      throw new Error(`Kiwi API error: ${response.status} - ${sanitizeApiError(text)}`)
     }
 
     const data = (await response.json()) as KiwiSearchResponse
@@ -212,7 +213,7 @@ export async function searchFlexibleDatesKiwi(
 
     if (!response.ok) {
       const text = await response.text()
-      throw new Error(`Kiwi API error: ${response.status} - ${text.slice(0, 200)}`)
+      throw new Error(`Kiwi API error: ${response.status} - ${sanitizeApiError(text)}`)
     }
 
     const data = (await response.json()) as KiwiSearchResponse

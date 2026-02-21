@@ -7,7 +7,7 @@ import { getPricesDbService } from './prices-db.service.js'
 import { logger } from '../utils/logger.js'
 import { loadEnv } from '../utils/env.js'
 import { formatRouteFull } from '../utils/airports.js'
-import { getBenchmark, getAllBenchmarks, setBenchmark, saveBenchmarkToSupabase, loadBenchmarksFromSupabase, seedBenchmarksToSupabase } from '../utils/price-benchmark.js'
+import { getBenchmark, getAllBenchmarks, setBenchmark, saveBenchmarkToSupabase, loadBenchmarksFromSupabase, seedBenchmarksToSupabase, filterPriceOutliers } from '../utils/price-benchmark.js'
 import { getPromoMonitorService } from './promo-monitor.service.js'
 import { searchFlightDeals, getDigestInsights, getRouteBenchmark, isPerplexityConfigured } from './perplexity.service.js'
 import { addDays, format } from 'date-fns'
@@ -343,8 +343,14 @@ class DailyDigestService {
           continue
         }
 
-        // Ordena preços do menor para o maior
-        const sorted = prices.map(p => p.price).sort((a, b) => a - b)
+        // Ordena preços e remove outliers (IQR)
+        const rawSorted = prices.map(p => p.price).sort((a, b) => a - b)
+        const sorted = filterPriceOutliers(rawSorted)
+
+        if (sorted.length < 5) {
+          logger.info(`[Benchmark] ${bm.route}: ${rawSorted.length} amostras → ${sorted.length} após filtro outliers (< 5) — pulando`)
+          continue
+        }
 
         // Calcula percentis
         const percentile = (arr: number[], p: number) => {

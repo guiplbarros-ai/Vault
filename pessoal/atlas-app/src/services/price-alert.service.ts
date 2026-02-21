@@ -22,6 +22,7 @@ interface ChatAlertPrefs {
   silenceUntil?: Date // Silencia alertas até esta data
 }
 
+const MAX_CACHED_CHATS = 100
 const chatPrefs = new Map<number, ChatAlertPrefs>()
 const prefsLoadedFromDb = new Set<number>() // Track which chats we already loaded from DB
 
@@ -30,6 +31,15 @@ export function setChatAlertPrefs(chatId: number, prefs: Partial<ChatAlertPrefs>
   const updated = { ...current, ...prefs }
   chatPrefs.set(chatId, updated)
   prefsLoadedFromDb.add(chatId)
+
+  // Evita crescimento ilimitado do Map — remove a entrada mais antiga
+  if (chatPrefs.size > MAX_CACHED_CHATS) {
+    const oldest = chatPrefs.keys().next().value
+    if (oldest !== undefined) {
+      chatPrefs.delete(oldest)
+      prefsLoadedFromDb.delete(oldest)
+    }
+  }
 
   // Persist to Supabase (fire-and-forget)
   const alertsDb = getAlertsDbService()
@@ -243,31 +253,37 @@ class PriceAlertService {
       }
     }
 
+    // Save-first pattern: salva deal ANTES de enviar Telegram (previne race condition)
+    let savedDealId: string | undefined
+    if (this.alertsDb.enabled()) {
+      const saved = await this.alertsDb.saveDeal({
+        routeId: deal.route.id,
+        origin: deal.flight.origin,
+        destination: deal.flight.destination,
+        departureDate: deal.flight.departureDate,
+        price: effectivePrice,
+        airline: deal.flight.airline,
+        stops: deal.flight.stops,
+        deepLink: deal.flight.deepLink,
+        dealType: deal.type,
+        // notifiedAt null = pending (será marcado após envio)
+      })
+      if (!saved) {
+        logger.warn(`Dedup (save-first): deal já existe ou erro ao salvar — pulando`)
+        return
+      }
+      savedDealId = saved.id
+    }
+
     const notification = this.formatNotification(deal)
 
     try {
       await telegram.sendAlert(chatId, notification)
-      // Registra no dedup (memória + Supabase)
       this.notifiedDeals.set(dedupKey, { price: effectivePrice, timestamp: Date.now() })
 
-      // Salva deal no Supabase com notified_at
-      if (this.alertsDb.enabled()) {
-        try {
-          await this.alertsDb.saveDeal({
-            routeId: deal.route.id,
-            origin: deal.flight.origin,
-            destination: deal.flight.destination,
-            departureDate: deal.flight.departureDate,
-            price: effectivePrice,
-            airline: deal.flight.airline,
-            stops: deal.flight.stops,
-            deepLink: deal.flight.deepLink,
-            dealType: deal.type,
-            notifiedAt: new Date(),
-          })
-        } catch (err) {
-          logger.warn(`Erro ao salvar deal no Supabase: ${err}`)
-        }
+      // Marca deal como notificado
+      if (savedDealId) {
+        await this.alertsDb.markDealNotified(savedDealId)
       }
 
       logger.info(`Notificação enviada para chat ${chatId}`)
@@ -682,8 +698,8 @@ class PriceAlertService {
   }
 
   // Salva um deal detectado no banco
-  async saveDeal(deal: DetectedDeal): Promise<FlightDeal> {
-    const savedDeal = await this.alertsDb.saveDeal({
+  async saveDeal(deal: DetectedDeal): Promise<FlightDeal | null> {
+    return await this.alertsDb.saveDeal({
       routeId: deal.route.id,
       origin: deal.flight.origin,
       destination: deal.flight.destination,
@@ -696,8 +712,6 @@ class PriceAlertService {
       deepLink: deal.flight.deepLink,
       dealType: deal.type,
     })
-
-    return savedDeal
   }
 
   // Formata notificacao para enviar via Telegram

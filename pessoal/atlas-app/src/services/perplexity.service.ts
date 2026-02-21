@@ -1,5 +1,6 @@
 import { loadEnv } from '../utils/env.js'
 import { logger } from '../utils/logger.js'
+import { sanitizeApiError } from '../utils/sanitize.js'
 import { getUsageDbService } from './usage-db.service.js'
 import { formatAirportFull } from '../utils/airports.js'
 import type { DealInsight, BenchmarkInsight } from '../types/index.js'
@@ -80,7 +81,7 @@ async function callPerplexity(
 
     if (!response.ok) {
       const text = await response.text()
-      throw new Error(`Perplexity error: ${response.status} - ${text.slice(0, 200)}`)
+      throw new Error(`Perplexity error: ${response.status} - ${sanitizeApiError(text)}`)
     }
 
     const data = (await response.json()) as PerplexityResponse

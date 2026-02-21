@@ -164,6 +164,19 @@ export function isPromotion(origin: string, destination: string, price: number):
 }
 
 /**
+ * Remove outliers usando IQR (Interquartile Range).
+ * Preços extremos (ex: error fares, premium class mistagged) distorcem percentis.
+ * @param sorted Array de preços já ordenado do menor para o maior
+ */
+export function filterPriceOutliers(sorted: number[]): number[] {
+  if (sorted.length < 5) return sorted
+  const q1 = sorted[Math.floor(sorted.length * 0.25)]
+  const q3 = sorted[Math.floor(sorted.length * 0.75)]
+  const iqr = q3 - q1
+  return sorted.filter(v => v >= q1 - 1.5 * iqr && v <= q3 + 1.5 * iqr)
+}
+
+/**
  * Retorna todos os benchmarks disponíveis
  */
 export function getAllBenchmarks(): PriceBenchmark[] {

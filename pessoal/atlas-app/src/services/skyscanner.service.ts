@@ -2,6 +2,7 @@ import { format } from 'date-fns'
 import type { FlightResult, FlightSearchParams, Layover } from '../types/index.js'
 import { loadEnv } from '../utils/env.js'
 import { logger } from '../utils/logger.js'
+import { sanitizeApiError } from '../utils/sanitize.js'
 
 loadEnv()
 
@@ -187,7 +188,7 @@ export async function searchFlightsSkyscanner(params: FlightSearchParams): Promi
 
     if (!response.ok) {
       const text = await response.text()
-      throw new Error(`Skyscanner error: ${response.status} - ${text.slice(0, 200)}`)
+      throw new Error(`Skyscanner error: ${response.status} - ${sanitizeApiError(text)}`)
     }
 
     const data = (await response.json()) as SkyscannerResponse

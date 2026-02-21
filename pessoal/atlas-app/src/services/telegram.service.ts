@@ -174,6 +174,10 @@ class TelegramService {
       const dest = normalizeIata(match[2])
       const targetPrice = Number(match[3])
 
+      if (targetPrice <= 0) {
+        return this.sendMessage(msg.chat.id, '❌ Preço-alvo deve ser maior que zero.')
+      }
+
       try {
         const ok = await this.routesDb.updateTargetPrice(msg.chat.id, origin, dest, targetPrice)
         if (ok) {
@@ -365,11 +369,11 @@ class TelegramService {
 
       const enabled = match[1] === 'on'
 
-      try {
-        await this.alertsDb.upsertChatSettings(msg.chat.id, { digestEnabled: enabled })
+      const result = await this.alertsDb.upsertChatSettings(msg.chat.id, { digestEnabled: enabled })
+      if (result) {
         this.sendMessage(msg.chat.id, `Digest ${enabled ? 'ativado' : 'desativado'}!`)
-      } catch (error) {
-        this.sendMessage(msg.chat.id, `Erro: ${error}`)
+      } else {
+        this.sendMessage(msg.chat.id, 'Erro ao salvar configuração. Tente novamente.')
       }
     })
 
@@ -451,8 +455,18 @@ class TelegramService {
 
       const day = Number(match[1])
       const month = Number(match[2])
+
+      if (month < 1 || month > 12 || day < 1 || day > 31) {
+        return this.sendMessage(msg.chat.id, '❌ Data inválida. Use DD/MM (ex: 25/03).')
+      }
+
       const year = new Date().getFullYear()
       const silenceDate = new Date(year, month - 1, day, 23, 59, 59)
+
+      // Verifica se a data resultante é válida (ex: 31/02 vira 03/03)
+      if (silenceDate.getDate() !== day || silenceDate.getMonth() !== month - 1) {
+        return this.sendMessage(msg.chat.id, `❌ Data inválida: ${day}/${month} não existe.`)
+      }
 
       if (silenceDate <= new Date()) {
         silenceDate.setFullYear(year + 1)
@@ -533,6 +547,10 @@ class TelegramService {
         return this.sendMessage(msg.chat.id, '⚠️ Perplexity não configurado (PERPLEXITY_API_KEY).')
       }
 
+      if (!isValidIata(match[1]) || !isValidIata(match[2])) {
+        return this.sendMessage(msg.chat.id, '❌ Código IATA inválido. Use 3 letras (ex: CNF, NRT).')
+      }
+
       const origin = normalizeIata(match[1])
       const dest = normalizeIata(match[2])
 
@@ -589,6 +607,10 @@ class TelegramService {
     this.bot.onText(/\/historico ([A-Za-z]{3}) ([A-Za-z]{3})/, async (msg, match) => {
       if (!isAuthorized(msg.from?.id || 0)) return
       if (!match) return
+
+      if (!isValidIata(match[1]) || !isValidIata(match[2])) {
+        return this.sendMessage(msg.chat.id, '❌ Código IATA inválido. Use 3 letras (ex: CNF, NRT).')
+      }
 
       const origin = normalizeIata(match[1])
       const dest = normalizeIata(match[2])

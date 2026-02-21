@@ -93,7 +93,7 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
   // 1. SerpAPI (principal - preços reais via Google Flights)
   // Custa $0.01/call mas tem dados precisos de mercado
   // BLOQUEADO automaticamente se limite mensal atingido
-  if (isSerpApiConfigured()) {
+  if (isSerpApiConfigured() && health.isHealthy('serpapi')) {
     try {
       const serpResults = await searchFlightsSerpApi(params)
       results.push(...serpResults)
@@ -126,7 +126,7 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
   }
 
   // 2. Skyscanner (via RapidAPI - 500 free/mês, dados reais)
-  if (isSkyscannerConfigured() && results.length === 0) {
+  if (isSkyscannerConfigured() && results.length === 0 && health.isHealthy('skyscanner')) {
     try {
       const skyResults = await searchFlightsSkyscanner(params)
       results.push(...skyResults)
@@ -143,7 +143,7 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
 
   // 3. Kiwi (GRÁTIS ilimitado, dados razoáveis)
   // Usado como fallback quando SerpAPI/Skyscanner não retornaram resultados
-  if (isKiwiConfigured() && (results.length === 0 || serpApiBudgetExceeded)) {
+  if (isKiwiConfigured() && (results.length === 0 || serpApiBudgetExceeded) && health.isHealthy('kiwi')) {
     try {
       const kiwiResults = await searchFlightsKiwi(params)
       results.push(...kiwiResults)
@@ -161,7 +161,7 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
   // 4. Amadeus (último recurso - API de TESTE com dados não confiáveis)
   // ATENÇÃO: test.api.amadeus.com retorna preços inflados/falsos
   // Só usar se não houver outra opção
-  if (isAmadeusConfigured() && results.length === 0) {
+  if (isAmadeusConfigured() && results.length === 0 && health.isHealthy('amadeus')) {
     try {
       const amadeusResults = await searchFlightsAmadeus(params)
       results.push(...amadeusResults)

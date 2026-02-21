@@ -211,7 +211,7 @@ class AlertsDbService {
       alertLevel: string
       silenceUntil: Date | null
     }>
-  ): Promise<ChatSettings> {
+  ): Promise<ChatSettings | null> {
     const supabase = getSupabaseClient()
 
     const updateData: Record<string, unknown> = {}
@@ -231,7 +231,8 @@ class AlertsDbService {
       .single()
 
     if (error) {
-      throw new Error(`Erro ao salvar configuracoes: ${error.message}`)
+      logger.error(`Erro ao salvar configuracoes: ${error.message}`)
+      return null
     }
 
     return mapDbToSettings(data as DbChatSettings)
@@ -254,7 +255,7 @@ class AlertsDbService {
   }
 
   // Flight Deals
-  async saveDeal(deal: Omit<FlightDeal, 'id' | 'createdAt'>): Promise<FlightDeal> {
+  async saveDeal(deal: Omit<FlightDeal, 'id' | 'createdAt'>): Promise<FlightDeal | null> {
     const supabase = getSupabaseClient()
 
     const { data, error } = await supabase
@@ -278,7 +279,8 @@ class AlertsDbService {
       .single()
 
     if (error) {
-      throw new Error(`Erro ao salvar deal: ${error.message}`)
+      logger.error(`Erro ao salvar deal: ${error.message}`)
+      return null
     }
 
     return mapDbToDeal(data as DbFlightDeal)
@@ -293,7 +295,7 @@ class AlertsDbService {
       .eq('id', dealId)
   }
 
-  // Dedup: busca deal notificado recentemente para mesma rota+data
+  // Dedup: busca deal recente para mesma rota+data (notificado OU pending)
   async findRecentNotification(
     origin: string,
     destination: string,
@@ -304,7 +306,8 @@ class AlertsDbService {
     const since = new Date(Date.now() - maxAgeHours * 3600000).toISOString()
     const depDate = departureDate.split(/[T ]/)[0] // YYYY-MM-DD only
 
-    const { data, error } = await supabase
+    // Busca deals notificados recentemente
+    const { data: notified, error: err1 } = await supabase
       .from('atlas_flight_deals')
       .select('*')
       .eq('origin', normalizeIata(origin))
@@ -315,8 +318,28 @@ class AlertsDbService {
       .order('notified_at', { ascending: false })
       .limit(1)
 
-    if (error || !data || data.length === 0) return null
-    return mapDbToDeal(data[0] as DbFlightDeal)
+    if (!err1 && notified && notified.length > 0) {
+      return mapDbToDeal(notified[0] as DbFlightDeal)
+    }
+
+    // Busca deals pending (notified_at IS NULL, criados < 5min atrás)
+    const pendingSince = new Date(Date.now() - 5 * 60000).toISOString()
+    const { data: pending, error: err2 } = await supabase
+      .from('atlas_flight_deals')
+      .select('*')
+      .eq('origin', normalizeIata(origin))
+      .eq('destination', normalizeIata(destination))
+      .eq('departure_date', depDate)
+      .is('notified_at', null)
+      .gte('created_at', pendingSince)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (!err2 && pending && pending.length > 0) {
+      return mapDbToDeal(pending[0] as DbFlightDeal)
+    }
+
+    return null
   }
 
   async getRecentDeals(hours: number = 24): Promise<FlightDeal[]> {

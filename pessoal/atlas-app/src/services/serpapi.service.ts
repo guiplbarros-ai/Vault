@@ -2,6 +2,7 @@ import { format } from 'date-fns'
 import type { FlightResult, FlightSearchParams } from '../types/index.js'
 import { loadEnv } from '../utils/env.js'
 import { logger } from '../utils/logger.js'
+import { sanitizeApiError } from '../utils/sanitize.js'
 import { getUsageDbService } from './usage-db.service.js'
 
 loadEnv()
@@ -132,13 +133,13 @@ export async function searchFlightsSerpApi(params: FlightSearchParams): Promise<
 
     if (!response.ok) {
       const text = await response.text()
-      throw new Error(`SerpAPI error: ${response.status} - ${text.slice(0, 200)}`)
+      throw new Error(`SerpAPI error: ${response.status} - ${sanitizeApiError(text)}`)
     }
 
     const data = (await response.json()) as SerpApiResponse
 
     if (data.error) {
-      throw new Error(`SerpAPI error: ${data.error}`)
+      throw new Error(`SerpAPI error: ${sanitizeApiError(String(data.error))}`)
     }
 
     const results: FlightResult[] = []

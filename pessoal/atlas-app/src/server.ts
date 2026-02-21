@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import crypto from 'node:crypto'
 import http from 'node:http'
 import { URL } from 'node:url'
 import { getTelegramService } from './services/telegram.service.js'
@@ -63,7 +64,10 @@ const server = http.createServer(async (req, res) => {
       // Valida secret se configurado
       if (webhookSecret) {
         const got = String(req.headers['x-telegram-bot-api-secret-token'] || '')
-        if (got !== webhookSecret) {
+        const bufA = Buffer.from(webhookSecret)
+        const bufB = Buffer.from(got)
+        const isValid = bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB)
+        if (!isValid) {
           logger.warn('Telegram webhook: secret invalido')
           return sendJson(res, 401, { ok: false, error: 'invalid webhook secret' })
         }

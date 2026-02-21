@@ -80,6 +80,13 @@ class HealthService {
     }
   }
 
+  // Circuit breaker: retorna false se provider atingiu threshold de falhas
+  isHealthy(provider: string): boolean {
+    const health = this.providers.get(provider)
+    if (!health) return true
+    return health.consecutiveFailures < FAILURE_THRESHOLD
+  }
+
   // Retorna status formatado para /health command
   getStatusMessage(): string {
     let message = '🏥 *Atlas Health Check*\n\n'

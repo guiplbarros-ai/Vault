@@ -91,7 +91,7 @@ class PricesDbService {
 
     if (error) {
       logger.error(`Erro ao salvar precos: ${error.message}`)
-      throw new Error(`Erro ao salvar precos: ${error.message}`)
+      return
     }
 
     logger.info(`Salvos ${records.length} precos no historico`)
