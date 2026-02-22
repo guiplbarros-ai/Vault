@@ -48,7 +48,7 @@ echo "   ✓ Estrutura criada em $OPENCLAW_DIR"
 echo "[3/5] Copiando workspaces..."
 
 # Ajuste este path para onde está o repo openclaw-infra no Windows
-INFRA_DIR="/mnt/c/Users/guipl/Documents/Coding/pessoal/openclaw-infra"
+INFRA_DIR="/mnt/c/Users/guipl/Documents/Coding/pessoal-repo/pessoal/openclaw-infra"
 
 if [ -d "$INFRA_DIR/workspaces" ]; then
   for agent in backstage data review ops pessoal; do

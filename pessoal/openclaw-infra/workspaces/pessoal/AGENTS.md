@@ -26,14 +26,19 @@ Você é o agente para os **projetos pessoais** do Guilherme: Cortex App, Cortex
 
 ## Diretório de trabalho
 ```bash
-# Cortex App
-cd /mnt/c/Users/guipl/Documents/Coding/pessoal/cortex-app
+BASE="/mnt/c/Users/guipl/Documents/Coding"
 
-# Cortex Cash
-cd /mnt/c/Users/guipl/Documents/Coding/pessoal/apps/cortex-cash
+# Cortex App (standalone, fora do monorepo)
+cd "$BASE/cortex-app-main"
 
-# Atlas
-cd /mnt/c/Users/guipl/Documents/Coding/pessoal/atlas-app
+# Cortex Cash (dentro do monorepo pessoal)
+cd "$BASE/pessoal-repo/pessoal/apps/cortex-cash"
+
+# Atlas App (dentro do monorepo pessoal)
+cd "$BASE/pessoal-repo/pessoal/atlas-app"
+
+# Monorepo pessoal (raiz)
+cd "$BASE/pessoal-repo/pessoal"
 ```
 
 ## Regras

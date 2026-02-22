@@ -15,13 +15,15 @@ const PORT = Number(process.env.PORT || 18790)
 const CLAUDE_BIN = process.env.CLAUDE_BIN || 'claude'
 const TIMEOUT_MS = Number(process.env.TIMEOUT_MS || 600_000) // 10 min
 const MAX_CONCURRENT = Number(process.env.MAX_CONCURRENT || 3)
+const MAX_RETRIES = Number(process.env.MAX_RETRIES || 3)
+const RETRY_BASE_DELAY_MS = Number(process.env.RETRY_BASE_DELAY_MS || 60_000) // 60s
 
 const AGENT_CONFIG = {
   'relay/backstage': { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 25 },
   'relay/data':      { model: 'opus',   cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 25 },
   'relay/review':    { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 15 },
   'relay/ops':       { model: 'haiku',  cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 10 },
-  'relay/pessoal':   { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/pessoal',         maxTurns: 25 },
+  'relay/pessoal':   { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/pessoal-repo/pessoal', maxTurns: 25 },
 }
 
 // ── State ───────────────────────────────────────────────────────────────────
@@ -203,6 +205,77 @@ function buildOpenAIResponse(text, model) {
   }
 }
 
+// ── Error Classification ────────────────────────────────────────────────────
+
+function classifyError(stderr, stdout) {
+  const output = ((stderr || '') + (stdout || '')).toLowerCase()
+  if (/rate.?limit|429|quota|too many request/i.test(output)) return 'rate_limit'
+  if (/not logged in|please run.*login|unauthorized|authentication/i.test(output)) return 'auth'
+  return 'unknown'
+}
+
+/** Spawn claude CLI once. Returns stdout on success, throws with { message, stderr, stdout } on failure. */
+function spawnClaude(args, config) {
+  return new Promise((resolve, reject) => {
+    const stdoutChunks = []
+    const stderrChunks = []
+
+    const proc = spawn(CLAUDE_BIN, args, {
+      cwd: config.cwd,
+      timeout: TIMEOUT_MS,
+      env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/local/bin:/usr/bin:/bin:${process.env.PATH || ''}` },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+    proc.stdout.on('data', (c) => stdoutChunks.push(c))
+    proc.stderr.on('data', (c) => stderrChunks.push(c))
+
+    proc.on('close', (code) => {
+      const stdout = Buffer.concat(stdoutChunks).toString('utf-8')
+      const stderr = Buffer.concat(stderrChunks).toString('utf-8')
+
+      if (code !== 0) {
+        const err = new Error(`claude exited ${code}: ${(stderr || stdout).slice(0, 500)}`)
+        err.stderr = stderr
+        err.stdout = stdout
+        reject(err)
+      } else {
+        resolve(stdout)
+      }
+    })
+
+    proc.on('error', (err) => reject(err))
+  })
+}
+
+/** Spawn claude CLI with retry on rate limit errors. */
+async function spawnClaudeWithRetry(args, config, modelName) {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await spawnClaude(args, config)
+    } catch (e) {
+      const errorType = classifyError(e.stderr, e.stdout || e.message)
+
+      // Auth errors: no retry, fail immediately
+      if (errorType === 'auth') {
+        throw new Error('AUTH: Claude CLI não está logado. Verificar `claude /login` no WSL2.')
+      }
+
+      // Rate limit: retry with backoff
+      if (errorType === 'rate_limit' && attempt < MAX_RETRIES) {
+        const delayMs = RETRY_BASE_DELAY_MS * (attempt + 1)
+        const delaySec = Math.round(delayMs / 1000)
+        log('warn', `[${modelName}] Rate limited, retry ${attempt + 1}/${MAX_RETRIES} in ${delaySec}s...`)
+        await new Promise(r => setTimeout(r, delayMs))
+        continue
+      }
+
+      // Unknown error or last retry: throw
+      throw e
+    }
+  }
+}
+
 // ── Handlers ────────────────────────────────────────────────────────────────
 
 async function handleChatCompletion(req, res) {
@@ -262,33 +335,7 @@ async function handleChatCompletion(req, res) {
   const startMs = Date.now()
 
   try {
-    const result = await new Promise((resolve, reject) => {
-      const stdoutChunks = []
-      const stderrChunks = []
-
-      const proc = spawn(CLAUDE_BIN, args, {
-        cwd: config.cwd,
-        timeout: TIMEOUT_MS,
-        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/local/bin:/usr/bin:/bin:${process.env.PATH || ''}` },
-        stdio: ['ignore', 'pipe', 'pipe'],
-      })
-
-      proc.stdout.on('data', (c) => stdoutChunks.push(c))
-      proc.stderr.on('data', (c) => stderrChunks.push(c))
-
-      proc.on('close', (code) => {
-        const stdout = Buffer.concat(stdoutChunks).toString('utf-8')
-        const stderr = Buffer.concat(stderrChunks).toString('utf-8')
-
-        if (code !== 0) {
-          reject(new Error(`claude exited ${code}: ${stderr || stdout}`.slice(0, 500)))
-        } else {
-          resolve(stdout)
-        }
-      })
-
-      proc.on('error', (err) => reject(err))
-    })
+    const result = await spawnClaudeWithRetry(args, config, modelName)
 
     const elapsedMs = Date.now() - startMs
     const elapsed = (elapsedMs / 1000).toFixed(1)
@@ -307,6 +354,23 @@ async function handleChatCompletion(req, res) {
   } catch (e) {
     const elapsed = ((Date.now() - startMs) / 1000).toFixed(1)
     log('error', `[${modelName}] Failed after ${elapsed}s: ${e.message}`)
+
+    // Friendly messages: return as 200 so the bot posts them in Discord
+    if (e.message.startsWith('AUTH:')) {
+      return sendJson(res, 200, buildOpenAIResponse(
+        `⚠️ ${e.message}`,
+        modelName
+      ))
+    }
+
+    const errorType = classifyError(e.stderr || '', e.stdout || e.message)
+    if (errorType === 'rate_limit') {
+      return sendJson(res, 200, buildOpenAIResponse(
+        `⏳ Rate limit atingido. Tentei ${MAX_RETRIES}x sem sucesso. Tente novamente em ~2 minutos.`,
+        modelName
+      ))
+    }
+
     return sendJson(res, 500, {
       error: { message: e.message, type: 'server_error' },
     })
@@ -382,5 +446,6 @@ server.listen(PORT, '127.0.0.1', () => {
   log('info', `Claude binary: ${CLAUDE_BIN}`)
   log('info', `Max concurrent: ${MAX_CONCURRENT}`)
   log('info', `Timeout: ${TIMEOUT_MS / 1000}s`)
+  log('info', `Retry: ${MAX_RETRIES}x with ${RETRY_BASE_DELAY_MS / 1000}s base delay`)
   log('info', `Agents: ${Object.keys(AGENT_CONFIG).join(', ')}`)
 })

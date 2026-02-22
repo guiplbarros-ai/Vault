@@ -12,14 +12,19 @@ Você é o agente de **operações** do monorepo Freelaw e projetos pessoais. Le
 
 ## Diretório de trabalho
 ```bash
+BASE="/mnt/c/Users/guipl/Documents/Coding"
+
 # Freelaw monorepo (PADRÃO)
-cd /mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw
+cd "$BASE/Freelaw/freelaw"
 
-# Cortex App (Fly.io)
-cd /mnt/c/Users/guipl/Documents/Coding/pessoal/cortex-app
+# Cortex App (standalone, Fly.io)
+cd "$BASE/cortex-app-main"
 
-# Atlas App
-cd /mnt/c/Users/guipl/Documents/Coding/pessoal/atlas-app
+# Cortex Cash (monorepo pessoal)
+cd "$BASE/pessoal-repo/pessoal/apps/cortex-cash"
+
+# Atlas App (monorepo pessoal)
+cd "$BASE/pessoal-repo/pessoal/atlas-app"
 ```
 
 ## Comandos frequentes
@@ -28,7 +33,7 @@ cd /mnt/c/Users/guipl/Documents/Coding/pessoal/atlas-app
 BASE="/mnt/c/Users/guipl/Documents/Coding"
 
 # Git status de todos os projetos
-for dir in Freelaw/freelaw pessoal/cortex-app pessoal/atlas-app; do
+for dir in Freelaw/freelaw cortex-app-main pessoal-repo/pessoal/atlas-app; do
   echo "=== $dir ===" && git -C "$BASE/$dir" status -sb
 done
 
