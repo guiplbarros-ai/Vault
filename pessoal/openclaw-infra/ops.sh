@@ -11,7 +11,10 @@ set -euo pipefail
 # ── Config ──────────────────────────────────────────────────
 SSH_HOST="${OPS_SSH_HOST:-wsl2}"
 OPENCLAW_DIR="/home/guipl/.openclaw"
-INFRA_DIR="/mnt/c/Users/guipl/Documents/Coding/pessoal-repo/openclaw-infra"
+INFRA_DIR="/mnt/c/Users/guipl/Documents/Coding/pessoal-repo/pessoal/openclaw-infra"
+
+# Discord webhook for #status notifications
+DISCORD_WEBHOOK_OPS="${DISCORD_WEBHOOK_OPS:-https://discord.com/api/webhooks/1475264785506373823/dqfvRWVpaFpqKC3S11xLIukRK1L7FMinRSIHBCp0ilcLA_o_phPx9y944Qw227wxsr1G}"
 
 # Colors
 RED='\033[0;31m'
@@ -20,6 +23,12 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
+
+# Embed colors
+COLOR_OK=5025616       # green
+COLOR_FAIL=15158332    # red
+COLOR_WARN=16776960    # yellow
+COLOR_INFO=5865522     # blue
 
 # ── Helpers ─────────────────────────────────────────────────
 
@@ -30,6 +39,20 @@ fail()  { echo -e "  ${RED}✗${NC} $*"; }
 info()  { echo -e "  ${CYAN}→${NC} $*"; }
 warn()  { echo -e "  ${YELLOW}⚠${NC} $*"; }
 header() { echo -e "\n${BOLD}── $* ──${NC}"; }
+
+# Discord notification (non-blocking, fire-and-forget)
+notify() {
+  local title="$1" desc="${2:-}" color="${3:-$COLOR_INFO}"
+  [ -z "$DISCORD_WEBHOOK_OPS" ] && return 0
+  # Escape quotes in desc for JSON
+  desc=$(echo "$desc" | sed 's/"/\\"/g' | tr '\n' ' ')
+  local ts
+  ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  curl -sf -X POST "$DISCORD_WEBHOOK_OPS" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"OpenClaw Ops\",\"embeds\":[{\"title\":\"$title\",\"description\":\"$desc\",\"color\":$color,\"timestamp\":\"$ts\",\"footer\":{\"text\":\"ops.sh\"}}]}" \
+    &>/dev/null &
+}
 
 # ── Commands ────────────────────────────────────────────────
 
@@ -109,12 +132,18 @@ cmd_restart_relay() {
     if [ -n "$health" ]; then
       ok "Health endpoint responding"
       echo "$health" | python3 -m json.tool 2>/dev/null || echo "$health"
+      local uptime agents
+      uptime=$(echo "$health" | python3 -c "import sys,json; print(json.load(sys.stdin).get('uptime','?'))" 2>/dev/null || echo "?")
+      agents=$(echo "$health" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('agents',[])))" 2>/dev/null || echo "?")
+      notify "Relay reiniciado" "Status: active | Uptime: ${uptime}s | Agents: ${agents}" $COLOR_OK
     else
       warn "Health endpoint not ready yet (may need more time)"
+      notify "Relay reiniciado" "Status: active | Health: not responding yet" $COLOR_WARN
     fi
   else
     fail "Relay failed to start"
     info "Check logs: ./ops.sh logs relay"
+    notify "Relay FALHOU ao reiniciar" "Status: $status" $COLOR_FAIL
   fi
 }
 
@@ -131,9 +160,11 @@ cmd_restart_gateway() {
   gw_pid=$(run "pgrep -f 'openclaw gateway' 2>/dev/null" || echo "")
   if [ -n "$gw_pid" ]; then
     ok "Gateway running (PID $gw_pid)"
+    notify "Gateway reiniciado" "PID: $gw_pid" $COLOR_OK
   else
     fail "Gateway did NOT start"
     info "Check: ./ops.sh logs gateway"
+    notify "Gateway FALHOU ao reiniciar" "Verifique: ops.sh logs gateway" $COLOR_FAIL
   fi
 }
 
@@ -144,10 +175,12 @@ cmd_sync() {
   info "sync-workspaces.sh..."
   run "cd $INFRA_DIR && bash sync-workspaces.sh"
   ok "Sync complete"
+  notify "Workspaces sincronizados" "git pull + sync-workspaces.sh" $COLOR_OK
 }
 
 cmd_deploy() {
   header "Full Deploy"
+  notify "Deploy iniciado" "pull > sync > copy > restart" $COLOR_INFO
 
   info "Step 1/7: git pull"
   run "cd $INFRA_DIR && git pull --rebase 2>&1 || echo '(skipped)'"
@@ -184,8 +217,13 @@ cmd_deploy() {
   health=$(run "curl -sf http://127.0.0.1:18790/health 2>/dev/null" || echo "")
   if [ -n "$health" ]; then
     ok "Health: responding"
+    local uptime agents
+    uptime=$(echo "$health" | python3 -c "import sys,json; print(json.load(sys.stdin).get('uptime','?'))" 2>/dev/null || echo "?")
+    agents=$(echo "$health" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('agents',[])))" 2>/dev/null || echo "?")
+    notify "Deploy completo" "Relay: active | Uptime: ${uptime}s | Agents: ${agents}" $COLOR_OK
   else
     warn "Health: not responding yet"
+    notify "Deploy completo (com aviso)" "Relay: $status | Health: not responding" $COLOR_WARN
   fi
 
   ok "Deploy complete"
@@ -234,6 +272,17 @@ cmd_ssh() {
   ssh "$SSH_HOST"
 }
 
+cmd_notify() {
+  local title="${1:-}"
+  local desc="${2:-}"
+  if [ -z "$title" ]; then
+    fail "Usage: ops.sh notify <title> [description]"
+    exit 1
+  fi
+  notify "$title" "$desc" $COLOR_INFO
+  ok "Notification sent to #status"
+}
+
 cmd_help() {
   echo -e "${BOLD}ops.sh${NC} — Remote operations for OpenClaw (Mac → WSL2 via SSH)"
   echo ""
@@ -247,12 +296,14 @@ cmd_help() {
   echo "  deploy              Full deploy (pull, sync, copy, restart)"
   echo "  logs [service]      View logs (relay|daily-sync|gateway|tailscale)"
   echo "  stats               Relay usage stats for today"
+  echo "  notify <t> [desc]   Send notification to Discord #status"
   echo "  exec <cmd>          Run arbitrary command on WSL2"
   echo "  ssh                 Interactive SSH session"
   echo "  help                Show this help"
   echo ""
   echo -e "${BOLD}Config:${NC}"
   echo "  SSH_HOST: $SSH_HOST (override with OPS_SSH_HOST env var)"
+  echo "  Webhook: #status (DISCORD_WEBHOOK_OPS env var)"
 }
 
 # ── Main ────────────────────────────────────────────────────
@@ -265,6 +316,7 @@ case "${1:-help}" in
   deploy)           cmd_deploy ;;
   logs)             shift; cmd_logs "$@" ;;
   stats)            cmd_stats ;;
+  notify)           shift; cmd_notify "$@" ;;
   exec)             shift; cmd_exec "$@" ;;
   ssh)              cmd_ssh ;;
   help|--help|-h)   cmd_help ;;
