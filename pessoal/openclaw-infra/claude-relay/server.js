@@ -86,18 +86,36 @@ function convertMessages(messages) {
   }
 }
 
-/** Parse claude --output-format json output → extract result text */
+/** Parse claude --output-format json output → extract result text.
+ *  CLI 2.x returns a single object: { type: "result", result: "..." }
+ *  Older versions returned an array: [{ type: "system" }, ..., { type: "result", result: "..." }]
+ */
 function parseClaudeOutput(stdout) {
   const trimmed = stdout.trim()
   if (!trimmed) throw new Error('Empty output from claude CLI')
 
-  const items = JSON.parse(trimmed)
-  if (!Array.isArray(items)) throw new Error('Expected JSON array from claude CLI')
+  const parsed = JSON.parse(trimmed)
 
-  const result = items.findLast(i => i.type === 'result')
+  // CLI 2.x: single object with type "result"
+  if (!Array.isArray(parsed)) {
+    if (parsed.type === 'result') {
+      if (parsed.is_error) throw new Error(`Claude error: ${parsed.result}`)
+      return parsed.result
+    }
+    // Single object but not a result — try to extract text
+    if (parsed.message?.content) {
+      const textBlocks = parsed.message.content
+        .filter(c => c.type === 'text')
+        .map(c => c.text)
+      if (textBlocks.length > 0) return textBlocks.join('\n')
+    }
+    throw new Error(`Unexpected CLI output format: ${JSON.stringify(parsed).slice(0, 200)}`)
+  }
+
+  // Legacy: array format
+  const result = parsed.findLast(i => i.type === 'result')
   if (!result) {
-    // Fallback: try to find the last assistant message
-    const lastAssistant = items.findLast(i => i.type === 'assistant')
+    const lastAssistant = parsed.findLast(i => i.type === 'assistant')
     if (lastAssistant?.message?.content) {
       const textBlocks = lastAssistant.message.content
         .filter(c => c.type === 'text')
@@ -164,11 +182,10 @@ async function handleChatCompletion(req, res) {
     fs.writeFileSync(systemPromptFile, systemPrompt, 'utf-8')
   }
 
-  // Build claude CLI args
+  // Build claude CLI args (note: --cwd not supported in CLI 2.x, use spawn cwd option)
   const args = [
     '-p', userPrompt,
     '--model', config.model,
-    '--cwd', config.cwd,
     '--output-format', 'json',
     '--max-turns', String(config.maxTurns),
     '--dangerously-skip-permissions',
@@ -191,6 +208,7 @@ async function handleChatCompletion(req, res) {
       const stderrChunks = []
 
       const proc = spawn(CLAUDE_BIN, args, {
+        cwd: config.cwd,
         timeout: TIMEOUT_MS,
         env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/local/bin:/usr/bin:/bin:${process.env.PATH || ''}` },
         stdio: ['ignore', 'pipe', 'pipe'],
