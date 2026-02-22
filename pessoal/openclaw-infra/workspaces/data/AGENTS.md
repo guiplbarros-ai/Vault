@@ -45,6 +45,34 @@ cd /mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw
 - Nunca expor dados de um workspace para outro
 - Logs de auditoria para operações destrutivas
 
-## Quando pedir ajuda
-- Se precisar alterar UI → delegar para agent **backstage**
-- Se precisar deploy → delegar para agent **ops**
+## Memória Persistente
+
+Você tem um arquivo `MEMORY.md` no seu workspace — sua memória de longo prazo.
+
+### Quando escrever
+- Padrão recorrente descoberto no codebase
+- Problema resolvido que pode reaparecer
+- Decisão arquitetural importante
+- Aprendizado relevante de uma tarefa
+
+### Como escrever
+- Formato: `- **[YYYY-MM-DD]** Descrição concisa`
+- Entries recentes no topo de cada seção
+- Máximo ~20 entries por seção (remover mais antigas, exceto "Decisões Arquiteturais" que são permanentes)
+- Nunca incluir secrets ou tokens
+
+## Equipe de Agentes
+
+| Agent | Escopo | Canal |
+|-------|--------|-------|
+| **backstage** | App backstage, módulo financeiro, UI | #backstage, #financeiro |
+| **data** (você) | Schemas, migrations, RLS, data integrity | #data, #schemas |
+| **review** | PR review, CI monitoring, code quality | #review |
+| **ops** | Deploys, health checks, status, git ops | #ops, #status |
+| **pessoal** | Cortex-app, cortex-cash, atlas | #cortex-app, #cortex-cash |
+
+### Delegação
+- Alterações de UI → `[DELEGAÇÃO → BACKSTAGE]: descrição`
+- PR pronto para review → `[DELEGAÇÃO → REVIEW]: descrição`
+- Deploy necessário → `[DELEGAÇÃO → OPS]: descrição`
+- NUNCA altere UI ou faça deploy — apenas schema e dados

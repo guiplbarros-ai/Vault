@@ -28,6 +28,7 @@ const AGENT_CONFIG = {
 
 let activeProcesses = 0
 const startTime = Date.now()
+const STATS_DIR = path.join(os.homedir(), '.openclaw', 'stats')
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -86,28 +87,36 @@ function convertMessages(messages) {
   }
 }
 
-/** Parse claude --output-format json output → extract result text.
- *  CLI 2.x returns a single object: { type: "result", result: "..." }
+/** Parse claude --output-format json output → extract result text + metadata.
+ *  CLI 2.x returns a single object: { type: "result", result: "...", total_cost_usd, duration_ms, num_turns }
  *  Older versions returned an array: [{ type: "system" }, ..., { type: "result", result: "..." }]
+ *  Returns: { text, cost_usd, duration_ms, num_turns, session_id }
  */
 function parseClaudeOutput(stdout) {
   const trimmed = stdout.trim()
   if (!trimmed) throw new Error('Empty output from claude CLI')
 
   const parsed = JSON.parse(trimmed)
+  const emptyMeta = { cost_usd: 0, duration_ms: 0, num_turns: 0, session_id: null }
 
   // CLI 2.x: single object with type "result"
   if (!Array.isArray(parsed)) {
     if (parsed.type === 'result') {
       if (parsed.is_error) throw new Error(`Claude error: ${parsed.result}`)
-      return parsed.result
+      return {
+        text: parsed.result,
+        cost_usd: parsed.total_cost_usd || 0,
+        duration_ms: parsed.duration_ms || 0,
+        num_turns: parsed.num_turns || 0,
+        session_id: parsed.session_id || null,
+      }
     }
     // Single object but not a result — try to extract text
     if (parsed.message?.content) {
       const textBlocks = parsed.message.content
         .filter(c => c.type === 'text')
         .map(c => c.text)
-      if (textBlocks.length > 0) return textBlocks.join('\n')
+      if (textBlocks.length > 0) return { text: textBlocks.join('\n'), ...emptyMeta }
     }
     throw new Error(`Unexpected CLI output format: ${JSON.stringify(parsed).slice(0, 200)}`)
   }
@@ -120,13 +129,63 @@ function parseClaudeOutput(stdout) {
       const textBlocks = lastAssistant.message.content
         .filter(c => c.type === 'text')
         .map(c => c.text)
-      if (textBlocks.length > 0) return textBlocks.join('\n')
+      if (textBlocks.length > 0) return { text: textBlocks.join('\n'), ...emptyMeta }
     }
     throw new Error('No result object in claude CLI output')
   }
 
   if (result.is_error) throw new Error(`Claude error: ${result.result}`)
-  return result.result
+  return {
+    text: result.result,
+    cost_usd: result.total_cost_usd || 0,
+    duration_ms: result.duration_ms || 0,
+    num_turns: result.num_turns || 0,
+    session_id: result.session_id || null,
+  }
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+
+function getTodayDateStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function loadTodayStats() {
+  const p = path.join(STATS_DIR, `${getTodayDateStr()}.json`)
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf-8'))
+  } catch {
+    return { date: getTodayDateStr(), agents: {}, totals: { requests: 0, cost_usd: 0, duration_ms: 0 } }
+  }
+}
+
+function saveTodayStats(stats) {
+  fs.mkdirSync(STATS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(STATS_DIR, `${stats.date}.json`), JSON.stringify(stats, null, 2))
+}
+
+function recordUsage(agentName, { cost_usd, duration_ms, num_turns, response_chars, model }) {
+  try {
+    const stats = loadTodayStats()
+    if (!stats.agents[agentName]) {
+      stats.agents[agentName] = { requests: 0, cost_usd: 0, duration_ms: 0, num_turns: 0, response_chars: 0, model }
+    }
+    const a = stats.agents[agentName]
+    a.requests++
+    a.cost_usd += cost_usd
+    a.duration_ms += duration_ms
+    a.num_turns += num_turns
+    a.response_chars += response_chars
+
+    stats.totals.requests++
+    stats.totals.cost_usd += cost_usd
+    stats.totals.duration_ms += duration_ms
+
+    saveTodayStats(stats)
+  } catch (e) {
+    log('warn', `Failed to record stats: ${e.message}`)
+  }
 }
 
 function buildOpenAIResponse(text, model) {
@@ -231,9 +290,18 @@ async function handleChatCompletion(req, res) {
       proc.on('error', (err) => reject(err))
     })
 
-    const elapsed = ((Date.now() - startMs) / 1000).toFixed(1)
-    const text = parseClaudeOutput(result)
-    log('info', `[${modelName}] Done in ${elapsed}s (${text.length} chars)`)
+    const elapsedMs = Date.now() - startMs
+    const elapsed = (elapsedMs / 1000).toFixed(1)
+    const { text, cost_usd, duration_ms: cliDuration, num_turns } = parseClaudeOutput(result)
+    log('info', `[${modelName}] Done in ${elapsed}s (${text.length} chars, ${num_turns} turns, $${cost_usd.toFixed(4)})`)
+
+    recordUsage(modelName, {
+      cost_usd,
+      duration_ms: elapsedMs,
+      num_turns,
+      response_chars: text.length,
+      model: config.model,
+    })
 
     return sendJson(res, 200, buildOpenAIResponse(text, modelName))
   } catch (e) {
@@ -274,6 +342,16 @@ function handleHealth(_req, res) {
   })
 }
 
+function handleStats(_req, res) {
+  const stats = loadTodayStats()
+  stats.relay = {
+    uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
+    active_processes: activeProcesses,
+    max_concurrent: MAX_CONCURRENT,
+  }
+  sendJson(res, 200, stats)
+}
+
 // ── Server ──────────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -289,6 +367,7 @@ const server = http.createServer(async (req, res) => {
   try {
     if (method === 'GET' && url.pathname === '/health') return handleHealth(req, res)
     if (method === 'GET' && url.pathname === '/v1/models') return handleListModels(req, res)
+    if (method === 'GET' && url.pathname === '/v1/stats') return handleStats(req, res)
     if (method === 'POST' && url.pathname === '/v1/chat/completions') return await handleChatCompletion(req, res)
 
     sendJson(res, 404, { error: { message: 'not found', type: 'invalid_request' } })

@@ -41,3 +41,34 @@ cd /mnt/c/Users/guipl/Documents/Coding/pessoal/atlas-app
 - Commits com identidade pessoal (não freelaw)
 - Cortex App: cuidado com orchestrator error handling (não throw, retorna success: false)
 - Cortex Cash: usar THEME_COLORS, static promise lock pattern
+
+## Memória Persistente
+
+Você tem um arquivo `MEMORY.md` no seu workspace — sua memória de longo prazo.
+
+### Quando escrever
+- Padrão recorrente descoberto no codebase
+- Problema resolvido que pode reaparecer
+- Decisão arquitetural importante
+- Aprendizado relevante de uma tarefa
+
+### Como escrever
+- Formato: `- **[YYYY-MM-DD]** Descrição concisa`
+- Entries recentes no topo de cada seção
+- Máximo ~20 entries por seção (remover mais antigas, exceto "Decisões Arquiteturais" que são permanentes)
+- Nunca incluir secrets ou tokens
+
+## Equipe de Agentes
+
+| Agent | Escopo | Canal |
+|-------|--------|-------|
+| **backstage** | App backstage Freelaw, módulo financeiro | #backstage, #financeiro |
+| **data** | Schemas Freelaw, migrations, RLS | #data, #schemas |
+| **review** | PR review Freelaw, CI monitoring | #review |
+| **ops** | Deploys, health checks, git ops | #ops, #status |
+| **pessoal** (você) | Cortex-app, cortex-cash, atlas | #cortex-app, #cortex-cash |
+
+### Delegação
+- Projetos pessoais são independentes — raramente delegam para agents Freelaw
+- Deploy cortex-app → `[DELEGAÇÃO → OPS]: descrição`
+- Padrões de schema (consulta) → pode referenciar **data** para boas práticas
