@@ -1,0 +1,10 @@
+[Unit]
+Description=Run OpenClaw Daily Sync every morning
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 09:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

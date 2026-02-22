@@ -26,11 +26,55 @@ const AGENT_CONFIG = {
   'relay/pessoal':   { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/pessoal-repo/pessoal', maxTurns: 25 },
 }
 
+const QUEUE_CONCURRENCY = Number(process.env.QUEUE_CONCURRENCY || 1) // serialize by default
+const MIN_DELAY_BETWEEN_MS = Number(process.env.MIN_DELAY_BETWEEN_MS || 3_000) // 3s between requests
+
 // ── State ───────────────────────────────────────────────────────────────────
 
 let activeProcesses = 0
 const startTime = Date.now()
 const STATS_DIR = path.join(os.homedir(), '.openclaw', 'stats')
+
+// ── Request Queue ──────────────────────────────────────────────────────────
+// Serializes requests to avoid CLI rate limits. Bots wait in queue instead of
+// hitting rate limits and retrying.
+
+const requestQueue = []
+let queueRunning = 0
+let lastRequestEndMs = 0
+
+function enqueue(fn) {
+  return new Promise((resolve, reject) => {
+    requestQueue.push({ fn, resolve, reject })
+    drainQueue()
+  })
+}
+
+async function drainQueue() {
+  if (queueRunning >= QUEUE_CONCURRENCY || requestQueue.length === 0) return
+
+  const { fn, resolve, reject } = requestQueue.shift()
+  queueRunning++
+
+  try {
+    // Enforce minimum delay between requests
+    const sinceLast = Date.now() - lastRequestEndMs
+    if (sinceLast < MIN_DELAY_BETWEEN_MS && lastRequestEndMs > 0) {
+      const wait = MIN_DELAY_BETWEEN_MS - sinceLast
+      log('info', `[queue] Waiting ${wait}ms before next request (${requestQueue.length} queued)`)
+      await new Promise(r => setTimeout(r, wait))
+    }
+
+    const result = await fn()
+    resolve(result)
+  } catch (e) {
+    reject(e)
+  } finally {
+    lastRequestEndMs = Date.now()
+    queueRunning--
+    drainQueue()
+  }
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -279,11 +323,11 @@ async function spawnClaudeWithRetry(args, config, modelName) {
 // ── Handlers ────────────────────────────────────────────────────────────────
 
 async function handleChatCompletion(req, res) {
-  // Concurrency check
-  if (activeProcesses >= MAX_CONCURRENT) {
-    log('warn', `Rate limited: ${activeProcesses}/${MAX_CONCURRENT} active`)
+  // Hard limit to prevent unbounded queue growth
+  if (requestQueue.length >= MAX_CONCURRENT * 3) {
+    log('warn', `Queue full: ${requestQueue.length} pending`)
     return sendJson(res, 429, {
-      error: { message: 'Too many concurrent requests', type: 'rate_limit_error' },
+      error: { message: 'Too many queued requests, try again later', type: 'rate_limit_error' },
     })
   }
 
@@ -305,80 +349,98 @@ async function handleChatCompletion(req, res) {
 
   const { systemPrompt, userPrompt } = convertMessages(body.messages || [])
 
-  log('info', `[${modelName}] Processing (model=${config.model}, cwd=${path.basename(config.cwd)}, active=${activeProcesses + 1}/${MAX_CONCURRENT})`)
-
-  // Write system prompt to temp file if large
-  let systemPromptFile = null
-  if (systemPrompt.length > 50_000) {
-    systemPromptFile = path.join(os.tmpdir(), `claude-relay-sys-${crypto.randomUUID()}.txt`)
-    fs.writeFileSync(systemPromptFile, systemPrompt, 'utf-8')
+  const queuePos = requestQueue.length + queueRunning
+  if (queuePos > 0) {
+    log('info', `[${modelName}] Queued at position ${queuePos} (${queueRunning} running, ${requestQueue.length} waiting)`)
   }
 
-  // Build claude CLI args (note: --cwd not supported in CLI 2.x, use spawn cwd option)
-  const args = [
-    '-p', userPrompt,
-    '--model', config.model,
-    '--output-format', 'json',
-    '--max-turns', String(config.maxTurns),
-    '--dangerously-skip-permissions',
-  ]
-
-  if (systemPrompt) {
-    if (systemPromptFile) {
-      args.push('--append-system-prompt', fs.readFileSync(systemPromptFile, 'utf-8'))
-    } else {
-      args.push('--append-system-prompt', systemPrompt)
-    }
-  }
-
-  activeProcesses++
-  const startMs = Date.now()
-
+  // Enqueue the actual work — only one CLI process runs at a time
   try {
-    const result = await spawnClaudeWithRetry(args, config, modelName)
+    const result = await enqueue(async () => {
+      log('info', `[${modelName}] Processing (model=${config.model}, cwd=${path.basename(config.cwd)})`)
 
-    const elapsedMs = Date.now() - startMs
-    const elapsed = (elapsedMs / 1000).toFixed(1)
-    const { text, cost_usd, duration_ms: cliDuration, num_turns } = parseClaudeOutput(result)
-    log('info', `[${modelName}] Done in ${elapsed}s (${text.length} chars, ${num_turns} turns, $${cost_usd.toFixed(4)})`)
+      // Write system prompt to temp file if large
+      let systemPromptFile = null
+      if (systemPrompt.length > 50_000) {
+        systemPromptFile = path.join(os.tmpdir(), `claude-relay-sys-${crypto.randomUUID()}.txt`)
+        fs.writeFileSync(systemPromptFile, systemPrompt, 'utf-8')
+      }
 
-    recordUsage(modelName, {
-      cost_usd,
-      duration_ms: elapsedMs,
-      num_turns,
-      response_chars: text.length,
-      model: config.model,
+      // Build claude CLI args
+      const args = [
+        '-p', userPrompt,
+        '--model', config.model,
+        '--output-format', 'json',
+        '--max-turns', String(config.maxTurns),
+        '--dangerously-skip-permissions',
+      ]
+
+      if (systemPrompt) {
+        if (systemPromptFile) {
+          args.push('--append-system-prompt', fs.readFileSync(systemPromptFile, 'utf-8'))
+        } else {
+          args.push('--append-system-prompt', systemPrompt)
+        }
+      }
+
+      activeProcesses++
+      const startMs = Date.now()
+
+      try {
+        const stdout = await spawnClaudeWithRetry(args, config, modelName)
+
+        const elapsedMs = Date.now() - startMs
+        const elapsed = (elapsedMs / 1000).toFixed(1)
+        const { text, cost_usd, duration_ms: cliDuration, num_turns } = parseClaudeOutput(stdout)
+        log('info', `[${modelName}] Done in ${elapsed}s (${text.length} chars, ${num_turns} turns, $${cost_usd.toFixed(4)})`)
+
+        recordUsage(modelName, {
+          cost_usd,
+          duration_ms: elapsedMs,
+          num_turns,
+          response_chars: text.length,
+          model: config.model,
+        })
+
+        return { ok: true, data: buildOpenAIResponse(text, modelName) }
+      } catch (e) {
+        const elapsed = ((Date.now() - startMs) / 1000).toFixed(1)
+        log('error', `[${modelName}] Failed after ${elapsed}s: ${e.message}`)
+
+        // Return friendly error as success so bot posts it in Discord
+        if (e.message.startsWith('AUTH:')) {
+          return { ok: true, data: buildOpenAIResponse(`⚠️ ${e.message}`, modelName) }
+        }
+
+        const errorType = classifyError(e.stderr || '', e.stdout || e.message)
+        if (errorType === 'rate_limit') {
+          return { ok: true, data: buildOpenAIResponse(
+            `⏳ Rate limit atingido. Tentei ${MAX_RETRIES}x sem sucesso. Tente novamente em ~2 minutos.`,
+            modelName
+          )}
+        }
+
+        return { ok: false, error: e }
+      } finally {
+        activeProcesses--
+        if (systemPromptFile) {
+          try { fs.unlinkSync(systemPromptFile) } catch {}
+        }
+      }
     })
 
-    return sendJson(res, 200, buildOpenAIResponse(text, modelName))
+    if (result.ok) {
+      return sendJson(res, 200, result.data)
+    } else {
+      return sendJson(res, 500, {
+        error: { message: result.error.message, type: 'server_error' },
+      })
+    }
   } catch (e) {
-    const elapsed = ((Date.now() - startMs) / 1000).toFixed(1)
-    log('error', `[${modelName}] Failed after ${elapsed}s: ${e.message}`)
-
-    // Friendly messages: return as 200 so the bot posts them in Discord
-    if (e.message.startsWith('AUTH:')) {
-      return sendJson(res, 200, buildOpenAIResponse(
-        `⚠️ ${e.message}`,
-        modelName
-      ))
-    }
-
-    const errorType = classifyError(e.stderr || '', e.stdout || e.message)
-    if (errorType === 'rate_limit') {
-      return sendJson(res, 200, buildOpenAIResponse(
-        `⏳ Rate limit atingido. Tentei ${MAX_RETRIES}x sem sucesso. Tente novamente em ~2 minutos.`,
-        modelName
-      ))
-    }
-
+    log('error', `[${modelName}] Queue error: ${e.message}`)
     return sendJson(res, 500, {
       error: { message: e.message, type: 'server_error' },
     })
-  } finally {
-    activeProcesses--
-    if (systemPromptFile) {
-      try { fs.unlinkSync(systemPromptFile) } catch {}
-    }
   }
 }
 
@@ -401,7 +463,8 @@ function handleHealth(_req, res) {
     service: 'claude-relay',
     uptime: Math.floor((Date.now() - startTime) / 1000),
     active: activeProcesses,
-    maxConcurrent: MAX_CONCURRENT,
+    queued: requestQueue.length,
+    queueConcurrency: QUEUE_CONCURRENCY,
     agents: Object.keys(AGENT_CONFIG),
   })
 }
@@ -444,7 +507,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, '127.0.0.1', () => {
   log('info', `Claude Relay listening on 127.0.0.1:${PORT}`)
   log('info', `Claude binary: ${CLAUDE_BIN}`)
-  log('info', `Max concurrent: ${MAX_CONCURRENT}`)
+  log('info', `Queue: concurrency=${QUEUE_CONCURRENCY}, min delay=${MIN_DELAY_BETWEEN_MS}ms, max queued=${MAX_CONCURRENT * 3}`)
   log('info', `Timeout: ${TIMEOUT_MS / 1000}s`)
   log('info', `Retry: ${MAX_RETRIES}x with ${RETRY_BASE_DELAY_MS / 1000}s base delay`)
   log('info', `Agents: ${Object.keys(AGENT_CONFIG).join(', ')}`)
