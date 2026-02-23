@@ -31,7 +31,15 @@ if [ -d "$OPENCLAW_DIR" ]; then
   echo "✓ Synced daily-sync → ~/.openclaw/"
 fi
 
-# 4. Criar diretórios auxiliares
+# 4. Copiar tools para ~/.openclaw
+if [ -d "$OPENCLAW_DIR" ] && [ -d "$SCRIPT_DIR/tools" ]; then
+  mkdir -p "$OPENCLAW_DIR/tools"
+  cp "$SCRIPT_DIR/tools/"* "$OPENCLAW_DIR/tools/" 2>/dev/null
+  chmod +x "$OPENCLAW_DIR/tools/"* 2>/dev/null
+  echo "✓ Synced tools/ → ~/.openclaw/tools/"
+fi
+
+# 5. Criar diretórios auxiliares
 mkdir -p "$OPENCLAW_DIR/stats" 2>/dev/null
 mkdir -p "$OPENCLAW_DIR/logs" 2>/dev/null
 echo "✓ Diretórios stats/ e logs/ garantidos"

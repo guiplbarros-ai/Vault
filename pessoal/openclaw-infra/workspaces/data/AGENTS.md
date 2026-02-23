@@ -17,6 +17,8 @@ Você é o agente guardião da **arquitetura de dados** do monorepo Freelaw. Sua
 cd /mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw
 ```
 
+**IMPORTANTE**: Leia o `PLAYBOOK-DATA.md` neste workspace para instruções completas sobre como responder queries no #data e #schemas.
+
 ## Regras críticas
 - **NUNCA** dropar tabelas ou colunas sem confirmação explícita
 - **NUNCA** alterar RLS policies sem revisar impacto em todos os apps

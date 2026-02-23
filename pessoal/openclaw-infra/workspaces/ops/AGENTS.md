@@ -27,6 +27,8 @@ cd "$BASE/pessoal-repo/pessoal/apps/cortex-cash"
 cd "$BASE/pessoal-repo/pessoal/atlas-app"
 ```
 
+**IMPORTANTE**: Leia o `PLAYBOOK-OPS.md` neste workspace para instruções completas sobre como responder queries no #ops e #status.
+
 ## Comandos frequentes
 ```bash
 # Base path

@@ -31,11 +31,16 @@ const MCP_CONFIG_PATH = path.join(os.homedir(), '.openclaw', 'claude-relay', 'mc
 const QUEUE_CONCURRENCY = Number(process.env.QUEUE_CONCURRENCY || 2) // allow 2 parallel CLI processes
 const MIN_DELAY_BETWEEN_MS = Number(process.env.MIN_DELAY_BETWEEN_MS || 3_000) // 3s between requests
 
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || ''
+
 // ── State ───────────────────────────────────────────────────────────────────
 
 let activeProcesses = 0
 const startTime = Date.now()
 const STATS_DIR = path.join(os.homedir(), '.openclaw', 'stats')
+const AUDIT_LOG_PATH = path.join(STATS_DIR, 'audit.jsonl')
+let lastQueueAlertMs = 0
+const QUEUE_ALERT_COOLDOWN_MS = 60_000
 
 // ── Request Queue ──────────────────────────────────────────────────────────
 // Serializes requests to avoid CLI rate limits. Bots wait in queue instead of
@@ -48,6 +53,11 @@ let lastRequestEndMs = 0
 function enqueue(fn) {
   return new Promise((resolve, reject) => {
     requestQueue.push({ fn, resolve, reject })
+    // Gap 6: alert when queue is backing up (check after push)
+    if (requestQueue.length >= QUEUE_CONCURRENCY * 2 && Date.now() - lastQueueAlertMs > QUEUE_ALERT_COOLDOWN_MS) {
+      lastQueueAlertMs = Date.now()
+      notifyDiscord('📥 Queue crescendo', `${requestQueue.length} requests na fila (${queueRunning} processando)`, 0xFFFF00)
+    }
     drainQueue()
   })
 }
@@ -76,6 +86,34 @@ async function drainQueue() {
     queueRunning--
     drainQueue()
   }
+}
+
+// ── Discord Notifications ────────────────────────────────────────────────────
+
+function notifyDiscord(title, description, color) {
+  if (!DISCORD_WEBHOOK_URL) return
+  log('info', `[discord] ${title}: ${description}`)
+  const payload = JSON.stringify({
+    username: 'Claude Relay',
+    embeds: [{ title, description, color: color || 0x5865F2, timestamp: new Date().toISOString(), footer: { text: 'relay' } }],
+  })
+  try {
+    const url = new URL(DISCORD_WEBHOOK_URL)
+    const mod = url.protocol === 'https:' ? require('node:https') : require('node:http')
+    const req = mod.request(url, { method: 'POST', headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) } })
+    req.on('error', (e) => log('warn', `[discord] webhook error: ${e.message}`))
+    req.write(payload)
+    req.end()
+  } catch {}
+}
+
+// ── Audit Log ────────────────────────────────────────────────────────────────
+
+function auditLog(entry) {
+  try {
+    fs.mkdirSync(path.dirname(AUDIT_LOG_PATH), { recursive: true })
+    fs.appendFileSync(AUDIT_LOG_PATH, JSON.stringify(entry) + '\n')
+  } catch {}
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -369,6 +407,7 @@ async function handleChatCompletion(req, res) {
   // Hard limit to prevent unbounded queue growth
   if (requestQueue.length >= MAX_CONCURRENT * 3) {
     log('warn', `Queue full: ${requestQueue.length} pending`)
+    notifyDiscord('🚫 Queue cheia', `${requestQueue.length} pendentes — rejeitando request`, 0xE74C3C)
     return sendJson(res, 429, {
       error: { message: 'Too many queued requests, try again later', type: 'rate_limit_error' },
     })
@@ -453,24 +492,37 @@ async function handleChatCompletion(req, res) {
           model: config.model,
         })
 
+        auditLog({
+          ts: new Date().toISOString(), agent: modelName, model: config.model,
+          prompt: userPrompt.slice(0, 200), duration_ms: elapsedMs,
+          cost_usd, num_turns, chars: (text || '').length, status: 'ok', error: null,
+        })
+
         return { ok: true, data: buildOpenAIResponse(text, modelName) }
       } catch (e) {
-        const elapsed = ((Date.now() - startMs) / 1000).toFixed(1)
+        const elapsedMs = Date.now() - startMs
+        const elapsed = (elapsedMs / 1000).toFixed(1)
         log('error', `[${modelName}] Failed after ${elapsed}s: ${e.message}`)
 
         // Return friendly error as success so bot posts it in Discord
         if (e.message.startsWith('AUTH:')) {
+          notifyDiscord('🔐 Auth Error', `${modelName} — CLI não logado`, 0xE74C3C)
+          auditLog({ ts: new Date().toISOString(), agent: modelName, model: config.model, prompt: userPrompt.slice(0, 200), duration_ms: elapsedMs, cost_usd: 0, num_turns: 0, chars: 0, status: 'auth_error', error: e.message.slice(0, 200) })
           return { ok: true, data: buildOpenAIResponse(`⚠️ ${e.message}`, modelName) }
         }
 
         const errorType = classifyError(e.stderr || '', e.stdout || e.message)
         if (errorType === 'rate_limit') {
+          notifyDiscord('⏳ Rate Limit', `${modelName} — ${MAX_RETRIES} retries falharam`, 0xFFFF00)
+          auditLog({ ts: new Date().toISOString(), agent: modelName, model: config.model, prompt: userPrompt.slice(0, 200), duration_ms: elapsedMs, cost_usd: 0, num_turns: 0, chars: 0, status: 'rate_limit', error: 'exhausted retries' })
           return { ok: true, data: buildOpenAIResponse(
             `⏳ Rate limit atingido. Tentei ${MAX_RETRIES}x sem sucesso. Tente novamente em ~2 minutos.`,
             modelName
           )}
         }
 
+        notifyDiscord('❌ Erro', `${modelName} — ${e.message.slice(0, 200)}`, 0xE74C3C)
+        auditLog({ ts: new Date().toISOString(), agent: modelName, model: config.model, prompt: userPrompt.slice(0, 200), duration_ms: elapsedMs, cost_usd: 0, num_turns: 0, chars: 0, status: 'error', error: e.message.slice(0, 200) })
         return { ok: false, error: e }
       } finally {
         activeProcesses--
@@ -565,4 +617,6 @@ server.listen(PORT, '127.0.0.1', () => {
   log('info', `Timeout: ${TIMEOUT_MS / 1000}s`)
   log('info', `Retry: ${MAX_RETRIES}x with ${RETRY_BASE_DELAY_MS / 1000}s base delay`)
   log('info', `Agents: ${Object.keys(AGENT_CONFIG).join(', ')}`)
+  log('info', `Discord webhook: ${DISCORD_WEBHOOK_URL ? 'configured' : 'NOT SET'}`)
+  log('info', `Audit log: ${AUDIT_LOG_PATH}`)
 })

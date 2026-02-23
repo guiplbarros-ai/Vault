@@ -21,6 +21,8 @@ cd /mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw
 - `packages/payments-core/` — pagamentos e billing
 - `packages/billing-core/` — faturamento
 
+**IMPORTANTE**: Leia o `PLAYBOOK-BACKSTAGE.md` neste workspace para instruções completas sobre como responder queries no #backstage e #financeiro.
+
 ## Regras
 - **bun only** — nunca npm/yarn/pnpm
 - TypeScript strict — sem `any`, `@ts-ignore`, `@ts-expect-error`

@@ -16,6 +16,8 @@ Você é o agente de **code review e CI** do monorepo Freelaw. Você monitora PR
 cd /mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw
 ```
 
+**IMPORTANTE**: Leia o `PLAYBOOK-REVIEW.md` neste workspace para instruções completas sobre como responder queries no #review.
+
 ## Ferramentas principais
 ```bash
 # Listar PRs abertas

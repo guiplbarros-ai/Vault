@@ -24,10 +24,14 @@
         ]
       },
       "anthropic": {
-        "apiKey": "${ANTHROPIC_API_KEY}"
+        "baseUrl": "https://api.anthropic.com",
+        "apiKey": "${ANTHROPIC_API_KEY}",
+        "models": []
       },
       "openai": {
-        "apiKey": "${OPENAI_API_KEY}"
+        "baseUrl": "https://api.openai.com/v1",
+        "apiKey": "${OPENAI_API_KEY}",
+        "models": []
       }
     }
   },
@@ -35,7 +39,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "relay/backstage"
+        "primary": "claude-relay/relay/backstage"
       },
       "maxConcurrent": 4,
       "subagents": {
@@ -46,7 +50,7 @@
       {
         "id": "backstage",
         "workspace": "~/.openclaw/workspace-backstage",
-        "model": { "primary": "relay/backstage" },
+        "model": { "primary": "claude-relay/relay/backstage" },
         "tools": {
           "allow": ["exec", "read", "write", "edit", "web_browse", "memory"],
           "deny": []
@@ -55,7 +59,7 @@
       {
         "id": "data",
         "workspace": "~/.openclaw/workspace-data",
-        "model": { "primary": "relay/data" },
+        "model": { "primary": "claude-relay/relay/data" },
         "tools": {
           "allow": ["exec", "read", "write", "edit", "memory"],
           "deny": ["web_browse"]
@@ -64,7 +68,7 @@
       {
         "id": "review",
         "workspace": "~/.openclaw/workspace-review",
-        "model": { "primary": "relay/review" },
+        "model": { "primary": "claude-relay/relay/review" },
         "tools": {
           "allow": ["exec", "read", "memory", "web_browse"],
           "deny": ["write", "edit"]
@@ -73,7 +77,7 @@
       {
         "id": "ops",
         "workspace": "~/.openclaw/workspace-ops",
-        "model": { "primary": "relay/ops" },
+        "model": { "primary": "claude-relay/relay/ops" },
         "tools": {
           "allow": ["exec", "read", "memory"],
           "deny": ["write", "edit"]
@@ -82,7 +86,7 @@
       {
         "id": "pessoal",
         "workspace": "~/.openclaw/workspace-pessoal",
-        "model": { "primary": "relay/pessoal" },
+        "model": { "primary": "claude-relay/relay/pessoal" },
         "tools": {
           "allow": ["exec", "read", "write", "edit", "web_browse", "memory"],
           "deny": []
@@ -118,12 +122,6 @@
     "discord": {
       "enabled": true,
       "groupPolicy": "allowlist",
-      "streamMode": "partial",
-      "draftChunk": {
-        "minChars": 200,
-        "maxChars": 800,
-        "breakPreference": "paragraph"
-      },
       "accounts": {
         "backstage": {
           "token": "${DISCORD_BOT_BACKSTAGE}",
@@ -197,6 +195,13 @@
         "target": "channel"
       }
     }
+  },
+
+  "browser": {
+    "headless": true,
+    "enabled": true,
+    "executablePath": "/usr/bin/chromium-browser",
+    "defaultProfile": "openclaw"
   },
 
   "skills": {

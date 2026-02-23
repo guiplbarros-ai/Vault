@@ -5,7 +5,7 @@ After=network.target claude-relay.service
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/node /home/guipl/.openclaw/daily-sync/daily-sync.js
+EnvironmentFile=/home/guipl/.openclaw/.env
 Environment=RELAY_URL=http://localhost:18790
-Environment=DISCORD_WEBHOOK_URL=
 Environment=PATH=/home/guipl/.bun/bin:/home/guipl/.openclaw/tools:/usr/local/bin:/usr/bin:/bin
 TimeoutStartSec=900

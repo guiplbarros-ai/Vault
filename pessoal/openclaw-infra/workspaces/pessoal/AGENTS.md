@@ -14,10 +14,27 @@ Você é o agente para os **projetos pessoais** do Guilherme: Cortex App, Cortex
 - **Normalizar**: `.replace(/e-mail/gi, 'email')` antes de pattern matching
 
 ### Cortex Cash (`pessoal/apps/cortex-cash`)
-- **Stack**: Next.js + React + Dexie.js (IndexedDB) local-first
+- **Stack**: Next.js + React + Supabase (PostgreSQL)
 - **Package manager**: bun
-- **StrictMode**: usar static promise lock para evitar duplicatas
+- **Deploy**: Fly.io — `cortex-cash.fly.dev` (região gru)
+- **Database**: Supabase, schema `cortex_cash`
 - **Tema**: `THEME_COLORS` em `lib/constants/colors.ts`
+
+#### API Financeira (cortex-cash.fly.dev)
+Todos os endpoints requerem `Authorization: Bearer $CORTEX_CASH_API_KEY`
+
+| Endpoint | Descrição |
+|----------|-----------|
+| `GET /api/financeiro/resumo` | Resumo mensal: saldo, receitas, despesas, patrimônio |
+| `GET /api/financeiro/transacoes` | Transações recentes (?limit=20&tipo=despesa&from=2026-01-01) |
+| `GET /api/financeiro/contas` | Contas bancárias ativas + saldo total |
+| `GET /api/financeiro/health-score` | Score financeiro (0-100) + componentes |
+| `GET /api/financeiro/patrimonio` | Patrimônio total + investimentos + evolução |
+| `GET /api/financeiro/orcamento` | Orçamentos do mês (?mes=2026-02) |
+
+Usar via bash: `cortex-cash-api resumo` (wrapper em `~/.openclaw/tools/`)
+
+**IMPORTANTE**: Leia o `PLAYBOOK-FINANCEIRO.md` neste workspace para instruções completas sobre como responder queries financeiras no #cortex-cash.
 
 ### Atlas App (`pessoal/atlas-app`)
 - **Stack**: Node.js + Telegram Bot API + Supabase

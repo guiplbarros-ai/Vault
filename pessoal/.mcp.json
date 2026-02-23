@@ -4,11 +4,6 @@
       "type": "http",
       "url": "https://mcp.context7.com/mcp"
     },
-    "playwright": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["@anthropic/mcp-playwright@latest"]
-    },
     "shadcn": {
       "type": "stdio",
       "command": "npx",
