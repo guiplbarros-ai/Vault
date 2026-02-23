@@ -6,42 +6,71 @@
  */
 
 import { format } from 'date-fns'
-import { getDB } from '../db/client'
-import { getCurrentUserId } from '../db/seed-usuarios'
+import { escapeLikePattern } from '../api/sanitize'
+import { getSupabase } from '../db/supabase'
 import { DatabaseError, DuplicateError, NotFoundError, ValidationError } from '../errors'
 import { generateTransactionHash } from '../import/dedupe'
 import type { CreateTransacaoDTO, Transacao } from '../types'
 import { roundCurrency } from '../utils/currency'
 import { generateHash } from '../utils/format'
-import { createTransacaoSchema, updateTransacaoSchema, validateDTO } from '../validations/dtos'
 import { contaService } from './conta.service'
 import type { ITransacaoService } from './interfaces'
 import { orcamentoService } from './orcamento.service'
 
+async function getUserId(): Promise<string> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return user.id
+}
+
+function rowToTransacao(row: Record<string, unknown>): Transacao {
+  return {
+    id: row.id as string,
+    conta_id: row.conta_id as string,
+    categoria_id: row.categoria_id as string | undefined,
+    centro_custo_id: row.centro_custo_id as string | undefined,
+    data: row.data ? new Date(row.data as string) : new Date(),
+    descricao: row.descricao as string,
+    valor: Number(row.valor) || 0,
+    tipo: row.tipo as Transacao['tipo'],
+    observacoes: row.observacoes as string | undefined,
+    tags: row.tags as string | undefined,
+    transferencia_id: row.transferencia_id as string | undefined,
+    conta_destino_id: row.conta_destino_id as string | undefined,
+    parcelado: row.parcelado === true,
+    parcela_numero: row.parcela_numero as number | undefined,
+    parcela_total: row.parcela_total as number | undefined,
+    grupo_parcelamento_id: row.grupo_parcelamento_id as string | undefined,
+    classificacao_confirmada: row.classificacao_confirmada === true,
+    classificacao_origem: row.classificacao_origem as Transacao['classificacao_origem'],
+    classificacao_confianca: row.classificacao_confianca as number | undefined,
+    hash: row.hash as string | undefined,
+    origem_arquivo: row.origem_arquivo as string | undefined,
+    usuario_id: row.usuario_id as string | undefined,
+    origem_linha: row.origem_linha as number | undefined,
+    created_at: row.created_at ? new Date(row.created_at as string) : new Date(),
+    updated_at: row.updated_at ? new Date(row.updated_at as string) : new Date(),
+  }
+}
+
 export class TransacaoService implements ITransacaoService {
   /**
    * Helper: Recalcula orçamentos relacionados a uma transação
-   * Atualiza orçamentos se a transação tiver categoria_id ou centro_custo_id
    */
   private async recalcularOrcamentosRelacionados(transacao: Transacao): Promise<void> {
     try {
-      // Só recalcula para despesas (orçamentos não se aplicam a receitas/transferências)
       if (transacao.tipo !== 'despesa') return
 
-      const dataTransacao =
-        transacao.data instanceof Date ? transacao.data : new Date(transacao.data)
+      const dataTransacao = transacao.data instanceof Date ? transacao.data : new Date(transacao.data)
       const mesReferencia = format(dataTransacao, 'yyyy-MM')
 
-      // Buscar orçamentos do mês
       const orcamentos = await orcamentoService.listOrcamentos({ mesReferencia })
 
-      // Recalcular orçamentos relacionados
       for (const orcamento of orcamentos) {
-        // Verifica se o orçamento está relacionado à transação
         const isRelacionado =
           (orcamento.tipo === 'categoria' && orcamento.categoria_id === transacao.categoria_id) ||
-          (orcamento.tipo === 'centro_custo' &&
-            orcamento.centro_custo_id === transacao.centro_custo_id)
+          (orcamento.tipo === 'centro_custo' && orcamento.centro_custo_id === transacao.centro_custo_id)
 
         if (isRelacionado) {
           await orcamentoService.recalcularValorRealizado(orcamento.id)
@@ -49,16 +78,14 @@ export class TransacaoService implements ITransacaoService {
       }
     } catch (error) {
       console.error(
-        `[TransacaoService] Erro ao recalcular orçamentos (txn=${transacao.id}, cat=${transacao.categoria_id}):`,
+        `[TransacaoService] Erro ao recalcular orçamentos (txn=${transacao.id}):`,
         error instanceof Error ? error.message : error
       )
     }
   }
 
   /**
-   * Cria uma transferência entre contas com duas transações vinculadas pelo mesmo transferencia_id.
-   * - Origem: valor negativo e conta_destino_id preenchido
-   * - Destino: valor positivo
+   * Cria uma transferência entre contas com duas transações vinculadas.
    */
   async createTransfer(
     contaOrigemId: string,
@@ -77,69 +104,75 @@ export class TransacaoService implements ITransacaoService {
       throw new ValidationError('Valor da transferência deve ser positivo')
     }
 
-    const db = getDB()
-    const currentUserId = getCurrentUserId()
+    const supabase = getSupabase()
+    const userId = await getUserId()
     const transferenciaId = crypto.randomUUID()
     const now = new Date()
     const dataTransacao = typeof data === 'string' ? new Date(data) : data || now
 
-    const origem: Transacao = {
+    const origemData = {
       id: crypto.randomUUID(),
       conta_id: contaOrigemId,
-      categoria_id: undefined,
-      data: dataTransacao,
+      categoria_id: null,
+      data: dataTransacao.toISOString(),
       descricao: descricao || 'Transferência para conta destino',
       valor: -Math.abs(valor),
       tipo: 'transferencia',
-      observacoes: undefined,
-      tags: undefined,
+      observacoes: null,
+      tags: null,
       transferencia_id: transferenciaId,
       conta_destino_id: contaDestinoId,
       parcelado: false,
       classificacao_confirmada: true,
       classificacao_origem: 'manual',
-      usuario_id: currentUserId, // Pertence ao usuário atual
+      usuario_id: userId,
       hash: await generateHash(
         `${contaOrigemId}-${contaDestinoId}-${dataTransacao.toISOString()}-${descricao}-orig-${valor}`
       ),
-      created_at: now,
-      updated_at: now,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
     }
 
-    const destino: Transacao = {
+    const destinoData = {
       id: crypto.randomUUID(),
       conta_id: contaDestinoId,
-      categoria_id: undefined,
-      data: dataTransacao,
+      categoria_id: null,
+      data: dataTransacao.toISOString(),
       descricao: descricao || 'Transferência recebida',
       valor: Math.abs(valor),
       tipo: 'transferencia',
-      observacoes: undefined,
-      tags: undefined,
+      observacoes: null,
+      tags: null,
       transferencia_id: transferenciaId,
-      conta_destino_id: undefined,
+      conta_destino_id: null,
       parcelado: false,
       classificacao_confirmada: true,
       classificacao_origem: 'manual',
-      usuario_id: currentUserId, // Pertence ao usuário atual
+      usuario_id: userId,
       hash: await generateHash(
         `${contaOrigemId}-${contaDestinoId}-${dataTransacao.toISOString()}-${descricao}-dest-${valor}`
       ),
-      created_at: now,
-      updated_at: now,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
     }
 
-    await db.transaction('rw', db.transacoes, async () => {
-      await db.transacoes.add(origem)
-      await db.transacoes.add(destino)
-    })
+    const { data: inserted, error } = await supabase
+      .from('transacoes')
+      .insert([origemData, destinoData])
+      .select()
 
-    // Atualiza saldo das duas contas
+    if (error) throw new DatabaseError('Erro ao criar transferência', error as unknown as Error)
+
     await contaService.recalcularESalvarSaldo(contaOrigemId)
     await contaService.recalcularESalvarSaldo(contaDestinoId)
 
+    const rows = inserted || []
+    const origem = rowToTransacao(rows.find((r: Record<string, unknown>) => r.conta_id === contaOrigemId) || rows[0])
+    const destino = rowToTransacao(rows.find((r: Record<string, unknown>) => r.conta_id === contaDestinoId) || rows[1])
+
     return { origem, destino }
   }
+
   async listTransacoes(filters?: {
     contaId?: string
     categoriaId?: string
@@ -152,260 +185,143 @@ export class TransacaoService implements ITransacaoService {
     sortBy?: 'data' | 'valor' | 'descricao'
     sortOrder?: 'asc' | 'desc'
   }): Promise<Transacao[]> {
-    const db = getDB()
-    const currentUserId = getCurrentUserId()
-
-    // Buscar transações de forma eficiente usando índices quando possível
-    let transacoes: Transacao[]
-    try {
-      // Tenta reduzir o universo usando um índice adequado quando filtros permitem
-      if (filters?.dataInicio || filters?.dataFim) {
-        // Intervalo por data
-        const start = filters.dataInicio
-          ? filters.dataInicio instanceof Date
-            ? filters.dataInicio
-            : new Date(filters.dataInicio)
-          : new Date(0)
-        const end = filters.dataFim
-          ? filters.dataFim instanceof Date
-            ? filters.dataFim
-            : new Date(filters.dataFim)
-          : new Date(8640000000000000)
-        let chain = db.transacoes.where('data').between(start, end, true, true)
-        // Aplica paginação no nível do Dexie quando possível
-        if (
-          typeof filters?.offset === 'number' &&
-          filters.offset > 0 &&
-          typeof (chain as any).offset === 'function'
-        ) {
-          chain = (chain as any).offset(filters.offset)
-        }
-        if (typeof filters?.limit === 'number' && filters.limit > 0) {
-          chain = chain.limit(filters.limit)
-        }
-        transacoes = await chain.toArray()
-      } else if (
-        // Caso específico: apenas ordenar por data e limitar resultados (ótimo para "recentes")
-        !filters?.contaId &&
-        !filters?.categoriaId &&
-        !filters?.tipo &&
-        !filters?.busca &&
-        !filters?.dataInicio &&
-        !filters?.dataFim &&
-        filters?.sortBy === 'data' &&
-        typeof filters.limit === 'number' &&
-        (!filters.offset || filters.offset === 0)
-      ) {
-        const order = db.transacoes.orderBy('data')
-        const ordered = (filters.sortOrder || 'desc') === 'desc' ? order.reverse() : order
-        transacoes = await ordered.limit(filters.limit).toArray()
-      } else if (filters?.contaId) {
-        // Filtro por conta
-        let chain = db.transacoes.where('conta_id').equals(filters.contaId)
-        if (
-          typeof filters?.offset === 'number' &&
-          filters.offset > 0 &&
-          typeof (chain as any).offset === 'function'
-        ) {
-          chain = (chain as any).offset(filters.offset)
-        }
-        if (typeof filters?.limit === 'number' && filters.limit > 0) {
-          chain = chain.limit(filters.limit)
-        }
-        transacoes = await chain.toArray()
-      } else if (filters?.categoriaId) {
-        // Filtro por categoria
-        let chain = db.transacoes.where('categoria_id').equals(filters.categoriaId)
-        if (
-          typeof filters?.offset === 'number' &&
-          filters.offset > 0 &&
-          typeof (chain as any).offset === 'function'
-        ) {
-          chain = (chain as any).offset(filters.offset)
-        }
-        if (typeof filters?.limit === 'number' && filters.limit > 0) {
-          chain = chain.limit(filters.limit)
-        }
-        transacoes = await chain.toArray()
-      } else if (filters?.tipo) {
-        // Filtro por tipo
-        let chain = db.transacoes.where('tipo').equals(filters.tipo)
-        if (
-          typeof filters?.offset === 'number' &&
-          filters.offset > 0 &&
-          typeof (chain as any).offset === 'function'
-        ) {
-          chain = (chain as any).offset(filters.offset)
-        }
-        if (typeof filters?.limit === 'number' && filters.limit > 0) {
-          chain = chain.limit(filters.limit)
-        }
-        transacoes = await chain.toArray()
-      } else {
-        // Sem filtros primários: carrega todas
-        transacoes = await db.transacoes.toArray()
-      }
-    } catch {
-      // Fallback seguro caso algum índice falhe
-      transacoes = await db.transacoes.toArray()
-    }
-
-    // Filtrar por usuário atual (SEMPRE)
-    transacoes = transacoes.filter((t) => t.usuario_id === currentUserId)
-
-    // Aplicar filtros
-    if (filters?.contaId) {
-      transacoes = transacoes.filter((t) => t.conta_id === filters.contaId)
-    }
-
-    if (filters?.categoriaId) {
-      transacoes = transacoes.filter((t) => t.categoria_id === filters.categoriaId)
-    }
-
-    if (filters?.dataInicio) {
-      const dataInicioTime = filters.dataInicio.getTime()
-      transacoes = transacoes.filter((t) => {
-        const tData = t.data instanceof Date ? t.data : new Date(t.data)
-        return tData.getTime() >= dataInicioTime
-      })
-    }
-
-    if (filters?.dataFim) {
-      const dataFimTime = filters.dataFim.getTime()
-      transacoes = transacoes.filter((t) => {
-        const tData = t.data instanceof Date ? t.data : new Date(t.data)
-        return tData.getTime() <= dataFimTime
-      })
-    }
-
-    if (filters?.tipo) {
-      transacoes = transacoes.filter((t) => t.tipo === filters.tipo)
-    }
-
-    if (filters?.busca) {
-      const buscaLower = filters.busca.toLowerCase()
-      transacoes = transacoes.filter((t) => t.descricao.toLowerCase().includes(buscaLower))
-    }
-
-    // Ordenar
+    const supabase = getSupabase()
+    const userId = await getUserId()
     const sortBy = filters?.sortBy || 'data'
     const sortOrder = filters?.sortOrder || 'desc'
 
-    transacoes.sort((a, b) => {
-      let compareA: any
-      let compareB: any
+    let query = supabase
+      .from('transacoes')
+      .select('*')
+      .eq('usuario_id', userId)
+      .order(sortBy, { ascending: sortOrder === 'asc' })
 
-      if (sortBy === 'data') {
-        compareA = a.data instanceof Date ? a.data : new Date(a.data)
-        compareB = b.data instanceof Date ? b.data : new Date(b.data)
-        compareA = compareA.getTime()
-        compareB = compareB.getTime()
-      } else if (sortBy === 'valor') {
-        compareA = a.valor
-        compareB = b.valor
-      } else if (sortBy === 'descricao') {
-        compareA = a.descricao.toLowerCase()
-        compareB = b.descricao.toLowerCase()
-      }
-
-      if (sortOrder === 'asc') {
-        return compareA > compareB ? 1 : compareA < compareB ? -1 : 0
-      } else {
-        return compareA < compareB ? 1 : compareA > compareB ? -1 : 0
-      }
-    })
-
-    // Aplicar paginação somente se não foi possível aplicar no nível do Dexie
-    // (quando usamos toArray() direto sem filtros indexados)
-    const offset = filters?.offset || 0
-    const limit = filters?.limit
-
-    if (offset > 0 || limit !== undefined) {
-      const start = offset
-      const end = limit !== undefined ? start + limit : undefined
-      transacoes = transacoes.slice(start, end)
+    if (filters?.contaId) {
+      query = query.eq('conta_id', filters.contaId)
     }
 
-    return transacoes
+    if (filters?.categoriaId) {
+      query = query.eq('categoria_id', filters.categoriaId)
+    }
+
+    if (filters?.dataInicio) {
+      query = query.gte('data', filters.dataInicio.toISOString())
+    }
+
+    if (filters?.dataFim) {
+      query = query.lte('data', filters.dataFim.toISOString())
+    }
+
+    if (filters?.tipo) {
+      query = query.eq('tipo', filters.tipo)
+    }
+
+    if (filters?.busca) {
+      query = query.ilike('descricao', `%${escapeLikePattern(filters.busca)}%`)
+    }
+
+    if (filters?.limit !== undefined) {
+      const offset = filters?.offset || 0
+      query = query.range(offset, offset + filters.limit - 1)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw new DatabaseError('Erro ao listar transações', error as unknown as Error)
+
+    return (data || []).map(rowToTransacao)
   }
 
   async getTransacaoById(id: string): Promise<Transacao | null> {
-    const db = getDB()
-    const transacao = await db.transacoes.get(id)
-    return transacao || null
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('transacoes')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Erro ao buscar transação', error as unknown as Error)
+
+    return data ? rowToTransacao(data) : null
   }
 
   async getTransacaoByHash(hash: string): Promise<Transacao | null> {
-    const db = getDB()
-    const transacao = await db.transacoes.where('hash').equals(hash).first()
-    return transacao || null
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('transacoes')
+      .select('*')
+      .eq('hash', hash)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Erro ao buscar transação por hash', error as unknown as Error)
+
+    return data ? rowToTransacao(data) : null
   }
 
   async createTransacao(data: CreateTransacaoDTO): Promise<Transacao> {
     try {
-      // Validate input
-      const validatedData = validateDTO(createTransacaoSchema, data)
+      if (!data.conta_id || !data.descricao || !data.tipo) {
+        throw new ValidationError('Dados insuficientes para criar transação')
+      }
 
-      const db = getDB()
-      const currentUserId = getCurrentUserId()
-
-      const id = crypto.randomUUID()
+      const supabase = getSupabase()
+      const userId = await getUserId()
       const now = new Date()
 
-      // Gera hash canônico para deduplicação (conta_id + data(YYYY-MM-DD) + descrição normalizada + valor fixado)
+      const dataTransacao = typeof data.data === 'string' ? new Date(data.data) : (data.data || now)
+
       const canonicalHash = await generateTransactionHash(
         {
-          data:
-            typeof validatedData.data === 'string'
-              ? new Date(validatedData.data)
-              : validatedData.data,
-          descricao: validatedData.descricao,
-          valor: validatedData.valor,
+          data: dataTransacao,
+          descricao: data.descricao,
+          valor: data.valor,
         },
-        validatedData.conta_id
+        data.conta_id
       )
 
-      // Verifica duplicidade antes de inserir
-      const duplicates = await db.transacoes.where('hash').equals(canonicalHash).count()
-      if (duplicates > 0) {
+      // Check for duplicates
+      const { count } = await supabase
+        .from('transacoes')
+        .select('*', { count: 'exact', head: true })
+        .eq('hash', canonicalHash)
+
+      if (count && count > 0) {
         throw new DuplicateError('Transação', 'hash')
       }
 
-      const transacao: Transacao = {
-        id,
-        conta_id: validatedData.conta_id,
-        categoria_id: validatedData.categoria_id,
-        data:
-          typeof validatedData.data === 'string'
-            ? new Date(validatedData.data)
-            : validatedData.data,
-        descricao: validatedData.descricao,
-        valor: validatedData.valor,
-        tipo: validatedData.tipo,
-        observacoes: validatedData.observacoes,
-        tags: validatedData.tags ? JSON.stringify(validatedData.tags) : undefined,
-        parcelado: false,
-        classificacao_confirmada: !!validatedData.categoria_id,
-        classificacao_origem: validatedData.categoria_id ? 'manual' : undefined,
-        usuario_id: currentUserId, // Pertence ao usuário atual
-        hash: canonicalHash,
-        created_at: now,
-        updated_at: now,
-      }
+      const { data: inserted, error } = await supabase
+        .from('transacoes')
+        .insert({
+          id: crypto.randomUUID(),
+          conta_id: data.conta_id,
+          categoria_id: data.categoria_id || null,
+          data: dataTransacao.toISOString(),
+          descricao: data.descricao,
+          valor: data.valor,
+          tipo: data.tipo,
+          observacoes: data.observacoes || null,
+          tags: data.tags ? JSON.stringify(data.tags) : null,
+          parcelado: false,
+          classificacao_confirmada: !!data.categoria_id,
+          classificacao_origem: data.categoria_id ? 'manual' : null,
+          usuario_id: userId,
+          hash: canonicalHash,
+          created_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        })
+        .select()
+        .single()
 
-      await db.transacoes.add(transacao)
+      if (error) throw new DatabaseError('Erro ao criar transação', error as unknown as Error)
 
-      // Atualiza saldo da conta
-      await contaService.recalcularESalvarSaldo(validatedData.conta_id)
+      const transacao = rowToTransacao(inserted)
 
-      // Recalcula orçamentos relacionados
+      await contaService.recalcularESalvarSaldo(data.conta_id)
       await this.recalcularOrcamentosRelacionados(transacao)
 
       return transacao
     } catch (error) {
-      if (error instanceof ValidationError || error instanceof DuplicateError) {
-        throw error
-      }
+      if (error instanceof ValidationError || error instanceof DuplicateError || error instanceof DatabaseError) throw error
       throw new DatabaseError('Erro ao criar transação', error as Error)
     }
   }
@@ -415,107 +331,87 @@ export class TransacaoService implements ITransacaoService {
     data: import('../types').UpdateTransacaoDTO
   ): Promise<Transacao> {
     try {
-      // Validate input
-      validateDTO(updateTransacaoSchema, data)
+      const supabase = getSupabase()
 
-      const db = getDB()
-
-      const existing = await db.transacoes.get(id)
+      const existing = await this.getTransacaoById(id)
       if (!existing) {
         throw new NotFoundError('Transação', id)
       }
 
-      // Build update object without undefined fields (Dexie treats undefined as "clear column")
-      const updated: Partial<Transacao> = {
-        updated_at: new Date(),
+      const updatePayload: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
       }
 
-      // Only include fields that are actually present in the input DTO
-      if (data.conta_id !== undefined) updated.conta_id = data.conta_id
+      if (data.conta_id !== undefined) updatePayload.conta_id = data.conta_id
+      if (data.descricao !== undefined) updatePayload.descricao = data.descricao
+      if (data.valor !== undefined) updatePayload.valor = data.valor
+      if (data.tipo !== undefined) updatePayload.tipo = data.tipo
+      if (data.observacoes !== undefined) updatePayload.observacoes = data.observacoes
+      if (data.tags !== undefined) updatePayload.tags = JSON.stringify(data.tags)
+      if (data.data !== undefined) {
+        updatePayload.data = (typeof data.data === 'string' ? new Date(data.data) : data.data).toISOString()
+      }
 
-      // Handle categoria_id with classification metadata
       if (data.categoria_id !== undefined) {
-        updated.categoria_id = data.categoria_id
-
-        // Preserve classification metadata if provided, otherwise default to manual
-        updated.classificacao_confirmada = data.classificacao_confirmada ?? true
-        updated.classificacao_origem = data.classificacao_origem ?? 'manual'
+        updatePayload.categoria_id = data.categoria_id
+        updatePayload.classificacao_confirmada = data.classificacao_confirmada ?? true
+        updatePayload.classificacao_origem = data.classificacao_origem ?? 'manual'
         if (data.classificacao_confianca !== undefined) {
-          updated.classificacao_confianca = data.classificacao_confianca
+          updatePayload.classificacao_confianca = data.classificacao_confianca
         }
       }
 
-      if (data.descricao !== undefined) updated.descricao = data.descricao
-      if (data.valor !== undefined) updated.valor = data.valor
-      if (data.tipo !== undefined) updated.tipo = data.tipo
-      if (data.observacoes !== undefined) updated.observacoes = data.observacoes
-      if (data.tags !== undefined) updated.tags = JSON.stringify(data.tags)
-
-      // Convert date string to Date object if present
-      if (data.data !== undefined) {
-        updated.data = typeof data.data === 'string' ? new Date(data.data) : data.data
-      }
-
-      // Recalcula hash se algum dos campos que o compõem mudou
-      const nextContaId = updated.conta_id ?? existing.conta_id
-      const nextData =
-        updated.data !== undefined
-          ? updated.data instanceof Date
-            ? updated.data
-            : new Date(updated.data)
-          : existing.data instanceof Date
-            ? existing.data
-            : new Date(existing.data)
-      const nextDescricao = updated.descricao ?? existing.descricao
-      const nextValor = updated.valor ?? existing.valor
+      // Recalculate hash if relevant fields changed
+      const nextContaId = (updatePayload.conta_id as string) ?? existing.conta_id
+      const nextData = updatePayload.data
+        ? new Date(updatePayload.data as string)
+        : existing.data instanceof Date ? existing.data : new Date(existing.data)
+      const nextDescricao = (updatePayload.descricao as string) ?? existing.descricao
+      const nextValor = (updatePayload.valor as number) ?? existing.valor
 
       const hashRelevantChanged =
         nextContaId !== existing.conta_id ||
         nextDescricao !== existing.descricao ||
         nextValor !== existing.valor ||
-        nextData.getTime() !==
-          (existing.data instanceof Date
-            ? existing.data.getTime()
-            : new Date(existing.data).getTime())
+        nextData.getTime() !== (existing.data instanceof Date ? existing.data.getTime() : new Date(existing.data).getTime())
 
       if (hashRelevantChanged) {
         const newHash = await generateTransactionHash(
-          {
-            data: nextData,
-            descricao: nextDescricao,
-            valor: nextValor,
-          },
+          { data: nextData, descricao: nextDescricao, valor: nextValor },
           nextContaId
         )
 
         if (newHash !== existing.hash) {
-          const other = await db.transacoes.where('hash').equals(newHash).first()
-          if (other && other.id !== id) {
+          const { count } = await supabase
+            .from('transacoes')
+            .select('*', { count: 'exact', head: true })
+            .eq('hash', newHash)
+            .neq('id', id)
+
+          if (count && count > 0) {
             throw new DuplicateError('Transação', 'hash')
           }
-          updated.hash = newHash
+          updatePayload.hash = newHash
         }
       }
 
-      await db.transacoes.update(id, updated)
+      const { data: updated, error } = await supabase
+        .from('transacoes')
+        .update(updatePayload)
+        .eq('id', id)
+        .select()
+        .single()
 
-      const result = await db.transacoes.get(id)
-      if (!result) {
-        throw new DatabaseError(`Erro ao recuperar transação atualizada ${id}`)
-      }
+      if (error) throw new DatabaseError('Erro ao atualizar transação', error as unknown as Error)
 
-      // Atualiza saldo da conta antiga
+      const result = rowToTransacao(updated)
+
       await contaService.recalcularESalvarSaldo(existing.conta_id)
-
-      // Se a transação mudou de conta, atualiza também o saldo da nova conta
       if (data.conta_id && data.conta_id !== existing.conta_id) {
         await contaService.recalcularESalvarSaldo(data.conta_id)
       }
 
-      // Recalcula orçamentos da transação antiga (caso tenha mudado categoria/centro de custo)
       await this.recalcularOrcamentosRelacionados(existing)
-
-      // Recalcula orçamentos da transação atualizada
       await this.recalcularOrcamentosRelacionados(result)
 
       return result
@@ -525,77 +421,74 @@ export class TransacaoService implements ITransacaoService {
         error instanceof DatabaseError ||
         error instanceof ValidationError ||
         error instanceof DuplicateError
-      ) {
-        throw error
-      }
+      ) throw error
       throw new DatabaseError('Erro ao atualizar transação', error as Error)
     }
   }
 
   async deleteTransacao(id: string): Promise<void> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    // Busca a transação antes de deletar para saber qual conta atualizar
-    const transacao = await db.transacoes.get(id)
+    const transacao = await this.getTransacaoById(id)
     if (!transacao) {
       throw new NotFoundError('Transação', id)
     }
 
-    await db.transacoes.delete(id)
+    const { error } = await supabase.from('transacoes').delete().eq('id', id)
+    if (error) throw new DatabaseError('Erro ao deletar transação', error as unknown as Error)
 
-    // Atualiza saldo da conta
     await contaService.recalcularESalvarSaldo(transacao.conta_id)
 
-    // Se for transferência, deleta a perna irmã e recalcula contas afetadas
     if (transacao.transferencia_id) {
-      const sibling = await db.transacoes
-        .where('transferencia_id')
-        .equals(transacao.transferencia_id)
-        .first()
+      const { data: sibling } = await supabase
+        .from('transacoes')
+        .select('*')
+        .eq('transferencia_id', transacao.transferencia_id)
+        .neq('id', id)
+        .maybeSingle()
+
       if (sibling) {
-        await db.transacoes.delete(sibling.id)
+        await supabase.from('transacoes').delete().eq('id', sibling.id)
         await contaService.recalcularESalvarSaldo(sibling.conta_id)
       }
     } else if (transacao.tipo === 'transferencia' && transacao.conta_destino_id) {
       await contaService.recalcularESalvarSaldo(transacao.conta_destino_id)
     }
 
-    // Recalcula orçamentos relacionados
     await this.recalcularOrcamentosRelacionados(transacao)
   }
 
   async bulkUpdateCategoria(transacaoIds: string[], categoriaId: string): Promise<number> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    // Busca transações antes da atualização para saber as categorias antigas
-    const transacoesAntigas = await db.transacoes.bulkGet(transacaoIds)
+    // Fetch existing categories before update
+    const { data: existingRows } = await supabase
+      .from('transacoes')
+      .select('id, categoria_id')
+      .in('id', transacaoIds)
+
     const categoriasAntigas = new Set<string>()
-    for (const t of transacoesAntigas) {
-      if (t?.categoria_id) categoriasAntigas.add(t.categoria_id)
+    for (const t of existingRows || []) {
+      if (t.categoria_id) categoriasAntigas.add(t.categoria_id)
     }
 
-    let count = 0
-    for (const id of transacaoIds) {
-      try {
-        await db.transacoes.update(id, {
-          categoria_id: categoriaId,
-          classificacao_confirmada: true,
-          classificacao_origem: 'manual',
-          updated_at: new Date(),
-        })
-        count++
-      } catch (error) {
-        console.error(`Erro ao atualizar transação ${id}:`, error)
-      }
-    }
+    const { error, count } = await supabase
+      .from('transacoes')
+      .update({
+        categoria_id: categoriaId,
+        classificacao_confirmada: true,
+        classificacao_origem: 'manual',
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', transacaoIds)
 
-    // Recalcula orçamentos das categorias afetadas (antigas + nova)
-    if (count > 0) {
-      const sampleTx = await db.transacoes.get(transacaoIds[0]!)
+    if (error) throw new DatabaseError('Erro ao atualizar categorias', error as unknown as Error)
+
+    // Recalculate orcamentos
+    if (transacaoIds.length > 0) {
+      const sampleTx = await this.getTransacaoById(transacaoIds[0]!)
       if (sampleTx) {
-        // Recalcula para a nova categoria
         await this.recalcularOrcamentosRelacionados(sampleTx)
-        // Recalcula para as categorias antigas
         for (const catId of categoriasAntigas) {
           if (catId !== categoriaId) {
             await this.recalcularOrcamentosRelacionados({ ...sampleTx, categoria_id: catId } as Transacao)
@@ -604,51 +497,51 @@ export class TransacaoService implements ITransacaoService {
       }
     }
 
-    return count
+    return count || transacaoIds.length
   }
 
   async bulkDelete(transacaoIds: string[]): Promise<number> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    // Busca todas as transações que serão deletadas para capturar as contas afetadas
-    const transacoes = await db.transacoes.bulkGet(transacaoIds)
+    // Fetch transactions to be deleted
+    const { data: transacoes } = await supabase
+      .from('transacoes')
+      .select('id, conta_id, transferencia_id, tipo, conta_destino_id, categoria_id')
+      .in('id', transacaoIds)
 
-    // Coleta IDs únicos de todas as contas afetadas
     const contasAfetadas = new Set<string>()
     const idsParaDeletar = new Set<string>(transacaoIds)
 
-    for (const transacao of transacoes) {
-      if (transacao) {
-        contasAfetadas.add(transacao.conta_id)
+    for (const transacao of transacoes || []) {
+      contasAfetadas.add(transacao.conta_id)
 
-        // Se for transferência, coleta a perna irmã para deletar junto
-        if (transacao.transferencia_id) {
-          const sibling = await db.transacoes
-            .where('transferencia_id')
-            .equals(transacao.transferencia_id)
-            .filter((s) => !idsParaDeletar.has(s.id))
-            .first()
-          if (sibling) {
-            idsParaDeletar.add(sibling.id)
-            contasAfetadas.add(sibling.conta_id)
-          }
-        } else if (transacao.tipo === 'transferencia' && transacao.conta_destino_id) {
-          contasAfetadas.add(transacao.conta_destino_id)
-        }
+      if (transacao.transferencia_id) {
+        const { data: siblings } = await supabase
+          .from('transacoes')
+          .select('id, conta_id')
+          .eq('transferencia_id', transacao.transferencia_id)
+          .not('id', 'in', `(${[...idsParaDeletar].join(',')})`)
 
-        // Recalcula orçamentos antes de deletar
-        if (transacao.tipo === 'despesa') {
-          await this.recalcularOrcamentosRelacionados(transacao)
+        for (const sibling of siblings || []) {
+          idsParaDeletar.add(sibling.id)
+          contasAfetadas.add(sibling.conta_id)
         }
+      } else if (transacao.tipo === 'transferencia' && transacao.conta_destino_id) {
+        contasAfetadas.add(transacao.conta_destino_id)
+      }
+
+      if (transacao.tipo === 'despesa') {
+        await this.recalcularOrcamentosRelacionados(rowToTransacao(transacao))
       }
     }
 
-    // Executa a deleção em massa atomicamente (inclui siblings de transferências)
-    await db.transaction('rw', db.transacoes, async () => {
-      await db.transacoes.bulkDelete([...idsParaDeletar])
-    })
+    const { error } = await supabase
+      .from('transacoes')
+      .delete()
+      .in('id', [...idsParaDeletar])
 
-    // Recalcula saldo de todas as contas afetadas (outside txn)
+    if (error) throw new DatabaseError('Erro ao deletar transações', error as unknown as Error)
+
     for (const contaId of contasAfetadas) {
       await contaService.recalcularESalvarSaldo(contaId)
     }
@@ -656,87 +549,57 @@ export class TransacaoService implements ITransacaoService {
     return transacaoIds.length
   }
 
-  /**
-   * Retorna estatísticas de gastos por categoria em um período
-   * Útil para widgets de orçamento e análises
-   */
   async getGastosPorCategoria(
     dataInicio: Date,
     dataFim: Date
-  ): Promise<
-    {
-      categoria_id: string
-      categoria_nome: string
-      categoria_icone: string
-      categoria_cor: string
-      total_gasto: number
-      quantidade_transacoes: number
-    }[]
-  > {
-    const db = getDB()
+  ): Promise<{
+    categoria_id: string
+    categoria_nome: string
+    categoria_icone: string
+    categoria_cor: string
+    total_gasto: number
+    quantidade_transacoes: number
+  }[]> {
+    const supabase = getSupabase()
 
-    // Busca todas as despesas no período
-    const transacoes = await this.listTransacoes({
-      tipo: 'despesa',
-      dataInicio,
-      dataFim,
-    })
+    const transacoes = await this.listTransacoes({ tipo: 'despesa', dataInicio, dataFim })
 
-    // Agrupa por categoria
-    const gastosPorCategoria = new Map<
-      string,
-      {
-        total: number
-        quantidade: number
-        categoria_id: string
-      }
-    >()
+    const gastosPorCategoria = new Map<string, { total: number; quantidade: number }>()
 
     for (const t of transacoes) {
-      if (!t.categoria_id) continue // Ignora transações sem categoria
-
-      const categoriaId = t.categoria_id
+      if (!t.categoria_id) continue
       const valorAbsoluto = Math.abs(t.valor)
-
-      if (gastosPorCategoria.has(categoriaId)) {
-        const dados = gastosPorCategoria.get(categoriaId)!
-        dados.total += valorAbsoluto
-        dados.quantidade += 1
+      const existing = gastosPorCategoria.get(t.categoria_id)
+      if (existing) {
+        existing.total += valorAbsoluto
+        existing.quantidade += 1
       } else {
-        gastosPorCategoria.set(categoriaId, {
-          total: valorAbsoluto,
-          quantidade: 1,
-          categoria_id: categoriaId,
-        })
+        gastosPorCategoria.set(t.categoria_id, { total: valorAbsoluto, quantidade: 1 })
       }
     }
 
-    // Busca informações das categorias
-    const categorias = await db.categorias.toArray()
-    const categoriaMap = new Map(categorias.map((c) => [c.id, c]))
+    const categoriaIds = [...gastosPorCategoria.keys()]
+    const { data: categorias } = categoriaIds.length > 0
+      ? await supabase.from('categorias').select('id, nome, icone, cor').in('id', categoriaIds)
+      : { data: [] }
 
-    // Monta resultado final
-    const resultado = Array.from(gastosPorCategoria.values())
-      .map((gasto) => {
-        const categoria = categoriaMap.get(gasto.categoria_id)
+    const categoriaMap = new Map((categorias || []).map((c: { id: string; nome: string; icone?: string; cor?: string }) => [c.id, c]))
+
+    return Array.from(gastosPorCategoria.entries())
+      .map(([categoriaId, gasto]) => {
+        const categoria = categoriaMap.get(categoriaId)
         return {
-          categoria_id: gasto.categoria_id,
-          categoria_nome: categoria?.nome || 'Sem categoria',
-          categoria_icone: categoria?.icone || '📦',
-          categoria_cor: categoria?.cor || '#6B7280',
+          categoria_id: categoriaId,
+          categoria_nome: (categoria as { nome: string } | undefined)?.nome || 'Sem categoria',
+          categoria_icone: (categoria as { icone?: string } | undefined)?.icone || '📦',
+          categoria_cor: (categoria as { cor?: string } | undefined)?.cor || '#6B7280',
           total_gasto: roundCurrency(gasto.total),
           quantidade_transacoes: gasto.quantidade,
         }
       })
-      .sort((a, b) => b.total_gasto - a.total_gasto) // Ordena por valor decrescente
-
-    return resultado
+      .sort((a, b) => b.total_gasto - a.total_gasto)
   }
 
-  /**
-   * Retorna transações sem categoria (não classificadas)
-   * Útil para workflows de classificação em massa
-   */
   async getTransacoesNaoClassificadas(filters?: {
     contaId?: string
     dataInicio?: Date
@@ -745,129 +608,121 @@ export class TransacaoService implements ITransacaoService {
     limit?: number
     offset?: number
   }): Promise<Transacao[]> {
-    const transacoes = await this.listTransacoes({
-      ...filters,
-      sortBy: 'data',
-      sortOrder: 'desc',
-    })
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
-    return transacoes.filter((t) => !t.categoria_id)
-  }
+    let query = supabase
+      .from('transacoes')
+      .select('*')
+      .eq('usuario_id', userId)
+      .is('categoria_id', null)
+      .order('data', { ascending: false })
 
-  /**
-   * Atualiza tags de múltiplas transações de uma vez
-   * @returns Número de transações atualizadas
-   */
-  async bulkUpdateTags(transacaoIds: string[], tags: string[]): Promise<number> {
-    const db = getDB()
+    if (filters?.contaId) query = query.eq('conta_id', filters.contaId)
+    if (filters?.dataInicio) query = query.gte('data', filters.dataInicio.toISOString())
+    if (filters?.dataFim) query = query.lte('data', filters.dataFim.toISOString())
+    if (filters?.tipo) query = query.eq('tipo', filters.tipo)
 
-    let count = 0
-    const tagsJson = JSON.stringify(tags)
-
-    for (const id of transacaoIds) {
-      try {
-        await db.transacoes.update(id, {
-          tags: tagsJson,
-          updated_at: new Date(),
-        })
-        count++
-      } catch (error) {
-        console.error(`Erro ao atualizar tags da transação ${id}:`, error)
-      }
+    if (filters?.limit !== undefined) {
+      const offset = filters?.offset || 0
+      query = query.range(offset, offset + filters.limit - 1)
     }
 
-    return count
+    const { data, error } = await query
+
+    if (error) throw new DatabaseError('Erro ao buscar transações não classificadas', error as unknown as Error)
+
+    return (data || []).map(rowToTransacao)
   }
 
-  /**
-   * Retorna as categorias com maiores variações percentuais comparando dois períodos
-   * Útil para análise de mudanças de comportamento de gastos
-   */
+  async bulkUpdateTags(transacaoIds: string[], tags: string[]): Promise<number> {
+    const supabase = getSupabase()
+
+    const { error, count } = await supabase
+      .from('transacoes')
+      .update({
+        tags: JSON.stringify(tags),
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', transacaoIds)
+
+    if (error) throw new DatabaseError('Erro ao atualizar tags', error as unknown as Error)
+
+    return count || transacaoIds.length
+  }
+
   async getVariacoesPorCategoria(
     periodoAtualInicio: Date,
     periodoAtualFim: Date,
     periodoAnteriorInicio: Date,
     periodoAnteriorFim: Date
-  ): Promise<
-    {
-      categoria_id: string
-      categoria_nome: string
-      categoria_icone: string
-      categoria_cor: string
-      total_gasto_atual: number
-      total_gasto_anterior: number
-      variacao_absoluta: number
-      variacao_percentual: number
-      quantidade_transacoes: number
-    }[]
-  > {
-    const db = getDB()
+  ): Promise<{
+    categoria_id: string
+    categoria_nome: string
+    categoria_icone: string
+    categoria_cor: string
+    total_gasto_atual: number
+    total_gasto_anterior: number
+    variacao_absoluta: number
+    variacao_percentual: number
+    quantidade_transacoes: number
+  }[]> {
+    const supabase = getSupabase()
 
-    // Busca despesas do período atual
     const transacoesAtuais = await this.listTransacoes({
       tipo: 'despesa',
       dataInicio: periodoAtualInicio,
       dataFim: periodoAtualFim,
     })
 
-    // Busca despesas do período anterior
     const transacoesAnteriores = await this.listTransacoes({
       tipo: 'despesa',
       dataInicio: periodoAnteriorInicio,
       dataFim: periodoAnteriorFim,
     })
 
-    // Agrupa gastos atuais por categoria
     const gastosAtuais = new Map<string, number>()
     for (const t of transacoesAtuais) {
       if (!t.categoria_id) continue
-      const valor = Math.abs(t.valor)
-      gastosAtuais.set(t.categoria_id, (gastosAtuais.get(t.categoria_id) || 0) + valor)
+      gastosAtuais.set(t.categoria_id, (gastosAtuais.get(t.categoria_id) || 0) + Math.abs(t.valor))
     }
 
-    // Agrupa gastos anteriores por categoria
     const gastosAnteriores = new Map<string, number>()
     for (const t of transacoesAnteriores) {
       if (!t.categoria_id) continue
-      const valor = Math.abs(t.valor)
-      gastosAnteriores.set(t.categoria_id, (gastosAnteriores.get(t.categoria_id) || 0) + valor)
+      gastosAnteriores.set(t.categoria_id, (gastosAnteriores.get(t.categoria_id) || 0) + Math.abs(t.valor))
     }
 
-    // Conta transações atuais por categoria
     const quantidades = new Map<string, number>()
     for (const t of transacoesAtuais) {
       if (!t.categoria_id) continue
       quantidades.set(t.categoria_id, (quantidades.get(t.categoria_id) || 0) + 1)
     }
 
-    // Busca informações das categorias
-    const categorias = await db.categorias.toArray()
-    const categoriaMap = new Map(categorias.map((c) => [c.id, c]))
+    const todasCategoriaIds = new Set([...gastosAtuais.keys(), ...gastosAnteriores.keys()])
+    const categoriaIds = [...todasCategoriaIds]
 
-    // Calcula variações para todas as categorias que aparecem em qualquer período
-    const todasCategoriasIds = new Set([...gastosAtuais.keys(), ...gastosAnteriores.keys()])
+    const { data: categorias } = categoriaIds.length > 0
+      ? await supabase.from('categorias').select('id, nome, icone, cor').in('id', categoriaIds)
+      : { data: [] }
 
-    const resultado = Array.from(todasCategoriasIds)
+    const categoriaMap = new Map((categorias || []).map((c: { id: string; nome: string; icone?: string; cor?: string }) => [c.id, c]))
+
+    return Array.from(todasCategoriaIds)
       .map((categoriaId) => {
         const categoria = categoriaMap.get(categoriaId)
         const gastoAtual = gastosAtuais.get(categoriaId) || 0
         const gastoAnterior = gastosAnteriores.get(categoriaId) || 0
-
-        // Calcula variação absoluta e percentual
         const variacaoAbsoluta = gastoAtual - gastoAnterior
-        let variacaoPercentual = 0
-
-        if (gastoAnterior > 0) {
-          variacaoPercentual = ((gastoAtual - gastoAnterior) / gastoAnterior) * 100
-        } else if (gastoAtual > 0) {
-          variacaoPercentual = 100 // Nova categoria que não existia antes
-        }
+        const variacaoPercentual = gastoAnterior > 0
+          ? ((gastoAtual - gastoAnterior) / gastoAnterior) * 100
+          : gastoAtual > 0 ? 100 : 0
 
         return {
           categoria_id: categoriaId,
-          categoria_nome: categoria?.nome || 'Sem categoria',
-          categoria_icone: categoria?.icone || '📦',
-          categoria_cor: categoria?.cor || '#6B7280',
+          categoria_nome: (categoria as { nome: string } | undefined)?.nome || 'Sem categoria',
+          categoria_icone: (categoria as { icone?: string } | undefined)?.icone || '📦',
+          categoria_cor: (categoria as { cor?: string } | undefined)?.cor || '#6B7280',
           total_gasto_atual: roundCurrency(gastoAtual),
           total_gasto_anterior: roundCurrency(gastoAnterior),
           variacao_absoluta: roundCurrency(variacaoAbsoluta),
@@ -875,10 +730,7 @@ export class TransacaoService implements ITransacaoService {
           quantidade_transacoes: quantidades.get(categoriaId) || 0,
         }
       })
-      // Ordena por variação absoluta (maior variação primeiro, seja positiva ou negativa)
       .sort((a, b) => Math.abs(b.variacao_absoluta) - Math.abs(a.variacao_absoluta))
-
-    return resultado
   }
 }
 

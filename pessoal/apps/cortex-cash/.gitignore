@@ -53,3 +53,7 @@ Thumbs.db
 
 # bank statements (sensitive data)
 imports/
+
+# migration data (contains personal financial data)
+scripts/data/*.json
+!scripts/data/.gitkeep

@@ -5,16 +5,44 @@
  * Fornece operações CRUD e consultas para contas
  */
 
-import { getDB } from '../db/client'
-import { getCurrentUserId } from '../db/seed-usuarios'
+import { getSupabase } from '../db/supabase'
 import { DatabaseError, NotFoundError, ValidationError } from '../errors'
 import type { Conta } from '../types'
 import { roundCurrency } from '../utils/currency'
-import { createContaSchema, updateContaSchema, validateDTO } from '../validations/dtos'
+
+async function getUserId(): Promise<string> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return user.id
+}
+
+function rowToConta(row: Record<string, unknown>): Conta {
+  return {
+    id: row.id as string,
+    instituicao_id: row.instituicao_id as string,
+    nome: row.nome as string,
+    tipo: row.tipo as Conta['tipo'],
+    agencia: row.agencia as string | undefined,
+    numero: row.numero as string | undefined,
+    saldo_referencia: Number(row.saldo_referencia) || 0,
+    data_referencia: row.data_referencia ? new Date(row.data_referencia as string) : new Date(),
+    saldo_atual: Number(row.saldo_atual) || 0,
+    ativa: row.ativa !== false,
+    cor: row.cor as string | undefined,
+    icone: row.icone as string | undefined,
+    observacoes: row.observacoes as string | undefined,
+    conta_pai_id: row.conta_pai_id as string | undefined,
+    pluggy_id: row.pluggy_id as string | undefined,
+    usuario_id: row.usuario_id as string | undefined,
+    created_at: row.created_at ? new Date(row.created_at as string) : new Date(),
+    updated_at: row.updated_at ? new Date(row.updated_at as string) : new Date(),
+  }
+}
 
 export class ContaService {
   /**
-   * Lista todas as contas ativas
+   * Lista todas as contas do usuário atual
    */
   async listContas(options?: {
     incluirInativas?: boolean
@@ -23,85 +51,70 @@ export class ContaService {
     sortBy?: 'nome' | 'saldo_referencia' | 'created_at'
     sortOrder?: 'asc' | 'desc'
   }): Promise<Conta[]> {
-    const db = getDB()
-    const currentUserId = getCurrentUserId()
+    const supabase = getSupabase()
+    const userId = await getUserId()
     const incluirInativas = options?.incluirInativas || false
-
-    let contas: Conta[] = await db.contas.toArray()
-
-    // Filtrar por usuário atual
-    contas = contas.filter((c) => c.usuario_id === currentUserId)
-
-    if (!incluirInativas) {
-      contas = contas.filter((c) => c.ativa === true)
-    }
-
-    // Ordenar
     const sortBy = options?.sortBy || 'nome'
     const sortOrder = options?.sortOrder || 'asc'
 
-    contas.sort((a, b) => {
-      let compareA: any
-      let compareB: any
+    let query = supabase
+      .from('contas')
+      .select('*')
+      .eq('usuario_id', userId)
+      .order(sortBy, { ascending: sortOrder === 'asc' })
 
-      if (sortBy === 'nome') {
-        compareA = a.nome.toLowerCase()
-        compareB = b.nome.toLowerCase()
-      } else if (sortBy === 'saldo_referencia') {
-        compareA = a.saldo_referencia || 0
-        compareB = b.saldo_referencia || 0
-      } else if (sortBy === 'created_at') {
-        compareA = a.created_at instanceof Date ? a.created_at : new Date(a.created_at)
-        compareB = b.created_at instanceof Date ? b.created_at : new Date(b.created_at)
-        compareA = compareA.getTime()
-        compareB = compareB.getTime()
-      }
-
-      if (sortOrder === 'asc') {
-        return compareA > compareB ? 1 : compareA < compareB ? -1 : 0
-      } else {
-        return compareA < compareB ? 1 : compareA > compareB ? -1 : 0
-      }
-    })
-
-    // Aplicar paginação
-    const offset = options?.offset || 0
-    const limit = options?.limit
-
-    if (limit !== undefined) {
-      contas = contas.slice(offset, offset + limit)
-    } else if (offset > 0) {
-      contas = contas.slice(offset)
+    if (!incluirInativas) {
+      query = query.eq('ativa', true)
     }
 
-    return contas
+    if (options?.limit !== undefined) {
+      const offset = options?.offset || 0
+      query = query.range(offset, offset + options.limit - 1)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw new DatabaseError('Erro ao listar contas', error as unknown as Error)
+
+    return (data || []).map(rowToConta)
   }
 
   /**
    * Busca uma conta por ID
    */
   async getContaById(id: string): Promise<Conta | null> {
-    const db = getDB()
-    const conta = await db.contas.get(id)
-    return conta || null
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('contas')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Erro ao buscar conta', error as unknown as Error)
+
+    return data ? rowToConta(data) : null
   }
 
   /**
-   * Lista contas de uma instituição específica
+   * Lista contas de uma instituição específica do usuário atual
    */
   async listContasByInstituicao(instituicaoId: string): Promise<Conta[]> {
-    const db = getDB()
-    const currentUserId = getCurrentUserId()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
-    const contas = await db.contas.where('instituicao_id').equals(instituicaoId).toArray()
+    const { data, error } = await supabase
+      .from('contas')
+      .select('*')
+      .eq('instituicao_id', instituicaoId)
+      .eq('usuario_id', userId)
 
-    // Filtrar por usuário atual
-    return contas.filter((c) => c.usuario_id === currentUserId)
+    if (error) throw new DatabaseError('Erro ao listar contas por instituição', error as unknown as Error)
+
+    return (data || []).map(rowToConta)
   }
 
   /**
    * Calcula o saldo de uma conta baseado no saldo de referência + transações.
-   * Delega para calcularSaldoEmData para manter consistência.
    */
   async getSaldoConta(contaId: string): Promise<number> {
     return this.calcularSaldoEmData(contaId, new Date())
@@ -116,8 +129,6 @@ export class ContaService {
       throw new NotFoundError('Conta', contaId)
     }
 
-    // Novo modelo: usamos o saldo de referência (saldo final conhecido na data_referencia)
-    // e calculamos o saldo na data desejada (agora) a partir dele.
     return await this.calcularSaldoEmData(contaId, new Date())
   }
 
@@ -130,44 +141,53 @@ export class ContaService {
       throw new NotFoundError('Conta', contaId)
     }
 
-    const db = getDB()
-    // Calcula o saldo atual de forma consistente com a filosofia de saldo_referencia
+    const supabase = getSupabase()
     const novoSaldoAtual = await this.calcularSaldoEmData(contaId, new Date())
 
-    await db.contas.update(contaId, {
-      saldo_atual: novoSaldoAtual,
-      updated_at: new Date(),
-    })
+    const { error } = await supabase
+      .from('contas')
+      .update({
+        saldo_atual: novoSaldoAtual,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', contaId)
+
+    if (error) throw new DatabaseError('Erro ao salvar saldo recalculado', error as unknown as Error)
   }
 
   /**
    * Cria uma nova conta
    */
   async createConta(data: Omit<Conta, 'id' | 'created_at' | 'updated_at'>): Promise<Conta> {
-    // Validate input
-    validateDTO(createContaSchema, data)
-
-    const db = getDB()
-    const currentUserId = getCurrentUserId()
-
-    const id = crypto.randomUUID()
-    const now = new Date()
-
-    const contaBase: Conta = {
-      ...data,
-      id,
-      usuario_id: currentUserId, // Pertence ao usuário atual
-      // Inicializa saldo_atual com saldo_referencia (sem transações ainda)
-      saldo_atual: data.saldo_referencia || 0,
-      // Se data_referencia não fornecida, usa a data atual
-      data_referencia: data.data_referencia || now,
-      created_at: now,
-      updated_at: now,
+    if (!data.instituicao_id || !data.nome || !data.tipo) {
+      throw new ValidationError('Dados insuficientes para criar conta')
     }
 
-    await db.contas.add(contaBase)
+    const supabase = getSupabase()
+    const userId = await getUserId()
+    const now = new Date().toISOString()
 
-    return contaBase
+    const { data: inserted, error } = await supabase
+      .from('contas')
+      .insert({
+        id: crypto.randomUUID(),
+        ...data,
+        usuario_id: userId,
+        saldo_atual: data.saldo_referencia || 0,
+        data_referencia: data.data_referencia
+          ? (data.data_referencia instanceof Date
+              ? data.data_referencia.toISOString()
+              : data.data_referencia)
+          : now,
+        created_at: now,
+        updated_at: now,
+      })
+      .select()
+      .single()
+
+    if (error) throw new DatabaseError('Erro ao criar conta', error as unknown as Error)
+
+    return rowToConta(inserted)
   }
 
   /**
@@ -178,25 +198,23 @@ export class ContaService {
     data: Partial<Omit<Conta, 'id' | 'created_at' | 'updated_at'>>
   ): Promise<Conta> {
     try {
-      // Validate input
-      validateDTO(updateContaSchema, data)
+      const supabase = getSupabase()
 
-      const db = getDB()
-
-      const existing = await db.contas.get(id)
+      const existing = await this.getContaById(id)
       if (!existing) {
         throw new NotFoundError('Conta', id)
       }
 
-      // Se está desativando a conta, verificar se há cartões vinculados
+      // If disabling, check for linked active credit cards
       if (data.ativa === false && existing.ativa) {
-        // Usar filter em vez de where porque conta_pagamento_id não é indexado
-        const todosCartoes = await db.cartoes_config.toArray()
-        const cartoesVinculados = todosCartoes.filter((c) => c.conta_pagamento_id === id)
-        const cartoesAtivos = cartoesVinculados.filter((c) => c.ativo)
+        const { data: cartoesAtivos, error: cartaoError } = await supabase
+          .from('cartoes_config')
+          .select('nome')
+          .eq('conta_pagamento_id', id)
+          .eq('ativo', true)
 
-        if (cartoesAtivos.length > 0) {
-          const nomesCartoes = cartoesAtivos.map((c) => c.nome).join(', ')
+        if (!cartaoError && cartoesAtivos && cartoesAtivos.length > 0) {
+          const nomesCartoes = cartoesAtivos.map((c: { nome: string }) => c.nome).join(', ')
           throw new ValidationError(
             `Não é possível desativar esta conta pois ela está vinculada a ${cartoesAtivos.length} cartão(ões) de crédito ativo(s): ${nomesCartoes}. ` +
               `Desvincule ou desative os cartões primeiro.`
@@ -204,17 +222,25 @@ export class ContaService {
         }
       }
 
-      await db.contas.update(id, {
+      const updatePayload: Record<string, unknown> = {
         ...data,
-        updated_at: new Date(),
-      })
-
-      const result = await db.contas.get(id)
-      if (!result) {
-        throw new DatabaseError(`Erro ao recuperar conta atualizada ${id}`)
+        updated_at: new Date().toISOString(),
       }
 
-      return result
+      if (data.data_referencia instanceof Date) {
+        updatePayload.data_referencia = data.data_referencia.toISOString()
+      }
+
+      const { data: updated, error } = await supabase
+        .from('contas')
+        .update(updatePayload)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw new DatabaseError('Erro ao atualizar conta', error as unknown as Error)
+
+      return rowToConta(updated)
     } catch (error) {
       if (
         error instanceof NotFoundError ||
@@ -232,22 +258,23 @@ export class ContaService {
    */
   async toggleAtiva(id: string): Promise<Conta> {
     try {
-      const db = getDB()
-
-      const conta = await db.contas.get(id)
+      const conta = await this.getContaById(id)
       if (!conta) {
         throw new NotFoundError('Conta', id)
       }
 
-      // Se está desativando a conta, verificar se há cartões vinculados
-      if (conta.ativa) {
-        // Usar filter em vez de where porque conta_pagamento_id não é indexado
-        const todosCartoes = await db.cartoes_config.toArray()
-        const cartoesVinculados = todosCartoes.filter((c) => c.conta_pagamento_id === id)
-        const cartoesAtivos = cartoesVinculados.filter((c) => c.ativo)
+      const supabase = getSupabase()
 
-        if (cartoesAtivos.length > 0) {
-          const nomesCartoes = cartoesAtivos.map((c) => c.nome).join(', ')
+      // If disabling, check for linked active credit cards
+      if (conta.ativa) {
+        const { data: cartoesAtivos, error: cartaoError } = await supabase
+          .from('cartoes_config')
+          .select('nome')
+          .eq('conta_pagamento_id', id)
+          .eq('ativo', true)
+
+        if (!cartaoError && cartoesAtivos && cartoesAtivos.length > 0) {
+          const nomesCartoes = cartoesAtivos.map((c: { nome: string }) => c.nome).join(', ')
           throw new ValidationError(
             `Não é possível desativar esta conta pois ela está vinculada a ${cartoesAtivos.length} cartão(ões) de crédito ativo(s): ${nomesCartoes}. ` +
               `Desvincule ou desative os cartões primeiro.`
@@ -255,17 +282,19 @@ export class ContaService {
         }
       }
 
-      await db.contas.update(id, {
-        ativa: !conta.ativa,
-        updated_at: new Date(),
-      })
+      const { data: updated, error } = await supabase
+        .from('contas')
+        .update({
+          ativa: !conta.ativa,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single()
 
-      const result = await db.contas.get(id)
-      if (!result) {
-        throw new DatabaseError(`Erro ao recuperar conta atualizada ${id}`)
-      }
+      if (error) throw new DatabaseError('Erro ao alternar estado da conta', error as unknown as Error)
 
-      return result
+      return rowToConta(updated)
     } catch (error) {
       if (
         error instanceof NotFoundError ||
@@ -287,27 +316,32 @@ export class ContaService {
 
   /**
    * Deleta permanentemente uma conta e todas as suas transações associadas.
-   * Também deleta pernas irmãs de transferências e recalcula contas afetadas.
    */
   async hardDeleteConta(id: string): Promise<void> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    // Busca todas as transações da conta
-    const transacoes = await db.transacoes.where('conta_id').equals(id).toArray()
+    // Get all transactions for this account
+    const { data: transacoes, error: txError } = await supabase
+      .from('transacoes')
+      .select('id, transferencia_id, conta_id')
+      .eq('conta_id', id)
 
-    const idsParaDeletar = new Set(transacoes.map((t) => t.id))
+    if (txError) throw new DatabaseError('Erro ao buscar transações', txError as unknown as Error)
+
+    const idsParaDeletar = new Set((transacoes || []).map((t: { id: string }) => t.id))
     const contasParaRecalcular = new Set<string>()
 
-    if (transacoes.length > 0) {
-      // Coleta pernas irmãs de transferências
-      for (const t of transacoes) {
-        if (t.transferencia_id) {
-          const sibling = await db.transacoes
-            .where('transferencia_id')
-            .equals(t.transferencia_id)
-            .filter((s) => !idsParaDeletar.has(s.id))
-            .first()
-          if (sibling) {
+    // Find sibling transactions from transfers
+    for (const t of transacoes || []) {
+      if (t.transferencia_id) {
+        const { data: siblings } = await supabase
+          .from('transacoes')
+          .select('id, conta_id')
+          .eq('transferencia_id', t.transferencia_id)
+          .neq('conta_id', id)
+
+        for (const sibling of siblings || []) {
+          if (!idsParaDeletar.has(sibling.id)) {
             idsParaDeletar.add(sibling.id)
             contasParaRecalcular.add(sibling.conta_id)
           }
@@ -315,15 +349,22 @@ export class ContaService {
       }
     }
 
-    // Delete transactions and account atomically
-    await db.transaction('rw', [db.transacoes, db.contas], async () => {
-      if (idsParaDeletar.size > 0) {
-        await db.transacoes.bulkDelete([...idsParaDeletar])
-      }
-      await db.contas.delete(id)
-    })
+    // Delete all collected transactions
+    if (idsParaDeletar.size > 0) {
+      const { error: delTxError } = await supabase
+        .from('transacoes')
+        .delete()
+        .in('id', [...idsParaDeletar])
 
-    // Recalcula saldo das contas afetadas por siblings (outside txn — read-only)
+      if (delTxError) throw new DatabaseError('Erro ao deletar transações', delTxError as unknown as Error)
+    }
+
+    // Delete the account
+    const { error: delContaError } = await supabase.from('contas').delete().eq('id', id)
+
+    if (delContaError) throw new DatabaseError('Erro ao deletar conta', delContaError as unknown as Error)
+
+    // Recalculate balances for affected sibling accounts
     for (const contaId of contasParaRecalcular) {
       if (contaId !== id) {
         await this.recalcularESalvarSaldo(contaId)
@@ -334,16 +375,12 @@ export class ContaService {
   /**
    * Calcula o saldo da conta em uma data específica
    * Filosofia: User é soberano - usa saldo_referencia como base e calcula para frente ou trás
-   *
-   * @param contaId ID da conta
-   * @param data Data para calcular o saldo (default: hoje)
-   * @returns Saldo calculado na data especificada
    */
   async calcularSaldoEmData(contaId: string, data: Date = new Date()): Promise<number> {
     try {
-      const db = getDB()
+      const supabase = getSupabase()
 
-      const conta = await db.contas.get(contaId)
+      const conta = await this.getContaById(contaId)
       if (!conta) {
         throw new NotFoundError('Conta', contaId)
       }
@@ -353,20 +390,24 @@ export class ContaService {
           ? conta.data_referencia
           : new Date(conta.data_referencia)
 
-      // Se a data solicitada é igual à data de referência, retorna o saldo de referência
       if (data.toDateString() === dataReferencia.toDateString()) {
         return conta.saldo_referencia
       }
 
-      // Buscar todas as transações da conta
-      const todasTransacoes = await db.transacoes.where('conta_id').equals(contaId).toArray()
+      // Fetch all transactions for this account
+      const { data: todasTransacoes, error } = await supabase
+        .from('transacoes')
+        .select('tipo, valor, data')
+        .eq('conta_id', contaId)
+
+      if (error) throw new DatabaseError('Erro ao buscar transações', error as unknown as Error)
 
       let saldoCalculado = conta.saldo_referencia
 
       if (data >= dataReferencia) {
-        // FUTURO: adiciona transações entre data_referencia e data solicitada
-        const transacoesFuturas = todasTransacoes.filter((t) => {
-          const dataTransacao = t.data instanceof Date ? t.data : new Date(t.data)
+        // FUTURE: add transactions between data_referencia and requested date
+        const transacoesFuturas = (todasTransacoes || []).filter((t: { data: string; tipo: string; valor: number }) => {
+          const dataTransacao = new Date(t.data)
           return dataTransacao > dataReferencia && dataTransacao <= data
         })
 
@@ -376,25 +417,22 @@ export class ContaService {
           } else if (t.tipo === 'despesa') {
             saldoCalculado -= t.valor
           } else if (t.tipo === 'transferencia') {
-            // Transferências: adiciona o valor (já vem com sinal correto)
             saldoCalculado += t.valor
           }
         }
       } else {
-        // PASSADO: subtrai transações entre data solicitada e data_referencia (invertido)
-        const transacoesPassadas = todasTransacoes.filter((t) => {
-          const dataTransacao = t.data instanceof Date ? t.data : new Date(t.data)
+        // PAST: subtract transactions between requested date and data_referencia (reversed)
+        const transacoesPassadas = (todasTransacoes || []).filter((t: { data: string; tipo: string; valor: number }) => {
+          const dataTransacao = new Date(t.data)
           return dataTransacao > data && dataTransacao <= dataReferencia
         })
 
         for (const t of transacoesPassadas) {
-          // Inverte a lógica: o que era receita vira despesa e vice-versa
           if (t.tipo === 'receita') {
             saldoCalculado -= t.valor
           } else if (t.tipo === 'despesa') {
             saldoCalculado += t.valor
           } else if (t.tipo === 'transferencia') {
-            // Transferências: inverte o sinal
             saldoCalculado -= t.valor
           }
         }
@@ -402,20 +440,13 @@ export class ContaService {
 
       return roundCurrency(saldoCalculado)
     } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error
-      }
+      if (error instanceof NotFoundError) throw error
       throw new DatabaseError('Erro ao calcular saldo da conta', error as Error)
     }
   }
 
   /**
    * Atualiza o saldo de referência da conta
-   * Usado quando o usuário verifica o saldo real no banco e quer atualizar
-   *
-   * @param contaId ID da conta
-   * @param novoSaldo Novo saldo verificado
-   * @param dataReferencia Data em que o saldo foi verificado (default: hoje)
    */
   async atualizarSaldoReferencia(
     contaId: string,
@@ -423,55 +454,71 @@ export class ContaService {
     dataReferencia: Date = new Date()
   ): Promise<Conta> {
     try {
-      const db = getDB()
+      const supabase = getSupabase()
 
-      const conta = await db.contas.get(contaId)
+      const conta = await this.getContaById(contaId)
       if (!conta) {
         throw new NotFoundError('Conta', contaId)
       }
 
-      await db.contas.update(contaId, {
-        saldo_referencia: novoSaldo,
-        data_referencia: dataReferencia,
-        updated_at: new Date(),
-      })
+      await supabase
+        .from('contas')
+        .update({
+          saldo_referencia: novoSaldo,
+          data_referencia: dataReferencia.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', contaId)
 
-      // Recalcula o saldo atual
+      // Recalculate current balance
       const saldoAtual = await this.calcularSaldoEmData(contaId, new Date())
-      await db.contas.update(contaId, { saldo_atual: saldoAtual })
 
-      const result = await db.contas.get(contaId)
-      if (!result) {
+      const { data: result, error } = await supabase
+        .from('contas')
+        .update({ saldo_atual: saldoAtual, updated_at: new Date().toISOString() })
+        .eq('id', contaId)
+        .select()
+        .single()
+
+      if (error || !result) {
         throw new DatabaseError(`Erro ao recuperar conta atualizada ${contaId}`)
       }
 
-      return result
+      return rowToConta(result)
     } catch (error) {
-      if (error instanceof NotFoundError || error instanceof DatabaseError) {
-        throw error
-      }
+      if (error instanceof NotFoundError || error instanceof DatabaseError) throw error
       throw new DatabaseError('Erro ao atualizar saldo de referência', error as Error)
     }
   }
 
   /**
-   * Recalcula o saldo atual de todas as contas ativas
-   * Útil após importações ou edições em massa de transações
+   * Recalcula o saldo atual de todas as contas ativas do usuário
    */
   async recalcularSaldosAtuais(): Promise<void> {
     try {
-      const db = getDB()
-      const contasAtivas = await db.contas.where('ativa').equals(1).toArray()
+      const supabase = getSupabase()
+      const userId = await getUserId()
 
-      for (const conta of contasAtivas) {
+      const { data: contasAtivas, error } = await supabase
+        .from('contas')
+        .select('id')
+        .eq('usuario_id', userId)
+        .eq('ativa', true)
+
+      if (error) throw new DatabaseError('Erro ao buscar contas', error as unknown as Error)
+
+      for (const conta of contasAtivas || []) {
         const saldoAtual = await this.calcularSaldoEmData(conta.id, new Date())
-        await db.contas.update(conta.id, {
-          saldo_atual: saldoAtual,
-          updated_at: new Date(),
-        })
+        await supabase
+          .from('contas')
+          .update({
+            saldo_atual: saldoAtual,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', conta.id)
       }
 
-      console.log(`[ContaService] Saldos atuais recalculados para ${contasAtivas.length} contas`)
+      console.log(`[ContaService] Saldos atuais recalculados para ${(contasAtivas || []).length} contas`)
     } catch (error) {
       throw new DatabaseError('Erro ao recalcular saldos atuais', error as Error)
     }

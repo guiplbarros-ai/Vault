@@ -5,8 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { getDB } from '@/lib/db/client'
-import { getCurrentUserId } from '@/lib/db/seed-usuarios'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import { AlertCircle, AlertTriangle, CheckCircle, Loader2, Trash2, Upload } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
@@ -94,24 +93,22 @@ export default function BulkImportPage() {
     setSkippedCount(0)
 
     try {
-      const userId = getCurrentUserId()
-      const now = new Date()
-      const db = getDB()
+      const now = new Date().toISOString()
+      const supabase = getSupabaseBrowserClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      const userId = user?.id ?? 'usuario-producao'
 
       // 0. Se modo substituir, limpa dados existentes
       if (replaceMode) {
         console.log('Modo substituir: limpando dados existentes...')
 
-        // Limpa transações
-        await db.transacoes.clear()
+        await supabase.from('transacoes').delete().neq('id', '')
         console.log('Transações limpas')
 
-        // Limpa contas
-        await db.contas.clear()
+        await supabase.from('contas').delete().neq('id', '')
         console.log('Contas limpas')
 
-        // Limpa instituições
-        await db.instituicoes.clear()
+        await supabase.from('instituicoes').delete().neq('id', '')
         console.log('Instituições limpas')
 
         setProgress(5)
@@ -122,16 +119,22 @@ export default function BulkImportPage() {
 
       for (const [key, inst] of Object.entries(data.institutions)) {
         // Check if institution already exists (only if not in replace mode)
-        let existing = null
+        let existingId: string | null = null
         if (!replaceMode) {
-          existing = await db.instituicoes.where('nome').equals(inst.nome).first()
+          const { data: existing } = await supabase
+            .from('instituicoes')
+            .select('id')
+            .eq('nome', inst.nome)
+            .limit(1)
+            .single()
+          existingId = existing?.id ?? null
         }
 
-        if (existing) {
-          institutionIds[key] = existing.id
+        if (existingId) {
+          institutionIds[key] = existingId
         } else {
           const id = crypto.randomUUID()
-          await db.instituicoes.add({
+          await supabase.from('instituicoes').insert({
             id,
             nome: inst.nome,
             codigo: inst.codigo,
@@ -149,16 +152,22 @@ export default function BulkImportPage() {
 
       for (const [key, acc] of Object.entries(data.accounts)) {
         // Check if account already exists (only if not in replace mode)
-        let existing = null
+        let existingId: string | null = null
         if (!replaceMode) {
-          existing = await db.contas.where('nome').equals(acc.nome).first()
+          const { data: existing } = await supabase
+            .from('contas')
+            .select('id')
+            .eq('nome', acc.nome)
+            .limit(1)
+            .single()
+          existingId = existing?.id ?? null
         }
 
-        if (existing) {
-          accountIds[key] = existing.id
+        if (existingId) {
+          accountIds[key] = existingId
         } else {
           const id = crypto.randomUUID()
-          await db.contas.add({
+          await supabase.from('contas').insert({
             id,
             instituicao_id: institutionIds[acc.instituicao]!,
             nome: acc.nome,
@@ -166,7 +175,7 @@ export default function BulkImportPage() {
             agencia: acc.agencia,
             numero: acc.numero,
             saldo_referencia: 0,
-            data_referencia: new Date(0), // Epoch to count all historical transactions
+            data_referencia: new Date(0).toISOString(), // Epoch to count all historical transactions
             saldo_atual: 0,
             ativa: true,
             usuario_id: userId,
@@ -187,8 +196,8 @@ export default function BulkImportPage() {
       // Get existing transaction hashes for deduplication (only if not in replace mode)
       const existingHashes = new Set<string>()
       if (!replaceMode) {
-        const allTransactions = await db.transacoes.toArray()
-        allTransactions.forEach((t) => {
+        const { data: allTransactions } = await supabase.from('transacoes').select('hash')
+        ;(allTransactions || []).forEach((t: any) => {
           if (t.hash) existingHashes.add(t.hash)
         })
       }
@@ -199,7 +208,7 @@ export default function BulkImportPage() {
           id: string
           conta_id: string
           categoria_id: string | null
-          data: Date
+          data: string
           descricao: string
           valor: number
           tipo: 'receita' | 'despesa' | 'transferencia'
@@ -209,8 +218,8 @@ export default function BulkImportPage() {
           ignorada: boolean
           classificacao_confirmada: boolean
           usuario_id: string
-          created_at: Date
-          updated_at: Date
+          created_at: string
+          updated_at: string
         }> = []
 
         for (const tx of batch) {
@@ -233,7 +242,7 @@ export default function BulkImportPage() {
             id: crypto.randomUUID(),
             conta_id: contaId,
             categoria_id: null,
-            data: txDate,
+            data: txDate.toISOString().split('T')[0]!,
             descricao: tx.descricao,
             valor: tx.valor,
             tipo: tx.tipo,
@@ -249,8 +258,7 @@ export default function BulkImportPage() {
         }
 
         if (toAdd.length > 0) {
-          // @ts-expect-error -- schema type mismatch (pre-existing)
-          await db.transacoes.bulkAdd(toAdd)
+          await supabase.from('transacoes').insert(toAdd)
           imported += toAdd.length
         }
 
@@ -457,29 +465,34 @@ async function generateTransactionHash(
 
 // Helper to update account balance
 async function updateAccountBalance(contaId: string): Promise<void> {
-  const db = getDB()
-  const conta = await db.contas.get(contaId)
+  const supabase = getSupabaseBrowserClient()
+  const { data: conta } = await supabase.from('contas').select('*').eq('id', contaId).single()
   if (!conta) return
 
-  const transacoes = await db.transacoes.where('conta_id').equals(contaId).toArray()
+  const { data: transacoesData } = await supabase
+    .from('transacoes')
+    .select('tipo, valor, data, ignorada')
+    .eq('conta_id', contaId)
 
-  let saldo = conta.saldo_referencia || 0
-  const dataRef = conta.data_referencia || new Date(0)
+  const transacoes = transacoesData || []
+
+  let saldo = (conta as any).saldo_referencia || 0
+  const dataRef = (conta as any).data_referencia ? new Date((conta as any).data_referencia) : new Date(0)
 
   for (const tx of transacoes) {
     if ((tx as any).ignorada) continue
-    const txDate = tx.data instanceof Date ? tx.data : new Date(tx.data)
+    const txDate = new Date((tx as any).data)
     if (txDate > dataRef) {
-      if (tx.tipo === 'receita') {
-        saldo += tx.valor
-      } else if (tx.tipo === 'despesa') {
-        saldo -= tx.valor
+      if ((tx as any).tipo === 'receita') {
+        saldo += (tx as any).valor
+      } else if ((tx as any).tipo === 'despesa') {
+        saldo -= (tx as any).valor
       }
     }
   }
 
-  await db.contas.update(contaId, {
-    saldo_atual: Math.round(saldo * 100) / 100,
-    updated_at: new Date(),
-  })
+  await supabase
+    .from('contas')
+    .update({ saldo_atual: Math.round(saldo * 100) / 100, updated_at: new Date().toISOString() })
+    .eq('id', contaId)
 }

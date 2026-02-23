@@ -1,15 +1,8 @@
 /**
  * Vitest Setup File
- * Agent CORE: Implementador
  *
- * Configura ambiente de testes com fake IndexedDB
+ * Configura ambiente de testes
  */
-
-import 'fake-indexeddb/auto'
-import { IDBFactory } from 'fake-indexeddb'
-
-// Setup global IndexedDB
-globalThis.indexedDB = new IDBFactory()
 
 // Mock Date to ensure timestamps are different for test assertions
 let mockTimeOffset = 0

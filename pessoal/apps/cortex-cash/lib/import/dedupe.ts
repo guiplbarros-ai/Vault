@@ -3,7 +3,7 @@
  * Agent IMPORT: Detecta e remove transações duplicadas usando hash SHA-256
  */
 
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import type { DedupeResult, ParsedTransacao } from '@/lib/types'
 import { roundCurrency } from '@/lib/utils/currency'
 
@@ -119,10 +119,15 @@ export async function deduplicateTransactions(
   const uniqueInArray = removeDuplicatesInArray(withHashes)
 
   // Buscar hashes existentes no banco
-  const db = getDB()
-  const existentes = await db.transacoes.where('conta_id').equals(contaId).toArray()
+  const supabase = getSupabaseBrowserClient()
+  const { data: existentes } = await supabase
+    .from('transacoes')
+    .select('hash')
+    .eq('conta_id', contaId)
 
-  const existingHashes = new Set(existentes.map((t) => t.hash).filter((h): h is string => !!h))
+  const existingHashes = new Set(
+    (existentes || []).map((t: { hash: string | null }) => t.hash).filter((h: string | null): h is string => !!h)
+  )
 
   // Separar novas vs duplicadas
   const transacoes_unicas: ParsedTransacao[] = []
@@ -164,10 +169,14 @@ export async function isDuplicate(
 ): Promise<boolean> {
   const hash = await generateTransactionHash(transacao, contaId)
 
-  const db = getDB()
-  const count = await db.transacoes.where(['conta_id', 'hash']).equals([contaId, hash]).count()
+  const supabase = getSupabaseBrowserClient()
+  const { count } = await supabase
+    .from('transacoes')
+    .select('*', { count: 'exact', head: true })
+    .eq('conta_id', contaId)
+    .eq('hash', hash)
 
-  return count > 0
+  return (count ?? 0) > 0
 }
 
 /**

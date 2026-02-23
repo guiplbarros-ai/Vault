@@ -4,12 +4,12 @@
  * Verifica a saúde dos componentes críticos da aplicação
  */
 
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import type { HealthCheckConfig, HealthCheckResult, HealthStatus, SystemHealth } from './types'
 
 const DEFAULT_CONFIG: HealthCheckConfig = {
   timeout: 5000,
-  criticalChecks: ['database', 'indexeddb', 'localStorage'],
+  criticalChecks: ['database', 'localStorage'],
 }
 
 /**
@@ -25,36 +25,39 @@ async function runWithTimeout<T>(fn: () => Promise<T>, timeout: number): Promise
 }
 
 /**
- * Check: Database connectivity (Dexie)
+ * Check: Database connectivity (Supabase)
  */
 async function checkDatabase(): Promise<HealthCheckResult> {
   const start = Date.now()
   const name = 'database'
 
   try {
-    const db = getDB()
+    const supabase = getSupabaseBrowserClient()
 
     // Tenta uma operação simples de leitura
-    const count = await db.categorias.count()
+    const { count, error } = await supabase
+      .from('categorias')
+      .select('*', { count: 'exact', head: true })
+
     const duration = Date.now() - start
 
-    if (count >= 0) {
+    if (error) {
       return {
         name,
-        status: 'healthy',
-        message: 'Database is operational',
+        status: 'unhealthy',
+        message: `Database error: ${error.message}`,
         timestamp: new Date(),
         duration,
-        metadata: { categoriesCount: count },
       }
     }
 
     return {
       name,
-      status: 'unhealthy',
-      message: 'Database returned unexpected result',
+      status: 'healthy',
+      message: 'Database is operational',
       timestamp: new Date(),
       duration,
+      metadata: { categoriesCount: count ?? 0 },
     }
   } catch (error) {
     const duration = Date.now() - start
@@ -62,55 +65,6 @@ async function checkDatabase(): Promise<HealthCheckResult> {
       name,
       status: 'unhealthy',
       message: `Database error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      timestamp: new Date(),
-      duration,
-    }
-  }
-}
-
-/**
- * Check: IndexedDB availability
- */
-async function checkIndexedDB(): Promise<HealthCheckResult> {
-  const start = Date.now()
-  const name = 'indexeddb'
-
-  try {
-    if (!('indexedDB' in window)) {
-      return {
-        name,
-        status: 'unhealthy',
-        message: 'IndexedDB not supported in this browser',
-        timestamp: new Date(),
-        duration: Date.now() - start,
-      }
-    }
-
-    // Test opening a temporary database
-    const testDB = indexedDB.open('health-check-test', 1)
-
-    await new Promise((resolve, reject) => {
-      testDB.onsuccess = resolve
-      testDB.onerror = reject
-    })
-
-    // Clean up test database
-    indexedDB.deleteDatabase('health-check-test')
-
-    const duration = Date.now() - start
-    return {
-      name,
-      status: 'healthy',
-      message: 'IndexedDB is available and functional',
-      timestamp: new Date(),
-      duration,
-    }
-  } catch (error) {
-    const duration = Date.now() - start
-    return {
-      name,
-      status: 'unhealthy',
-      message: `IndexedDB error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       timestamp: new Date(),
       duration,
     }
@@ -181,14 +135,18 @@ async function checkServices(): Promise<HealthCheckResult> {
   const name = 'services'
 
   try {
-    const db = getDB()
+    const supabase = getSupabaseBrowserClient()
 
     // Test multiple critical services
-    const [contas, categorias, transacoes] = await Promise.all([
-      db.contas.count(),
-      db.categorias.count(),
-      db.transacoes.count(),
+    const [contasResult, categoriasResult, transacoesResult] = await Promise.all([
+      supabase.from('contas').select('*', { count: 'exact', head: true }),
+      supabase.from('categorias').select('*', { count: 'exact', head: true }),
+      supabase.from('transacoes').select('*', { count: 'exact', head: true }),
     ])
+
+    const contas = contasResult.count ?? 0
+    const categorias = categoriasResult.count ?? 0
+    const transacoes = transacoesResult.count ?? 0
 
     const duration = Date.now() - start
 
@@ -231,16 +189,21 @@ async function checkDataIntegrity(): Promise<HealthCheckResult> {
   const name = 'dataIntegrity'
 
   try {
-    const db = getDB()
+    const supabase = getSupabaseBrowserClient()
 
     // Check for orphaned records or data inconsistencies
-    const transacoes = await db.transacoes.limit(100).toArray()
-    const contas = await db.contas.toArray()
-    const contaIds = new Set(contas.map((c) => c.id))
+    const { data: transacoesData } = await supabase
+      .from('transacoes')
+      .select('conta_id')
+      .limit(100)
+    const { data: contasData } = await supabase.from('contas').select('id')
+
+    const transacoes = transacoesData || []
+    const contaIds = new Set((contasData || []).map((c: any) => c.id))
 
     let orphanedCount = 0
     for (const t of transacoes) {
-      if (t.conta_id && !contaIds.has(t.conta_id)) {
+      if ((t as any).conta_id && !contaIds.has((t as any).conta_id)) {
         orphanedCount++
       }
     }
@@ -287,7 +250,6 @@ async function checkBrowserCompatibility(): Promise<HealthCheckResult> {
 
   try {
     const features = {
-      indexedDB: 'indexedDB' in window,
       localStorage: 'localStorage' in window,
       serviceWorker: 'serviceWorker' in navigator,
       crypto: 'crypto' in window && 'randomUUID' in crypto,
@@ -379,7 +341,6 @@ export async function runHealthChecks(
 
   const checkFunctions = [
     checkDatabase,
-    checkIndexedDB,
     checkLocalStorage,
     checkServices,
     checkDataIntegrity,
@@ -417,7 +378,6 @@ export async function runHealthChecks(
 export async function runSingleHealthCheck(checkName: string): Promise<HealthCheckResult> {
   const checks: Record<string, () => Promise<HealthCheckResult>> = {
     database: checkDatabase,
-    indexeddb: checkIndexedDB,
     localStorage: checkLocalStorage,
     services: checkServices,
     dataIntegrity: checkDataIntegrity,

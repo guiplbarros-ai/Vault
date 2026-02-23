@@ -4,10 +4,10 @@
  * Provides server-safe and client-safe storage for AI usage tracking
  *
  * - ServerAIUsageStore: In-memory store for SSR/API routes
- * - DexieAIUsageStore: IndexedDB store for client-side
+ * - SupabaseAIUsageStore: Supabase store for client-side
  */
 
-import { getDB } from '@/lib/db/client'
+import { getSupabase } from '@/lib/db/supabase'
 
 export interface AIUsageRecord {
   id: string
@@ -78,29 +78,28 @@ export class ServerAIUsageStore implements IAIUsageStore {
 }
 
 /**
- * Client-side Dexie store
+ * Client-side Supabase store
  *
- * Uses IndexedDB via Dexie for persistent storage
+ * Uses Supabase for persistent storage
  */
-export class DexieAIUsageStore implements IAIUsageStore {
+export class SupabaseAIUsageStore implements IAIUsageStore {
   async logUsage(record: AIUsageRecord): Promise<void> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    // Convert to Dexie format
-    await db.logs_ia.add({
+    await supabase.from('logs_ia').insert({
       id: record.id,
-      transacao_id: undefined,
+      transacao_id: null,
       prompt: '',
       resposta: '',
-      modelo: 'gpt-4o-mini', // Default model
+      modelo: 'gpt-4o-mini',
       tokens_prompt: 0,
       tokens_resposta: 0,
       tokens_total: record.tokens_total,
       custo_usd: record.custo_usd,
-      categoria_sugerida_id: undefined,
-      confianca: undefined,
+      categoria_sugerida_id: null,
+      confianca: null,
       confirmada: false,
-      created_at: record.timestamp,
+      created_at: record.timestamp.toISOString(),
     })
   }
 
@@ -112,12 +111,15 @@ export class DexieAIUsageStore implements IAIUsageStore {
     total_tokens: number
     total_cost_usd: number
   }> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    const logs = await db.logs_ia
-      .where('created_at')
-      .between(startDate, endDate, true, true)
-      .toArray()
+    const { data } = await supabase
+      .from('logs_ia')
+      .select('tokens_total, custo_usd')
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
+
+    const logs = (data || []) as { tokens_total: number; custo_usd: number }[]
 
     return {
       total_requests: logs.length,
@@ -146,8 +148,8 @@ export function getServerStore(): ServerAIUsageStore {
 /**
  * Create client store instance
  */
-export function getClientStore(): DexieAIUsageStore {
-  return new DexieAIUsageStore()
+export function getClientStore(): SupabaseAIUsageStore {
+  return new SupabaseAIUsageStore()
 }
 
 /**
@@ -166,7 +168,7 @@ export function getAIUsageStore(): IAIUsageStore {
 /**
  * Server-safe budget check
  *
- * Uses in-memory store for server, Dexie for client
+ * Uses in-memory store for server, Supabase for client
  */
 export async function checkAIBudgetLimitSafe(
   store: IAIUsageStore,

@@ -6,7 +6,7 @@
  */
 
 import type { Instituicao } from '../types'
-import { getDB } from './client'
+import { getSupabaseBrowserClient } from './supabase'
 
 export const INSTITUICOES_PADRAO: Omit<Instituicao, 'id' | 'created_at' | 'updated_at'>[] = [
   {
@@ -105,66 +105,66 @@ export const INSTITUICOES_PADRAO: Omit<Instituicao, 'id' | 'created_at' | 'updat
  * Verifica se já existem instituições no banco
  */
 export async function hasInstituicoes(): Promise<boolean> {
-  const db = getDB()
-  const count = await db.instituicoes.count()
-  return count > 0
+  const supabase = getSupabaseBrowserClient()
+  const { count } = await supabase.from('instituicoes').select('*', { count: 'exact', head: true })
+  return (count ?? 0) > 0
 }
 
 /**
  * Popula o banco com instituições padrão
  */
 export async function seedInstituicoes(): Promise<void> {
-  const db = getDB()
+  const supabase = getSupabaseBrowserClient()
   const alreadyHas = await hasInstituicoes()
 
   if (alreadyHas) {
-    console.log('✓ Instituições já existem, pulando seed...')
+    console.log('Instituicoes ja existem, pulando seed...')
     return
   }
 
-  const now = new Date()
+  const now = new Date().toISOString()
 
-  const instituicoes: Instituicao[] = INSTITUICOES_PADRAO.map((inst, index) => ({
+  const instituicoes = INSTITUICOES_PADRAO.map((inst, index) => ({
     ...inst,
     id: `inst_${Date.now()}_${index}`,
     created_at: now,
     updated_at: now,
   }))
 
-  try {
-    await db.instituicoes.bulkAdd(instituicoes)
-    console.log(`✓ ${instituicoes.length} instituições criadas com sucesso!`)
-  } catch (error: any) {
-    if (error?.name !== 'ConstraintError') {
+  const { error } = await supabase.from('instituicoes').insert(instituicoes)
+  if (error) {
+    if (error.code !== '23505') {
       throw error
     }
-    console.log('⚠️ Algumas instituições já existem, pulando duplicatas...')
+    console.log('Algumas instituicoes ja existem, pulando duplicatas...')
+    return
   }
+  console.log(`${instituicoes.length} instituicoes criadas com sucesso!`)
 }
 
 /**
  * Cria apenas instituições essenciais (Nubank, Inter, Itaú)
  */
 export async function seedInstituicoesEssenciais(): Promise<void> {
-  const db = getDB()
-  const essenciais = INSTITUICOES_PADRAO.slice(0, 3) // Nubank, Inter, Itaú
+  const supabase = getSupabaseBrowserClient()
+  const essenciais = INSTITUICOES_PADRAO.slice(0, 3) // Nubank, Inter, Itau
 
-  const now = new Date()
+  const now = new Date().toISOString()
 
-  const instituicoes: Instituicao[] = essenciais.map((inst, index) => ({
+  const instituicoes = essenciais.map((inst, index) => ({
     ...inst,
     id: `inst_${Date.now()}_${index}`,
     created_at: now,
     updated_at: now,
   }))
 
-  try {
-    await db.instituicoes.bulkAdd(instituicoes)
-    console.log(`✓ ${instituicoes.length} instituições essenciais criadas!`)
-  } catch (error: any) {
-    if (error?.name !== 'ConstraintError') {
+  const { error } = await supabase.from('instituicoes').insert(instituicoes)
+  if (error) {
+    if (error.code !== '23505') {
       throw error
     }
-    console.log('⚠️ Algumas instituições já existem, pulando duplicatas...')
+    console.log('Algumas instituicoes ja existem, pulando duplicatas...')
+    return
   }
+  console.log(`${instituicoes.length} instituicoes essenciais criadas!`)
 }

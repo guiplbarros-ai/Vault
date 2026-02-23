@@ -8,9 +8,11 @@ import { checkAIBudgetLimitSafe, getServerStore } from '@/lib/services/ai-usage.
 import { type NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+let _openai: OpenAI | null = null
+function getOpenAI() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return _openai
+}
 
 type AIModel = 'gpt-4o-mini' | 'gpt-4o'
 type AIStrategy = 'aggressive' | 'balanced' | 'quality'
@@ -114,7 +116,7 @@ async function classifyOne(
     const params = strategyParams[config.strategy]
 
     // Chama OpenAI
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: config.modelo,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -207,7 +209,7 @@ async function classifyOne(
       confianca: 0,
       reasoning: '',
       cached: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Classification failed for this item',
     }
   }
 }
@@ -354,7 +356,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to process batch classification',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Erro interno ao processar classificação em lote',
       },
       { status: 500 }
     )

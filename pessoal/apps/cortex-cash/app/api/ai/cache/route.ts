@@ -33,7 +33,6 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: 'Failed to fetch cache stats',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )
@@ -80,7 +79,6 @@ export async function DELETE(request: NextRequest) {
       {
         success: false,
         error: 'Failed to clear cache',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )

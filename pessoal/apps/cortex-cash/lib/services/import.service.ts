@@ -5,7 +5,8 @@
  * Gerencia importação de transações de diferentes formatos (CSV, OFX, Excel)
  */
 
-import { getDB } from '../db/client'
+import { escapeLikePattern } from '../api/sanitize'
+import { getSupabase } from '../db/supabase'
 import { DatabaseError, ValidationError } from '../errors'
 import { generateTransactionHash } from '../import/dedupe'
 import { parseOFX as parseOFXStandalone } from '../import/parsers/ofx'
@@ -20,6 +21,31 @@ import type {
   TemplateImportacao,
 } from '../types'
 import { transacaoService } from './transacao.service'
+
+async function getUserId(): Promise<string> {
+  const supabase = getSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return user.id
+}
+
+function rowToTemplate(row: Record<string, unknown>): TemplateImportacao {
+  return {
+    id: row.id as string,
+    nome: row.nome as string,
+    instituicao_id: row.instituicao_id as string | undefined,
+    tipo_arquivo: (row.formato ?? row.tipo_arquivo) as TemplateImportacao['tipo_arquivo'],
+    mapeamento_colunas: (typeof row.mapeamento_colunas === 'string' ? row.mapeamento_colunas : JSON.stringify(row.mapeamento_colunas)) as string,
+    contador_uso: row.contador_uso as number,
+    ultima_utilizacao: row.ultima_utilizacao ? new Date(row.ultima_utilizacao as string) : undefined,
+    is_favorite: row.is_favorite as boolean | undefined,
+    usuario_id: row.usuario_id as string | undefined,
+    created_at: new Date(row.created_at as string),
+    updated_at: new Date(row.updated_at as string),
+  }
+}
 
 export class ImportService {
   /**
@@ -74,7 +100,7 @@ export class ImportService {
         confianca: 0.9,
         detectado: {
           separador: melhorSeparador,
-          encoding: 'utf-8', // Será corrigido no upload se needed
+          encoding: 'utf-8',
           headers,
         },
       }
@@ -129,15 +155,12 @@ export class ImportService {
           if (mapeamento.valor !== undefined) {
             valorStr = colunas[mapeamento.valor]?.trim()
           } else if (mapeamento.credito !== undefined && mapeamento.debito !== undefined) {
-            // Para bancos como Bradesco que têm colunas separadas de crédito/débito
             const creditoStr = colunas[mapeamento.credito]?.trim()
             const debitoStr = colunas[mapeamento.debito]?.trim()
 
-            // Usa whichever tem valor (crédito positivo, débito negativo)
             if (creditoStr && creditoStr !== '' && creditoStr !== '0') {
               valorStr = creditoStr
             } else if (debitoStr && debitoStr !== '' && debitoStr !== '0') {
-              // Débito pode já ter sinal negativo no arquivo
               valorStr = debitoStr.startsWith('-') ? debitoStr : '-' + debitoStr
             }
           }
@@ -239,12 +262,18 @@ export class ImportService {
     contaId: string,
     transacoesParsed: ParsedTransacao[]
   ): Promise<DedupeResult> {
-    const db = getDB()
+    const supabase = getSupabase()
 
     // Buscar transações existentes da conta
-    const existentes = await db.transacoes.where('conta_id').equals(contaId).toArray()
+    const { data: existentesData } = await supabase
+      .from('transacoes')
+      .select('hash')
+      .eq('conta_id', contaId)
+      .not('hash', 'is', null)
 
-    const hashesExistentes = new Set(existentes.filter((t) => t.hash).map((t) => t.hash!))
+    const hashesExistentes = new Set(
+      (existentesData || []).map((t: Record<string, unknown>) => t.hash as string)
+    )
 
     const novas: ParsedTransacao[] = []
     const duplicadas: ParsedTransacao[] = []
@@ -296,7 +325,7 @@ export class ImportService {
             data: transacao.data,
             descricao: transacao.descricao,
             valor: transacao.tipo === 'despesa' ? -transacao.valor : transacao.valor,
-            tipo: transacao.tipo || 'despesa', // Default to 'despesa' if undefined
+            tipo: transacao.tipo || 'despesa',
             observacoes: transacao.observacoes,
           })
           importadas++
@@ -324,19 +353,26 @@ export class ImportService {
   async saveTemplate(
     template: Omit<TemplateImportacao, 'id' | 'created_at' | 'updated_at'>
   ): Promise<TemplateImportacao> {
-    const db = getDB()
-    const now = new Date()
-
+    const supabase = getSupabase()
+    const userId = await getUserId()
+    const now = new Date().toISOString()
     const id = crypto.randomUUID()
-    const novoTemplate: TemplateImportacao = {
-      id,
-      ...template,
-      created_at: now,
-      updated_at: now,
-    }
 
-    await db.templates_importacao.add(novoTemplate)
-    return novoTemplate
+    const { data: inserted, error } = await supabase
+      .from('templates_importacao')
+      .insert({
+        id,
+        ...template,
+        usuario_id: userId,
+        created_at: now,
+        updated_at: now,
+      })
+      .select()
+      .single()
+
+    if (error) throw new DatabaseError('Erro ao salvar template', error as unknown as Error)
+
+    return rowToTemplate(inserted)
   }
 
   /**
@@ -344,106 +380,139 @@ export class ImportService {
    * Ordenados por contador de uso (mais usados primeiro)
    */
   async listTemplates(instituicaoId?: string): Promise<TemplateImportacao[]> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
+
+    let query = supabase
+      .from('templates_importacao')
+      .select('*')
+      .eq('usuario_id', userId)
+      .order('contador_uso', { ascending: false })
 
     if (instituicaoId) {
-      const templates = await db.templates_importacao
-        .where('instituicao_id')
-        .equals(instituicaoId)
-        .toArray()
-
-      // Ordenar por contador de uso (decrescente)
-      return templates.sort((a, b) => b.contador_uso - a.contador_uso)
+      query = query.eq('instituicao_id', instituicaoId)
     }
 
-    const allTemplates = await db.templates_importacao.toArray()
-    // Ordenar por contador de uso (decrescente)
-    return allTemplates.sort((a, b) => b.contador_uso - a.contador_uso)
+    const { data, error } = await query
+
+    if (error) throw new DatabaseError('Erro ao listar templates', error as unknown as Error)
+
+    return (data || []).map(rowToTemplate)
   }
 
   /**
    * Busca template por ID
    */
   async getTemplateById(templateId: string): Promise<TemplateImportacao | undefined> {
-    const db = getDB()
-    return db.templates_importacao.get(templateId)
+    const supabase = getSupabase()
+
+    const { data, error } = await supabase
+      .from('templates_importacao')
+      .select('*')
+      .eq('id', templateId)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Erro ao buscar template', error as unknown as Error)
+
+    return data ? rowToTemplate(data) : undefined
   }
 
   /**
    * Busca templates por nome (busca parcial)
    */
   async searchTemplates(query: string): Promise<TemplateImportacao[]> {
-    const db = getDB()
-    const allTemplates = await db.templates_importacao.toArray()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
-    const lowerQuery = query.toLowerCase()
-    return allTemplates
-      .filter((t) => t.nome.toLowerCase().includes(lowerQuery))
-      .sort((a, b) => b.contador_uso - a.contador_uso)
+    const { data, error } = await supabase
+      .from('templates_importacao')
+      .select('*')
+      .eq('usuario_id', userId)
+      .ilike('nome', `%${escapeLikePattern(query)}%`)
+      .order('contador_uso', { ascending: false })
+
+    if (error) throw new DatabaseError('Erro ao buscar templates', error as unknown as Error)
+
+    return (data || []).map(rowToTemplate)
   }
 
   /**
-   * Busca templates populares (top 5 mais usados)
+   * Busca templates populares (top N mais usados)
    */
   async getPopularTemplates(limit = 5): Promise<TemplateImportacao[]> {
-    const db = getDB()
-    const allTemplates = await db.templates_importacao.toArray()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
-    return allTemplates.sort((a, b) => b.contador_uso - a.contador_uso).slice(0, limit)
+    const { data, error } = await supabase
+      .from('templates_importacao')
+      .select('*')
+      .eq('usuario_id', userId)
+      .order('contador_uso', { ascending: false })
+      .limit(limit)
+
+    if (error) throw new DatabaseError('Erro ao buscar templates populares', error as unknown as Error)
+
+    return (data || []).map(rowToTemplate)
   }
 
   /**
    * Atualiza contador de uso de template
    */
   async incrementTemplateUsage(templateId: string): Promise<void> {
-    const db = getDB()
-    const template = await db.templates_importacao.get(templateId)
+    const supabase = getSupabase()
 
+    const template = await this.getTemplateById(templateId)
     if (template) {
-      await db.templates_importacao.update(templateId, {
-        contador_uso: template.contador_uso + 1,
-        ultima_utilizacao: new Date(),
-        updated_at: new Date(),
-      })
+      await supabase
+        .from('templates_importacao')
+        .update({
+          contador_uso: template.contador_uso + 1,
+          ultima_utilizacao: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', templateId)
     }
   }
 
   /**
    * Favorita/desfavorita um template
-   * Agent IMPORT: Template Favorites
    */
   async toggleTemplateFavorite(templateId: string): Promise<boolean> {
-    const db = getDB()
-    const template = await db.templates_importacao.get(templateId)
+    const supabase = getSupabase()
 
-    if (!template) {
-      throw new ValidationError('Template não encontrado')
-    }
+    const template = await this.getTemplateById(templateId)
+    if (!template) throw new ValidationError('Template não encontrado')
 
     const newFavoriteState = !template.is_favorite
 
-    await db.templates_importacao.update(templateId, {
-      is_favorite: newFavoriteState,
-      updated_at: new Date(),
-    })
+    await supabase
+      .from('templates_importacao')
+      .update({
+        is_favorite: newFavoriteState,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', templateId)
 
     return newFavoriteState
   }
 
   /**
    * Busca templates favoritos
-   * Agent IMPORT: Template Favorites
    */
   async getFavoriteTemplates(): Promise<TemplateImportacao[]> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
-    const favorites = await db.templates_importacao
-      .where('is_favorite')
-      .equals(1) // Dexie usa 1 para true em índices
-      .toArray()
+    const { data, error } = await supabase
+      .from('templates_importacao')
+      .select('*')
+      .eq('usuario_id', userId)
+      .eq('is_favorite', true)
+      .order('nome', { ascending: true })
 
-    // Ordenar por nome
-    return favorites.sort((a, b) => a.nome.localeCompare(b.nome))
+    if (error) throw new DatabaseError('Erro ao buscar templates favoritos', error as unknown as Error)
+
+    return (data || []).map(rowToTemplate)
   }
 
   // ============================================================================
@@ -512,25 +581,19 @@ export class ImportService {
    * Parse de valor com diferentes separadores decimais
    */
   private parseValor(valorStr: string, separadorDecimal: string): number {
-    // Remove espaços, símbolos de moeda e pontos/vírgulas de milhar
-    let cleanStr = valorStr.replace(/\s/g, '').replace(/[R$]/g, '').replace(/[()]/g, '') // Remove parênteses (valores negativos)
+    let cleanStr = valorStr.replace(/\s/g, '').replace(/[R$]/g, '').replace(/[()]/g, '')
 
-    // Detectar se o valor original tinha parênteses (indica negativo)
     const isNegative = valorStr.includes('(') && valorStr.includes(')')
 
-    // Substituir separador decimal por ponto
     if (separadorDecimal === ',') {
-      // Remove pontos de milhar e substitui vírgula decimal por ponto
       cleanStr = cleanStr.replace(/\./g, '').replace(',', '.')
     } else {
-      // Remove vírgulas de milhar
       cleanStr = cleanStr.replace(/,/g, '')
     }
 
     const valor = Number.parseFloat(cleanStr)
     return isNegative ? -Math.abs(valor) : valor
   }
-
 }
 
 // Singleton instance

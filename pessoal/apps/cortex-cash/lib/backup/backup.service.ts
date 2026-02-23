@@ -1,10 +1,10 @@
 /**
  * Backup/Export Service
  *
- * Handles export and import of IndexedDB data
+ * Handles export and import of Supabase data
  */
 
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import type {
   BackupData,
   BackupMetadata,
@@ -40,21 +40,23 @@ export async function exportDatabase(options: ExportOptions = {}): Promise<Backu
   const { tables = ALL_TABLES, prettify = true } = options
 
   try {
-    const db = getDB()
+    const supabase = getSupabaseBrowserClient()
     const data: Record<string, any[]> = {}
     let totalRecords = 0
 
     // Export each table
     for (const tableName of tables) {
-      const table = (db as any)[tableName]
-      if (!table) {
-        console.warn(`Table ${tableName} not found in database`)
+      const { data: records, error } = await supabase.from(tableName).select('*')
+
+      if (error) {
+        console.warn(`Failed to export table ${tableName}: ${error.message}`)
+        data[tableName] = []
         continue
       }
 
-      const records = await table.toArray()
-      data[tableName] = records
-      totalRecords += records.length
+      const tableRecords = records || []
+      data[tableName] = tableRecords
+      totalRecords += tableRecords.length
     }
 
     const metadata: BackupMetadata = {
@@ -200,39 +202,45 @@ export async function importDatabase(
       return result
     }
 
-    const db = getDB()
+    const supabase = getSupabaseBrowserClient()
 
     // Import each table
     for (const [tableName, records] of Object.entries(backupData.data)) {
-      const table = (db as any)[tableName]
-      if (!table) {
-        result.warnings.push(`Table "${tableName}" not found in database, skipping`)
-        continue
-      }
-
       let imported = 0
       let skipped = 0
 
       try {
         if (options.mode === 'replace') {
           // Clear existing data
-          await table.clear()
+          await supabase.from(tableName).delete().neq('id', '')
         }
 
-        // Import records
+        // Import records in batches
         for (const record of records) {
           try {
             if (options.mode === 'merge') {
               // Check if record already exists
-              const existing = await table.get(record.id)
+              const { data: existing } = await supabase
+                .from(tableName)
+                .select('id')
+                .eq('id', record.id)
+                .single()
+
               if (existing) {
                 skipped++
                 continue
               }
             }
 
-            await table.add(record)
-            imported++
+            const { error } = await supabase.from(tableName).insert(record)
+            if (error) {
+              skipped++
+              result.warnings.push(
+                `Failed to import record in ${tableName}: ${error.message}`
+              )
+            } else {
+              imported++
+            }
           } catch (error) {
             skipped++
             result.warnings.push(
@@ -312,12 +320,9 @@ export async function getBackupInfo(file: File): Promise<{
  * Clear all data (use with caution!)
  */
 export async function clearAllData(): Promise<void> {
-  const db = getDB()
+  const supabase = getSupabaseBrowserClient()
 
   for (const tableName of ALL_TABLES) {
-    const table = (db as any)[tableName]
-    if (table) {
-      await table.clear()
-    }
+    await supabase.from(tableName).delete().neq('id', '')
   }
 }

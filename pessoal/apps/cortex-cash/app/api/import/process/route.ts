@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    // Não implementado no servidor: use fluxo de importação no cliente (Dexie)
+    // Não implementado no servidor: use fluxo de importação no cliente
     return NextResponse.json(
       { error: 'Not implemented on server. Use client-side import workflow.' },
       { status: 501 }

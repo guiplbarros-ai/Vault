@@ -18,9 +18,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(accounts)
   } catch (error: any) {
     console.error('Error fetching Pluggy accounts:', error)
-    const message = error?.response?.body?.message || error?.message || String(error)
     return NextResponse.json(
-      { error: 'Failed to fetch accounts', message },
+      { error: 'Failed to fetch accounts', message: 'Erro ao buscar contas' },
       { status: error?.response?.statusCode || 500 }
     )
   }

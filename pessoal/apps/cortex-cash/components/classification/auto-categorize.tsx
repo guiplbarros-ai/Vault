@@ -17,8 +17,7 @@ import {
   CLASSIFICATION_RULES,
   assignPriorities,
 } from '@/lib/constants/classification-rules'
-import { getDB } from '@/lib/db/client'
-import { getCurrentUserId } from '@/lib/db/seed-usuarios'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import { matchTypeReclassRule } from '@/lib/pluggy/transaction-type-rules'
 import { logger } from '@/lib/utils/logger'
 import { Play, CheckCircle, AlertCircle } from 'lucide-react'
@@ -72,8 +71,9 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
     }
 
     try {
-      const db = getDB()
-      const usuarioId = getCurrentUserId()
+      const supabase = getSupabaseBrowserClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      const usuarioId = user?.id
 
       // =====================================================================
       // STEP 0: Reclassificar tipos de transação
@@ -81,19 +81,21 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
       setStep('reclassify')
       addLog('🔄 Reclassificando tipos de transação...')
 
-      const pluggyTransactions = await db.transacoes
-        .filter((t) => t.origem_arquivo === 'pluggy' && t.tipo !== 'transferencia')
-        .toArray()
+      const { data: pluggyTransactions } = await supabase
+        .from('transacoes')
+        .select('id, descricao, tipo')
+        .eq('origem_arquivo', 'pluggy')
+        .neq('tipo', 'transferencia')
 
-      addLog(`  📊 ${pluggyTransactions.length} transações Pluggy para verificar`)
+      addLog(`  📊 ${pluggyTransactions?.length ?? 0} transações Pluggy para verificar`)
 
-      for (const tx of pluggyTransactions) {
+      for (const tx of pluggyTransactions ?? []) {
         const newType = matchTypeReclassRule(tx.descricao)
         if (newType && newType !== tx.tipo) {
-          await db.transacoes.update(tx.id, {
-            tipo: newType,
-            updated_at: new Date(),
-          })
+          await supabase
+            .from('transacoes')
+            .update({ tipo: newType, updated_at: new Date().toISOString() })
+            .eq('id', tx.id)
           stats.tiposReclassificados++
         }
       }
@@ -108,16 +110,23 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
       addLog('📋 Criando regras de classificação...')
 
       // Carregar categorias existentes do seed (CATEGORIAS_PADRAO)
-      const categoriasExistentes = await db.categorias.toArray()
+      const { data: categoriasExistentes } = await supabase
+        .from('categorias')
+        .select('id, nome, ativa')
+        .eq('ativa', true)
+
       const categoriasMap = new Map(
-        categoriasExistentes.filter((c) => c.ativa).map((c) => [c.nome, c.id]),
+        (categoriasExistentes ?? []).map((c: any) => [c.nome, c.id]),
       )
 
       addLog(`  📁 ${categoriasMap.size} categorias disponíveis no banco`)
 
       // Verificar regras existentes (evitar duplicatas)
-      const regrasExistentes = await db.regras_classificacao.toArray()
-      const regrasSet = new Set(regrasExistentes.map((r) => r.padrao.toUpperCase()))
+      const { data: regrasExistentes } = await supabase
+        .from('regras_classificacao')
+        .select('padrao')
+
+      const regrasSet = new Set((regrasExistentes ?? []).map((r: any) => r.padrao.toUpperCase()))
 
       // Criar regras com prioridades estratégicas
       const prioritizedRules = assignPriorities(CLASSIFICATION_RULES)
@@ -131,7 +140,7 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
           continue
         }
 
-        await db.regras_classificacao.add({
+        await supabase.from('regras_classificacao').insert({
           id: crypto.randomUUID(),
           categoria_id: categoriaId,
           nome: `${rule.categoria} - ${rule.pattern}`,
@@ -142,9 +151,9 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
           total_aplicacoes: 0,
           total_confirmacoes: 0,
           total_rejeicoes: 0,
-          usuario_id: usuarioId,
-          created_at: new Date(),
-          updated_at: new Date(),
+          usuario_id: usuarioId ?? null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
 
         regrasSet.add(rule.pattern.toUpperCase())
@@ -160,20 +169,24 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
       setStep('applying')
       addLog('🏷️ Aplicando regras nas transações...')
 
-      const transacoesSemCategoria = await db.transacoes
-        .filter((t) => !t.categoria_id && t.tipo !== 'transferencia')
-        .toArray()
+      const { data: transacoesSemCategoria } = await supabase
+        .from('transacoes')
+        .select('id, descricao')
+        .is('categoria_id', null)
+        .neq('tipo', 'transferencia')
 
-      addLog(`  📊 ${transacoesSemCategoria.length} transações para categorizar`)
+      addLog(`  📊 ${transacoesSemCategoria?.length ?? 0} transações para categorizar`)
 
-      const regras = await db.regras_classificacao
-        .filter((r) => r.ativa)
-        .toArray()
+      const { data: regrasData } = await supabase
+        .from('regras_classificacao')
+        .select('id, tipo_regra, padrao, prioridade, categoria_id, total_aplicacoes')
+        .eq('ativa', true)
+        .order('prioridade', { ascending: true })
 
-      regras.sort((a, b) => a.prioridade - b.prioridade)
+      const regras = regrasData ?? []
 
       let processed = 0
-      for (const transacao of transacoesSemCategoria) {
+      for (const transacao of transacoesSemCategoria ?? []) {
         let matched = false
 
         for (const regra of regras) {
@@ -201,18 +214,24 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
           }
 
           if (isMatch) {
-            await db.transacoes.update(transacao.id, {
-              categoria_id: regra.categoria_id,
-              classificacao_origem: 'regra',
-              classificacao_confirmada: false,
-              updated_at: new Date(),
-            })
+            await supabase
+              .from('transacoes')
+              .update({
+                categoria_id: regra.categoria_id,
+                classificacao_origem: 'regra',
+                classificacao_confirmada: false,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', transacao.id)
 
-            await db.regras_classificacao.update(regra.id, {
-              total_aplicacoes: (regra.total_aplicacoes || 0) + 1,
-              ultima_aplicacao: new Date(),
-              updated_at: new Date(),
-            })
+            await supabase
+              .from('regras_classificacao')
+              .update({
+                total_aplicacoes: (regra.total_aplicacoes || 0) + 1,
+                ultima_aplicacao: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', regra.id)
 
             stats.transacoesCategorizadas++
             matched = true
@@ -226,8 +245,8 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
 
         processed++
         if (processed % 50 === 0) {
-          setProgress(25 + Math.round((processed / transacoesSemCategoria.length) * 35))
-          addLog(`  📝 ${processed}/${transacoesSemCategoria.length} processadas...`)
+          setProgress(25 + Math.round((processed / (transacoesSemCategoria?.length ?? 1)) * 35))
+          addLog(`  📝 ${processed}/${transacoesSemCategoria?.length ?? 0} processadas...`)
         }
       }
 
@@ -242,12 +261,20 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
         setStep('ai')
         addLog('🤖 Classificando restantes com AI...')
 
-        const semCategoria = await db.transacoes
-          .filter((t) => !t.categoria_id && t.tipo !== 'transferencia')
-          .toArray()
+        const { data: semCategoriaData } = await supabase
+          .from('transacoes')
+          .select('id, descricao, valor, tipo')
+          .is('categoria_id', null)
+          .neq('tipo', 'transferencia')
 
-        const categorias = await db.categorias.filter((c) => c.ativa).toArray()
-        const categoriasPayload = categorias.map((c) => ({ id: c.id, nome: c.nome }))
+        const semCategoria = semCategoriaData ?? []
+
+        const { data: categoriasData } = await supabase
+          .from('categorias')
+          .select('id, nome')
+          .eq('ativa', true)
+
+        const categoriasPayload = (categoriasData ?? []).map((c: any) => ({ id: c.id, nome: c.nome }))
 
         const BATCH_SIZE = 5
         let aiProcessed = 0
@@ -255,7 +282,7 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
         for (let i = 0; i < semCategoria.length; i += BATCH_SIZE) {
           const batch = semCategoria.slice(i, i + BATCH_SIZE)
 
-          const promises = batch.map(async (tx) => {
+          const promises = batch.map(async (tx: any) => {
             try {
               const res = await fetch('/api/ai/classify', {
                 method: 'POST',
@@ -273,13 +300,16 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
               const result = await res.json()
 
               if (result.categoria_sugerida_id && result.confianca >= 0.7) {
-                await db.transacoes.update(tx.id, {
-                  categoria_id: result.categoria_sugerida_id,
-                  classificacao_origem: 'ia',
-                  classificacao_confianca: result.confianca,
-                  classificacao_confirmada: false,
-                  updated_at: new Date(),
-                })
+                await supabase
+                  .from('transacoes')
+                  .update({
+                    categoria_id: result.categoria_sugerida_id,
+                    classificacao_origem: 'ia',
+                    classificacao_confianca: result.confianca,
+                    classificacao_confirmada: false,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', tx.id)
                 return true
               }
               return false

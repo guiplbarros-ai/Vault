@@ -3,7 +3,7 @@
  * Agent IMPORT: Template Seeding
  */
 
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import type { TemplateImportacao } from '@/lib/types'
 import { ALL_BANK_TEMPLATES } from './bank-templates'
 
@@ -14,34 +14,44 @@ import { ALL_BANK_TEMPLATES } from './bank-templates'
  * @returns Número de templates inseridos
  */
 export async function seedBankTemplates(): Promise<number> {
-  const db = getDB()
-  const now = new Date()
+  const supabase = getSupabaseBrowserClient()
+  const now = new Date().toISOString()
 
   let insertedCount = 0
 
   for (const template of ALL_BANK_TEMPLATES) {
     // Verificar se já existe
-    const existing = await db.templates_importacao.where('nome').equals(template.nome).first()
+    const { data: existing } = await supabase
+      .from('templates_importacao')
+      .select('id, contador_uso, ultima_utilizacao')
+      .eq('nome', template.nome)
+      .limit(1)
+      .single()
 
     if (!existing) {
       // Criar novo template
-      const newTemplate: TemplateImportacao = {
+      const newTemplate = {
         id: crypto.randomUUID(),
         ...template,
         created_at: now,
         updated_at: now,
       }
 
-      await db.templates_importacao.add(newTemplate)
-      insertedCount++
+      const { error } = await supabase.from('templates_importacao').insert(newTemplate)
+      if (!error) {
+        insertedCount++
+      }
     } else {
       // Atualizar template existente (preservando contador_uso e ultima_utilizacao)
-      await db.templates_importacao.update(existing.id, {
-        ...template,
-        contador_uso: existing.contador_uso, // Preservar contador
-        ultima_utilizacao: existing.ultima_utilizacao, // Preservar última utilização
-        updated_at: now,
-      })
+      await supabase
+        .from('templates_importacao')
+        .update({
+          ...template,
+          contador_uso: existing.contador_uso, // Preservar contador
+          ultima_utilizacao: existing.ultima_utilizacao, // Preservar última utilização
+          updated_at: now,
+        })
+        .eq('id', existing.id)
     }
   }
 
@@ -53,30 +63,32 @@ export async function seedBankTemplates(): Promise<number> {
  * Útil para reset ou testes
  */
 export async function clearBankTemplates(): Promise<number> {
-  const db = getDB()
+  const supabase = getSupabaseBrowserClient()
   const templateNames = ALL_BANK_TEMPLATES.map((t) => t.nome)
 
-  let deletedCount = 0
+  const { data: toDelete } = await supabase
+    .from('templates_importacao')
+    .select('id')
+    .in('nome', templateNames)
 
-  for (const nome of templateNames) {
-    const template = await db.templates_importacao.where('nome').equals(nome).first()
+  const count = toDelete?.length ?? 0
 
-    if (template) {
-      await db.templates_importacao.delete(template.id)
-      deletedCount++
-    }
+  if (count > 0) {
+    await supabase.from('templates_importacao').delete().in('nome', templateNames)
   }
 
-  return deletedCount
+  return count
 }
 
 /**
  * Verifica se os templates já foram inseridos
  */
 export async function areTemplatesSeeded(): Promise<boolean> {
-  const db = getDB()
-  const count = await db.templates_importacao.count()
-  return count >= ALL_BANK_TEMPLATES.length
+  const supabase = getSupabaseBrowserClient()
+  const { count } = await supabase
+    .from('templates_importacao')
+    .select('*', { count: 'exact', head: true })
+  return (count ?? 0) >= ALL_BANK_TEMPLATES.length
 }
 
 /**

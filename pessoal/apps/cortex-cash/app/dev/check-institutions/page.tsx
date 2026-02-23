@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { getDB } from '@/lib/db/client'
+import { instituicaoService } from '@/lib/services/instituicao.service'
 import type { Instituicao } from '@/lib/types'
 import { useEffect, useState } from 'react'
 
@@ -13,8 +13,7 @@ export default function CheckInstitutionsPage() {
   }, [])
 
   const loadInstitutions = async () => {
-    const db = getDB()
-    const data = await db.instituicoes.toArray()
+    const data = await instituicaoService.listInstituicoes()
     setInstitutions(data)
   }
 

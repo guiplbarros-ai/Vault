@@ -7,10 +7,20 @@
 
 import { endOfMonth, format, getDay, startOfMonth, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { getDB } from '../db/client'
-import { getCurrentUserId } from '../db/seed-usuarios'
-import type { Categoria, Transacao } from '../types'
+import { assertUUID } from '../api/sanitize'
+import { getSupabase } from '../db/supabase'
+import type { Categoria, OrigemClassificacao, TipoTransacao, Transacao } from '../types'
 import { roundCurrency } from '../utils/currency'
+
+async function getUserId(): Promise<string> {
+  const supabase = getSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  assertUUID(user.id, 'userId')
+  return user.id
+}
 
 export interface GastoPorCategoria {
   categoria_id: string
@@ -105,21 +115,31 @@ class RelatorioService {
   async gerarRelatorioMensal(
     mesReferencia: string // 'YYYY-MM'
   ): Promise<RelatorioMensal> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
     // Parse data
     const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
     const dataInicio = startOfMonth(new Date(ano, mes - 1))
     const dataFim = endOfMonth(new Date(ano, mes - 1))
 
-    // Busca transações do mês (filtrado por usuário atual)
-    const currentUserId = getCurrentUserId()
-    const transacoes = (
-      await db.transacoes.where('data').between(dataInicio, dataFim, true, true).toArray()
-    ).filter((t) => t.usuario_id === currentUserId)
+    // Busca transações do mês
+    const { data: transacoesRaw } = await supabase
+      .from('transacoes')
+      .select('*')
+      .eq('usuario_id', userId)
+      .gte('data', dataInicio.toISOString())
+      .lte('data', dataFim.toISOString())
+
+    const transacoes: Transacao[] = (transacoesRaw || []).map((row: Record<string, unknown>) => rowToTransacao(row))
 
     // Busca todas as categorias (para nomes)
-    const categorias = await db.categorias.toArray()
+    const { data: categoriasRaw } = await supabase
+      .from('categorias')
+      .select('*')
+      .or(`is_sistema.eq.true,usuario_id.eq.${userId}`)
+
+    const categorias: Categoria[] = (categoriasRaw || []).map((row: Record<string, unknown>) => rowToCategoria(row))
     const categoriasMap = new Map(categorias.map((c) => [c.id, c]))
 
     // Separa por tipo
@@ -345,22 +365,23 @@ class RelatorioService {
    * Identifica gastos recorrentes (mesma descrição em 2+ meses dos últimos 3)
    */
   async getGastosRecorrentes(mesReferencia: string): Promise<GastoRecorrente[]> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
     const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
     const baseDate = new Date(ano, mes - 1)
 
-    // Fetch 3 months of transactions in a single range query (avoids 3 separate queries)
-    const currentUserId = getCurrentUserId()
+    // Fetch 3 months of transactions in a single range query
     const rangeStart = startOfMonth(subMonths(baseDate, 2))
     const rangeEnd = endOfMonth(baseDate)
 
-    const allTx = (
-      await db.transacoes
-        .where('data')
-        .between(rangeStart, rangeEnd, true, true)
-        .toArray()
-    ).filter((t) => t.usuario_id === currentUserId)
+    const { data: allTxRaw } = await supabase
+      .from('transacoes')
+      .select('*')
+      .eq('usuario_id', userId)
+      .gte('data', rangeStart.toISOString())
+      .lte('data', rangeEnd.toISOString())
 
+    const allTx: Transacao[] = (allTxRaw || []).map((row: Record<string, unknown>) => rowToTransacao(row))
     const despesas = allTx.filter((t) => t.tipo === 'despesa')
 
     // Group by normalized description
@@ -377,7 +398,12 @@ class RelatorioService {
     }
 
     // Get categories for name lookup
-    const categorias = await db.categorias.toArray()
+    const { data: categoriasRaw } = await supabase
+      .from('categorias')
+      .select('*')
+      .or(`is_sistema.eq.true,usuario_id.eq.${userId}`)
+
+    const categorias: Categoria[] = (categoriasRaw || []).map((row: Record<string, unknown>) => rowToCategoria(row))
     const catMap = new Map(categorias.map((c) => [c.id, c]))
 
     const result: GastoRecorrente[] = []
@@ -409,16 +435,20 @@ class RelatorioService {
    * Padrão de gastos por dia da semana (mês selecionado)
    */
   async getPadraoPorDiaDaSemana(mesReferencia: string): Promise<PadraoDiaSemana[]> {
-    const db = getDB()
-    const currentUserId = getCurrentUserId()
+    const supabase = getSupabase()
+    const userId = await getUserId()
     const [ano, mes] = mesReferencia.split('-').map(Number) as [number, number]
     const dataInicio = startOfMonth(new Date(ano, mes - 1))
     const dataFim = endOfMonth(new Date(ano, mes - 1))
 
-    const transacoes = (
-      await db.transacoes.where('data').between(dataInicio, dataFim, true, true).toArray()
-    ).filter((t) => t.usuario_id === currentUserId)
+    const { data: transacoesRaw } = await supabase
+      .from('transacoes')
+      .select('*')
+      .eq('usuario_id', userId)
+      .gte('data', dataInicio.toISOString())
+      .lte('data', dataFim.toISOString())
 
+    const transacoes: Transacao[] = (transacoesRaw || []).map((row: Record<string, unknown>) => rowToTransacao(row))
     const despesas = transacoes.filter((t) => t.tipo === 'despesa')
 
     const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -628,6 +658,53 @@ class RelatorioService {
     comparacoes.sort((a, b) => Math.abs(b.variacao_absoluta) - Math.abs(a.variacao_absoluta))
 
     return comparacoes
+  }
+}
+
+// Row converters
+function rowToTransacao(row: Record<string, unknown>): Transacao {
+  return {
+    id: row.id as string,
+    conta_id: row.conta_id as string,
+    categoria_id: row.categoria_id as string | undefined,
+    data: new Date(row.data as string),
+    descricao: row.descricao as string,
+    valor: row.valor as number,
+    tipo: row.tipo as 'receita' | 'despesa' | 'transferencia',
+    observacoes: row.observacoes as string | undefined,
+    tags: row.tags as string | undefined,
+    transferencia_id: row.transferencia_id as string | undefined,
+    conta_destino_id: row.conta_destino_id as string | undefined,
+    parcelado: row.parcelado as boolean | undefined,
+    parcela_numero: row.parcela_numero as number | undefined,
+    parcela_total: row.parcela_total as number | undefined,
+    grupo_parcelamento_id: row.grupo_parcelamento_id as string | undefined,
+    classificacao_confirmada: row.classificacao_confirmada as boolean | undefined,
+    classificacao_origem: row.classificacao_origem as OrigemClassificacao | undefined,
+    classificacao_confianca: row.classificacao_confianca as number | undefined,
+    hash: row.hash as string | undefined,
+    origem_arquivo: row.origem_arquivo as string | undefined,
+    origem_linha: row.origem_linha as number | undefined,
+    usuario_id: row.usuario_id as string,
+    created_at: new Date(row.created_at as string),
+    updated_at: new Date(row.updated_at as string),
+  }
+}
+
+function rowToCategoria(row: Record<string, unknown>): Categoria {
+  return {
+    id: row.id as string,
+    nome: row.nome as string,
+    tipo: row.tipo as TipoTransacao,
+    icone: row.icone as string | undefined,
+    cor: row.cor as string | undefined,
+    pai_id: row.pai_id as string | undefined,
+    ordem: (row.ordem as number) ?? 0,
+    ativa: (row.ativa as boolean) ?? true,
+    is_sistema: row.is_sistema as boolean | undefined,
+    usuario_id: row.usuario_id as string | undefined,
+    created_at: new Date(row.created_at as string),
+    updated_at: new Date(row.updated_at as string),
   }
 }
 

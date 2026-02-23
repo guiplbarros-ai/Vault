@@ -5,7 +5,7 @@
  * Coordena classificação de transações usando regras e IA
  */
 
-import { getDB } from '../../db/client'
+import { getSupabaseBrowserClient } from '../../db/supabase'
 import { categoriaService } from '../../services/categoria.service'
 import { regraClassificacaoService } from '../../services/regra-classificacao.service'
 import type { OrigemClassificacao, TipoTransacao, Transacao } from '../../types'
@@ -182,8 +182,12 @@ export async function classifyAndUpdateTransaction(
   useAI = true,
   aiConfig?: BatchClassificationRequest['aiConfig']
 ): Promise<ClassificationResult> {
-  const db = getDB()
-  const transacao = await db.transacoes.get(transacao_id)
+  const supabase = getSupabaseBrowserClient()
+  const { data: transacao } = await supabase
+    .from('transacoes')
+    .select('*')
+    .eq('id', transacao_id)
+    .single()
 
   if (!transacao) {
     throw new Error(`Transação não encontrada: ${transacao_id}`)
@@ -204,13 +208,16 @@ export async function classifyAndUpdateTransaction(
 
   // Atualiza transação se encontrou categoria
   if (result.categoria_id) {
-    await db.transacoes.update(transacao_id, {
-      categoria_id: result.categoria_id,
-      classificacao_origem: result.origem,
-      classificacao_confianca: result.confianca,
-      classificacao_confirmada: result.origem === 'regra', // Regras são auto-confirmadas
-      updated_at: new Date(),
-    })
+    await supabase
+      .from('transacoes')
+      .update({
+        categoria_id: result.categoria_id,
+        classificacao_origem: result.origem,
+        classificacao_confianca: result.confianca,
+        classificacao_confirmada: result.origem === 'regra', // Regras são auto-confirmadas
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', transacao_id)
   }
 
   return result
@@ -224,8 +231,13 @@ export async function classifyAndUpdateBatch(
   useAI = true,
   aiConfig?: BatchClassificationRequest['aiConfig']
 ): Promise<BatchClassificationResult> {
-  const db = getDB()
-  const transacoes = await db.transacoes.bulkGet(transacao_ids)
+  const supabase = getSupabaseBrowserClient()
+  const { data: transacoesData } = await supabase
+    .from('transacoes')
+    .select('*')
+    .in('id', transacao_ids)
+
+  const transacoes = (transacoesData || []) as Transacao[]
 
   const requests: ClassificationRequest[] = transacoes
     .filter((t): t is Transacao => t !== undefined)
@@ -247,13 +259,16 @@ export async function classifyAndUpdateBatch(
   for (const result of batchResult.results) {
     const transacao = transacoes[result.transacao_index]
     if (transacao && result.categoria_id) {
-      await db.transacoes.update(transacao.id, {
-        categoria_id: result.categoria_id,
-        classificacao_origem: result.origem,
-        classificacao_confianca: result.confianca,
-        classificacao_confirmada: result.origem === 'regra',
-        updated_at: new Date(),
-      })
+      await supabase
+        .from('transacoes')
+        .update({
+          categoria_id: result.categoria_id,
+          classificacao_origem: result.origem,
+          classificacao_confianca: result.confianca,
+          classificacao_confirmada: result.origem === 'regra',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', transacao.id)
     }
   }
 
@@ -276,16 +291,18 @@ export async function getClassificationStats(
   pendentes_confirmacao: number
   taxa_acuracia: number // % de confirmadas vs classificadas automaticamente
 }> {
-  const db = getDB()
+  const supabase = getSupabaseBrowserClient()
   const start = startDate ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   const end = endDate ?? new Date()
 
   // Busca todas as transações no período
-  const allTransacoes = await db.transacoes.toArray()
-  const transacoes = allTransacoes.filter((t) => {
-    const data = t.data instanceof Date ? t.data : new Date(t.data)
-    return data >= start && data <= end
-  })
+  const { data: transacoesData } = await supabase
+    .from('transacoes')
+    .select('*')
+    .gte('data', start.toISOString().split('T')[0])
+    .lte('data', end.toISOString().split('T')[0])
+
+  const transacoes = (transacoesData || []) as Transacao[]
 
   const total_transacoes = transacoes.length
   const classificadas = transacoes.filter(
@@ -322,58 +339,60 @@ export async function getClassificationStats(
  * Confirma uma classificação de IA (marca como confirmada)
  */
 export async function confirmClassification(transacao_id: string): Promise<void> {
-  const db = getDB()
-  await db.transacoes.update(transacao_id, {
-    classificacao_confirmada: true,
-    updated_at: new Date(),
-  })
+  const supabase = getSupabaseBrowserClient()
+  await supabase
+    .from('transacoes')
+    .update({
+      classificacao_confirmada: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', transacao_id)
 }
 
 /**
  * Rejeita uma classificação de IA e remove categoria
  */
 export async function rejectClassification(transacao_id: string): Promise<void> {
-  const db = getDB()
-  await db.transacoes.update(transacao_id, {
-    categoria_id: undefined,
-    classificacao_origem: 'manual',
-    classificacao_confianca: undefined,
-    classificacao_confirmada: false,
-    updated_at: new Date(),
-  })
+  const supabase = getSupabaseBrowserClient()
+  await supabase
+    .from('transacoes')
+    .update({
+      categoria_id: null,
+      classificacao_origem: 'manual',
+      classificacao_confianca: null,
+      classificacao_confirmada: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', transacao_id)
 }
 
 /**
  * Confirma múltiplas classificações em lote
  */
 export async function confirmBatch(transacao_ids: string[]): Promise<void> {
-  const db = getDB()
-
-  await db.transaction('rw', db.transacoes, async () => {
-    for (const id of transacao_ids) {
-      await db.transacoes.update(id, {
-        classificacao_confirmada: true,
-        updated_at: new Date(),
-      })
-    }
-  })
+  const supabase = getSupabaseBrowserClient()
+  await supabase
+    .from('transacoes')
+    .update({
+      classificacao_confirmada: true,
+      updated_at: new Date().toISOString(),
+    })
+    .in('id', transacao_ids)
 }
 
 /**
  * Rejeita múltiplas classificações em lote
  */
 export async function rejectBatch(transacao_ids: string[]): Promise<void> {
-  const db = getDB()
-
-  await db.transaction('rw', db.transacoes, async () => {
-    for (const id of transacao_ids) {
-      await db.transacoes.update(id, {
-        categoria_id: undefined,
-        classificacao_origem: 'manual',
-        classificacao_confianca: undefined,
-        classificacao_confirmada: false,
-        updated_at: new Date(),
-      })
-    }
-  })
+  const supabase = getSupabaseBrowserClient()
+  await supabase
+    .from('transacoes')
+    .update({
+      categoria_id: null,
+      classificacao_origem: 'manual',
+      classificacao_confianca: null,
+      classificacao_confirmada: false,
+      updated_at: new Date().toISOString(),
+    })
+    .in('id', transacao_ids)
 }

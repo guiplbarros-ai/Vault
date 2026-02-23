@@ -7,20 +7,80 @@
 
 import { addMonths, endOfMonth, format, isAfter, isBefore, startOfMonth, subMonths } from 'date-fns'
 import { nanoid } from 'nanoid'
-import { getDB } from '../db/client'
+import { assertUUID } from '../api/sanitize'
+import { getSupabase } from '../db/supabase'
 import { NotFoundError, ValidationError } from '../errors'
 import type {
   Cenario,
+  CategoriaObjetivo,
   ConfiguracaoComportamento,
   CreateCenarioDTO,
   CreateConfiguracaoDTO,
   CreateObjetivoDTO,
   ObjetivoFinanceiro,
+  PrioridadeObjetivo,
+  TipoCenario,
 } from '../types'
 
-export class PlanejamentoService {
-  private db = getDB()
+async function getUserId(): Promise<string> {
+  const supabase = getSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  assertUUID(user.id, 'userId')
+  return user.id
+}
 
+function rowToCenario(row: Record<string, unknown>): Cenario {
+  return {
+    id: row.id as string,
+    nome: row.nome as string,
+    descricao: row.descricao as string | undefined,
+    tipo: row.tipo as TipoCenario,
+    horizonte_anos: row.horizonte_anos as number,
+    data_inicio: new Date(row.data_inicio as string),
+    created_at: new Date(row.created_at as string),
+    updated_at: new Date(row.updated_at as string),
+  }
+}
+
+function rowToConfiguracao(row: Record<string, unknown>): ConfiguracaoComportamento {
+  return {
+    id: row.id as string,
+    cenario_id: row.cenario_id as string,
+    tipo: row.tipo as ConfiguracaoComportamento['tipo'],
+    categoria_id: row.categoria_id as string | undefined,
+    modo: row.modo as ConfiguracaoComportamento['modo'],
+    percentual_mudanca: row.percentual_mudanca as number | undefined,
+    valor_fixo: row.valor_fixo as number | undefined,
+    data_aplicacao: row.data_aplicacao ? new Date(row.data_aplicacao as string) : undefined,
+    percentual_saving: row.percentual_saving as number | undefined,
+    taxa_retorno_mensal: row.taxa_retorno_mensal as number | undefined,
+    evento_descricao: row.evento_descricao as string | undefined,
+    evento_valor: row.evento_valor as number | undefined,
+    evento_data: row.evento_data ? new Date(row.evento_data as string) : undefined,
+    evento_tipo: row.evento_tipo as 'receita' | 'despesa' | undefined,
+    created_at: new Date(row.created_at as string),
+    updated_at: new Date(row.updated_at as string),
+  }
+}
+
+function rowToObjetivo(row: Record<string, unknown>): ObjetivoFinanceiro {
+  return {
+    id: row.id as string,
+    cenario_id: row.cenario_id as string,
+    nome: row.nome as string,
+    valor_alvo: row.valor_alvo as number,
+    data_alvo: new Date(row.data_alvo as string),
+    categoria: row.categoria as CategoriaObjetivo,
+    prioridade: row.prioridade as PrioridadeObjetivo,
+    created_at: new Date(row.created_at as string),
+    updated_at: new Date(row.updated_at as string),
+  }
+}
+
+export class PlanejamentoService {
   // ============================================================================
   // CRUD de Cenários
   // ============================================================================
@@ -29,24 +89,45 @@ export class PlanejamentoService {
    * Lista todos os cenários
    */
   async listCenarios(): Promise<Cenario[]> {
-    return await this.db.cenarios.orderBy('created_at').reverse().toArray()
+    const supabase = getSupabase()
+    const userId = await getUserId()
+
+    const { data, error } = await supabase
+      .from('cenarios')
+      .select('*')
+      .eq('usuario_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw new Error(`Erro ao listar cenários: ${error.message}`)
+
+    return (data || []).map(rowToCenario)
   }
 
   /**
    * Busca um cenário por ID
    */
   async getCenario(id: string): Promise<Cenario> {
-    const cenario = await this.db.cenarios.get(id)
-    if (!cenario) {
-      throw new NotFoundError(`Cenário com ID ${id} não encontrado`)
-    }
-    return cenario
+    const supabase = getSupabase()
+
+    const { data, error } = await supabase
+      .from('cenarios')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) throw new Error(`Erro ao buscar cenário: ${error.message}`)
+    if (!data) throw new NotFoundError(`Cenário com ID ${id} não encontrado`)
+
+    return rowToCenario(data)
   }
 
   /**
    * Cria um novo cenário
    */
   async createCenario(data: CreateCenarioDTO): Promise<Cenario> {
+    const supabase = getSupabase()
+    const userId = await getUserId()
+
     // Validações
     if (!data.nome || data.nome.trim().length === 0) {
       throw new ValidationError('Nome do cenário é obrigatório')
@@ -56,18 +137,28 @@ export class PlanejamentoService {
       throw new ValidationError('Horizonte deve estar entre 1 e 10 anos')
     }
 
-    const cenario: Cenario = {
-      id: nanoid(),
-      nome: data.nome.trim(),
-      descricao: data.descricao?.trim(),
-      tipo: 'personalizado',
-      horizonte_anos: data.horizonte_anos,
-      data_inicio: new Date(),
-      created_at: new Date(),
-      updated_at: new Date(),
-    }
+    const now = new Date().toISOString()
+    const cenarioId = nanoid()
 
-    await this.db.cenarios.add(cenario)
+    const { data: inserted, error } = await supabase
+      .from('cenarios')
+      .insert({
+        id: cenarioId,
+        nome: data.nome.trim(),
+        descricao: data.descricao?.trim() || null,
+        tipo: 'personalizado',
+        horizonte_anos: data.horizonte_anos,
+        data_inicio: now,
+        usuario_id: userId,
+        created_at: now,
+        updated_at: now,
+      })
+      .select()
+      .single()
+
+    if (error) throw new Error(`Erro ao criar cenário: ${error.message}`)
+
+    const cenario = rowToCenario(inserted)
 
     // Se solicitou duplicar de outro cenário, copia as configurações
     if (data.duplicar_de_cenario_id) {
@@ -81,6 +172,7 @@ export class PlanejamentoService {
    * Atualiza um cenário
    */
   async updateCenario(id: string, data: Partial<Cenario>): Promise<Cenario> {
+    const supabase = getSupabase()
     const cenario = await this.getCenario(id)
 
     // Validações
@@ -90,22 +182,36 @@ export class PlanejamentoService {
       }
     }
 
-    const updated: Cenario = {
-      ...cenario,
+    const updateData: Record<string, unknown> = {
       ...data,
-      id: cenario.id, // Garantir que ID não muda
-      tipo: cenario.tipo, // Garantir que tipo não muda
-      updated_at: new Date(),
+      id: cenario.id,
+      tipo: cenario.tipo,
+      updated_at: new Date().toISOString(),
     }
 
-    await this.db.cenarios.put(updated)
-    return updated
+    // Convert Date objects
+    if (data.data_inicio) {
+      updateData.data_inicio =
+        data.data_inicio instanceof Date ? data.data_inicio.toISOString() : data.data_inicio
+    }
+
+    const { data: updated, error } = await supabase
+      .from('cenarios')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw new Error(`Erro ao atualizar cenário: ${error.message}`)
+
+    return rowToCenario(updated)
   }
 
   /**
    * Deleta um cenário e todas as suas configurações/objetivos
    */
   async deleteCenario(id: string): Promise<void> {
+    const supabase = getSupabase()
     const cenario = await this.getCenario(id)
 
     // Não permitir deletar cenário base
@@ -113,22 +219,15 @@ export class PlanejamentoService {
       throw new ValidationError('Não é possível deletar o cenário base')
     }
 
-    await this.db.transaction(
-      'rw',
-      this.db.cenarios,
-      this.db.configuracoes_comportamento,
-      this.db.objetivos_financeiros,
-      async () => {
-        // Deletar configurações
-        await this.db.configuracoes_comportamento.where('cenario_id').equals(id).delete()
+    // Deletar configurações
+    await supabase.from('configuracoes_comportamento').delete().eq('cenario_id', id)
 
-        // Deletar objetivos
-        await this.db.objetivos_financeiros.where('cenario_id').equals(id).delete()
+    // Deletar objetivos
+    await supabase.from('objetivos_financeiros').delete().eq('cenario_id', id)
 
-        // Deletar cenário
-        await this.db.cenarios.delete(id)
-      }
-    )
+    // Deletar cenário
+    const { error } = await supabase.from('cenarios').delete().eq('id', id)
+    if (error) throw new Error(`Erro ao deletar cenário: ${error.message}`)
   }
 
   /**
@@ -170,7 +269,16 @@ export class PlanejamentoService {
    * Lista todas as configurações de um cenário
    */
   async listConfiguracoes(cenarioId: string): Promise<ConfiguracaoComportamento[]> {
-    return await this.db.configuracoes_comportamento.where('cenario_id').equals(cenarioId).toArray()
+    const supabase = getSupabase()
+
+    const { data, error } = await supabase
+      .from('configuracoes_comportamento')
+      .select('*')
+      .eq('cenario_id', cenarioId)
+
+    if (error) throw new Error(`Erro ao listar configurações: ${error.message}`)
+
+    return (data || []).map(rowToConfiguracao)
   }
 
   /**
@@ -180,19 +288,15 @@ export class PlanejamentoService {
     cenarioId: string,
     data: CreateConfiguracaoDTO
   ): Promise<ConfiguracaoComportamento> {
+    const supabase = getSupabase()
+
     // Verificar se cenário existe
     await this.getCenario(cenarioId)
 
     // Validações
-    if (!data.tipo) {
-      throw new ValidationError('Tipo de configuração é obrigatório')
-    }
+    if (!data.tipo) throw new ValidationError('Tipo de configuração é obrigatório')
+    if (!data.modo) throw new ValidationError('Modo de configuração é obrigatório')
 
-    if (!data.modo) {
-      throw new ValidationError('Modo de configuração é obrigatório')
-    }
-
-    // Validações específicas por modo
     if (data.modo === 'percentual') {
       if (data.percentual_mudanca === undefined || data.percentual_mudanca === null) {
         throw new ValidationError('Percentual de mudança é obrigatório para modo "percentual"')
@@ -217,58 +321,77 @@ export class PlanejamentoService {
       }
     }
 
-    // Validações específicas para eventos únicos
     if (data.tipo === 'evento_unico') {
-      if (!data.evento_descricao?.trim()) {
-        throw new ValidationError('Descrição do evento é obrigatória')
-      }
+      if (!data.evento_descricao?.trim()) throw new ValidationError('Descrição do evento é obrigatória')
       if (data.evento_valor === undefined || data.evento_valor === null) {
         throw new ValidationError('Valor do evento é obrigatório')
       }
-      if (data.evento_valor <= 0) {
-        throw new ValidationError('Valor do evento deve ser maior que zero')
-      }
-      if (!data.evento_data) {
-        throw new ValidationError('Data do evento é obrigatória')
-      }
+      if (data.evento_valor <= 0) throw new ValidationError('Valor do evento deve ser maior que zero')
+      if (!data.evento_data) throw new ValidationError('Data do evento é obrigatória')
       if (!data.evento_tipo || !['receita', 'despesa'].includes(data.evento_tipo)) {
         throw new ValidationError('Tipo do evento deve ser "receita" ou "despesa"')
       }
     }
 
-    const configuracao: ConfiguracaoComportamento = {
-      id: nanoid(),
-      cenario_id: cenarioId,
-      tipo: data.tipo,
-      categoria_id: data.categoria_id,
-      modo: data.modo,
-      percentual_mudanca: data.percentual_mudanca,
-      valor_fixo: data.valor_fixo,
-      data_aplicacao: data.data_aplicacao ? new Date(data.data_aplicacao) : undefined,
-      percentual_saving: data.percentual_saving,
-      taxa_retorno_mensal: data.taxa_retorno_mensal,
-      evento_descricao: data.evento_descricao,
-      evento_valor: data.evento_valor,
-      evento_data: data.evento_data ? new Date(data.evento_data) : undefined,
-      evento_tipo: data.evento_tipo,
-      created_at: new Date(),
-      updated_at: new Date(),
-    }
+    const now = new Date().toISOString()
+    const id = nanoid()
 
-    await this.db.configuracoes_comportamento.add(configuracao)
-    return configuracao
+    const { data: inserted, error } = await supabase
+      .from('configuracoes_comportamento')
+      .insert({
+        id,
+        cenario_id: cenarioId,
+        tipo: data.tipo,
+        categoria_id: data.categoria_id || null,
+        modo: data.modo,
+        percentual_mudanca: data.percentual_mudanca ?? null,
+        valor_fixo: data.valor_fixo ?? null,
+        data_aplicacao: data.data_aplicacao
+          ? data.data_aplicacao instanceof Date
+            ? data.data_aplicacao.toISOString()
+            : new Date(data.data_aplicacao as string).toISOString()
+          : null,
+        percentual_saving: data.percentual_saving ?? null,
+        taxa_retorno_mensal: data.taxa_retorno_mensal ?? null,
+        evento_descricao: data.evento_descricao || null,
+        evento_valor: data.evento_valor ?? null,
+        evento_data: data.evento_data
+          ? data.evento_data instanceof Date
+            ? data.evento_data.toISOString()
+            : new Date(data.evento_data as string).toISOString()
+          : null,
+        evento_tipo: data.evento_tipo || null,
+        created_at: now,
+        updated_at: now,
+      })
+      .select()
+      .single()
+
+    if (error) throw new Error(`Erro ao criar configuração: ${error.message}`)
+
+    return rowToConfiguracao(inserted)
   }
 
   /**
    * Remove uma configuração
    */
   async removeConfiguracao(configuracaoId: string): Promise<void> {
-    // Verificar se existe antes de deletar
-    const config = await this.db.configuracoes_comportamento.get(configuracaoId)
-    if (!config) {
-      throw new NotFoundError(`Configuração com ID ${configuracaoId} não encontrada`)
-    }
-    await this.db.configuracoes_comportamento.delete(configuracaoId)
+    const supabase = getSupabase()
+
+    const { data: existing } = await supabase
+      .from('configuracoes_comportamento')
+      .select('id')
+      .eq('id', configuracaoId)
+      .maybeSingle()
+
+    if (!existing) throw new NotFoundError(`Configuração com ID ${configuracaoId} não encontrada`)
+
+    const { error } = await supabase
+      .from('configuracoes_comportamento')
+      .delete()
+      .eq('id', configuracaoId)
+
+    if (error) throw new Error(`Erro ao remover configuração: ${error.message}`)
   }
 
   /**
@@ -308,16 +431,25 @@ export class PlanejamentoService {
    * Lista todos os objetivos de um cenário
    */
   async listObjetivos(cenarioId: string): Promise<ObjetivoFinanceiro[]> {
-    return await this.db.objetivos_financeiros
-      .where('cenario_id')
-      .equals(cenarioId)
-      .sortBy('data_alvo')
+    const supabase = getSupabase()
+
+    const { data, error } = await supabase
+      .from('objetivos_financeiros')
+      .select('*')
+      .eq('cenario_id', cenarioId)
+      .order('data_alvo', { ascending: true })
+
+    if (error) throw new Error(`Erro ao listar objetivos: ${error.message}`)
+
+    return (data || []).map(rowToObjetivo)
   }
 
   /**
    * Adiciona um objetivo financeiro ao cenário
    */
   async addObjetivo(cenarioId: string, data: CreateObjetivoDTO): Promise<ObjetivoFinanceiro> {
+    const supabase = getSupabase()
+
     // Verificar se cenário existe
     const cenario = await this.getCenario(cenarioId)
 
@@ -325,17 +457,14 @@ export class PlanejamentoService {
     if (!data.nome || data.nome.trim().length === 0) {
       throw new ValidationError('Nome do objetivo é obrigatório')
     }
-
     if (!data.valor_alvo || data.valor_alvo <= 0) {
       throw new ValidationError('Valor alvo deve ser maior que zero')
     }
-
     if (!data.data_alvo) {
       throw new ValidationError('Data alvo é obrigatória')
     }
 
-    // Validar data alvo
-    const dataAlvo = new Date(data.data_alvo)
+    const dataAlvo = new Date(data.data_alvo as string | Date)
     if (isNaN(dataAlvo.getTime())) {
       throw new ValidationError('Data alvo inválida')
     }
@@ -352,32 +481,46 @@ export class PlanejamentoService {
       )
     }
 
-    const objetivo: ObjetivoFinanceiro = {
-      id: nanoid(),
-      cenario_id: cenarioId,
-      nome: data.nome.trim(),
-      valor_alvo: data.valor_alvo,
-      data_alvo: dataAlvo,
-      categoria: data.categoria,
-      prioridade: data.prioridade,
-      created_at: new Date(),
-      updated_at: new Date(),
-    }
+    const now = new Date().toISOString()
+    const id = nanoid()
 
-    await this.db.objetivos_financeiros.add(objetivo)
-    return objetivo
+    const { data: inserted, error } = await supabase
+      .from('objetivos_financeiros')
+      .insert({
+        id,
+        cenario_id: cenarioId,
+        nome: data.nome.trim(),
+        valor_alvo: data.valor_alvo,
+        data_alvo: dataAlvo.toISOString(),
+        categoria: data.categoria || null,
+        prioridade: data.prioridade ?? null,
+        created_at: now,
+        updated_at: now,
+      })
+      .select()
+      .single()
+
+    if (error) throw new Error(`Erro ao criar objetivo: ${error.message}`)
+
+    return rowToObjetivo(inserted)
   }
 
   /**
    * Remove um objetivo
    */
   async removeObjetivo(objetivoId: string): Promise<void> {
-    // Verificar se existe antes de deletar
-    const objetivo = await this.db.objetivos_financeiros.get(objetivoId)
-    if (!objetivo) {
-      throw new NotFoundError(`Objetivo com ID ${objetivoId} não encontrado`)
-    }
-    await this.db.objetivos_financeiros.delete(objetivoId)
+    const supabase = getSupabase()
+
+    const { data: existing } = await supabase
+      .from('objetivos_financeiros')
+      .select('id')
+      .eq('id', objetivoId)
+      .maybeSingle()
+
+    if (!existing) throw new NotFoundError(`Objetivo com ID ${objetivoId} não encontrado`)
+
+    const { error } = await supabase.from('objetivos_financeiros').delete().eq('id', objetivoId)
+    if (error) throw new Error(`Erro ao remover objetivo: ${error.message}`)
   }
 
   /**
@@ -387,36 +530,47 @@ export class PlanejamentoService {
     objetivoId: string,
     data: Partial<ObjetivoFinanceiro>
   ): Promise<ObjetivoFinanceiro> {
-    const objetivo = await this.db.objetivos_financeiros.get(objetivoId)
-    if (!objetivo) {
-      throw new NotFoundError(`Objetivo com ID ${objetivoId} não encontrado`)
-    }
+    const supabase = getSupabase()
 
-    const updated: ObjetivoFinanceiro = {
-      ...objetivo,
+    const { data: existing } = await supabase
+      .from('objetivos_financeiros')
+      .select('*')
+      .eq('id', objetivoId)
+      .maybeSingle()
+
+    if (!existing) throw new NotFoundError(`Objetivo com ID ${objetivoId} não encontrado`)
+
+    const updateData: Record<string, unknown> = {
       ...data,
-      id: objetivo.id,
-      cenario_id: objetivo.cenario_id,
-      updated_at: new Date(),
+      id: objetivoId,
+      cenario_id: (existing as Record<string, unknown>).cenario_id,
+      updated_at: new Date().toISOString(),
     }
 
-    await this.db.objetivos_financeiros.put(updated)
-    return updated
+    if (data.data_alvo) {
+      updateData.data_alvo =
+        data.data_alvo instanceof Date ? data.data_alvo.toISOString() : data.data_alvo
+    }
+
+    const { data: updated, error } = await supabase
+      .from('objetivos_financeiros')
+      .update(updateData)
+      .eq('id', objetivoId)
+      .select()
+      .single()
+
+    if (error) throw new Error(`Erro ao atualizar objetivo: ${error.message}`)
+
+    return rowToObjetivo(updated)
   }
 
   // ============================================================================
   // Auto-Generated Scenarios
   // ============================================================================
 
-  /**
-   * Creates a "Minha Situação Atual" base scenario from real transaction data.
-   * Called automatically when user visits Planning page with 0 scenarios.
-   * Analyzes last 3 months of transactions to set baseline configurations.
-   */
   private static _creatingDefault: Promise<Cenario> | null = null
 
   async createDefaultScenario(): Promise<Cenario> {
-    // Prevent concurrent creation (React StrictMode double-render)
     if (PlanejamentoService._creatingDefault) {
       return PlanejamentoService._creatingDefault
     }
@@ -430,38 +584,66 @@ export class PlanejamentoService {
   }
 
   private async _doCreateDefaultScenario(): Promise<Cenario> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
     const now = new Date()
 
     // Guard: check if a base scenario already exists
-    const existing = await db.cenarios.filter((c) => c.tipo === 'base').first()
-    if (existing) return existing
+    const { data: existing } = await supabase
+      .from('cenarios')
+      .select('*')
+      .eq('usuario_id', userId)
+      .eq('tipo', 'base')
+      .maybeSingle()
+
+    if (existing) return rowToCenario(existing)
 
     // 1. Create the base scenario
-    const cenario: Cenario = {
-      id: nanoid(),
-      nome: 'Minha Situação Atual',
-      descricao:
-        'Cenário gerado automaticamente com base nos últimos 3 meses de transações reais.',
-      tipo: 'base',
-      horizonte_anos: 1,
-      data_inicio: now,
-      created_at: now,
-      updated_at: now,
-    }
+    const cenarioId = nanoid()
+    const nowIso = now.toISOString()
 
-    await db.cenarios.add(cenario)
+    const { data: inserted, error } = await supabase
+      .from('cenarios')
+      .insert({
+        id: cenarioId,
+        nome: 'Minha Situação Atual',
+        descricao:
+          'Cenário gerado automaticamente com base nos últimos 3 meses de transações reais.',
+        tipo: 'base',
+        horizonte_anos: 1,
+        data_inicio: nowIso,
+        usuario_id: userId,
+        created_at: nowIso,
+        updated_at: nowIso,
+      })
+      .select()
+      .single()
+
+    if (error) throw new Error(`Erro ao criar cenário padrão: ${error.message}`)
+
+    const cenario = rowToCenario(inserted)
 
     // 2. Analyze last 3 months of transactions for baseline
     const months = [subMonths(now, 2), subMonths(now, 1), now]
     const allTx: { tipo: string; valor: number; categoria_id?: string }[] = []
 
     for (const m of months) {
-      const txs = await db.transacoes
-        .where('data')
-        .between(startOfMonth(m), endOfMonth(m), true, true)
-        .toArray()
-      allTx.push(...txs.map((t) => ({ tipo: t.tipo, valor: t.valor, categoria_id: t.categoria_id })))
+      const { data: txData } = await supabase
+        .from('transacoes')
+        .select('tipo, valor, categoria_id')
+        .eq('usuario_id', userId)
+        .gte('data', startOfMonth(m).toISOString())
+        .lte('data', endOfMonth(m).toISOString())
+
+      if (txData) {
+        allTx.push(
+          ...txData.map((t: Record<string, unknown>) => ({
+            tipo: t.tipo as string,
+            valor: t.valor as number,
+            categoria_id: t.categoria_id as string | undefined,
+          }))
+        )
+      }
     }
 
     if (allTx.length === 0) return cenario
@@ -475,16 +657,15 @@ export class PlanejamentoService {
     const savingRate = avgReceita > 0 ? ((avgReceita - avgDespesa) / avgReceita) * 100 : 0
 
     // 4. Add baseline configuration for income
-    const receitaConfig: ConfiguracaoComportamento = {
+    await supabase.from('configuracoes_comportamento').insert({
       id: nanoid(),
       cenario_id: cenario.id,
       tipo: 'receita',
       modo: 'valor_fixo',
       valor_fixo: Math.round(avgReceita),
-      created_at: now,
-      updated_at: now,
-    }
-    await db.configuracoes_comportamento.add(receitaConfig)
+      created_at: nowIso,
+      updated_at: nowIso,
+    })
 
     // 5. Add per-category expense configurations (top categories)
     const despesaPorCat = new Map<string, number>()
@@ -493,9 +674,14 @@ export class PlanejamentoService {
       despesaPorCat.set(catId, (despesaPorCat.get(catId) || 0) + Math.abs(tx.valor))
     }
 
-    // Get category names
-    const categorias = await db.categorias.toArray()
-    const catMap = new Map(categorias.map((c) => [c.id, c]))
+    const { data: categoriasData } = await supabase
+      .from('categorias')
+      .select('id, nome')
+      .or(`is_sistema.eq.true,usuario_id.eq.${userId}`)
+
+    const catMap = new Map(
+      (categoriasData || []).map((c: Record<string, unknown>) => [c.id as string, c])
+    )
 
     const sortedCats = [...despesaPorCat.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -505,32 +691,30 @@ export class PlanejamentoService {
       const monthlyAvg = total / 3
       if (monthlyAvg < 50) continue
 
-      const config: ConfiguracaoComportamento = {
+      await supabase.from('configuracoes_comportamento').insert({
         id: nanoid(),
         cenario_id: cenario.id,
         tipo: 'despesa',
-        categoria_id: catId === 'sem_categoria' ? undefined : catId,
+        categoria_id: catId === 'sem_categoria' ? null : catId,
         modo: 'valor_fixo',
         valor_fixo: Math.round(monthlyAvg),
-        created_at: now,
-        updated_at: now,
-      }
-      await db.configuracoes_comportamento.add(config)
+        created_at: nowIso,
+        updated_at: nowIso,
+      })
     }
 
     // 6. Add saving/investment config
     if (savingRate > 0) {
-      const investConfig: ConfiguracaoComportamento = {
+      await supabase.from('configuracoes_comportamento').insert({
         id: nanoid(),
         cenario_id: cenario.id,
         tipo: 'investimento',
         modo: 'percentual',
         percentual_saving: Math.round(savingRate),
-        taxa_retorno_mensal: 0.8, // ~10% a.a. CDI estimate
-        created_at: now,
-        updated_at: now,
-      }
-      await db.configuracoes_comportamento.add(investConfig)
+        taxa_retorno_mensal: 0.8,
+        created_at: nowIso,
+        updated_at: nowIso,
+      })
     }
 
     return cenario
@@ -538,19 +722,25 @@ export class PlanejamentoService {
 
   /**
    * Creates an optimized copy of a scenario, reducing non-essential expenses by 10%.
-   * Non-essential = everything except Moradia and Saúde.
    */
   async createOptimizedScenario(baseScenarioId: string): Promise<Cenario> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
     const baseCenario = await this.getCenario(baseScenarioId)
 
     // Get category names to identify essential ones
-    const categorias = await db.categorias.toArray()
+    const { data: categoriasData } = await supabase
+      .from('categorias')
+      .select('id, nome')
+      .or(`is_sistema.eq.true,usuario_id.eq.${userId}`)
+
     const essentialNames = new Set(['moradia', 'saúde', 'saude'])
     const essentialIds = new Set(
-      categorias
-        .filter((c) => essentialNames.has(c.nome.toLowerCase()))
-        .map((c) => c.id)
+      (categoriasData || [])
+        .filter((c: Record<string, unknown>) =>
+          essentialNames.has((c.nome as string).toLowerCase())
+        )
+        .map((c: Record<string, unknown>) => c.id as string)
     )
 
     // Clone the scenario

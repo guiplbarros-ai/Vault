@@ -6,7 +6,6 @@
  */
 
 import { addMonths, format, isAfter, isBefore, isSameMonth } from 'date-fns'
-import { getDB } from '../db/client'
 import type {
   BaselineData,
   Cenario,
@@ -22,7 +21,6 @@ import { getPlanejamentoService } from './planejamento.service'
 import { transacaoService } from './transacao.service'
 
 export class ProjecaoService {
-  private db = getDB()
   private planejamentoService = getPlanejamentoService()
 
   // ============================================================================
@@ -39,7 +37,7 @@ export class ProjecaoService {
 
     // Buscar todas as transações dos últimos 6 meses
     const todasTransacoes = await transacaoService.listTransacoes({
-      limit: 50000, // Aumentar limite para evitar dados incompletos
+      limit: 50000,
     })
 
     const transacoesFiltradas = todasTransacoes.filter((t) => {
@@ -114,8 +112,8 @@ export class ProjecaoService {
     const totalDespesas = Object.values(despesas_mensais).reduce((acc, val) => acc + val, 0)
     const taxa_saving = totalReceitas > 0 ? (totalReceitas - totalDespesas) / totalReceitas : 0
 
-    // Patrimônio atual: calcular de forma otimizada (sem N+1 queries)
-    const patrimonio_inicial = await this.calcularPatrimonioAtual(todasTransacoes)
+    // Patrimônio atual
+    const patrimonio_inicial = await this.calcularPatrimonioAtual()
 
     return {
       receitas_mensais,
@@ -126,13 +124,11 @@ export class ProjecaoService {
   }
 
   /**
-   * Calcula patrimônio atual de forma otimizada (sem N+1 queries)
+   * Calcula patrimônio atual de forma otimizada
    */
-  private async calcularPatrimonioAtual(todasTransacoes?: any[]): Promise<number> {
+  private async calcularPatrimonioAtual(): Promise<number> {
     const contas = await contaService.listContas()
 
-    // Calcula o patrimônio atual somando o saldo atual de cada conta
-    // Consistência: usa calcularSaldoEmData(conta, agora) que respeita saldo_referencia/data_referencia
     let patrimonio = 0
     for (const conta of contas) {
       try {
@@ -208,7 +204,7 @@ export class ProjecaoService {
       // Saving bruto (receitas - despesas)
       const savingBruto = receitas.total - despesas.total
 
-      // Calcular investimentos (percentual do saving que é direcionado a investimentos)
+      // Calcular investimentos
       const configInvestimento = configsAplicaveis.find((c) => c.tipo === 'investimento')
       const percentualInvestimento = configInvestimento?.percentual_saving || 0
       const investimentos = savingBruto * (percentualInvestimento / 100)
@@ -217,7 +213,7 @@ export class ProjecaoService {
       const taxaRetorno = configInvestimento?.taxa_retorno_mensal || 0
       const rendimento_investimentos = patrimonioAcumulado * taxaRetorno
 
-      // Atualizar patrimônio: adiciona o saving total (que já inclui o que vai para investimentos) + rendimentos
+      // Atualizar patrimônio
       patrimonioAcumulado += savingBruto + rendimento_investimentos
 
       projecoes.push({
@@ -245,11 +241,9 @@ export class ProjecaoService {
     const porCategoria: Record<string, number> = {}
     let total = 0
 
-    // Para cada categoria de receita no baseline
     for (const [categoriaId, valorBase] of Object.entries(baseline.receitas_mensais)) {
       let valor = valorBase
 
-      // Aplicar configurações
       const config = configuracoes.find(
         (c) => c.tipo === 'receita' && c.categoria_id === categoriaId
       )
@@ -295,11 +289,9 @@ export class ProjecaoService {
     const porCategoria: Record<string, number> = {}
     let total = 0
 
-    // Para cada categoria de despesa no baseline
     for (const [categoriaId, valorBase] of Object.entries(baseline.despesas_mensais)) {
       let valor = valorBase
 
-      // Aplicar configurações
       const config = configuracoes.find(
         (c) => c.tipo === 'despesa' && c.categoria_id === categoriaId
       )
@@ -369,7 +361,6 @@ export class ProjecaoService {
     const rendimento_total = projecoes.reduce((acc, p) => acc + p.rendimento_investimentos, 0)
     const taxa_saving_media = receita_total > 0 ? saving_acumulado / receita_total : 0
 
-    // Encontrar melhor e pior mês
     const melhorProjecao = projecoes.reduce(
       (best, p) => (p.saving > best.saving ? p : best),
       projecoes[0]!
@@ -401,7 +392,6 @@ export class ProjecaoService {
     projecoes: ProjecaoMensal[]
   ): ObjetivoAnalise[] {
     return objetivos.map((objetivo) => {
-      // Encontrar projeção do mês do objetivo
       const projecaoMeta = projecoes.find(
         (p) => isSameMonth(p.mes, objetivo.data_alvo) || isAfter(p.mes, objetivo.data_alvo)
       )
@@ -411,24 +401,23 @@ export class ProjecaoService {
       const percentual_alcance =
         objetivo.valor_alvo > 0 ? (patrimonio_projetado / objetivo.valor_alvo) * 100 : 0
 
-      // Determinar status
       let status: 'no_caminho' | 'precisa_ajustes' | 'inviavel'
       const sugestoes: string[] = []
 
       if (percentual_alcance >= 100) {
         status = 'no_caminho'
         sugestoes.push(
-          `✅ Objetivo alcançável! Você terá ${this.formatarMoeda(patrimonio_projetado - objetivo.valor_alvo)} a mais.`
+          `Objetivo alcançável! Você terá ${this.formatarMoeda(patrimonio_projetado - objetivo.valor_alvo)} a mais.`
         )
       } else if (percentual_alcance >= 80) {
         status = 'precisa_ajustes'
         sugestoes.push(
-          `⚠️ Faltam ${this.formatarMoeda(diferenca)}. Aumente saving em ${Math.ceil(diferenca / projecoes.length / 1000) * 1000}/mês.`
+          `Faltam ${this.formatarMoeda(diferenca)}. Aumente saving em ${Math.ceil(diferenca / projecoes.length / 1000) * 1000}/mês.`
         )
       } else {
         status = 'inviavel'
         sugestoes.push(
-          `❌ Meta muito distante. Considere aumentar horizonte ou reduzir valor alvo.`
+          `Meta muito distante. Considere aumentar horizonte ou reduzir valor alvo.`
         )
         sugestoes.push(
           `Você precisaria de mais ${Math.ceil(diferenca / 10000) * 10000} em patrimônio.`
@@ -457,7 +446,6 @@ export class ProjecaoService {
     const cenarios: Cenario[] = []
     const metricas: Record<string, any> = {}
 
-    // Calcular projeções para cada cenário
     for (const id of cenarioIds) {
       const resultado = await this.calcularProjecao(id)
       cenarios.push(resultado.cenario)
@@ -471,7 +459,6 @@ export class ProjecaoService {
       }
     }
 
-    // Calcular diferenças
     const patrimonios = cenarioIds.map((id) => metricas[id].patrimonio_final)
     const savings = cenarioIds.map((id) => metricas[id].saving_acumulado)
 
@@ -508,9 +495,6 @@ export class ProjecaoService {
   // Helpers
   // ============================================================================
 
-  /**
-   * Normaliza uma data para objeto Date, independente se é Date ou string
-   */
   private normalizeDate(date: Date | string | undefined): Date | undefined {
     if (!date) return undefined
     return date instanceof Date ? date : new Date(date)

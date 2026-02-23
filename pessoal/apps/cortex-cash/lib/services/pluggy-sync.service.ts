@@ -4,11 +4,17 @@
  * Pluggy Sync Service
  *
  * Client-side service that orchestrates syncing data from Pluggy API routes
- * into the local Dexie/IndexedDB database.
+ * into the Supabase database.
  */
 
-import { getDB } from '../db/client'
-import { getCurrentUserId } from '../db/seed-usuarios'
+import type {
+  Account as PluggyAccount,
+  Item as PluggyItem,
+  Investment as PluggyInvestment,
+  Transaction as PluggyTransaction,
+} from 'pluggy-sdk'
+import { assertUUID, escapeLikePattern, sanitizeExternalId } from '../api/sanitize'
+import { getSupabase } from '../db/supabase'
 import {
   isCreditCardAccount,
   mapConnectorToInstituicao,
@@ -60,6 +66,16 @@ interface SyncProgress {
 const SYNC_META_KEY = 'cortex-cash-pluggy-sync'
 const ITEM_ID_KEY = 'cortex-cash-pluggy-item-id'
 
+async function getUserId(): Promise<string> {
+  const supabase = getSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  assertUUID(user.id, 'userId')
+  return user.id
+}
+
 export class PluggySyncService {
   private onProgress?: (progress: SyncProgress) => void
 
@@ -94,7 +110,7 @@ export class PluggySyncService {
     }
 
     const data = await response.json()
-    const usuarioId = getCurrentUserId()
+    const usuarioId = await getUserId()
 
     // 2. Sync institutions
     this.reportProgress('Sincronizando instituicoes...', 1, 5)
@@ -122,15 +138,15 @@ export class PluggySyncService {
 
     // 7. Reclassify transaction types (transfers misclassified as receita/despesa)
     this.reportProgress('Reclassificando tipos...', 6, 8)
-    await this.reclassifyTransactionTypes()
+    await this.reclassifyTransactionTypes(usuarioId)
 
     // 8. Fix CC virtual account balances (saldo should be 0, not available credit)
     this.reportProgress('Corrigindo saldos de cartão...', 7, 9)
-    await this.fixCreditCardAccountBalances()
+    await this.fixCreditCardAccountBalances(usuarioId)
 
     // 9. Apply classification rules
     this.reportProgress('Aplicando regras de classificação...', 8, 10)
-    await this.applyClassificationRules()
+    await this.applyClassificationRules(usuarioId)
 
     // 10. Auto-tag transactions
     this.reportProgress('Aplicando tags automáticas...', 9, 10)
@@ -165,18 +181,20 @@ export class PluggySyncService {
   // Institutions
   // --------------------------------------------------------------------------
 
-  private async syncInstitutions(item: any, accounts: any[]): Promise<SyncResult> {
+  private async syncInstitutions(item: PluggyItem, accounts: PluggyAccount[]): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, errors: [] }
-    const db = getDB()
+    const supabase = getSupabase()
 
     try {
       const connector = item.connector
       const connectorName = connector?.name || 'Instituicao'
 
-      // Check if institution already exists by name
-      const existing = await db.instituicoes
-        .filter((i) => i.nome.toLowerCase() === connectorName.toLowerCase())
-        .first()
+      // Check if institution already exists by name (case-insensitive)
+      const { data: existing } = await supabase
+        .from('instituicoes')
+        .select('id')
+        .ilike('nome', escapeLikePattern(connectorName))
+        .maybeSingle()
 
       if (existing) {
         result.skipped++
@@ -186,16 +204,22 @@ export class PluggySyncService {
           connector?.imageUrl,
           connector?.primaryColor
         )
-        await db.instituicoes.add({
+        const { error } = await supabase.from('instituicoes').insert({
           ...mapped,
           id: `inst_pluggy_${Date.now()}`,
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
-        result.created++
+        if (error) {
+          result.errors.push(`Institution insert error: ${error.message}`)
+        } else {
+          result.created++
+        }
       }
     } catch (err) {
-      result.errors.push(`Institution sync error: ${err instanceof Error ? err.message : String(err)}`)
+      result.errors.push(
+        `Institution sync error: ${err instanceof Error ? err.message : String(err)}`
+      )
     }
 
     return result
@@ -205,14 +229,16 @@ export class PluggySyncService {
   // Accounts
   // --------------------------------------------------------------------------
 
-  private async syncAccounts(accounts: any[], item: any, usuarioId: string): Promise<SyncResult> {
+  private async syncAccounts(accounts: PluggyAccount[], item: PluggyItem, usuarioId: string): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, errors: [] }
-    const db = getDB()
+    const supabase = getSupabase()
 
     const connectorName = item.connector?.name || 'Instituicao'
-    const instituicao = await db.instituicoes
-      .filter((i) => i.nome.toLowerCase() === connectorName.toLowerCase())
-      .first()
+    const { data: instituicao } = await supabase
+      .from('instituicoes')
+      .select('id')
+      .ilike('nome', escapeLikePattern(connectorName))
+      .maybeSingle()
 
     if (!instituicao) {
       result.errors.push('Institution not found — sync institutions first')
@@ -225,31 +251,46 @@ export class PluggySyncService {
 
       try {
         // Check if already synced by pluggy_id
-        const existing = await db.contas
-          .filter((c) => c.pluggy_id === pluggyAccount.id)
-          .first()
+        const { data: existing } = await supabase
+          .from('contas')
+          .select('id')
+          .eq('pluggy_id', pluggyAccount.id)
+          .maybeSingle()
 
         if (existing) {
           // Update balance
-          await db.contas.update(existing.id, {
-            saldo_referencia: pluggyAccount.balance,
-            saldo_atual: pluggyAccount.balance,
-            data_referencia: new Date(),
-            updated_at: new Date(),
-          })
-          result.updated++
+          const { error } = await supabase
+            .from('contas')
+            .update({
+              saldo_referencia: pluggyAccount.balance,
+              saldo_atual: pluggyAccount.balance,
+              data_referencia: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id)
+          if (error) {
+            result.errors.push(`Account update ${pluggyAccount.name}: ${error.message}`)
+          } else {
+            result.updated++
+          }
         } else {
           const mapped = mapPluggyAccountToConta(pluggyAccount, instituicao.id, usuarioId)
-          await db.contas.add({
+          const { error } = await supabase.from('contas').insert({
             ...mapped,
             id: `conta_pluggy_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            created_at: new Date(),
-            updated_at: new Date(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           })
-          result.created++
+          if (error) {
+            result.errors.push(`Account insert ${pluggyAccount.name}: ${error.message}`)
+          } else {
+            result.created++
+          }
         }
       } catch (err) {
-        result.errors.push(`Account ${pluggyAccount.name}: ${err instanceof Error ? err.message : String(err)}`)
+        result.errors.push(
+          `Account ${pluggyAccount.name}: ${err instanceof Error ? err.message : String(err)}`
+        )
       }
     }
 
@@ -261,44 +302,62 @@ export class PluggySyncService {
   // --------------------------------------------------------------------------
 
   private async syncTransactions(
-    accounts: any[],
-    transactionsByAccount: Record<string, any[]>,
+    accounts: PluggyAccount[],
+    transactionsByAccount: Record<string, PluggyTransaction[]>,
     usuarioId: string
   ): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, errors: [] }
-    const db = getDB()
+    const supabase = getSupabase()
 
     for (const pluggyAccount of accounts) {
       const transactions = transactionsByAccount[pluggyAccount.id] || []
       if (transactions.length === 0) continue
 
       // Find the local account by pluggy_id
-      const localAccount = await db.contas
-        .filter((c) => c.pluggy_id === pluggyAccount.id)
-        .first()
+      const { data: localAccount } = await supabase
+        .from('contas')
+        .select('id')
+        .eq('pluggy_id', pluggyAccount.id)
+        .maybeSingle()
 
       // For credit cards, find virtual account or create one
       let contaId: string | undefined = localAccount?.id
 
       if (!contaId && pluggyAccount.type === 'CREDIT') {
         // Check if virtual cc account already exists
-        const ccAccount = await db.contas
-          .filter((c) => c.pluggy_id === `cc_${pluggyAccount.id}`)
-          .first()
+        const { data: ccAccount } = await supabase
+          .from('contas')
+          .select('id')
+          .eq('pluggy_id', `cc_${pluggyAccount.id}`)
+          .maybeSingle()
 
         if (ccAccount) {
           contaId = ccAccount.id
         } else {
           // Find institution from cartoes_config or fallback to first institution
-          const cartao = await db.cartoes_config
-            .filter((c) => c.pluggy_id === pluggyAccount.id)
-            .first()
+          const { data: cartao } = await supabase
+            .from('cartoes_config')
+            .select('instituicao_id')
+            .eq('pluggy_id', pluggyAccount.id)
+            .maybeSingle()
 
-          const instituicaoId = cartao?.instituicao_id
-            || (await db.instituicoes.toCollection().first())?.id
+          let instituicaoId: string | undefined = cartao?.instituicao_id
+
+          if (!instituicaoId) {
+            const { data: firstInst } = await supabase
+              .from('instituicoes')
+              .select('id')
+              .limit(1)
+              .maybeSingle()
+            instituicaoId = firstInst?.id
+          }
 
           if (instituicaoId) {
-            contaId = await this.getOrCreateCreditCardAccount(pluggyAccount, instituicaoId, usuarioId)
+            contaId = await this.getOrCreateCreditCardAccount(
+              pluggyAccount,
+              instituicaoId,
+              usuarioId
+            )
           }
         }
       }
@@ -308,31 +367,46 @@ export class PluggySyncService {
         continue
       }
 
-      // Batch insert transactions using bulkPut (upserts by hash)
-      const mappedTransactions = transactions.map((tx: any) => {
+      // Map transactions for upsert
+      const mappedTransactions = transactions.map((tx: PluggyTransaction) => {
         const mapped = mapPluggyTransactionToTransacao(tx, contaId!, usuarioId)
         return {
           ...mapped,
           id: `tx_pluggy_${tx.id}`,
-          created_at: new Date(tx.createdAt || Date.now()),
-          updated_at: new Date(tx.updatedAt || Date.now()),
+          created_at: new Date(tx.createdAt || Date.now()).toISOString(),
+          updated_at: new Date(tx.updatedAt || Date.now()).toISOString(),
         }
       })
 
       try {
-        // Use bulkPut for upsert behavior — hash uniqueness handles dedup
-        await db.transacoes.bulkPut(mappedTransactions)
-        result.created += mappedTransactions.length
-      } catch (err) {
-        // If bulkPut fails (e.g., constraint violation), try one by one
-        for (const tx of mappedTransactions) {
-          try {
-            await db.transacoes.put(tx)
-            result.created++
-          } catch (innerErr) {
-            result.skipped++
+        // Use upsert for upsert behavior — hash uniqueness handles dedup
+        const { error } = await supabase
+          .from('transacoes')
+          .upsert(mappedTransactions, { onConflict: 'id' })
+
+        if (error) {
+          // If batch upsert fails, try one by one
+          for (const tx of mappedTransactions) {
+            try {
+              const { error: singleError } = await supabase
+                .from('transacoes')
+                .upsert(tx, { onConflict: 'id' })
+              if (singleError) {
+                result.skipped++
+              } else {
+                result.created++
+              }
+            } catch {
+              result.skipped++
+            }
           }
+        } else {
+          result.created += mappedTransactions.length
         }
+      } catch (err) {
+        result.errors.push(
+          `Transactions sync error for account ${pluggyAccount.id}: ${err instanceof Error ? err.message : String(err)}`
+        )
       }
     }
 
@@ -340,33 +414,36 @@ export class PluggySyncService {
   }
 
   private async getOrCreateCreditCardAccount(
-    pluggyAccount: any,
+    pluggyAccount: PluggyAccount,
     instituicaoId: string,
     usuarioId: string
   ): Promise<string> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const pluggyId = `cc_${pluggyAccount.id}`
 
     // Check if we already have a virtual conta for this credit card
-    const existing = await db.contas
-      .filter((c) => c.pluggy_id === `cc_${pluggyAccount.id}`)
-      .first()
+    const { data: existing } = await supabase
+      .from('contas')
+      .select('id')
+      .eq('pluggy_id', pluggyId)
+      .maybeSingle()
 
     if (existing) return existing.id
 
     const id = `conta_cc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
-    await db.contas.add({
+    await supabase.from('contas').insert({
       id,
       instituicao_id: instituicaoId,
       nome: `Fatura ${pluggyAccount.name || 'Cartao'}`,
       tipo: 'corrente',
       saldo_referencia: 0,
-      data_referencia: new Date(),
+      data_referencia: new Date().toISOString(),
       saldo_atual: 0,
       ativa: true,
-      pluggy_id: `cc_${pluggyAccount.id}`,
+      pluggy_id: pluggyId,
       usuario_id: usuarioId,
-      created_at: new Date(),
-      updated_at: new Date(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
 
     return id
@@ -377,47 +454,57 @@ export class PluggySyncService {
    * Fatura saldo = sum of despesas - sum of receitas (payments).
    * Stored as negative value (debt) so it doesn't inflate patrimônio.
    */
-  private async fixCreditCardAccountBalances(): Promise<number> {
-    const db = getDB()
-    const ccContas = await db.contas
-      .filter((c) => c.pluggy_id?.startsWith('cc_') === true)
-      .toArray()
+  private async fixCreditCardAccountBalances(usuarioId: string): Promise<number> {
+    const supabase = getSupabase()
+
+    const { data: ccContas } = await supabase
+      .from('contas')
+      .select('id, pluggy_id')
+      .eq('usuario_id', usuarioId)
+      .like('pluggy_id', 'cc_%')
+
+    if (!ccContas || ccContas.length === 0) return 0
 
     let fixed = 0
-    for (const conta of ccContas) {
-      const transactions = await db.transacoes
-        .where('conta_id')
-        .equals(conta.id)
-        .toArray()
 
+    for (const conta of ccContas as { id: string; pluggy_id: string }[]) {
       // Current month transactions only
       const now = new Date()
-      const currentMonth = now.getMonth()
-      const currentYear = now.getFullYear()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
 
-      const monthTx = transactions.filter((t) => {
-        const d = t.data instanceof Date ? t.data : new Date(t.data)
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear
-      })
+      const { data: transactions } = await supabase
+        .from('transacoes')
+        .select('tipo, valor')
+        .eq('conta_id', conta.id)
+        .gte('data', monthStart.toISOString())
+        .lte('data', monthEnd.toISOString())
 
-      const despesas = monthTx
-        .filter((t) => t.tipo === 'despesa')
-        .reduce((sum, t) => sum + (Number(t.valor) || 0), 0)
+      if (!transactions) continue
 
-      const receitas = monthTx
-        .filter((t) => t.tipo === 'receita')
-        .reduce((sum, t) => sum + (Number(t.valor) || 0), 0)
+      const despesas = transactions
+        .filter((t: { tipo: string; valor: number }) => t.tipo === 'despesa')
+        .reduce((sum: number, t: { valor: number }) => sum + (Number(t.valor) || 0), 0)
+
+      const receitas = transactions
+        .filter((t: { tipo: string; valor: number }) => t.tipo === 'receita')
+        .reduce((sum: number, t: { valor: number }) => sum + (Number(t.valor) || 0), 0)
 
       // Fatura value as negative (debt owed)
       const faturaValue = -(despesas - receitas)
 
-      await db.contas.update(conta.id, {
-        saldo_atual: faturaValue,
-        saldo_referencia: faturaValue,
-        updated_at: new Date(),
-      })
+      await supabase
+        .from('contas')
+        .update({
+          saldo_atual: faturaValue,
+          saldo_referencia: faturaValue,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', conta.id)
+
       fixed++
     }
+
     return fixed
   }
 
@@ -425,53 +512,78 @@ export class PluggySyncService {
   // Credit Cards
   // --------------------------------------------------------------------------
 
-  private async syncCreditCards(accounts: any[], usuarioId: string): Promise<SyncResult> {
+  private async syncCreditCards(accounts: PluggyAccount[], usuarioId: string): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, errors: [] }
-    const db = getDB()
+    const supabase = getSupabase()
 
     for (const pluggyAccount of accounts) {
       if (!isCreditCardAccount(pluggyAccount)) continue
 
       try {
-        // Find institution
-        const conta = await db.contas
-          .filter((c) => c.pluggy_id === pluggyAccount.id || c.pluggy_id === `cc_${pluggyAccount.id}`)
-          .first()
+        // Find institution via linked conta
+        const safePluggyId = sanitizeExternalId(pluggyAccount.id)
+        const { data: conta } = await supabase
+          .from('contas')
+          .select('instituicao_id')
+          .or(`pluggy_id.eq.${safePluggyId},pluggy_id.eq.cc_${safePluggyId}`)
+          .maybeSingle()
 
-        const instituicao = conta
-          ? await db.instituicoes.get(conta.instituicao_id)
-          : await db.instituicoes.toCollection().first()
+        let instituicaoId: string | undefined = conta?.instituicao_id
 
-        if (!instituicao) {
+        if (!instituicaoId) {
+          const { data: firstInst } = await supabase
+            .from('instituicoes')
+            .select('id')
+            .limit(1)
+            .maybeSingle()
+          instituicaoId = firstInst?.id
+        }
+
+        if (!instituicaoId) {
           result.errors.push(`No institution found for credit card ${pluggyAccount.name}`)
           continue
         }
 
         // Check if card already exists by pluggy_id
-        const existingCard = await db.cartoes_config
-          .filter((c) => c.pluggy_id === pluggyAccount.id)
-          .first()
+        const { data: existingCard } = await supabase
+          .from('cartoes_config')
+          .select('id')
+          .eq('pluggy_id', pluggyAccount.id)
+          .maybeSingle()
 
-        const mapped = mapPluggyAccountToCartao(pluggyAccount, instituicao.id, usuarioId)
+        const mapped = mapPluggyAccountToCartao(pluggyAccount, instituicaoId, usuarioId)
         if (!mapped) continue
 
         if (existingCard) {
-          await db.cartoes_config.update(existingCard.id, {
-            ...mapped,
-            updated_at: new Date(),
-          })
-          result.updated++
+          const { error } = await supabase
+            .from('cartoes_config')
+            .update({
+              ...mapped,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingCard.id)
+          if (error) {
+            result.errors.push(`Credit card update ${pluggyAccount.name}: ${error.message}`)
+          } else {
+            result.updated++
+          }
         } else {
-          await db.cartoes_config.add({
+          const { error } = await supabase.from('cartoes_config').insert({
             ...mapped,
             id: `cartao_pluggy_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            created_at: new Date(),
-            updated_at: new Date(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           })
-          result.created++
+          if (error) {
+            result.errors.push(`Credit card insert ${pluggyAccount.name}: ${error.message}`)
+          } else {
+            result.created++
+          }
         }
       } catch (err) {
-        result.errors.push(`Credit card ${pluggyAccount.name}: ${err instanceof Error ? err.message : String(err)}`)
+        result.errors.push(
+          `Credit card ${pluggyAccount.name}: ${err instanceof Error ? err.message : String(err)}`
+        )
       }
     }
 
@@ -482,16 +594,22 @@ export class PluggySyncService {
   // Investments
   // --------------------------------------------------------------------------
 
-  private async syncInvestments(investments: any[], item: any, usuarioId: string): Promise<SyncResult> {
+  private async syncInvestments(
+    investments: PluggyInvestment[],
+    item: PluggyItem,
+    usuarioId: string
+  ): Promise<SyncResult> {
     const result: SyncResult = { created: 0, updated: 0, skipped: 0, errors: [] }
-    const db = getDB()
+    const supabase = getSupabase()
 
     if (!investments || investments.length === 0) return result
 
     const connectorName = item.connector?.name || 'Instituicao'
-    const instituicao = await db.instituicoes
-      .filter((i) => i.nome.toLowerCase() === connectorName.toLowerCase())
-      .first()
+    const { data: instituicao } = await supabase
+      .from('instituicoes')
+      .select('id')
+      .ilike('nome', escapeLikePattern(connectorName))
+      .maybeSingle()
 
     if (!instituicao) {
       result.errors.push('Institution not found for investments')
@@ -500,29 +618,44 @@ export class PluggySyncService {
 
     for (const pluggyInv of investments) {
       try {
-        const existing = await db.investimentos
-          .filter((i) => i.pluggy_id === pluggyInv.id)
-          .first()
+        const { data: existing } = await supabase
+          .from('investimentos')
+          .select('id')
+          .eq('pluggy_id', pluggyInv.id)
+          .maybeSingle()
 
         const mapped = mapPluggyInvestmentToInvestimento(pluggyInv, instituicao.id, usuarioId)
 
         if (existing) {
-          await db.investimentos.update(existing.id, {
-            ...mapped,
-            updated_at: new Date(),
-          })
-          result.updated++
+          const { error } = await supabase
+            .from('investimentos')
+            .update({
+              ...mapped,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id)
+          if (error) {
+            result.errors.push(`Investment update ${pluggyInv.name}: ${error.message}`)
+          } else {
+            result.updated++
+          }
         } else {
-          await db.investimentos.add({
+          const { error } = await supabase.from('investimentos').insert({
             ...mapped,
             id: `inv_pluggy_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            created_at: new Date(),
-            updated_at: new Date(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           })
-          result.created++
+          if (error) {
+            result.errors.push(`Investment insert ${pluggyInv.name}: ${error.message}`)
+          } else {
+            result.created++
+          }
         }
       } catch (err) {
-        result.errors.push(`Investment ${pluggyInv.name}: ${err instanceof Error ? err.message : String(err)}`)
+        result.errors.push(
+          `Investment ${pluggyInv.name}: ${err instanceof Error ? err.message : String(err)}`
+        )
       }
     }
 
@@ -533,21 +666,29 @@ export class PluggySyncService {
   // Post-Sync: Type Reclassification
   // --------------------------------------------------------------------------
 
-  private async reclassifyTransactionTypes(): Promise<number> {
-    const db = getDB()
+  private async reclassifyTransactionTypes(usuarioId: string): Promise<number> {
+    const supabase = getSupabase()
     let count = 0
 
-    const pluggyTransactions = await db.transacoes
-      .filter((t) => t.origem_arquivo === 'pluggy' && t.tipo !== 'transferencia')
-      .toArray()
+    const { data: pluggyTransactions } = await supabase
+      .from('transacoes')
+      .select('id, descricao, tipo')
+      .eq('usuario_id', usuarioId)
+      .eq('origem_arquivo', 'pluggy')
+      .neq('tipo', 'transferencia')
 
-    for (const tx of pluggyTransactions) {
+    if (!pluggyTransactions) return 0
+
+    for (const tx of pluggyTransactions as { id: string; descricao: string; tipo: string }[]) {
       const newType = matchTypeReclassRule(tx.descricao)
       if (newType && newType !== tx.tipo) {
-        await db.transacoes.update(tx.id, {
-          tipo: newType,
-          updated_at: new Date(),
-        })
+        await supabase
+          .from('transacoes')
+          .update({
+            tipo: newType,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', tx.id)
         count++
       }
     }
@@ -559,28 +700,39 @@ export class PluggySyncService {
   // Post-Sync: Classification Rules
   // --------------------------------------------------------------------------
 
-  private async applyClassificationRules(): Promise<number> {
-    const db = getDB()
+  private async applyClassificationRules(usuarioId: string): Promise<number> {
+    const supabase = getSupabase()
     let count = 0
 
-    const uncategorized = await db.transacoes
-      .filter((t) => !t.categoria_id && t.tipo !== 'transferencia')
-      .toArray()
+    // Fetch uncategorized non-transfer transactions
+    const { data: uncategorized } = await supabase
+      .from('transacoes')
+      .select('id, descricao')
+      .eq('usuario_id', usuarioId)
+      .is('categoria_id', null)
+      .neq('tipo', 'transferencia')
 
-    if (uncategorized.length === 0) return 0
+    if (!uncategorized || uncategorized.length === 0) return 0
 
-    const regras = await db.regras_classificacao
-      .filter((r) => r.ativa)
-      .toArray()
+    // Fetch active rules
+    const { data: regras } = await supabase
+      .from('regras_classificacao')
+      .select('padrao, tipo_regra, categoria_id, prioridade')
+      .eq('usuario_id', usuarioId)
+      .eq('ativa', true)
+      .order('prioridade', { ascending: true })
 
-    if (regras.length === 0) return 0
+    if (!regras || regras.length === 0) return 0
 
-    regras.sort((a, b) => a.prioridade - b.prioridade)
-
-    for (const tx of uncategorized) {
+    for (const tx of uncategorized as { id: string; descricao: string }[]) {
       const descUpper = tx.descricao.toUpperCase()
 
-      for (const regra of regras) {
+      for (const regra of regras as {
+        padrao: string
+        tipo_regra: string
+        categoria_id: string
+        prioridade: number
+      }[]) {
         const padraoUpper = regra.padrao.toUpperCase()
         let isMatch = false
 
@@ -595,18 +747,24 @@ export class PluggySyncService {
             isMatch = descUpper.endsWith(padraoUpper)
             break
           case 'regex':
-            try { isMatch = new RegExp(regra.padrao, 'i').test(tx.descricao) }
-            catch { isMatch = false }
+            try {
+              isMatch = new RegExp(regra.padrao, 'i').test(tx.descricao)
+            } catch {
+              isMatch = false
+            }
             break
         }
 
         if (isMatch) {
-          await db.transacoes.update(tx.id, {
-            categoria_id: regra.categoria_id,
-            classificacao_origem: 'regra',
-            classificacao_confirmada: false,
-            updated_at: new Date(),
-          })
+          await supabase
+            .from('transacoes')
+            .update({
+              categoria_id: regra.categoria_id,
+              classificacao_origem: 'regra',
+              classificacao_confirmada: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', tx.id)
           count++
           break
         }
@@ -658,7 +816,9 @@ export class PluggySyncService {
     }
   }
 
-  private saveSyncMeta(meta: Partial<{ lastSync: Date; itemId: string; lastError: string | null }>) {
+  private saveSyncMeta(
+    meta: Partial<{ lastSync: Date; itemId: string; lastError: string | null }>
+  ) {
     if (typeof window === 'undefined') return
     try {
       const existing = JSON.parse(localStorage.getItem(SYNC_META_KEY) || '{}')

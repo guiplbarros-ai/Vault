@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import { INSTITUICOES_PADRAO } from '@/lib/db/seed-instituicoes'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -19,23 +19,27 @@ export default function UpdateBankLogosPage() {
     setResult('')
 
     try {
-      const db = getDB()
+      const supabase = getSupabaseBrowserClient()
 
       // Busca todas as instituições
-      const instituicoes = await db.instituicoes.toArray()
+      const { data: instituicoes, error } = await supabase
+        .from('instituicoes')
+        .select('id, codigo')
+
+      if (error) throw error
 
       let updated = 0
 
-      for (const inst of instituicoes) {
+      for (const inst of instituicoes ?? []) {
         // Encontra o padrão correspondente pelo código
         const padrao = INSTITUICOES_PADRAO.find((p) => p.codigo === inst.codigo)
 
         if (padrao) {
           // Atualiza a logo_url
-          await db.instituicoes.update(inst.id, {
-            logo_url: padrao.logo_url,
-            updated_at: new Date(),
-          })
+          await supabase
+            .from('instituicoes')
+            .update({ logo_url: padrao.logo_url, updated_at: new Date().toISOString() })
+            .eq('id', inst.id)
           updated++
         }
       }
@@ -66,13 +70,13 @@ export default function UpdateBankLogosPage() {
     setResult('')
 
     try {
-      const db = getDB()
+      const supabase = getSupabaseBrowserClient()
 
       // Apaga todas as instituições
-      await db.instituicoes.clear()
+      await supabase.from('instituicoes').delete().neq('id', '')
 
       // Recria com os dados atualizados
-      const now = new Date()
+      const now = new Date().toISOString()
       const instituicoes = INSTITUICOES_PADRAO.map((inst, index) => ({
         ...inst,
         id: `inst_${Date.now()}_${index}`,
@@ -80,7 +84,7 @@ export default function UpdateBankLogosPage() {
         updated_at: now,
       }))
 
-      await db.instituicoes.bulkAdd(instituicoes)
+      await supabase.from('instituicoes').insert(instituicoes)
 
       setResult(
         `✅ ${instituicoes.length} instituições recriadas com sucesso!\n\n⚠️ IMPORTANTE: Você precisa editar suas contas existentes e re-selecionar a instituição!`
@@ -110,34 +114,48 @@ export default function UpdateBankLogosPage() {
     setResult('')
 
     try {
-      const db = getDB()
+      const supabase = getSupabaseBrowserClient()
 
       // Busca todas as contas
-      const contas = await db.contas.toArray()
+      const { data: contas, error: contasError } = await supabase
+        .from('contas')
+        .select('id, instituicao_id')
+
+      if (contasError) throw contasError
 
       // Busca todas as instituições
-      const instituicoes = await db.instituicoes.toArray()
+      const { data: instituicoes, error: instError } = await supabase
+        .from('instituicoes')
+        .select('id, codigo')
+
+      if (instError) throw instError
 
       let fixed = 0
 
-      for (const conta of contas) {
+      for (const conta of contas ?? []) {
         // Tenta encontrar instituição antiga pelo ID ou agência
         const oldInstId = conta.instituicao_id
 
         // Se o ID começa com "inst_", tenta buscar instituição pelo código no nome da agência
         if (oldInstId?.startsWith('inst_')) {
           // Pega as instituições antigas
-          const oldInst = await db.instituicoes.get(oldInstId)
+          const { data: oldInstData } = await supabase
+            .from('instituicoes')
+            .select('id, codigo')
+            .eq('id', oldInstId)
+            .maybeSingle()
 
-          if (oldInst) {
+          if (oldInstData) {
             // Busca nova instituição pelo mesmo código
-            const newInst = instituicoes.find((i) => i.codigo === oldInst.codigo)
+            const newInst = (instituicoes ?? []).find(
+              (i: any) => i.codigo === oldInstData.codigo && i.id !== oldInstId
+            )
 
-            if (newInst && newInst.id !== oldInstId) {
-              await db.contas.update(conta.id, {
-                instituicao_id: newInst.id,
-                updated_at: new Date(),
-              })
+            if (newInst) {
+              await supabase
+                .from('contas')
+                .update({ instituicao_id: newInst.id, updated_at: new Date().toISOString() })
+                .eq('id', conta.id)
               fixed++
             }
           }

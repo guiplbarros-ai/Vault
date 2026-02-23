@@ -6,7 +6,7 @@
  */
 
 import type { RegraClassificacao, TipoRegra } from '../types'
-import { getDB } from './client'
+import { getSupabaseBrowserClient } from './supabase'
 
 export interface RegraSeed {
   nome: string
@@ -172,37 +172,43 @@ export async function seedCommonRules(): Promise<{
   skipped: number
   errors: string[]
 }> {
-  const db = getDB()
-  const now = new Date()
+  const supabase = getSupabaseBrowserClient()
+  const now = new Date().toISOString()
 
   let inserted = 0
   let skipped = 0
   const errors: string[] = []
 
-  console.log('🌱 Iniciando seed de regras comuns...')
+  console.log('Iniciando seed de regras comuns...')
 
   for (const regraSeed of REGRAS_COMUNS) {
     try {
       // Busca categoria pelo nome
-      const categoria = await db.categorias
-        .filter((c) => c.nome.toLowerCase() === regraSeed.categoria_nome.toLowerCase())
-        .first()
+      const { data: categorias } = await supabase
+        .from('categorias')
+        .select('id, nome')
+        .ilike('nome', regraSeed.categoria_nome)
+        .limit(1)
+
+      const categoria = categorias?.[0]
 
       if (!categoria) {
         errors.push(
-          `Categoria não encontrada: ${regraSeed.categoria_nome} (regra: ${regraSeed.nome})`
+          `Categoria nao encontrada: ${regraSeed.categoria_nome} (regra: ${regraSeed.nome})`
         )
         skipped++
         continue
       }
 
-      // Verifica se regra já existe (pelo nome)
-      const existingRegra = await db.regras_classificacao
-        .filter((r) => r.nome.toLowerCase() === regraSeed.nome.toLowerCase())
-        .first()
+      // Verifica se regra ja existe (pelo nome)
+      const { data: existingRegras } = await supabase
+        .from('regras_classificacao')
+        .select('id')
+        .ilike('nome', regraSeed.nome)
+        .limit(1)
 
-      if (existingRegra) {
-        console.log(`  ⏭️  Regra já existe: ${regraSeed.nome}`)
+      if (existingRegras && existingRegras.length > 0) {
+        console.log(`  Regra ja existe: ${regraSeed.nome}`)
         skipped++
         continue
       }
@@ -221,25 +227,24 @@ export async function seedCommonRules(): Promise<{
         ultima_aplicacao: undefined,
         total_confirmacoes: 0,
         total_rejeicoes: 0,
-        created_at: now,
-        updated_at: now,
+        created_at: now as unknown as Date,
+        updated_at: now as unknown as Date,
       }
 
-      try {
-        await db.regras_classificacao.add(regra)
-        console.log(`  ✅ Regra criada: ${regraSeed.nome} → ${categoria.nome}`)
-      } catch (error: any) {
-        if (error?.name !== 'ConstraintError') {
-          throw error
+      const { error: insertError } = await supabase.from('regras_classificacao').insert(regra)
+      if (insertError) {
+        if (insertError.code !== '23505') {
+          throw insertError
         }
-        console.log(`  ⚠️ Regra ${regraSeed.nome} já existe, pulando...`)
+        console.log(`  Regra ${regraSeed.nome} ja existe, pulando...`)
         continue
       }
+      console.log(`  Regra criada: ${regraSeed.nome} -> ${categoria.nome}`)
       inserted++
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro desconhecido'
       errors.push(`${regraSeed.nome}: ${message}`)
-      console.error(`  ❌ Erro ao criar regra ${regraSeed.nome}:`, error)
+      console.error(`  Erro ao criar regra ${regraSeed.nome}:`, error)
     }
   }
 
@@ -260,18 +265,24 @@ export async function seedCommonRules(): Promise<{
  * Remove todas as regras de seed (útil para reset)
  */
 export async function clearCommonRules(): Promise<number> {
-  const db = getDB()
+  const supabase = getSupabaseBrowserClient()
 
-  const nomesSeed = REGRAS_COMUNS.map((r) => r.nome.toLowerCase())
+  const nomesSeed = REGRAS_COMUNS.map((r) => r.nome)
 
-  const regrasParaRemover = await db.regras_classificacao
-    .filter((r) => nomesSeed.includes(r.nome.toLowerCase()))
-    .toArray()
+  const { data: regrasParaRemover } = await supabase
+    .from('regras_classificacao')
+    .select('id')
+    .in('nome', nomesSeed)
 
-  for (const regra of regrasParaRemover) {
-    await db.regras_classificacao.delete(regra.id)
+  const count = regrasParaRemover?.length ?? 0
+
+  if (count > 0) {
+    await supabase
+      .from('regras_classificacao')
+      .delete()
+      .in('nome', nomesSeed)
   }
 
-  console.log(`🗑️  Removidas ${regrasParaRemover.length} regras de seed`)
-  return regrasParaRemover.length
+  console.log(`Removidas ${count} regras de seed`)
+  return count
 }

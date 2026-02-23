@@ -1,90 +1,89 @@
 import type { Usuario } from '../types'
-import { getDB } from './client'
+import { getSupabaseBrowserClient } from './supabase'
 
-// Hash de senha padrão: "123456" (apenas para migração/compatibilidade)
+// Hash de senha padrao: "123456" (apenas para migracao/compatibilidade)
 const DEFAULT_PASSWORD_HASH = '$2a$10$YQ3p5kZ8qZ7p5kZ8qZ7p5.YQ3p5kZ8qZ7p5kZ8qZ7p5kZ8qZ7p5kZ' // bcrypt('123456')
 
 export const USUARIOS_PADRAO: Omit<Usuario, 'created_at' | 'updated_at'>[] = [
   {
     id: 'usuario-producao',
-    nome: '📊 Produção',
+    nome: 'Producao',
     email: 'producao@cortexcash.local',
-    senha_hash: DEFAULT_PASSWORD_HASH, // Senha temporária: "123456"
+    senha_hash: DEFAULT_PASSWORD_HASH,
     role: 'admin',
-    ativo: false, // Desativado - usuário deve criar conta real
+    ativo: false,
   },
   {
     id: 'usuario-teste',
-    nome: '🧪 Teste',
+    nome: 'Teste',
     email: 'teste@cortexcash.local',
-    senha_hash: DEFAULT_PASSWORD_HASH, // Senha temporária: "123456"
+    senha_hash: DEFAULT_PASSWORD_HASH,
     role: 'user',
-    ativo: false, // Desativado - usuário deve criar conta real
+    ativo: false,
   },
 ]
 
 /**
- * Verifica se já existem usuários no banco
+ * Verifica se ja existem usuarios no banco
  */
 export async function hasUsuarios(): Promise<boolean> {
-  const db = getDB()
-  const count = await db.usuarios.count()
-  return count > 0
+  const supabase = getSupabaseBrowserClient()
+  const { count } = await supabase.from('usuarios').select('*', { count: 'exact', head: true })
+  return (count ?? 0) > 0
 }
 
 /**
- * Popula o banco com usuários padrão
+ * Popula o banco com usuarios padrao
  */
 export async function seedUsuarios(): Promise<void> {
-  const db = getDB()
+  const supabase = getSupabaseBrowserClient()
   const alreadyHas = await hasUsuarios()
 
   if (alreadyHas) {
-    console.log('✓ Usuários já existem, pulando seed...')
+    console.log('Usuarios ja existem, pulando seed...')
     return
   }
 
-  const now = new Date()
+  const now = new Date().toISOString()
 
-  const usuarios: Usuario[] = USUARIOS_PADRAO.map((user) => ({
+  const usuarios = USUARIOS_PADRAO.map((user) => ({
     ...user,
     created_at: now,
     updated_at: now,
   }))
 
-  try {
-    await db.usuarios.bulkAdd(usuarios)
-    console.log(`✓ ${usuarios.length} usuários padrão criados com sucesso!`)
-    console.log('  - 📊 Produção: Dados reais')
-    console.log('  - 🧪 Teste: Dados de exemplo')
-
-    // Define o usuário Produção como ativo por padrão
-    if (typeof window !== 'undefined') {
-      const currentUserId = localStorage.getItem('cortex-cash-current-user-id')
-      if (!currentUserId) {
-        localStorage.setItem('cortex-cash-current-user-id', 'usuario-producao')
-        console.log('✓ Usuário ativo definido como Produção')
-      }
-    }
-  } catch (error: any) {
-    if (error?.name !== 'ConstraintError') {
+  const { error } = await supabase.from('usuarios').insert(usuarios)
+  if (error) {
+    if (error.code !== '23505') {
       throw error
     }
-    console.log('⚠️ Alguns usuários já existem, pulando duplicatas...')
+    console.log('Alguns usuarios ja existem, pulando duplicatas...')
+    return
+  }
+
+  console.log(`${usuarios.length} usuarios padrao criados com sucesso!`)
+
+  // Define o usuario Producao como ativo por padrao
+  if (typeof window !== 'undefined') {
+    const currentUserId = localStorage.getItem('cortex-cash-current-user-id')
+    if (!currentUserId) {
+      localStorage.setItem('cortex-cash-current-user-id', 'usuario-producao')
+      console.log('Usuario ativo definido como Producao')
+    }
   }
 }
 
 /**
- * Retorna o ID do usuário atualmente ativo
- * IMPORTANTE: Agora usa authService.getCurrentUserId() para suportar autenticação real
- * Fallback para Produção se não houver nenhum definido
+ * Retorna o ID do usuario atualmente ativo
+ * IMPORTANTE: Agora usa authService.getCurrentUserId() para suportar autenticacao real
+ * Fallback para Producao se nao houver nenhum definido
  */
 export function getCurrentUserId(): string {
   if (typeof window === 'undefined') {
     return 'usuario-producao' // Default no SSR
   }
 
-  // Tenta pegar do authService primeiro (novo sistema com autenticação)
+  // Tenta pegar do authService primeiro (novo sistema com autenticacao)
   try {
     const { authService } = require('../services/auth.service')
     const userId = authService.getCurrentUserId()
@@ -92,27 +91,27 @@ export function getCurrentUserId(): string {
       return userId
     }
   } catch (error) {
-    // authService pode não estar disponível ainda (durante inicialização)
+    // authService pode nao estar disponivel ainda (durante inicializacao)
     // Continua para fallback
   }
 
-  // Fallback: old system (compatibilidade com usuários sem login)
+  // Fallback: old system (compatibilidade com usuarios sem login)
   const userId = localStorage.getItem('cortex-cash-current-user-id')
   return userId || 'usuario-producao'
 }
 
 /**
- * Define o usuário ativo
+ * Define o usuario ativo
  */
 export function setCurrentUserId(userId: string): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem('cortex-cash-current-user-id', userId)
-    console.log(`✓ Usuário ativo alterado para: ${userId}`)
+    console.log(`Usuario ativo alterado para: ${userId}`)
   }
 }
 
 /**
- * Verifica se está no modo teste
+ * Verifica se esta no modo teste
  */
 export function isTestMode(): boolean {
   return getCurrentUserId() === 'usuario-teste'

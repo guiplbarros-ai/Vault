@@ -80,12 +80,6 @@ export function PerformanceDashboard() {
     )
     if (!confirmed) return
     try {
-      // Delete Dexie/IndexedDB database
-      if ('indexedDB' in window) {
-        try {
-          await indexedDB.deleteDatabase('cortex-cash')
-        } catch {}
-      }
       // Clear localStorage
       try {
         localStorage.clear()

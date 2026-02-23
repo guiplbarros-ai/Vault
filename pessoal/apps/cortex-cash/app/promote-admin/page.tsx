@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import { AlertCircle, CheckCircle2, Shield } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -27,9 +27,9 @@ export default function PromoteAdminPage() {
 
   async function loadUsers() {
     try {
-      const db = getDB()
-      const allUsers = await db.usuarios.toArray()
-      setUsers(allUsers)
+      const supabase = getSupabaseBrowserClient()
+      const { data: allUsers } = await supabase.from('usuarios').select('*')
+      setUsers(allUsers || [])
     } catch (error) {
       console.error('Erro ao carregar usuários:', error)
     }
@@ -45,10 +45,15 @@ export default function PromoteAdminPage() {
     setMessage(null)
 
     try {
-      const db = getDB()
+      const supabase = getSupabaseBrowserClient()
 
       // Buscar usuário por email
-      const usuario = await db.usuarios.where('email').equalsIgnoreCase(email.trim()).first()
+      const { data: usuarios } = await supabase
+        .from('usuarios')
+        .select('*')
+        .ilike('email', email.trim())
+        .limit(1)
+      const usuario = usuarios?.[0]
 
       if (!usuario) {
         setMessage({ type: 'error', text: `Usuário com email ${email} não encontrado` })
@@ -63,10 +68,10 @@ export default function PromoteAdminPage() {
       }
 
       // Promover a admin
-      await db.usuarios.update(usuario.id, {
-        role: 'admin',
-        updated_at: new Date(),
-      })
+      await supabase
+        .from('usuarios')
+        .update({ role: 'admin', updated_at: new Date().toISOString() })
+        .eq('id', usuario.id)
 
       setMessage({
         type: 'success',
@@ -88,8 +93,13 @@ export default function PromoteAdminPage() {
     setMessage(null)
 
     try {
-      const db = getDB()
-      const usuario = await db.usuarios.get(userId)
+      const supabase = getSupabaseBrowserClient()
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      const usuario = usuarioData
 
       if (!usuario) {
         setMessage({ type: 'error', text: 'Usuário não encontrado' })
@@ -97,10 +107,10 @@ export default function PromoteAdminPage() {
         return
       }
 
-      await db.usuarios.update(userId, {
-        role: 'user',
-        updated_at: new Date(),
-      })
+      await supabase
+        .from('usuarios')
+        .update({ role: 'user', updated_at: new Date().toISOString() })
+        .eq('id', userId)
 
       setMessage({
         type: 'success',

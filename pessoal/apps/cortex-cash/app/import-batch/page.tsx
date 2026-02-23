@@ -11,7 +11,7 @@ import { DashboardLayout } from '@/components/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import { generateTransactionHash } from '@/lib/import/dedupe'
 import { logger } from '@/lib/utils/logger'
 
@@ -85,19 +85,21 @@ export default function ImportBatchPage() {
     }
 
     try {
-      const db = getDB()
+      const supabase = getSupabaseBrowserClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      const userId = user?.id ?? 'usuario-producao'
 
       // Buscar/criar instituições
-      const instituicoes = await db.instituicoes.toArray()
-      const instituicoesMap = new Map(instituicoes.map((i) => [i.nome, i.id]))
+      const { data: instData } = await supabase.from('instituicoes').select('id, nome')
+      const instituicoesMap = new Map<string, string>((instData ?? []).map((i: any) => [i.nome, i.id]))
 
       // Mapear contas existentes
-      const contasExistentes = await db.contas.toArray()
-      const contasMap = new Map(contasExistentes.map((c) => [c.nome, c.id]))
+      const { data: contasData } = await supabase.from('contas').select('id, nome')
+      const contasMap = new Map<string, string>((contasData ?? []).map((c: any) => [c.nome, c.id]))
 
       // Mapear cartões existentes
-      const cartoesExistentes = await db.cartoes_config.toArray()
-      const cartoesMap = new Map(cartoesExistentes.map((c) => [c.nome, c.id]))
+      const { data: cartoesData } = await supabase.from('cartoes_config').select('id, nome')
+      const cartoesMap = new Map<string, string>((cartoesData ?? []).map((c: any) => [c.nome, c.id]))
 
       const accountIds = Object.keys(data.accounts)
       let processed = 0
@@ -113,13 +115,13 @@ export default function ImportBatchPage() {
         let instituicaoId = instituicoesMap.get(account.instituicao)
         if (!instituicaoId) {
           instituicaoId = crypto.randomUUID()
-          await db.instituicoes.add({
+          await supabase.from('instituicoes').insert({
             id: instituicaoId,
             nome: account.instituicao,
             codigo: account.instituicao.toLowerCase().replace(/\s+/g, '-'),
             cor: '#3B82F6',
-            created_at: new Date(),
-            updated_at: new Date(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           })
           instituicoesMap.set(account.instituicao, instituicaoId)
         }
@@ -129,18 +131,18 @@ export default function ImportBatchPage() {
           contaId = contasMap.get(account.nome) ?? null
           if (!contaId) {
             contaId = crypto.randomUUID()
-            await db.contas.add({
+            await supabase.from('contas').insert({
               id: contaId,
               instituicao_id: instituicaoId,
               nome: account.nome,
               tipo: 'corrente',
               saldo_referencia: 0,
-              data_referencia: new Date(),
+              data_referencia: new Date().toISOString(),
               saldo_atual: 0,
               ativa: true,
-              usuario_id: 'usuario-producao',
-              created_at: new Date(),
-              updated_at: new Date(),
+              usuario_id: userId,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             })
             contasMap.set(account.nome, contaId)
             stats.contasCriadas++
@@ -150,7 +152,7 @@ export default function ImportBatchPage() {
           cartaoId = cartoesMap.get(account.nome) ?? null
           if (!cartaoId) {
             cartaoId = crypto.randomUUID()
-            await db.cartoes_config.add({
+            await supabase.from('cartoes_config').insert({
               id: cartaoId,
               instituicao_id: instituicaoId,
               nome: account.nome,
@@ -159,35 +161,33 @@ export default function ImportBatchPage() {
               dia_fechamento: 20,
               dia_vencimento: 10,
               ativo: true,
-              usuario_id: 'usuario-producao',
-              created_at: new Date(),
-              updated_at: new Date(),
+              usuario_id: userId,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             })
             cartoesMap.set(account.nome, cartaoId)
             stats.contasCriadas++
 
             // Também criar uma conta virtual para o cartão (para transações)
             contaId = crypto.randomUUID()
-            await db.contas.add({
+            await supabase.from('contas').insert({
               id: contaId,
               instituicao_id: instituicaoId,
               nome: `${account.nome} (Cartão)`,
-              tipo: 'corrente', // Usando 'corrente' pois TipoConta não tem 'cartao_credito'
+              tipo: 'corrente',
               saldo_referencia: 0,
-              data_referencia: new Date(),
+              data_referencia: new Date().toISOString(),
               saldo_atual: 0,
               ativa: true,
-              usuario_id: 'usuario-producao',
-              created_at: new Date(),
-              updated_at: new Date(),
+              usuario_id: userId,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             })
             contasMap.set(`${account.nome} (Cartão)`, contaId)
           } else {
             // Buscar conta associada ao cartão
-            const contaCartao = contasExistentes.find(
-              (c) => c.nome === `${account.nome} (Cartão)` || c.nome === account.nome
-            )
-            contaId = contaCartao?.id ?? null
+            const contaCartaoNome = `${account.nome} (Cartão)`
+            contaId = contasMap.get(contaCartaoNome) ?? contasMap.get(account.nome) ?? null
           }
         }
 
@@ -197,18 +197,24 @@ export default function ImportBatchPage() {
         }
 
         // Buscar hashes existentes para deduplicação
-        const transacoesExistentes = await db.transacoes.where('conta_id').equals(contaId).toArray()
-        const hashesExistentes = new Set(transacoesExistentes.filter((t) => t.hash).map((t) => t.hash!))
+        const { data: existingTxs } = await supabase
+          .from('transacoes')
+          .select('hash')
+          .eq('conta_id', contaId)
+          .not('hash', 'is', null)
 
-        // Importar transações
+        const hashesExistentes = new Set((existingTxs ?? []).map((t: any) => t.hash as string))
+
+        // Importar transações em lotes
+        const toInsert: any[] = []
         for (const tx of account.transacoes) {
           try {
-            const data = new Date(tx.data)
+            const txDate = new Date(tx.data)
             const valor = tx.tipo === 'despesa' ? -Math.abs(tx.valor) : Math.abs(tx.valor)
 
             // Gerar hash para deduplicação
             const hash = await generateTransactionHash(
-              { data, descricao: tx.descricao, valor: Math.abs(tx.valor) },
+              { data: txDate, descricao: tx.descricao, valor: Math.abs(tx.valor) },
               contaId
             )
 
@@ -218,31 +224,37 @@ export default function ImportBatchPage() {
               continue
             }
 
-            // Criar transação
-            await db.transacoes.add({
+            hashesExistentes.add(hash)
+            toInsert.push({
               id: crypto.randomUUID(),
               conta_id: contaId,
-              categoria_id: undefined,
-              data,
+              categoria_id: null,
+              data: txDate.toISOString(),
               descricao: tx.descricao,
               valor,
               tipo: tx.tipo,
               parcelado: !!tx.parcela,
-              parcela_numero: tx.parcela?.numero,
-              parcela_total: tx.parcela?.total,
+              parcela_numero: tx.parcela?.numero ?? null,
+              parcela_total: tx.parcela?.total ?? null,
               classificacao_confirmada: false,
-              classificacao_origem: undefined,
+              classificacao_origem: null,
               hash,
-              observacoes: tx.titular ? `Titular: ${tx.titular}` : undefined,
-              usuario_id: 'usuario-producao',
-              created_at: new Date(),
-              updated_at: new Date(),
+              observacoes: tx.titular ? `Titular: ${tx.titular}` : null,
+              usuario_id: userId,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             })
-
-            hashesExistentes.add(hash)
-            stats.transacoesImportadas++
           } catch (err) {
             stats.erros.push(`Erro na transação: ${tx.descricao} - ${err}`)
+          }
+        }
+
+        if (toInsert.length > 0) {
+          const { error: insertError } = await supabase.from('transacoes').insert(toInsert)
+          if (insertError) {
+            stats.erros.push(`Erro ao inserir transações de ${account.nome}: ${insertError.message}`)
+          } else {
+            stats.transacoesImportadas += toInsert.length
           }
         }
 

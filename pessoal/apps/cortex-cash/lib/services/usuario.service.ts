@@ -1,9 +1,9 @@
 /**
  * Serviço de Usuários
- * Gerenciamento de usuários e permissões
+ * Gerenciamento de usuários e permissões via Supabase profiles
  */
 
-import { getDB } from '../db/client'
+import { getSupabase } from '../db/supabase'
 import { DuplicateError, NotFoundError, ValidationError } from '../errors'
 import type { UserRole, Usuario } from '../types'
 
@@ -36,6 +36,28 @@ export interface UpdatePerfilDTO {
   tema_preferido?: string
 }
 
+function rowToUsuario(row: Record<string, unknown>): Usuario {
+  return {
+    id: row.id as string,
+    nome: (row.nome as string) || '',
+    email: (row.email as string) || '',
+    senha_hash: '',
+    role: (row.role as 'admin' | 'user') || 'user',
+    avatar_url: row.avatar_url as string | undefined,
+    telefone: row.telefone as string | undefined,
+    data_nascimento: row.data_nascimento ? new Date(row.data_nascimento as string) : undefined,
+    cpf: row.cpf as string | undefined,
+    biografia: row.biografia as string | undefined,
+    tema_preferido: row.tema_preferido as string | undefined,
+    moeda_preferida: row.moeda_preferida as string | undefined,
+    idioma_preferido: row.idioma_preferido as string | undefined,
+    ativo: row.ativo !== false,
+    ultimo_acesso: row.ultimo_acesso ? new Date(row.ultimo_acesso as string) : undefined,
+    created_at: row.created_at ? new Date(row.created_at as string) : new Date(),
+    updated_at: row.updated_at ? new Date(row.updated_at as string) : new Date(),
+  }
+}
+
 export class UsuarioService {
   /**
    * Lista todos os usuários
@@ -47,28 +69,33 @@ export class UsuarioService {
     offset?: number
   }): Promise<Usuario[]> {
     try {
-      const db = getDB()
+      const supabase = getSupabase()
       const { incluirInativos = false, role, limit, offset } = options || {}
 
-      let usuarios: Usuario[] = await db.usuarios.toArray()
+      let query = supabase.from('profiles').select('*').order('created_at', { ascending: true })
 
-      // Filtros
       if (!incluirInativos) {
-        usuarios = usuarios.filter((u) => u.ativo === true)
+        query = query.eq('ativo', true)
       }
+
       if (role) {
-        usuarios = usuarios.filter((u) => u.role === role)
+        query = query.eq('role', role)
       }
 
-      // Paginação
-      if (limit !== undefined || offset !== undefined) {
-        const start = offset || 0
-        const end = limit ? start + limit : undefined
-        usuarios = usuarios.slice(start, end)
+      if (limit !== undefined) {
+        query = query.limit(limit)
       }
 
-      return usuarios
-    } catch (error: any) {
+      if (offset !== undefined) {
+        query = query.range(offset, offset + (limit || 50) - 1)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      return (data || []).map(rowToUsuario)
+    } catch (error: unknown) {
       console.error('Erro ao listar usuários:', error)
       throw error
     }
@@ -79,10 +106,20 @@ export class UsuarioService {
    */
   async getUsuarioById(id: string): Promise<Usuario | null> {
     try {
-      const db = getDB()
-      const usuario = await db.usuarios.get(id)
-      return usuario || null
-    } catch (error: any) {
+      const supabase = getSupabase()
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') return null
+        throw error
+      }
+
+      return data ? rowToUsuario(data) : null
+    } catch (error: unknown) {
       console.error(`Erro ao buscar usuário ${id}:`, error)
       throw error
     }
@@ -93,56 +130,64 @@ export class UsuarioService {
    */
   async getUsuarioByEmail(email: string): Promise<Usuario | null> {
     try {
-      const db = getDB()
-      const usuario = await db.usuarios.where('email').equals(email).first()
-      return usuario || null
-    } catch (error: any) {
+      const supabase = getSupabase()
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle()
+
+      if (error) throw error
+
+      return data ? rowToUsuario(data) : null
+    } catch (error: unknown) {
       console.error(`Erro ao buscar usuário por email ${email}:`, error)
       throw error
     }
   }
 
   /**
-   * Cria novo usuário
+   * Cria novo usuário (apenas profile — auth user deve ser criado via authService.register)
    */
   async createUsuario(data: CreateUsuarioDTO): Promise<Usuario> {
     try {
-      const db = getDB()
-
-      // Validações
       if (!data.nome || !data.email) {
         throw new ValidationError('Nome e email são obrigatórios')
       }
 
-      // Email válido (regex simples)
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(data.email)) {
         throw new ValidationError('Email inválido')
       }
 
-      // Verifica se email já existe
       const existente = await this.getUsuarioByEmail(data.email)
       if (existente) {
         throw new DuplicateError(`Usuário com email ${data.email} já existe`)
       }
 
-      const novoUsuario: Usuario = {
-        id: crypto.randomUUID(),
-        nome: data.nome,
-        email: data.email,
-        senha_hash: '', // Senha será definida posteriormente
-        role: data.role || 'user',
-        avatar_url: data.avatar_url,
-        tema_preferido: data.tema_preferido || 'auto',
-        ativo: true,
-        created_at: new Date(),
-        updated_at: new Date(),
-      }
+      const supabase = getSupabase()
+      const now = new Date().toISOString()
 
-      await db.usuarios.add(novoUsuario)
+      const { data: inserted, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: crypto.randomUUID(),
+          nome: data.nome,
+          email: data.email.toLowerCase().trim(),
+          role: data.role || 'user',
+          avatar_url: data.avatar_url,
+          tema_preferido: data.tema_preferido || 'auto',
+          ativo: true,
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single()
 
-      return novoUsuario
-    } catch (error: any) {
+      if (error) throw error
+
+      return rowToUsuario(inserted)
+    } catch (error: unknown) {
       console.error('Erro ao criar usuário:', error)
       throw error
     }
@@ -153,15 +198,11 @@ export class UsuarioService {
    */
   async updateUsuario(id: string, data: UpdateUsuarioDTO): Promise<Usuario> {
     try {
-      const db = getDB()
-
-      // Verifica se usuário existe
       const usuario = await this.getUsuarioById(id)
       if (!usuario) {
         throw new NotFoundError(`Usuário ${id} não encontrado`)
       }
 
-      // Se está alterando email, verifica se novo email já existe
       if (data.email && data.email !== usuario.email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         if (!emailRegex.test(data.email)) {
@@ -174,16 +215,21 @@ export class UsuarioService {
         }
       }
 
-      const updateData = {
-        ...usuario,
-        ...data,
-        updated_at: new Date(),
-      }
+      const supabase = getSupabase()
+      const { data: updated, error } = await supabase
+        .from('profiles')
+        .update({
+          ...data,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single()
 
-      await db.usuarios.update(id, updateData)
+      if (error) throw error
 
-      return updateData
-    } catch (error: any) {
+      return rowToUsuario(updated)
+    } catch (error: unknown) {
       console.error(`Erro ao atualizar usuário ${id}:`, error)
       throw error
     }
@@ -194,17 +240,12 @@ export class UsuarioService {
    */
   async updatePerfil(id: string, data: UpdatePerfilDTO): Promise<Usuario> {
     try {
-      const db = getDB()
-
-      // Verifica se usuário existe
       const usuario = await this.getUsuarioById(id)
       if (!usuario) {
         throw new NotFoundError(`Usuário ${id} não encontrado`)
       }
 
-      // Validações específicas
       if (data.telefone) {
-        // Remove caracteres não numéricos
         const telefoneNumeros = data.telefone.replace(/\D/g, '')
         if (telefoneNumeros.length < 10 || telefoneNumeros.length > 11) {
           throw new ValidationError('Telefone inválido. Use formato: (XX) XXXXX-XXXX')
@@ -212,23 +253,28 @@ export class UsuarioService {
       }
 
       if (data.cpf) {
-        // Remove caracteres não numéricos
         const cpfNumeros = data.cpf.replace(/\D/g, '')
         if (cpfNumeros.length !== 11) {
           throw new ValidationError('CPF inválido. Use formato: XXX.XXX.XXX-XX')
         }
       }
 
-      const updateData = {
-        ...usuario,
-        ...data,
-        updated_at: new Date(),
-      }
+      const supabase = getSupabase()
+      const { data: updated, error } = await supabase
+        .from('profiles')
+        .update({
+          ...data,
+          data_nascimento: data.data_nascimento ? data.data_nascimento.toISOString() : undefined,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single()
 
-      await db.usuarios.update(id, updateData)
+      if (error) throw error
 
-      return updateData
-    } catch (error: any) {
+      return rowToUsuario(updated)
+    } catch (error: unknown) {
       console.error(`Erro ao atualizar perfil do usuário ${id}:`, error)
       throw error
     }
@@ -239,19 +285,19 @@ export class UsuarioService {
    */
   async deleteUsuario(id: string): Promise<void> {
     try {
-      const db = getDB()
       const usuario = await this.getUsuarioById(id)
       if (!usuario) {
         throw new NotFoundError(`Usuário ${id} não encontrado`)
       }
 
-      // Soft delete
-      await db.usuarios.update(id, {
-        ...usuario,
-        ativo: false,
-        updated_at: new Date(),
-      })
-    } catch (error: any) {
+      const supabase = getSupabase()
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ativo: false, updated_at: new Date().toISOString() })
+        .eq('id', id)
+
+      if (error) throw error
+    } catch (error: unknown) {
       console.error(`Erro ao deletar usuário ${id}:`, error)
       throw error
     }
@@ -262,18 +308,19 @@ export class UsuarioService {
    */
   async ativarUsuario(id: string): Promise<void> {
     try {
-      const db = getDB()
       const usuario = await this.getUsuarioById(id)
       if (!usuario) {
         throw new NotFoundError(`Usuário ${id} não encontrado`)
       }
 
-      await db.usuarios.update(id, {
-        ...usuario,
-        ativo: true,
-        updated_at: new Date(),
-      })
-    } catch (error: any) {
+      const supabase = getSupabase()
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ativo: true, updated_at: new Date().toISOString() })
+        .eq('id', id)
+
+      if (error) throw error
+    } catch (error: unknown) {
       console.error(`Erro ao ativar usuário ${id}:`, error)
       throw error
     }
@@ -284,18 +331,20 @@ export class UsuarioService {
    */
   async updateUltimoAcesso(id: string): Promise<void> {
     try {
-      const db = getDB()
-      const usuario = await this.getUsuarioById(id)
-      if (!usuario) return
+      const supabase = getSupabase()
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          ultimo_acesso: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
 
-      await db.usuarios.update(id, {
-        ...usuario,
-        ultimo_acesso: new Date(),
-        updated_at: new Date(),
-      })
-    } catch (error: any) {
+      if (error) {
+        console.error(`Erro ao atualizar último acesso do usuário ${id}:`, error)
+      }
+    } catch (error: unknown) {
       console.error(`Erro ao atualizar último acesso do usuário ${id}:`, error)
-      throw error
     }
   }
 
@@ -306,7 +355,7 @@ export class UsuarioService {
     try {
       const usuario = await this.getUsuarioById(id)
       return usuario?.role === 'admin' && usuario?.ativo === true
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`Erro ao verificar se usuário ${id} é admin:`, error)
       return false
     }
@@ -318,7 +367,7 @@ export class UsuarioService {
   async listAdmins(): Promise<Usuario[]> {
     try {
       return await this.listUsuarios({ role: 'admin', incluirInativos: false })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao listar admins:', error)
       throw error
     }
@@ -329,9 +378,23 @@ export class UsuarioService {
    */
   async countUsuarios(options?: { incluirInativos?: boolean; role?: UserRole }): Promise<number> {
     try {
-      const usuarios = await this.listUsuarios(options)
-      return usuarios.length
-    } catch (error: any) {
+      const supabase = getSupabase()
+      let query = supabase.from('profiles').select('*', { count: 'exact', head: true })
+
+      if (!options?.incluirInativos) {
+        query = query.eq('ativo', true)
+      }
+
+      if (options?.role) {
+        query = query.eq('role', options.role)
+      }
+
+      const { count, error } = await query
+
+      if (error) throw error
+
+      return count || 0
+    } catch (error: unknown) {
       console.error('Erro ao contar usuários:', error)
       return 0
     }
@@ -344,7 +407,7 @@ export class UsuarioService {
     try {
       const count = await this.countUsuarios({ role: 'admin', incluirInativos: false })
       return count > 0
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao verificar existência de admin:', error)
       return false
     }

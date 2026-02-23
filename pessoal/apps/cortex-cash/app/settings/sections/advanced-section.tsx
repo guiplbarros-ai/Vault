@@ -62,11 +62,11 @@ export function AdvancedSection() {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Database:</span>
-            <span className="font-medium">Dexie.js (IndexedDB)</span>
+            <span className="font-medium">Supabase (PostgreSQL)</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Storage:</span>
-            <span className="font-medium">Local (localStorage + IndexedDB)</span>
+            <span className="font-medium">Supabase Cloud</span>
           </div>
         </div>
       </SettingsCard>

@@ -1,5 +1,6 @@
 'use client'
 
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import { useEffect, useState } from 'react'
 
 export default function DiagnosticPage() {
@@ -11,111 +12,79 @@ export default function DiagnosticPage() {
 
   useEffect(() => {
     async function runDiagnostics() {
-      addLog('🧪 Iniciando diagnósticos...')
+      addLog('Iniciando diagnósticos...')
 
       // Teste 1: Window
-      addLog(`✅ Window existe: ${typeof window !== 'undefined'}`)
+      addLog(`Window existe: ${typeof window !== 'undefined'}`)
 
-      // Teste 2: IndexedDB
-      const hasIndexedDB = 'indexedDB' in window
-      addLog(`${hasIndexedDB ? '✅' : '❌'} IndexedDB disponível: ${hasIndexedDB}`)
-
-      if (!hasIndexedDB) {
-        addLog('❌ PROBLEMA CRÍTICO: IndexedDB não está disponível!')
-        return
-      }
-
-      // Teste 3: Listar bancos existentes
+      // Teste 2: Supabase client
       try {
-        const dbs = await indexedDB.databases()
-        addLog(`✅ Bancos existentes: ${JSON.stringify(dbs.map((d) => d.name))}`)
-      } catch (err) {
-        addLog(`⚠️ Erro ao listar bancos: ${err}`)
-      }
+        const supabase = getSupabaseBrowserClient()
+        addLog('Supabase client criado com sucesso')
 
-      // Teste 4: Deletar banco cortex-cash
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const req = indexedDB.deleteDatabase('cortex-cash')
-          req.onsuccess = () => {
-            addLog('✅ Banco cortex-cash deletado (se existia)')
-            resolve()
-          }
-          req.onerror = (e) => {
-            addLog(`❌ Erro ao deletar banco: ${e}`)
-            reject(e)
-          }
-          req.onblocked = () => {
-            addLog('⚠️ Deleção bloqueada - feche outras abas da aplicação')
-          }
-        })
-      } catch (err) {
-        addLog(`❌ Erro fatal ao deletar: ${err}`)
-      }
-
-      // Teste 5: Criar banco de teste
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const req = indexedDB.open('cortex-cash-diagnostic', 1)
-
-          req.onupgradeneeded = () => {
-            addLog('✅ OnUpgradeNeeded disparado')
-            const db = req.result
-            db.createObjectStore('test', { keyPath: 'id' })
-          }
-
-          req.onsuccess = () => {
-            addLog('✅ Banco de teste criado com sucesso!')
-            req.result.close()
-            resolve()
-          }
-
-          req.onerror = (e) => {
-            addLog(`❌ Erro ao criar banco: ${(e.target as any)?.error?.message || e}`)
-            reject(e)
-          }
-        })
-      } catch (err) {
-        addLog(`❌ Erro fatal ao criar banco: ${err}`)
-      }
-
-      // Teste 6: Importar e testar Dexie
-      try {
-        addLog('🔄 Importando Dexie...')
-        const Dexie = (await import('dexie')).default
-        addLog('✅ Dexie importado')
-
-        const testDB = new Dexie('cortex-cash-dexie-test')
-        testDB.version(1).stores({
-          test: 'id',
-        })
-
-        await testDB.open()
-        addLog('✅ Dexie funcionando! Banco criado.')
-
-        // Adicionar um item de teste
-        try {
-          await testDB.table('test').add({ id: 1, data: 'teste' })
-          addLog('✅ Item de teste adicionado')
-        } catch (err: any) {
-          if (err?.name === 'ConstraintError') {
-            addLog('⚠️ Item já existe (esperado em hot-reload)')
-          } else {
-            throw err
-          }
+        // Teste 3: Sessão de autenticação
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError) {
+          addLog(`ERRO ao verificar sessão: ${sessionError.message}`)
+        } else if (session) {
+          addLog(`Sessão ativa: user=${session.user.email}`)
+        } else {
+          addLog('Nenhuma sessão ativa (não autenticado)')
         }
 
-        // Ler item
-        const item = await testDB.table('test').get(1)
-        addLog(`✅ Item lido: ${JSON.stringify(item)}`)
+        // Teste 4: Conectividade com o banco
+        const { data: instData, error: instError } = await supabase
+          .from('instituicoes')
+          .select('*', { count: 'exact', head: true })
 
-        testDB.close()
+        if (instError) {
+          addLog(`ERRO ao consultar instituicoes: ${instError.message} (code: ${instError.code})`)
+        } else {
+          addLog(`Tabela instituicoes acessível`)
+        }
+
+        const { data: contasData, error: contasError } = await supabase
+          .from('contas')
+          .select('*', { count: 'exact', head: true })
+
+        if (contasError) {
+          addLog(`ERRO ao consultar contas: ${contasError.message} (code: ${contasError.code})`)
+        } else {
+          addLog(`Tabela contas acessível`)
+        }
+
+        const { data: txData, error: txError } = await supabase
+          .from('transacoes')
+          .select('*', { count: 'exact', head: true })
+
+        if (txError) {
+          addLog(`ERRO ao consultar transacoes: ${txError.message} (code: ${txError.code})`)
+        } else {
+          addLog(`Tabela transacoes acessível`)
+        }
+
+        const { data: catData, error: catError } = await supabase
+          .from('categorias')
+          .select('*', { count: 'exact', head: true })
+
+        if (catError) {
+          addLog(`ERRO ao consultar categorias: ${catError.message} (code: ${catError.code})`)
+        } else {
+          addLog(`Tabela categorias acessível`)
+        }
+
+        // Teste 5: Variáveis de ambiente
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        addLog(`NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? 'definido' : 'AUSENTE'}`)
+        addLog(`NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseKey ? 'definido' : 'AUSENTE'}`)
+
       } catch (err) {
-        addLog(`❌ Erro com Dexie: ${err}`)
-        console.error('Erro Dexie detalhado:', err)
+        addLog(`ERRO fatal: ${err}`)
+        console.error('Erro detalhado:', err)
       }
 
-      addLog('🏁 Diagnósticos concluídos!')
+      addLog('Diagnósticos concluídos!')
     }
 
     runDiagnostics()
@@ -124,7 +93,7 @@ export default function DiagnosticPage() {
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">🔬 Diagnóstico IndexedDB</h1>
+        <h1 className="text-3xl font-bold mb-6">Diagnóstico Supabase</h1>
 
         <div className="bg-card border rounded-lg p-6 space-y-2">
           <div className="font-mono text-sm space-y-1">
@@ -132,11 +101,11 @@ export default function DiagnosticPage() {
               <div
                 key={i}
                 className={`${
-                  log.includes('❌')
+                  log.includes('ERRO')
                     ? 'text-red-500'
-                    : log.includes('⚠️')
+                    : log.includes('AUSENTE')
                       ? 'text-yellow-500'
-                      : log.includes('✅')
+                      : log.includes('sucesso') || log.includes('acessível') || log.includes('ativa')
                         ? 'text-green-500'
                         : 'text-muted-foreground'
                 }`}
@@ -155,14 +124,14 @@ export default function DiagnosticPage() {
             }}
             className="px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90"
           >
-            🔄 Executar Novamente
+            Executar Novamente
           </button>
 
           <a
             href="/"
             className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:opacity-90 inline-block"
           >
-            ← Voltar ao App
+            Voltar ao App
           </a>
         </div>
       </div>

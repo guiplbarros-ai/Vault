@@ -2,17 +2,17 @@
  * Seed de Contas Mock
  * Agent BACKEND: Owner
  *
- * Popula contas banc�rias realistas para modo demo
+ * Popula contas bancarias realistas para modo demo
  */
 
 import type { Conta, TipoConta } from '../types'
-import { getDB } from './client'
+import { getSupabaseBrowserClient } from './supabase'
 
 export interface ContaMockData {
   nome: string
   tipo: TipoConta
   saldo_inicial: number
-  instituicao_codigo: string // C�digo da institui��o (para buscar ID depois)
+  instituicao_codigo: string // Codigo da instituicao (para buscar ID depois)
   agencia?: string
   numero?: string
   cor?: string
@@ -28,17 +28,15 @@ export const CONTAS_MOCK: ContaMockData[] = [
     agencia: '0001',
     numero: '123456-7',
     cor: '#820AD1',
-    icone: '=�',
   },
   {
-    nome: 'Conta Poupan�a',
+    nome: 'Conta Poupanca',
     tipo: 'poupanca',
     saldo_inicial: 15000.0,
-    instituicao_codigo: '341', // Ita�
+    instituicao_codigo: '341', // Itau
     agencia: '4321',
     numero: '98765-4',
     cor: '#EC7000',
-    icone: '<�',
   },
   {
     nome: 'Investimentos CDB',
@@ -46,15 +44,13 @@ export const CONTAS_MOCK: ContaMockData[] = [
     saldo_inicial: 50000.0,
     instituicao_codigo: '077', // Inter
     cor: '#FF7A00',
-    icone: '=�',
   },
   {
-    nome: 'Cart�o Nubank',
+    nome: 'Cartao Nubank',
     tipo: 'carteira',
     saldo_inicial: 0,
     instituicao_codigo: '260', // Nubank
     cor: '#820AD1',
-    icone: '=�',
   },
   {
     nome: 'Conta Digital',
@@ -64,35 +60,34 @@ export const CONTAS_MOCK: ContaMockData[] = [
     agencia: '0001',
     numero: '654321-0',
     cor: '#FF7A00',
-    icone: '=�',
   },
 ]
 
 /**
- * Verifica se j� existem contas no banco
+ * Verifica se ja existem contas no banco
  */
 export async function hasContas(): Promise<boolean> {
-  const db = getDB()
-  const count = await db.contas.count()
-  return count > 0
+  const supabase = getSupabaseBrowserClient()
+  const { count } = await supabase.from('contas').select('*', { count: 'exact', head: true })
+  return (count ?? 0) > 0
 }
 
 /**
  * Popula o banco com contas mock
- * IMPORTANTE: Requer que as institui��es j� estejam criadas
+ * IMPORTANTE: Requer que as instituicoes ja estejam criadas
  */
 export async function seedContas(): Promise<void> {
-  const db = getDB()
+  const supabase = getSupabaseBrowserClient()
   const alreadyHas = await hasContas()
 
   if (alreadyHas) {
-    console.log(' Contas j� existem, pulando seed...')
+    console.log('Contas ja existem, pulando seed...')
     return
   }
 
-  // Buscar todas as institui��es para mapear c�digo -> ID
-  const instituicoes = await db.instituicoes.toArray()
-  const instituicaoMap = new Map(instituicoes.map((inst) => [inst.codigo, inst.id]))
+  // Buscar todas as instituicoes para mapear codigo -> ID
+  const { data: instituicoes } = await supabase.from('instituicoes').select('id, codigo')
+  const instituicaoMap = new Map<string, string>((instituicoes || []).map((inst: any) => [inst.codigo as string, inst.id as string]))
 
   const now = new Date()
   const contas: Conta[] = []
@@ -103,7 +98,7 @@ export async function seedContas(): Promise<void> {
 
     if (!instituicaoId) {
       console.warn(
-        `� Institui��o com c�digo ${contaMock.instituicao_codigo} n�o encontrada, pulando conta "${contaMock.nome}"`
+        `Instituicao com codigo ${contaMock.instituicao_codigo} nao encontrada, pulando conta "${contaMock.nome}"`
       )
       continue
     }
@@ -115,13 +110,13 @@ export async function seedContas(): Promise<void> {
       tipo: contaMock.tipo,
       agencia: contaMock.agencia,
       numero: contaMock.numero,
-      saldo_referencia: contaMock.saldo_inicial, // User é soberano!
+      saldo_referencia: contaMock.saldo_inicial,
       data_referencia: now,
-      saldo_atual: contaMock.saldo_inicial, // Inicialmente igual ao saldo de referência
+      saldo_atual: contaMock.saldo_inicial,
       ativa: true,
       cor: contaMock.cor,
       icone: contaMock.icone,
-      usuario_id: 'usuario-producao', // Usuário padrão de produção
+      usuario_id: 'usuario-producao',
       created_at: now,
       updated_at: now,
     }
@@ -130,27 +125,26 @@ export async function seedContas(): Promise<void> {
   }
 
   if (contas.length > 0) {
-    try {
-      await db.contas.bulkAdd(contas)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
+    const { error } = await supabase.from('contas').insert(contas)
+    if (error) {
+      if (error.code !== '23505') {
         throw error
       }
-      console.log('⚠️ Algumas contas já existem, pulando duplicatas...')
+      console.log('Algumas contas ja existem, pulando duplicatas...')
       return
     }
-    console.log(` ${contas.length} contas criadas com sucesso!`)
+    console.log(`${contas.length} contas criadas com sucesso!`)
   } else {
-    console.log('� Nenhuma conta foi criada (institui��es n�o encontradas)')
+    console.log('Nenhuma conta foi criada (instituicoes nao encontradas)')
   }
 }
 
 /**
- * Remove todas as contas mock (�til para limpar dados demo)
+ * Remove todas as contas mock (util para limpar dados demo)
  */
 export async function clearContas(): Promise<void> {
-  const db = getDB()
-  const count = await db.contas.count()
-  await db.contas.clear()
-  console.log(`=� ${count} contas removidas`)
+  const supabase = getSupabaseBrowserClient()
+  const { count } = await supabase.from('contas').select('*', { count: 'exact', head: true })
+  await supabase.from('contas').delete().neq('id', '')
+  console.log(`${count ?? 0} contas removidas`)
 }

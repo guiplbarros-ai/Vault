@@ -4,7 +4,7 @@ import { FormInput, FormSelect } from '@/components/forms'
 import { FormCheckbox } from '@/components/forms/form-checkbox'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import { categoriaService } from '@/lib/services/categoria.service'
 import type { Categoria, CentroCusto } from '@/lib/types'
 import { type OrcamentoFormData, orcamentoSchema } from '@/lib/validations/budget'
@@ -65,9 +65,11 @@ export function BudgetForm({
             sortBy: 'nome',
             sortOrder: 'asc',
           }),
-          getDB()
-            .centros_custo.filter((cc) => cc.ativo)
-            .toArray(),
+          getSupabaseBrowserClient()
+            .from('centros_custo')
+            .select('*')
+            .eq('ativo', true)
+            .then((r: any) => r.data || []),
         ])
         setCategorias(cats)
         setCentrosCusto(centros)

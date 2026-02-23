@@ -68,14 +68,15 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error syncing Pluggy data:', error)
     const statusCode = error?.response?.statusCode || error?.status || 500
-    const message = error?.response?.body?.message || error?.message || String(error)
 
     // Detect auth/trial expiration errors
     const isAuthError = statusCode === 401 || statusCode === 403
     return NextResponse.json(
       {
         error: isAuthError ? 'PLUGGY_AUTH_ERROR' : 'Failed to sync',
-        message,
+        message: isAuthError
+          ? 'Erro de autenticação com Pluggy'
+          : 'Erro ao sincronizar dados',
       },
       { status: statusCode }
     )

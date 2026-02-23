@@ -4,23 +4,14 @@
  * Database Provider
  * Agent CORE: Owner
  *
- * Inicializa o banco de dados SQLite no navegador e disponibiliza via Context
+ * Verifica a conexão com o Supabase e disponibiliza status via Context.
  */
 
-import { getDB } from '@/lib/db/client'
-import type { CortexCashDB } from '@/lib/db/client'
+import { getSupabase } from '@/lib/db/supabase'
 import type React from 'react'
 import { createContext, useContext, useEffect, useState } from 'react'
 
-// Importa debug helpers (apenas em dev) - com tratamento de erro
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  import('@/lib/db/debug').catch((err) => {
-    console.warn('⚠️ Não foi possível carregar debug helpers:', err)
-  })
-}
-
 interface DBContextType {
-  db: CortexCashDB | null
   isInitialized: boolean
   isLoading: boolean
   error: string | null
@@ -41,87 +32,40 @@ interface DBProviderProps {
 }
 
 export function DBProvider({ children }: DBProviderProps) {
-  const [db, setDb] = useState<CortexCashDB | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isOpeningDB, setIsOpeningDB] = useState(false)
 
   useEffect(() => {
     // Só executa no cliente
     if (typeof window === 'undefined') return
 
-    let timeoutId: ReturnType<typeof setTimeout>
-    let longOpenId: ReturnType<typeof setTimeout>
-
-    let timedOut = false
+    let cancelled = false
 
     async function initialize() {
       try {
-        console.log('🔄 Inicializando banco de dados Dexie...')
+        console.log('[DBProvider] Verificando conexão com Supabase...')
 
-        // Timeout de 10 segundos para detectar travamentos
-        timeoutId = setTimeout(() => {
-          console.error('❌ Timeout na inicialização do banco de dados')
-          timedOut = true
-          setError('Timeout ao inicializar banco de dados. Tente recarregar a página.')
-          setIsLoading(false)
-        }, 10000)
+        const supabase = getSupabase()
 
-        // Verificação síncrona básica (não bloqueia)
-        const { checkIndexedDBSupport, checkIndexedDBSupportAsync } = await import(
-          '@/lib/db/client'
+        // Timeout de 10 segundos para detectar falhas de conexão
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout ao conectar ao Supabase')), 10000)
         )
-        const basicSupport = checkIndexedDBSupport()
-        if (!basicSupport.supported) {
-          throw new Error(basicSupport.error || 'IndexedDB não está disponível neste navegador')
-        }
 
-        // Dispara verificação assíncrona COMPLETA em background (Safari modo privado, etc.)
-        // Não bloqueia a UI — apenas reporta erro se detectar bloqueio.
-        checkIndexedDBSupportAsync()
-          .then((support) => {
-            if (!support.supported) {
-              setError(
-                support.error || 'IndexedDB pode estar bloqueado (modo privado ou configurações)'
-              )
-            }
-          })
-          .catch(() => {
-            // Silencia erros não críticos desta verificação
-          })
+        // Ping: busca a sessão atual como verificação de conectividade
+        const checkPromise = supabase.auth.getSession()
 
-        // Inicializa Dexie (IndexedDB) imediatamente após checagem básica
-        const dbInstance = getDB()
-        // Aguarda abertura/migrações para evitar telas internas ficarem em "loading infinito"
-        setIsOpeningDB(true)
-        // Se abrir demorar, mostramos ao usuário que está migrando
-        longOpenId = setTimeout(() => {
-          console.log('⏳ Abertura/migração do banco demorando...')
-        }, 1200)
-        await dbInstance.open()
-        clearTimeout(longOpenId)
-        setIsOpeningDB(false)
+        await Promise.race([checkPromise, timeoutPromise])
 
-        console.log('✅ Banco de dados Dexie inicializado')
-
-        // Cancela o timeout
-        clearTimeout(timeoutId)
-
-        // Só atualiza state se não tiver dado timeout
-        if (!timedOut) {
-          // Libera a UI IMEDIATAMENTE
-          setDb(dbInstance)
+        if (!cancelled) {
+          console.log('[DBProvider] Conexão com Supabase OK')
           setIsInitialized(true)
           setIsLoading(false)
         }
-
-        console.log('✅ Cortex Cash pronto para uso!')
       } catch (err) {
-        console.error('❌ Erro ao inicializar banco de dados:', err)
-        clearTimeout(timeoutId)
-        // Só atualiza state se não tiver dado timeout
-        if (!timedOut) {
+        console.error('[DBProvider] Erro ao conectar ao Supabase:', err)
+        if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Erro desconhecido')
           setIsLoading(false)
         }
@@ -130,10 +74,8 @@ export function DBProvider({ children }: DBProviderProps) {
 
     initialize()
 
-    // Cleanup
     return () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      if (longOpenId) clearTimeout(longOpenId)
+      cancelled = true
     }
   }, [])
 
@@ -151,11 +93,7 @@ export function DBProvider({ children }: DBProviderProps) {
           </div>
           <div>
             <h2 className="text-xl font-bold text-primary">Cortex Cash</h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              {isOpeningDB
-                ? 'Abrindo/migrando banco de dados...'
-                : 'Inicializando banco de dados...'}
-            </p>
+            <p className="text-sm text-muted-foreground mt-2">Conectando ao banco de dados...</p>
           </div>
           <div className="flex justify-center">
             <div className="h-1 w-48 bg-muted rounded-full overflow-hidden">
@@ -169,28 +107,6 @@ export function DBProvider({ children }: DBProviderProps) {
 
   // Tela de erro
   if (error) {
-    const handleClearCache = async () => {
-      if (!confirm('⚠️ Isso vai limpar TODOS os seus dados. Deseja continuar?')) {
-        return
-      }
-
-      try {
-        // Limpa IndexedDB
-        if ('indexedDB' in window) {
-          await indexedDB.deleteDatabase('cortex-cash')
-        }
-
-        // Limpa localStorage
-        localStorage.clear()
-
-        // Recarrega
-        window.location.reload()
-      } catch (err) {
-        alert('Erro ao limpar cache. Tente limpar manualmente nas configurações do navegador.')
-        console.error(err)
-      }
-    }
-
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="max-w-md text-center space-y-6 p-6">
@@ -202,9 +118,9 @@ export function DBProvider({ children }: DBProviderProps) {
             />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-destructive">Erro ao Inicializar</h2>
+            <h2 className="text-xl font-bold text-destructive">Erro ao Conectar</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              Não foi possível inicializar o banco de dados.
+              Não foi possível conectar ao banco de dados.
             </p>
             <p className="text-xs text-muted-foreground mt-4 p-3 bg-muted rounded font-mono">
               {error}
@@ -217,15 +133,9 @@ export function DBProvider({ children }: DBProviderProps) {
             >
               Tentar Novamente
             </button>
-            <button
-              onClick={handleClearCache}
-              className="px-4 py-2 bg-destructive text-destructive-foreground rounded hover:opacity-90 transition"
-            >
-              Limpar Cache e Reiniciar
-            </button>
           </div>
           <p className="text-xs text-muted-foreground">
-            💡 Dica: Verifique se o IndexedDB está habilitado no seu navegador
+            Dica: Verifique sua conexão com a internet e tente novamente.
           </p>
         </div>
       </div>
@@ -233,7 +143,7 @@ export function DBProvider({ children }: DBProviderProps) {
   }
 
   return (
-    <DBContext.Provider value={{ db, isInitialized, isLoading, error }}>
+    <DBContext.Provider value={{ isInitialized, isLoading, error }}>
       {children}
     </DBContext.Provider>
   )

@@ -3,7 +3,7 @@
 import { FormColorPicker, FormInput, FormSelect } from '@/components/forms'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import type { Conta, Instituicao } from '@/lib/types'
 import { createInvestimentoSchema } from '@/lib/validations/dtos'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -80,13 +80,13 @@ export function InvestmentForm({
     async function loadData() {
       try {
         setLoadingData(true)
-        const db = getDB()
-        const [instData, contasData] = await Promise.all([
-          db.instituicoes.toArray(),
-          db.contas.toArray(),
+        const supabase = getSupabaseBrowserClient()
+        const [instResult, contasResult] = await Promise.all([
+          supabase.from('instituicoes').select('*'),
+          supabase.from('contas').select('*'),
         ])
-        setInstitutions(instData)
-        setAccounts(contasData)
+        setInstitutions((instResult.data || []) as Instituicao[])
+        setAccounts((contasResult.data || []) as Conta[])
       } catch (error) {
         console.error('Erro ao carregar dados:', error)
       } finally {

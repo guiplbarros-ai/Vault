@@ -5,7 +5,7 @@
  */
 
 import { USD_TO_BRL } from '@/lib/config/currency'
-import { getDB } from '@/lib/db/client'
+import { getSupabase } from '@/lib/db/supabase'
 import { DatabaseError, ValidationError } from '@/lib/errors'
 
 // Preços OpenAI (USD por 1M tokens) - atualizado em Jan 2025
@@ -96,13 +96,14 @@ export function calculateCost(
  */
 export async function logAIUsage(data: CreateAIUsageLogDTO): Promise<AIUsageLog> {
   try {
-    const db = getDB()
+    const supabase = getSupabase()
     const custo_usd = calculateCost(data.modelo, data.tokens_prompt, data.tokens_resposta)
-
     const tokens_total = data.tokens_prompt + data.tokens_resposta
+    const id = crypto.randomUUID()
+    const now = new Date()
 
-    const log: AIUsageLog = {
-      id: crypto.randomUUID(),
+    const { error } = await supabase.from('logs_ia').insert({
+      id,
       transacao_id: data.transacao_id ?? null,
       prompt: data.prompt,
       resposta: data.resposta,
@@ -114,29 +115,28 @@ export async function logAIUsage(data: CreateAIUsageLogDTO): Promise<AIUsageLog>
       categoria_sugerida_id: data.categoria_sugerida_id ?? null,
       confianca: data.confianca ?? null,
       confirmada: false,
-      created_at: new Date(),
-    }
+      created_at: now.toISOString(),
+    })
 
-    // Converter null para undefined para compatibilidade com Dexie
-    const dexieLog: Omit<import('@/lib/types').LogIA, 'id'> & { id: string } = {
-      id: log.id,
-      transacao_id: log.transacao_id ?? undefined,
-      prompt: log.prompt,
-      resposta: log.resposta,
-      modelo: log.modelo as 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo',
-      tokens_prompt: log.tokens_prompt,
-      tokens_resposta: log.tokens_resposta,
-      tokens_total: log.tokens_total,
-      custo_usd: log.custo_usd,
-      categoria_sugerida_id: log.categoria_sugerida_id ?? undefined,
-      confianca: log.confianca ?? undefined,
-      confirmada: log.confirmada,
-      created_at: log.created_at,
-    }
+    if (error) throw new DatabaseError('Erro ao inserir log de IA', error as unknown as Error)
 
-    await db.logs_ia.add(dexieLog)
-    return log
+    return {
+      id,
+      transacao_id: data.transacao_id ?? null,
+      prompt: data.prompt,
+      resposta: data.resposta,
+      modelo: data.modelo,
+      tokens_prompt: data.tokens_prompt,
+      tokens_resposta: data.tokens_resposta,
+      tokens_total,
+      custo_usd,
+      categoria_sugerida_id: data.categoria_sugerida_id ?? null,
+      confianca: data.confianca ?? null,
+      confirmada: false,
+      created_at: now,
+    }
   } catch (error) {
+    if (error instanceof DatabaseError || error instanceof ValidationError) throw error
     throw new DatabaseError('Erro ao registrar uso de IA', error as Error)
   }
 }
@@ -146,9 +146,15 @@ export async function logAIUsage(data: CreateAIUsageLogDTO): Promise<AIUsageLog>
  */
 export async function confirmAISuggestion(logId: string): Promise<void> {
   try {
-    const db = getDB()
-    await db.logs_ia.update(logId, { confirmada: true })
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('logs_ia')
+      .update({ confirmada: true })
+      .eq('id', logId)
+
+    if (error) throw new DatabaseError('Erro ao confirmar sugestão de IA', error as unknown as Error)
   } catch (error) {
+    if (error instanceof DatabaseError) throw error
     throw new DatabaseError('Erro ao confirmar sugestão de IA', error as Error)
   }
 }
@@ -162,32 +168,54 @@ export async function getAIUsageSummary(
   usdToBrl: number = USD_TO_BRL
 ): Promise<AIUsageSummary> {
   try {
-    const db = getDB()
+    const supabase = getSupabase()
     const start = startDate ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
     const end = endDate ?? new Date()
 
-    // Usar índice created_at para filtrar eficientemente
-    const logs = await db.logs_ia
-      .where('created_at')
-      .between(start, end, true, true) // inclusive em ambos os lados
-      .toArray()
+    const { data, error } = await supabase
+      .from('logs_ia')
+      .select(
+        'tokens_total, custo_usd, categoria_sugerida_id, confirmada, confianca'
+      )
+      .gte('created_at', start.toISOString())
+      .lte('created_at', end.toISOString())
+
+    if (error) throw new DatabaseError('Erro ao consultar logs de IA', error as unknown as Error)
+
+    const logs = data || []
 
     const total_requests = logs.length
-    const total_tokens = logs.reduce((sum, log) => sum + log.tokens_total, 0)
-    const total_cost_usd = logs.reduce((sum, log) => sum + log.custo_usd, 0)
+    const total_tokens = logs.reduce(
+      (sum: number, log: Record<string, unknown>) => sum + (log.tokens_total as number),
+      0
+    )
+    const total_cost_usd = logs.reduce(
+      (sum: number, log: Record<string, unknown>) => sum + (log.custo_usd as number),
+      0
+    )
     const total_cost_brl = total_cost_usd * usdToBrl
 
-    const suggestions = logs.filter((log) => log.categoria_sugerida_id !== null)
-    const confirmed_suggestions = suggestions.filter((log) => log.confirmada).length
-    const rejected_suggestions = suggestions.filter((log) => !log.confirmada).length
+    const suggestions = logs.filter(
+      (log: Record<string, unknown>) => log.categoria_sugerida_id !== null
+    )
+    const confirmed_suggestions = suggestions.filter(
+      (log: Record<string, unknown>) => log.confirmada === true
+    ).length
+    const rejected_suggestions = suggestions.filter(
+      (log: Record<string, unknown>) => log.confirmada === false
+    ).length
 
     const confidenceValues = suggestions
-      .filter((log) => log.confianca !== null && log.confianca !== undefined)
-      .map((log) => log.confianca!)
+      .filter(
+        (log: Record<string, unknown>) =>
+          log.confianca !== null && log.confianca !== undefined
+      )
+      .map((log: Record<string, unknown>) => log.confianca as number)
 
     const average_confidence =
       confidenceValues.length > 0
-        ? confidenceValues.reduce((sum, val) => sum + val, 0) / confidenceValues.length
+        ? confidenceValues.reduce((sum: number, val: number) => sum + val, 0) /
+          confidenceValues.length
         : 0
 
     return {
@@ -200,6 +228,7 @@ export async function getAIUsageSummary(
       average_confidence,
     }
   } catch (error) {
+    if (error instanceof DatabaseError) throw error
     throw new DatabaseError('Erro ao obter resumo de uso de IA', error as Error)
   }
 }
@@ -213,19 +242,24 @@ export async function getAIUsageByPeriod(
   groupBy: 'day' | 'month' = 'day'
 ): Promise<AIUsageByPeriod[]> {
   try {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    // Usar índice created_at para filtrar eficientemente
-    const logs = await db.logs_ia
-      .where('created_at')
-      .between(startDate, endDate, true, true)
-      .toArray()
+    const { data, error } = await supabase
+      .from('logs_ia')
+      .select('created_at, tokens_total, custo_usd')
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
+      .order('created_at', { ascending: true })
+
+    if (error) throw new DatabaseError('Erro ao consultar logs de IA', error as unknown as Error)
+
+    const logs = data || []
 
     // Agrupar manualmente por período
     const grouped = new Map<string, { requests: number; tokens: number; cost_usd: number }>()
 
-    logs.forEach((log) => {
-      const date = log.created_at
+    for (const log of logs as Record<string, unknown>[]) {
+      const date = new Date(log.created_at as string)
       let period: string
 
       if (groupBy === 'day') {
@@ -237,15 +271,16 @@ export async function getAIUsageByPeriod(
       const existing = grouped.get(period) ?? { requests: 0, tokens: 0, cost_usd: 0 }
       grouped.set(period, {
         requests: existing.requests + 1,
-        tokens: existing.tokens + log.tokens_total,
-        cost_usd: existing.cost_usd + log.custo_usd,
+        tokens: existing.tokens + (log.tokens_total as number),
+        cost_usd: existing.cost_usd + (log.custo_usd as number),
       })
-    })
+    }
 
     return Array.from(grouped.entries())
       .map(([period, data]) => ({ period, ...data }))
       .sort((a, b) => a.period.localeCompare(b.period))
   } catch (error) {
+    if (error instanceof DatabaseError) throw error
     throw new DatabaseError('Erro ao obter uso de IA por período', error as Error)
   }
 }

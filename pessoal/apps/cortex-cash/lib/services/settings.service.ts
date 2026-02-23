@@ -12,7 +12,7 @@ import { validateSettings, validateSettingsCategory } from '../validations/setti
 const STORAGE_KEY = 'cortex_settings'
 const VERSION = '1.0.0'
 
-type SubscriberCallback = (value: any, event: SettingsChangeEvent) => void
+type SubscriberCallback = (value: unknown, event: SettingsChangeEvent) => void
 
 export class SettingsService {
   private settings: Settings
@@ -30,13 +30,13 @@ export class SettingsService {
   /**
    * Get configuração específica (suporta path nested)
    */
-  get<T = any>(path: string): T {
+  get<T = unknown>(path: string): T {
     const keys = path.split('.')
-    let value: any = this.settings
+    let value: unknown = this.settings
 
     for (const key of keys) {
       if (value && typeof value === 'object' && key in value) {
-        value = value[key]
+        value = (value as Record<string, unknown>)[key]
       } else {
         // Retorna default se path não existe
         return this.getDefault(path)
@@ -49,7 +49,7 @@ export class SettingsService {
   /**
    * Set configuração específica
    */
-  async set<T = any>(path: string, value: T): Promise<void> {
+  async set<T = unknown>(path: string, value: T): Promise<void> {
     const oldValue = this.get(path)
 
     // Valida valor
@@ -60,14 +60,14 @@ export class SettingsService {
 
     // Atualiza
     const keys = path.split('.')
-    let current: any = this.settings
+    let current: Record<string, unknown> = this.settings as unknown as Record<string, unknown>
 
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i]!
       if (!(key in current)) {
         current[key] = {}
       }
-      current = current[key]
+      current = current[key] as Record<string, unknown>
     }
 
     current[keys[keys.length - 1]!] = value
@@ -110,10 +110,10 @@ export class SettingsService {
     const oldValue = { ...this.settings[category] }
 
     // Merge com valores atuais
-    this.settings[category] = {
+    ;(this.settings as any)[category] = {
       ...this.settings[category],
       ...value,
-    } as any
+    }
 
     // Persiste
     await this.saveSettings()
@@ -135,7 +135,7 @@ export class SettingsService {
   async resetToDefaults(category?: SettingsCategory): Promise<void> {
     if (category) {
       const oldValue = this.settings[category]
-      this.settings[category] = { ...DEFAULT_SETTINGS[category] } as any
+      ;(this.settings as any)[category] = { ...DEFAULT_SETTINGS[category] }
 
       await this.saveSettings()
 
@@ -294,13 +294,14 @@ export class SettingsService {
    * Merge settings com defaults (adiciona campos novos)
    */
   private mergeWithDefaults(settings: Partial<Settings>): Settings {
-    const merged: any = { ...DEFAULT_SETTINGS }
+    const merged: Settings = { ...DEFAULT_SETTINGS }
 
     for (const category in settings) {
       if (category in DEFAULT_SETTINGS) {
-        merged[category] = {
-          ...DEFAULT_SETTINGS[category as SettingsCategory],
-          ...settings[category as SettingsCategory],
+        const key = category as SettingsCategory
+        ;(merged as any)[key] = {
+          ...(DEFAULT_SETTINGS as any)[key],
+          ...(settings as any)[key],
         }
       }
     }
@@ -311,25 +312,25 @@ export class SettingsService {
   /**
    * Get default value para um path
    */
-  private getDefault(path: string): any {
+  private getDefault<T = unknown>(path: string): T {
     const keys = path.split('.')
-    let value: any = DEFAULT_SETTINGS
+    let value: unknown = DEFAULT_SETTINGS
 
     for (const key of keys) {
       if (value && typeof value === 'object' && key in value) {
-        value = value[key]
+        value = (value as Record<string, unknown>)[key]
       } else {
-        return undefined
+        return undefined as T
       }
     }
 
-    return value
+    return value as T
   }
 
   /**
    * Valida valor individual
    */
-  private validateValue(path: string, value: any): { success: boolean; error?: string } {
+  private validateValue(path: string, _value: unknown): { success: boolean; error?: string } {
     // Implementação básica, pode ser expandida
     return { success: true }
   }
@@ -337,7 +338,7 @@ export class SettingsService {
   /**
    * Notifica subscribers sobre mudança
    */
-  private notifySubscribers(path: string, value: any, event: SettingsChangeEvent): void {
+  private notifySubscribers(path: string, value: unknown, event: SettingsChangeEvent): void {
     // Notifica subscribers específicos do path
     const exactSubs = this.subscribers.get(path)
     if (exactSubs) {
@@ -385,8 +386,8 @@ export const settingsService = new SettingsService()
 
 // Export helper functions
 export const getSettings = () => settingsService.getAll()
-export const getSetting = <T = any>(path: string): T => settingsService.get<T>(path)
-export const setSetting = <T = any>(path: string, value: T) => settingsService.set(path, value)
+export const getSetting = <T = unknown>(path: string): T => settingsService.get<T>(path)
+export const setSetting = <T = unknown>(path: string, value: T) => settingsService.set(path, value)
 export const resetSettings = (category?: SettingsCategory) =>
   settingsService.resetToDefaults(category)
 export const subscribeToSettings = (path: string, callback: SubscriberCallback) =>

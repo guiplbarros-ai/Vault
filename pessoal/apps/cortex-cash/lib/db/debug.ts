@@ -3,7 +3,7 @@
  * Use no console do navegador: window.dbDebug.resetDatabase()
  */
 
-import { getDB } from './client'
+import { getSupabaseBrowserClient } from './supabase'
 import { resetDatabase } from './initialize'
 import { clearMockTransactions, seedMockTransactions } from './seed-mock-transactions'
 
@@ -75,8 +75,8 @@ export const dbDebug = {
    * Lista todas as categorias no console
    */
   async listCategorias() {
-    const db = getDB()
-    const categorias = await db.categorias.toArray()
+    const supabase = getSupabaseBrowserClient()
+    const { data: categorias } = await supabase.from('categorias').select('*')
     console.table(categorias)
     return categorias
   },
@@ -85,8 +85,8 @@ export const dbDebug = {
    * Lista todas as tags no console
    */
   async listTags() {
-    const db = getDB()
-    const tags = await db.tags.toArray()
+    const supabase = getSupabaseBrowserClient()
+    const { data: tags } = await supabase.from('tags').select('*')
     console.table(tags)
     return tags
   },
@@ -95,20 +95,21 @@ export const dbDebug = {
    * Mostra estrutura hierárquica de categorias
    */
   async showHierarchy() {
-    const db = getDB()
-    const categorias = await db.categorias.toArray()
+    const supabase = getSupabaseBrowserClient()
+    const { data: categorias } = await supabase.from('categorias').select('*')
 
-    const principais = categorias.filter((c) => !c.pai_id)
+    const allCats = categorias || []
+    const principais = allCats.filter((c: any) => !c.pai_id)
 
-    console.log('\n📊 ESTRUTURA DE CATEGORIAS:')
+    console.log('\n ESTRUTURA DE CATEGORIAS:')
     console.log('===========================\n')
 
     for (const principal of principais) {
-      const filhas = categorias.filter((c) => c.pai_id === principal.id)
-      console.log(`${principal.icone} ${principal.nome} (${principal.tipo})`)
+      const filhas = allCats.filter((c: any) => c.pai_id === (principal as any).id)
+      console.log(`${(principal as any).icone} ${(principal as any).nome} (${(principal as any).tipo})`)
 
       for (const filha of filhas) {
-        console.log(`  ↳ ${filha.icone} ${filha.nome}`)
+        console.log(`  -> ${(filha as any).icone} ${(filha as any).nome}`)
       }
       console.log('')
     }

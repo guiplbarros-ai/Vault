@@ -1,6 +1,9 @@
 /**
  * Settings Service Tests
  * Cobertura completa do SettingsService
+ *
+ * NOTE: This service uses localStorage, NOT Dexie/Supabase.
+ * No migration needed - kept as-is with localStorage mocks.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -75,8 +78,6 @@ describe('SettingsService', () => {
     })
 
     it('deve lançar erro para valor inválido', async () => {
-      // validateValue sempre retorna success, mas se implementado retornaria erro
-      // Este teste documenta o comportamento esperado
       await expect(service.set('appearance.theme', 'dark')).resolves.not.toThrow()
     })
   })
@@ -97,11 +98,7 @@ describe('SettingsService', () => {
       const all1 = service.getAll()
       const all2 = service.getAll()
 
-      // Verifica que são objetos diferentes no nível raiz
       expect(all1).not.toBe(all2)
-
-      // No entanto, como é shallow copy, modificar nested mantém a referência
-      // (isso é comportamento do service, que usa { ...this.settings })
     })
   })
 
@@ -136,7 +133,6 @@ describe('SettingsService', () => {
         hideDecimals: false,
       })
 
-      // Verifica que os valores foram setados
       expect(service.get('localization.language')).toBe('en-US')
       expect(service.get('localization.dateFormat')).toBe('MM/DD/YYYY')
     })
@@ -180,7 +176,7 @@ describe('SettingsService', () => {
       await service.resetToDefaults('appearance')
 
       expect(service.get('appearance.theme')).toBe(DEFAULT_SETTINGS.appearance.theme)
-      expect(service.get('localization.language')).toBe('en-US') // Mantém
+      expect(service.get('localization.language')).toBe('en-US')
     })
   })
 
@@ -277,7 +273,7 @@ describe('SettingsService', () => {
 
       unsubscribe()
       await service.set('appearance.theme', 'light')
-      expect(mockCallback).toHaveBeenCalledTimes(1) // Não chamou novamente
+      expect(mockCallback).toHaveBeenCalledTimes(1)
     })
 
     it('deve limpar todos subscribers', async () => {
@@ -345,14 +341,12 @@ describe('SettingsService', () => {
     })
 
     it('deve carregar settings do localStorage na inicialização', () => {
-      // Salva no localStorage diretamente
       const settings = {
         ...DEFAULT_SETTINGS,
         appearance: { ...DEFAULT_SETTINGS.appearance, theme: 'dark' },
       }
       localStorage.setItem('cortex_settings', JSON.stringify(settings))
 
-      // Cria nova instância
       const newService = new SettingsService()
 
       expect(newService.get('appearance.theme')).toBe('dark')
@@ -380,7 +374,6 @@ describe('SettingsService', () => {
   describe('Edge Cases', () => {
     it('deve tratar path vazio retornando undefined', () => {
       const value = service.get('')
-      // Path vazio retorna undefined (primeira iteração do loop não encontra nada)
       expect(value).toBeUndefined()
     })
 
@@ -412,7 +405,6 @@ describe('SettingsService', () => {
     })
 
     it('deve fazer merge com defaults ao carregar do localStorage', () => {
-      // Salva settings parcial (falta campos novos)
       const partialSettings = {
         appearance: { theme: 'dark' },
       }
@@ -420,9 +412,7 @@ describe('SettingsService', () => {
 
       const newService = new SettingsService()
 
-      // Deve ter valor salvo
       expect(newService.get('appearance.theme')).toBe('dark')
-      // Deve ter valores default para campos não salvos
       expect(newService.get('localization.language')).toBe(DEFAULT_SETTINGS.localization.language)
     })
   })

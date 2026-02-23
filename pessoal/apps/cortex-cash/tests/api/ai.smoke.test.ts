@@ -12,7 +12,7 @@ import { POST as configPOST } from '@/app/api/ai/config/route'
 // Note: Avoid importing NextRequest to keep tests decoupled from Next internals
 import { GET as statusGET } from '@/app/api/ai/status/route'
 import { GET as usageGET } from '@/app/api/ai/usage/route'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock OpenAI
 vi.mock('openai', () => ({
@@ -73,6 +73,11 @@ vi.mock('@/lib/finance/classification/prompt-cache', () => ({
 }))
 
 describe('AI API Smoke Tests', () => {
+  beforeAll(() => {
+    // Route handlers check for OPENAI_API_KEY and return 500 if missing
+    process.env.OPENAI_API_KEY = 'test-key-for-mocked-openai'
+  })
+
   const mockCategorias = [
     { id: 'cat-1', nome: 'Alimentação' },
     { id: 'cat-2', nome: 'Transporte' },

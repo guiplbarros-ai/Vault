@@ -11,7 +11,7 @@ import { instituicaoService } from '../services/instituicao.service'
 import { tagService } from '../services/tag.service'
 import { transacaoService } from '../services/transacao.service'
 import type { Categoria, Conta, Instituicao, TipoConta, Transacao } from '../types'
-import { getDB } from './client'
+import { getSupabaseBrowserClient } from './supabase'
 import { hasCategories, seedCartoes, seedCategorias, seedInvestimentos } from './seed'
 import { seedCenarioBase } from './seed-planejamento'
 import { hasTags } from './seed-tags'
@@ -51,10 +51,10 @@ export async function seedDemoData() {
 
     // 4. Criar categorias padrão (se não existirem)
     console.log('[DEMO SEED] Passo 4: Criando categorias padrão...')
-    const db = getDB()
-    const alreadyHasCategories = await hasCategories(db)
+    const supabase = getSupabaseBrowserClient()
+    const alreadyHasCategories = await hasCategories(supabase)
     if (!alreadyHasCategories) {
-      await seedCategorias(db)
+      await seedCategorias(supabase)
       console.log('[DEMO SEED] ✅ Categorias padrão criadas')
     } else {
       console.log('[DEMO SEED] ✅ Categorias já existem, pulando seed')
@@ -62,7 +62,7 @@ export async function seedDemoData() {
 
     // 5. Criar tags padrão
     console.log('[DEMO SEED] Passo 5: Criando tags padrão...')
-    const alreadyHasTags = await hasTags(db)
+    const alreadyHasTags = await hasTags(supabase)
     if (!alreadyHasTags) {
       await seedTags()
       console.log('[DEMO SEED] ✅ Tags padrão criadas')
@@ -94,9 +94,11 @@ export async function seedDemoData() {
     // 9. Criar cartões de crédito
     console.log('[DEMO SEED] Passo 9: Criando cartões de crédito...')
     try {
-      await seedCartoes(db)
-      const cartoes = await db.cartoes_config.toArray()
-      console.log(`[DEMO SEED] ✅ ${cartoes.length} cartões criados`)
+      await seedCartoes(supabase)
+      const { count: cartoesCount } = await supabase
+        .from('cartoes_config')
+        .select('*', { count: 'exact', head: true })
+      console.log(`[DEMO SEED] ✅ ${cartoesCount ?? 0} cartões criados`)
     } catch (error) {
       console.warn('[DEMO SEED] ⚠️ Erro ao criar cartões (não crítico):', error)
     }
@@ -104,9 +106,11 @@ export async function seedDemoData() {
     // 10. Criar investimentos
     console.log('[DEMO SEED] Passo 10: Criando investimentos...')
     try {
-      await seedInvestimentos(db)
-      const investimentos = await db.investimentos.toArray()
-      console.log(`[DEMO SEED] ✅ ${investimentos.length} investimentos criados`)
+      await seedInvestimentos(supabase)
+      const { count: invCount } = await supabase
+        .from('investimentos')
+        .select('*', { count: 'exact', head: true })
+      console.log(`[DEMO SEED] ✅ ${invCount ?? 0} investimentos criados`)
     } catch (error) {
       console.warn('[DEMO SEED] ⚠️ Erro ao criar investimentos (não crítico):', error)
     }
@@ -115,24 +119,30 @@ export async function seedDemoData() {
     console.log('[DEMO SEED] Passo 11: Criando cenário base de planejamento...')
     try {
       await seedCenarioBase()
-      const cenarios = await db.cenarios.toArray()
-      console.log(`[DEMO SEED] ✅ ${cenarios.length} cenários criados`)
+      const { count: cenariosCount } = await supabase
+        .from('cenarios')
+        .select('*', { count: 'exact', head: true })
+      console.log(`[DEMO SEED] ✅ ${cenariosCount ?? 0} cenários criados`)
     } catch (error) {
       console.warn('[DEMO SEED] ⚠️ Erro ao criar cenários (não crítico):', error)
     }
 
     // 12. Estatísticas finais
     console.log('[DEMO SEED] Passo 12: Coletando estatísticas finais...')
+    const countTable = async (table: string) => {
+      const { count } = await supabase.from(table).select('*', { count: 'exact', head: true })
+      return count ?? 0
+    }
     const stats = await Promise.all([
-      db.instituicoes.count(),
-      db.contas.count(),
-      db.categorias.count(),
-      db.transacoes.count(),
-      db.tags.count(),
-      db.cartoes_config.count(),
-      db.investimentos.count(),
-      db.historico_investimentos.count(),
-      db.cenarios.count(),
+      countTable('instituicoes'),
+      countTable('contas'),
+      countTable('categorias'),
+      countTable('transacoes'),
+      countTable('tags'),
+      countTable('cartoes_config'),
+      countTable('investimentos'),
+      countTable('historico_investimentos'),
+      countTable('cenarios'),
     ])
 
     console.log('[DEMO SEED] ✅✅✅ Seed de dados demo concluído com sucesso!')
@@ -171,31 +181,18 @@ export async function seedDemoData() {
  * Limpa todos os dados do banco
  */
 async function clearAllData() {
-  const db = getDB()
+  const supabase = getSupabaseBrowserClient()
 
-  await db.transaction(
-    'rw',
-    [
-      db.transacoes,
-      db.contas,
-      db.instituicoes,
-      db.cartoes_config,
-      db.faturas,
-      db.faturas_lancamentos,
-      db.investimentos,
-      db.historico_investimentos,
-    ],
-    async () => {
-      await db.transacoes.clear()
-      await db.contas.clear()
-      await db.instituicoes.clear()
-      await db.cartoes_config.clear()
-      await db.faturas.clear()
-      await db.faturas_lancamentos.clear()
-      await db.investimentos.clear()
-      await db.historico_investimentos.clear()
-    }
-  )
+  await Promise.all([
+    supabase.from('transacoes').delete().neq('id', ''),
+    supabase.from('faturas_lancamentos').delete().neq('id', ''),
+    supabase.from('faturas').delete().neq('id', ''),
+    supabase.from('historico_investimentos').delete().neq('id', ''),
+    supabase.from('investimentos').delete().neq('id', ''),
+    supabase.from('cartoes_config').delete().neq('id', ''),
+    supabase.from('contas').delete().neq('id', ''),
+    supabase.from('instituicoes').delete().neq('id', ''),
+  ])
 
   console.log('[DEMO SEED] Dados limpos com sucesso')
 }

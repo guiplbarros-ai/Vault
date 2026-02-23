@@ -18,9 +18,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(investments)
   } catch (error: any) {
     console.error('Error fetching Pluggy investments:', error)
-    const message = error?.response?.body?.message || error?.message || String(error)
     return NextResponse.json(
-      { error: 'Failed to fetch investments', message },
+      { error: 'Failed to fetch investments', message: 'Erro ao buscar investimentos' },
       { status: error?.response?.statusCode || 500 }
     )
   }

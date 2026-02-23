@@ -1,31 +1,65 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
+
   images: {
     unoptimized: true,
   },
 
-  // ✅ Otimizações de performance
   reactStrictMode: true,
 
-  // Otimizações de compilação
   experimental: {
-    // Reduz o número de arquivos que o Turbopack monitora
     optimizePackageImports: ['recharts', 'lucide-react', 'date-fns'],
   },
 
-  // Configuração do Turbopack para ignorar arquivos temporários
-  turbopack: {
-    // Turbopack respeita .gitignore automaticamente
-    // .DS_Store, .swp, etc. já estão no .gitignore
-  },
+  turbopack: {},
 
-  // Desabilita source maps em desenvolvimento para compilação mais rápida
-  // (pode ser reativado se precisar debugar)
   productionBrowserSourceMaps: false,
 
-  // Evita cache agressivo para o service worker e manifesto
   async headers() {
     return [
+      // Security headers for all routes
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=()',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.pluggy.ai",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; '),
+          },
+        ],
+      },
+      // CORS for /api/financeiro (external API used by Discord bots)
+      {
+        source: '/api/financeiro/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Authorization, Content-Type' },
+        ],
+      },
+      // Cache headers for service worker and manifest
       {
         source: '/sw.js',
         headers: [
@@ -39,7 +73,6 @@ const nextConfig = {
     ]
   },
 
-  // Corrige 404 do favicon redirecionando para o logo existente
   async redirects() {
     return [
       {

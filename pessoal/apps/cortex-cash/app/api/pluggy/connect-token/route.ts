@@ -17,13 +17,14 @@ export async function POST() {
   } catch (error: any) {
     console.error('Error creating Pluggy connect token:', error)
     const statusCode = error?.response?.statusCode || error?.status || 500
-    const message = error?.response?.body?.message || error?.message || String(error)
 
     const isAuthError = statusCode === 401 || statusCode === 403
     return NextResponse.json(
       {
         error: isAuthError ? 'PLUGGY_AUTH_ERROR' : 'Failed to create connect token',
-        message,
+        message: isAuthError
+          ? 'Erro de autenticação com Pluggy'
+          : 'Erro ao criar token de conexão',
       },
       { status: statusCode }
     )

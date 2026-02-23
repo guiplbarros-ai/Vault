@@ -65,9 +65,11 @@ Regras:
 }
 `.trim()
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+let _openai: OpenAI | null = null
+function getOpenAI() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return _openai
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,16 +85,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Provide at least 3 months of data' }, { status: 400 })
     }
 
-    // Defaults
+    // Defaults (allowOverride removed — server controls budget, not client)
     const modelo = (config.defaultModel || 'gpt-4o-mini') as AIModel
     const monthlyCostLimit = config.monthlyCostLimit ?? 10.0
-    const allowOverride = config.allowOverride ?? false
     const strategy = (config.strategy || 'balanced') as AIStrategy
 
     // Budget check before calling OpenAI
     const store = getServerStore()
     const budgetCheck = await checkAIBudgetLimitSafe(store, new Date(), monthlyCostLimit, 0.8)
-    if (budgetCheck.isOverLimit && !allowOverride) {
+    if (budgetCheck.isOverLimit) {
       return NextResponse.json(
         {
           error: 'AI budget limit exceeded',
@@ -126,7 +127,7 @@ ${monthsSummary}
     } as const
     const params = strategyParams[strategy]
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: modelo,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -184,16 +185,18 @@ ${monthsSummary}
         completion_tokens: usage.completion_tokens,
         total_tokens: usage.total_tokens,
       },
-      metadata: {
-        modelo,
-        prompt: userPrompt,
-        resposta,
-      },
+      ...(process.env.NODE_ENV === 'development' && {
+        metadata: {
+          modelo,
+          prompt: userPrompt,
+          resposta,
+        },
+      }),
     }
 
     return NextResponse.json(response)
   } catch (error) {
     console.error('Error generating AI report:', error)
-    return NextResponse.json({ error: 'Failed to generate AI report' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro interno ao gerar relatório' }, { status: 500 })
   }
 }

@@ -2,59 +2,57 @@
 import { TAGS_PADRAO } from './seed'
 
 /**
- * Função para inserir tags padrão no banco (Dexie)
+ * Função para inserir tags padrão no banco (Supabase)
+ * Aceita um cliente Supabase como parâmetro (db: any para compatibilidade de assinatura)
  */
 export async function seedTags(db: any): Promise<void> {
   try {
-    const now = new Date()
+    const now = new Date().toISOString()
 
     const tags = TAGS_PADRAO.map((tag) => ({
       id: crypto.randomUUID(),
       nome: tag.nome,
       cor: tag.cor,
       tipo: tag.tipo,
-      is_sistema: true, // Tags padrão são do sistema
-      usuario_id: undefined, // Tags do sistema não pertencem a nenhum usuário
+      is_sistema: true,
+      usuario_id: null,
       created_at: now,
     }))
 
-    try {
-      await db.tags.bulkAdd(tags)
-      console.log(`✅ ${TAGS_PADRAO.length} tags padrão inseridas com sucesso!`)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Algumas tags já existem, pulando duplicatas...')
+    const { error } = await db.from('tags').upsert(tags, { onConflict: 'id' })
+    if (error && error.code !== '23505') {
+      console.warn('Aviso ao inserir tags padrao:', error.message)
+    } else {
+      console.log(`${TAGS_PADRAO.length} tags padrao inseridas com sucesso!`)
     }
   } catch (error) {
-    console.error('❌ Erro ao inserir tags padrão:', error)
+    console.error('Erro ao inserir tags padrao:', error)
     throw error
   }
 }
 
 /**
- * Verifica se o banco já possui tags (Dexie)
+ * Verifica se o banco já possui tags (Supabase)
  */
 export async function hasTags(db: any): Promise<boolean> {
   try {
-    const count = await db.tags.count()
-    return count > 0
+    const { count } = await db.from('tags').select('*', { count: 'exact', head: true })
+    return (count ?? 0) > 0
   } catch {
     return false
   }
 }
 
 /**
- * Inicializa tags padrão se necessário (Dexie)
+ * Inicializa tags padrão se necessário (Supabase)
  */
 export async function initializeTagsData(db: any): Promise<void> {
   const hasData = await hasTags(db)
 
   if (!hasData) {
-    console.log('📦 Banco sem tags detectado. Inserindo tags padrão...')
+    console.log('Banco sem tags detectado. Inserindo tags padrao...')
     await seedTags(db)
   } else {
-    console.log('✅ Banco já possui tags.')
+    console.log('Banco ja possui tags.')
   }
 }

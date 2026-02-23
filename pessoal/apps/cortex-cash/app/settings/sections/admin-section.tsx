@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { getDB } from '@/lib/db/client'
+import { usuarioService } from '@/lib/services/usuario.service'
 import { AlertCircle, CheckCircle2, Shield } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -27,8 +27,7 @@ export function AdminSection() {
 
   async function loadUsers() {
     try {
-      const db = getDB()
-      const allUsers = await db.usuarios.toArray()
+      const allUsers = await usuarioService.listUsuarios({ incluirInativos: true })
       setUsers(allUsers)
     } catch (error) {
       console.error('Erro ao carregar usuários:', error)
@@ -45,10 +44,7 @@ export function AdminSection() {
     setMessage(null)
 
     try {
-      const db = getDB()
-
-      // Buscar usuário por email
-      const usuario = await db.usuarios.where('email').equalsIgnoreCase(email.trim()).first()
+      const usuario = await usuarioService.getUsuarioByEmail(email.trim())
 
       if (!usuario) {
         setMessage({ type: 'error', text: `Usuário com email ${email} não encontrado` })
@@ -63,10 +59,7 @@ export function AdminSection() {
       }
 
       // Promover a admin
-      await db.usuarios.update(usuario.id, {
-        role: 'admin',
-        updated_at: new Date(),
-      })
+      await usuarioService.updateUsuario(usuario.id, { role: 'admin' })
 
       setMessage({
         type: 'success',
@@ -88,8 +81,7 @@ export function AdminSection() {
     setMessage(null)
 
     try {
-      const db = getDB()
-      const usuario = await db.usuarios.get(userId)
+      const usuario = await usuarioService.getUsuarioById(userId)
 
       if (!usuario) {
         setMessage({ type: 'error', text: 'Usuário não encontrado' })
@@ -97,10 +89,7 @@ export function AdminSection() {
         return
       }
 
-      await db.usuarios.update(userId, {
-        role: 'user',
-        updated_at: new Date(),
-      })
+      await usuarioService.updateUsuario(userId, { role: 'user' })
 
       setMessage({
         type: 'success',

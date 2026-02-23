@@ -4,7 +4,7 @@
  * Seletor de Usuário
  * Agent UI: Multi-User System
  *
- * Permite trocar entre perfis de usuário (Produção / Teste)
+ * Exibe o usuário autenticado atual
  */
 
 import { Button } from '@/components/ui/button'
@@ -16,60 +16,41 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { getDB } from '@/lib/db/client'
-import { getCurrentUserId, setCurrentUserId } from '@/lib/db/seed-usuarios'
+import { authService } from '@/lib/services/auth.service'
 import type { Usuario } from '@/lib/types'
-import { Check, User } from 'lucide-react'
+import { LogOut, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export function UserSelector() {
-  const [currentUserId, setCurrentUserIdState] = useState<string>('usuario-producao')
-  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [currentUser, setCurrentUser] = useState<Usuario | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    async function loadUsuarios() {
+    async function loadCurrentUser() {
       try {
         setIsLoading(true)
-        const db = getDB()
-        const allUsuarios = await db.usuarios.toArray()
-        setUsuarios(allUsuarios.filter((u) => u.ativo))
-
-        const userId = getCurrentUserId()
-        setCurrentUserIdState(userId)
+        const user = await authService.getCurrentUser()
+        setCurrentUser(user)
       } catch (error) {
-        console.error('Erro ao carregar usuários:', error)
+        console.error('Erro ao carregar usuário:', error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    loadUsuarios()
+    loadCurrentUser()
   }, [])
 
-  const handleUserChange = async (userId: string) => {
-    if (userId === currentUserId) return
-
+  const handleLogout = async () => {
     try {
-      // Atualiza localStorage
-      setCurrentUserId(userId)
-
-      // Atualiza último acesso
-      const db = getDB()
-      await db.usuarios.update(userId, {
-        ultimo_acesso: new Date(),
-      })
-
-      // Recarrega a página para aplicar o novo usuário em todos os services
+      await authService.logout()
       if (typeof window !== 'undefined') {
-        window.location.reload()
+        window.location.href = '/login'
       }
     } catch (error) {
-      console.error('Erro ao trocar usuário:', error)
+      console.error('Erro ao fazer logout:', error)
     }
   }
-
-  const currentUser = usuarios.find((u) => u.id === currentUserId)
 
   if (isLoading) {
     return (
@@ -85,6 +66,10 @@ export function UserSelector() {
     )
   }
 
+  if (!currentUser) {
+    return null
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -94,7 +79,7 @@ export function UserSelector() {
           className="text-white border-white/40 bg-transparent hover:bg-white/10 hover:border-white"
         >
           <User className="h-4 w-4 mr-2" />
-          <span className="max-w-[120px] truncate">{currentUser?.nome || 'Produção'}</span>
+          <span className="max-w-[120px] truncate">{currentUser.nome}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -103,19 +88,16 @@ export function UserSelector() {
         className="w-56 bg-[#0B2230]/95 backdrop-blur-md border-white/20 text-white"
       >
         <DropdownMenuLabel className="text-white/70 font-normal">
-          Perfis de Usuário
+          {currentUser.email}
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-white/20" />
-        {usuarios.map((usuario) => (
-          <DropdownMenuItem
-            key={usuario.id}
-            onClick={() => handleUserChange(usuario.id)}
-            className="flex items-center justify-between cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white"
-          >
-            <span>{usuario.nome}</span>
-            {usuario.id === currentUserId && <Check className="h-4 w-4 text-primary" />}
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="flex items-center gap-2 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Sair</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

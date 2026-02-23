@@ -6,8 +6,18 @@
  */
 
 import { endOfMonth, format, startOfMonth } from 'date-fns'
-import { getDB } from '../db/client'
-import type { Conta, Investimento, Transacao } from '../types'
+import { assertUUID } from '../api/sanitize'
+import { getSupabase } from '../db/supabase'
+
+async function getUserId(): Promise<string> {
+  const supabase = getSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  assertUUID(user.id, 'userId')
+  return user.id
+}
 
 // ============================================================================
 // Types
@@ -71,7 +81,8 @@ export class ImpostoRendaService {
    * Pulls all 'receita' transactions for the 12 months.
    */
   async getRendimentos(ano: number): Promise<ResumoRendimentos> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
     const meses: RendimentoMensal[] = []
     let totalGeral = 0
@@ -79,25 +90,47 @@ export class ImpostoRendaService {
     const porCategoria = new Map<string, { nome: string; icone?: string; total: number }>()
 
     // Get all categories for lookup
-    const categorias = await db.categorias.toArray()
-    const catMap = new Map(categorias.map((c) => [c.id, c]))
+    const { data: categoriasData } = await supabase
+      .from('categorias')
+      .select('id, nome, icone')
+      .or(`is_sistema.eq.true,usuario_id.eq.${userId}`)
+
+    const catMap = new Map<string, Record<string, unknown>>(
+      (categoriasData || []).map((c: Record<string, unknown>) => [c.id as string, c])
+    )
+
+    // Fetch all year transactions in one query (instead of 12 queries)
+    const yearStart = new Date(ano, 0, 1)
+    const yearEnd = new Date(ano, 11, 31, 23, 59, 59)
+
+    const { data: allTxData } = await supabase
+      .from('transacoes')
+      .select('data, tipo, valor, categoria_id')
+      .eq('usuario_id', userId)
+      .eq('tipo', 'receita')
+      .gte('data', yearStart.toISOString())
+      .lte('data', yearEnd.toISOString())
+
+    const allTx = allTxData || []
 
     for (let m = 0; m < 12; m++) {
       const dt = new Date(ano, m, 1)
       const inicio = startOfMonth(dt)
       const fim = endOfMonth(dt)
 
-      const txs = await db.transacoes
-        .where('data')
-        .between(inicio, fim, true, true)
-        .toArray()
+      const receitas = allTx.filter((t: Record<string, unknown>) => {
+        const d = new Date(t.data as string)
+        return d >= inicio && d <= fim
+      })
 
-      const receitas = txs.filter((t: Transacao) => t.tipo === 'receita')
-      const totalMes = receitas.reduce((s: number, t: Transacao) => s + Math.abs(t.valor), 0)
+      const totalMes = receitas.reduce(
+        (s: number, t: Record<string, unknown>) => s + Math.abs(t.valor as number),
+        0
+      )
 
       meses.push({
         mes: format(dt, 'yyyy-MM'),
-        mes_label: format(dt, "MMM/yyyy"),
+        mes_label: format(dt, 'MMM/yyyy'),
         total: totalMes,
         transacoes: receitas.length,
       })
@@ -106,14 +139,18 @@ export class ImpostoRendaService {
 
       // Aggregate by category
       for (const tx of receitas) {
-        const catId = tx.categoria_id || 'sem_categoria'
+        const catId = (tx.categoria_id as string) || 'sem_categoria'
         const cat = catMap.get(catId)
-        const nome = cat?.nome || 'Sem Categoria'
+        const nome = (cat?.nome as string) || 'Sem Categoria'
         const existing = porCategoria.get(nome)
         if (existing) {
-          existing.total += Math.abs(tx.valor)
+          existing.total += Math.abs(tx.valor as number)
         } else {
-          porCategoria.set(nome, { nome, icone: cat?.icone, total: Math.abs(tx.valor) })
+          porCategoria.set(nome, {
+            nome,
+            icone: cat?.icone as string | undefined,
+            total: Math.abs(tx.valor as number),
+          })
         }
       }
     }
@@ -131,59 +168,80 @@ export class ImpostoRendaService {
    * Deductible categories: Saúde (no limit), Educação (R$ 3,561.50 limit).
    */
   async getDeducoes(ano: number): Promise<ResumoDeducoes> {
-    const db = getDB()
-    const categorias = await db.categorias.toArray()
+    const supabase = getSupabase()
+    const userId = await getUserId()
+
+    const { data: categoriasData } = await supabase
+      .from('categorias')
+      .select('id, nome, icone, pai_id')
+      .or(`is_sistema.eq.true,usuario_id.eq.${userId}`)
+
+    const categorias = categoriasData || []
 
     // Find deductible parent categories and their subcategories
     const deductibleParents = new Map<string, { nome: string; icone?: string; limite?: number }>()
     const deductibleIds = new Set<string>()
 
     for (const cat of categorias) {
-      const nomeL = cat.nome.toLowerCase()
+      const nomeL = (cat.nome as string).toLowerCase()
       if (nomeL === 'saúde' || nomeL === 'saude') {
-        deductibleParents.set(cat.id, { nome: cat.nome, icone: cat.icone })
-        deductibleIds.add(cat.id)
+        deductibleParents.set(cat.id as string, {
+          nome: cat.nome as string,
+          icone: cat.icone as string | undefined,
+        })
+        deductibleIds.add(cat.id as string)
       }
       if (nomeL === 'educação' || nomeL === 'educacao') {
-        deductibleParents.set(cat.id, { nome: cat.nome, icone: cat.icone, limite: 3561.5 })
-        deductibleIds.add(cat.id)
+        deductibleParents.set(cat.id as string, {
+          nome: cat.nome as string,
+          icone: cat.icone as string | undefined,
+          limite: 3561.5,
+        })
+        deductibleIds.add(cat.id as string)
       }
     }
 
     // Include subcategories
     for (const cat of categorias) {
-      if (cat.pai_id && deductibleIds.has(cat.pai_id)) {
-        deductibleIds.add(cat.id)
+      if (cat.pai_id && deductibleIds.has(cat.pai_id as string)) {
+        deductibleIds.add(cat.id as string)
       }
     }
 
     // Get transactions for the year
     const inicio = new Date(ano, 0, 1)
     const fim = new Date(ano, 11, 31, 23, 59, 59)
-    const txs = await db.transacoes
-      .where('data')
-      .between(inicio, fim, true, true)
-      .toArray()
+
+    const { data: txData } = await supabase
+      .from('transacoes')
+      .select('valor, tipo, categoria_id')
+      .eq('usuario_id', userId)
+      .eq('tipo', 'despesa')
+      .gte('data', inicio.toISOString())
+      .lte('data', fim.toISOString())
 
     // Filter deductible expenses
-    const deductibleTxs = txs.filter(
-      (t: Transacao) => t.tipo === 'despesa' && t.categoria_id && deductibleIds.has(t.categoria_id)
+    const deductibleTxs = (txData || []).filter(
+      (t: Record<string, unknown>) =>
+        t.categoria_id && deductibleIds.has(t.categoria_id as string)
     )
 
     // Group by parent category
     const byParent = new Map<string, { total: number; count: number }>()
+    const catMapById = new Map<string, Record<string, unknown>>(
+      categorias.map((c: Record<string, unknown>) => [c.id as string, c])
+    )
 
     for (const tx of deductibleTxs) {
-      const cat = categorias.find((c) => c.id === tx.categoria_id)
+      const cat = catMapById.get(tx.categoria_id as string)
       if (!cat) continue
-      // Resolve to parent category
-      const parentId = cat.pai_id || cat.id
+      const parentId = (cat.pai_id as string) || (cat.id as string)
       const existing = byParent.get(parentId)
       if (existing) {
-        existing.total += Math.abs(tx.valor)
+        existing.total += Math.abs(tx.valor as number)
         existing.count++
       } else {
-        byParent.set(parentId, { total: Math.abs(tx.valor), count: 1 })
+        byParent.set(parentId, { total: Math.abs(tx.valor as number), count: 1 })
       }
     }
 
@@ -225,40 +283,53 @@ export class ImpostoRendaService {
    * Includes: active investments and bank accounts with balance > R$140.
    */
   async getBensDireitos(ano: number): Promise<ResumoBensDireitos> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
     // Get institutions for name lookup
-    const instituicoes = await db.instituicoes.toArray()
-    const instMap = new Map(instituicoes.map((i) => [i.id, i.nome]))
+    const { data: instituicoesData } = await supabase
+      .from('instituicoes')
+      .select('id, nome')
 
-    // Investments
-    const investimentos = await db.investimentos.toArray()
-    const investimentosAtivos = investimentos.filter(
-      (i: Investimento) => i.status === 'ativo'
+    const instMap = new Map(
+      (instituicoesData || []).map((i: Record<string, unknown>) => [
+        i.id as string,
+        i.nome as string,
+      ])
     )
 
-    const invItems: BemDireito[] = investimentosAtivos.map((i: Investimento) => ({
+    // Investments
+    const { data: investimentosData } = await supabase
+      .from('investimentos')
+      .select('*')
+      .eq('usuario_id', userId)
+      .eq('status', 'ativo')
+
+    const invItems: BemDireito[] = (investimentosData || []).map((i: Record<string, unknown>) => ({
       tipo: 'investimento' as const,
-      descricao: i.nome,
-      instituicao: instMap.get(i.instituicao_id) || 'N/A',
-      valor_aplicado: i.valor_aplicado,
-      valor_atual: i.valor_atual,
-      data_aquisicao: i.data_aplicacao,
-      ticker: i.ticker,
+      descricao: i.nome as string,
+      instituicao: instMap.get(i.instituicao_id as string) || 'N/A',
+      valor_aplicado: i.valor_aplicado as number,
+      valor_atual: i.valor_atual as number,
+      data_aquisicao: i.data_aplicacao ? new Date(i.data_aplicacao as string) : undefined,
+      ticker: i.ticker as string | undefined,
     }))
 
     // Bank accounts with balance > R$140
-    const contas = await db.contas.toArray()
-    const contasRelevantes = contas.filter(
-      (c: Conta) => c.ativa && Math.abs(c.saldo_atual) > 140
-    )
+    const { data: contasData } = await supabase
+      .from('contas')
+      .select('*')
+      .eq('usuario_id', userId)
+      .eq('ativa', true)
 
-    const contaItems: BemDireito[] = contasRelevantes.map((c: Conta) => ({
-      tipo: 'conta_bancaria' as const,
-      descricao: c.nome,
-      instituicao: instMap.get(c.instituicao_id) || 'N/A',
-      valor_atual: c.saldo_atual,
-    }))
+    const contaItems: BemDireito[] = (contasData || [])
+      .filter((c: Record<string, unknown>) => Math.abs(c.saldo_atual as number) > 140)
+      .map((c: Record<string, unknown>) => ({
+        tipo: 'conta_bancaria' as const,
+        descricao: c.nome as string,
+        instituicao: instMap.get(c.instituicao_id as string) || 'N/A',
+        valor_atual: c.saldo_atual as number,
+      }))
 
     return {
       ano,

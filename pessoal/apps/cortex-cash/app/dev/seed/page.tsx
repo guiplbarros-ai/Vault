@@ -7,8 +7,8 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getDB } from '@/lib/db/client'
-import { seedCartoes, seedCategorias, seedInvestimentos, seedMockData } from '@/lib/db/seed'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
+import { seedDemoData } from '@/lib/db/seed-demo'
 import { seedCenarioBase } from '@/lib/db/seed-planejamento'
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
@@ -29,70 +29,59 @@ export default function SeedPage() {
     lancamentos: number
   } | null>(null)
 
+  const fetchStats = async () => {
+    const supabase = getSupabaseBrowserClient()
+
+    const [
+      { count: categorias },
+      { count: instituicoes },
+      { count: contas },
+      { count: transacoes },
+      { count: investimentos },
+      { count: historico_investimentos },
+      { count: cartoes },
+      { count: faturas },
+      { count: lancamentos },
+    ] = await Promise.all([
+      supabase.from('categorias').select('*', { count: 'exact', head: true }),
+      supabase.from('instituicoes').select('*', { count: 'exact', head: true }),
+      supabase.from('contas').select('*', { count: 'exact', head: true }),
+      supabase.from('transacoes').select('*', { count: 'exact', head: true }),
+      supabase.from('investimentos').select('*', { count: 'exact', head: true }),
+      supabase.from('historico_investimentos').select('*', { count: 'exact', head: true }),
+      supabase.from('cartoes_config').select('*', { count: 'exact', head: true }),
+      supabase.from('faturas').select('*', { count: 'exact', head: true }),
+      supabase.from('faturas_lancamentos').select('*', { count: 'exact', head: true }),
+    ])
+
+    return {
+      categorias: categorias ?? 0,
+      instituicoes: instituicoes ?? 0,
+      contas: contas ?? 0,
+      transacoes: transacoes ?? 0,
+      investimentos: investimentos ?? 0,
+      historico_investimentos: historico_investimentos ?? 0,
+      cartoes: cartoes ?? 0,
+      faturas: faturas ?? 0,
+      lancamentos: lancamentos ?? 0,
+    }
+  }
+
   const handleSeedMockData = async () => {
     setLoading(true)
     setSuccess(false)
     setError(null)
 
     try {
-      const db = getDB()
-
-      // IMPORTANTE: Garantir que categorias existam antes de inserir transações
-      console.log('🔄 Verificando/inserindo categorias...')
-      const categoriasExistentes = await db.categorias.count()
-      if (categoriasExistentes === 0) {
-        console.log('📦 Nenhuma categoria encontrada. Inserindo categorias padrão...')
-        await seedCategorias(db)
-      } else {
-        console.log(`✅ ${categoriasExistentes} categorias já existem`)
-      }
-
-      // Inserir mock data
-      await seedMockData(db)
-
-      // Inserir investimentos
-      await seedInvestimentos(db)
-
-      // Inserir cartões de crédito
-      await seedCartoes(db)
+      // Use seedDemoData which is already Supabase-based
+      await seedDemoData()
 
       // Inserir cenário base de planejamento
       await seedCenarioBase()
 
       // Buscar estatísticas
-      const [
-        categorias,
-        instituicoes,
-        contas,
-        transacoes,
-        investimentos,
-        historico_investimentos,
-        cartoes,
-        faturas,
-        lancamentos,
-      ] = await Promise.all([
-        db.categorias.count(),
-        db.instituicoes.count(),
-        db.contas.count(),
-        db.transacoes.count(),
-        db.investimentos.count(),
-        db.historico_investimentos.count(),
-        db.cartoes_config.count(),
-        db.faturas.count(),
-        db.faturas_lancamentos.count(),
-      ])
-
-      setStats({
-        categorias,
-        instituicoes,
-        contas,
-        transacoes,
-        investimentos,
-        historico_investimentos,
-        cartoes,
-        faturas,
-        lancamentos,
-      })
+      const statsData = await fetchStats()
+      setStats(statsData)
       setSuccess(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido')
@@ -110,12 +99,20 @@ export default function SeedPage() {
     setStats(null)
 
     try {
-      const db = getDB()
-      await db.transaction('rw', db.tables, async () => {
-        for (const table of db.tables) {
-          await table.clear()
-        }
-      })
+      const supabase = getSupabaseBrowserClient()
+
+      // Delete in dependency order (children first)
+      await supabase.from('faturas_lancamentos').delete().neq('id', '')
+      await supabase.from('faturas').delete().neq('id', '')
+      await supabase.from('historico_investimentos').delete().neq('id', '')
+      await supabase.from('investimentos').delete().neq('id', '')
+      await supabase.from('transacoes').delete().neq('id', '')
+      await supabase.from('regras_classificacao').delete().neq('id', '')
+      await supabase.from('orcamentos').delete().neq('id', '')
+      await supabase.from('cartoes_config').delete().neq('id', '')
+      await supabase.from('contas').delete().neq('id', '')
+      await supabase.from('categorias').delete().neq('id', '')
+      await supabase.from('instituicoes').delete().neq('id', '')
 
       alert('Todos os dados foram apagados!')
     } catch (err) {
@@ -128,40 +125,8 @@ export default function SeedPage() {
   const handleGetStats = async () => {
     setLoading(true)
     try {
-      const db = getDB()
-      const [
-        categorias,
-        instituicoes,
-        contas,
-        transacoes,
-        investimentos,
-        historico_investimentos,
-        cartoes,
-        faturas,
-        lancamentos,
-      ] = await Promise.all([
-        db.categorias.count(),
-        db.instituicoes.count(),
-        db.contas.count(),
-        db.transacoes.count(),
-        db.investimentos.count(),
-        db.historico_investimentos.count(),
-        db.cartoes_config.count(),
-        db.faturas.count(),
-        db.faturas_lancamentos.count(),
-      ])
-
-      setStats({
-        categorias,
-        instituicoes,
-        contas,
-        transacoes,
-        investimentos,
-        historico_investimentos,
-        cartoes,
-        faturas,
-        lancamentos,
-      })
+      const statsData = await fetchStats()
+      setStats(statsData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido')
     } finally {

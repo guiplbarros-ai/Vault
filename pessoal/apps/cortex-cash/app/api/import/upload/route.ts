@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to process file',
-        message: error instanceof Error ? error.message : 'Erro desconhecido',
+        message: 'Erro ao processar arquivo',
       },
       { status: 500 }
     )

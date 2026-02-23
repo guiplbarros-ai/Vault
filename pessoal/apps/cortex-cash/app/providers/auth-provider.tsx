@@ -1,6 +1,7 @@
 'use client'
 
 import { type LoginDTO, type RegisterDTO, authService } from '@/lib/services/auth.service'
+import { getSupabase } from '@/lib/db/supabase'
 import type { UserRole, Usuario } from '@/lib/types'
 import { useRouter } from 'next/navigation'
 import type React from 'react'
@@ -14,7 +15,7 @@ interface AuthContextType {
   hasRole: (role: UserRole) => boolean
   login: (data: LoginDTO) => Promise<void>
   register: (data: RegisterDTO) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   updateUser: (data: { nome?: string; avatar_url?: string }) => Promise<void>
   changePassword: (senhaAtual: string, novaSenha: string) => Promise<void>
   refreshUser: () => Promise<void>
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const usuario = await authService.getCurrentUser()
 
       if (usuario) {
-        console.log('[AuthProvider] loadUser: Usuário carregado com sucesso:', usuario.email)
+        console.log('[AuthProvider] loadUser: Usuário carregado com sucesso')
         setUser(usuario)
       } else {
         console.log('[AuthProvider] loadUser: Nenhum usuário encontrado, setando como null')
@@ -50,8 +51,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Subscribe to Supabase auth state changes
   useEffect(() => {
+    const supabase = getSupabase()
+
+    // Initial load
     loadUser()
+
+    // Listen for auth state changes (login, logout, token refresh, etc.)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+      console.log('[AuthProvider] onAuthStateChange:', event)
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        await loadUser()
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setIsLoading(false)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [loadUser])
 
   // Login com email e senha
@@ -91,8 +113,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   // Logout
-  const logout = useCallback(() => {
-    authService.logout()
+  const logout = useCallback(async () => {
+    await authService.logout()
     setUser(null)
     // Redireciona para onboarding após logout
     router.push('/onboarding')

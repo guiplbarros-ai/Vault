@@ -5,11 +5,37 @@
  * Fornece operações CRUD e tracking de orçamentos mensais
  */
 
-import { getDB } from '../db/client'
-import { getCurrentUserId } from '../db/seed-usuarios'
+import { getSupabase } from '../db/supabase'
 import { DatabaseError, NotFoundError, ValidationError } from '../errors'
 import type { Orcamento } from '../types'
 import { roundCurrency } from '../utils/currency'
+
+async function getUserId(): Promise<string> {
+  const supabase = getSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return user.id
+}
+
+function rowToOrcamento(row: Record<string, unknown>): Orcamento {
+  return {
+    id: row.id as string,
+    nome: row.nome as string,
+    tipo: row.tipo as 'categoria' | 'centro_custo',
+    categoria_id: row.categoria_id as string | undefined,
+    centro_custo_id: row.centro_custo_id as string | undefined,
+    mes_referencia: row.mes_referencia as string,
+    valor_planejado: Number(row.valor_planejado) || 0,
+    valor_realizado: Number(row.valor_realizado) || 0,
+    alerta_80: row.alerta_80 !== false,
+    alerta_100: row.alerta_100 !== false,
+    alerta_80_enviado: row.alerta_80_enviado === true,
+    alerta_100_enviado: row.alerta_100_enviado === true,
+    usuario_id: row.usuario_id as string | undefined,
+    created_at: row.created_at ? new Date(row.created_at as string) : new Date(),
+    updated_at: row.updated_at ? new Date(row.updated_at as string) : new Date(),
+  }
+}
 
 export interface CreateOrcamentoDTO {
   nome: string
@@ -44,9 +70,6 @@ export class OrcamentoService {
   // CRUD - Orçamentos
   // ============================================================================
 
-  /**
-   * Lista orçamentos com filtros
-   */
   async listOrcamentos(options?: {
     mesReferencia?: string
     tipo?: 'categoria' | 'centro_custo'
@@ -57,106 +80,58 @@ export class OrcamentoService {
     sortBy?: 'nome' | 'valor_planejado' | 'valor_realizado' | 'created_at'
     sortOrder?: 'asc' | 'desc'
   }): Promise<Orcamento[]> {
-    const db = getDB()
-    const currentUserId = getCurrentUserId()
-
-    let orcamentos: Orcamento[]
-
-    // Preferir índice por mês-referência quando disponível (caso de uso principal)
-    if (options?.mesReferencia) {
-      let chain = db.orcamentos.where('mes_referencia').equals(options.mesReferencia)
-      // Paginação no nível do Dexie quando possível
-      if (
-        typeof options.offset === 'number' &&
-        options.offset > 0 &&
-        typeof (chain as any).offset === 'function'
-      ) {
-        chain = (chain as any).offset(options.offset)
-      }
-      if (typeof options.limit === 'number' && options.limit > 0) {
-        chain = chain.limit(options.limit)
-      }
-      orcamentos = await chain.toArray()
-    } else {
-      // Fallback: carrega todos (caso menos comum)
-      orcamentos = await db.orcamentos.toArray()
-    }
-
-    // Filtrar por usuário atual (sempre)
-    orcamentos = orcamentos.filter((o) => o.usuario_id === currentUserId)
-
-    // Filtrar por tipo
-    if (options?.tipo) {
-      orcamentos = orcamentos.filter((o) => o.tipo === options.tipo)
-    }
-
-    // Filtrar por categoria
-    if (options?.categoriaId) {
-      orcamentos = orcamentos.filter((o) => o.categoria_id === options.categoriaId)
-    }
-
-    // Filtrar por centro de custo
-    if (options?.centroCustoId) {
-      orcamentos = orcamentos.filter((o) => o.centro_custo_id === options.centroCustoId)
-    }
-
-    // Ordenar
+    const supabase = getSupabase()
+    const userId = await getUserId()
     const sortBy = options?.sortBy || 'nome'
     const sortOrder = options?.sortOrder || 'asc'
 
-    orcamentos.sort((a, b) => {
-      let compareA: any
-      let compareB: any
+    let query = supabase
+      .from('orcamentos')
+      .select('*')
+      .eq('usuario_id', userId)
+      .order(sortBy, { ascending: sortOrder === 'asc' })
 
-      if (sortBy === 'nome') {
-        compareA = a.nome.toLowerCase()
-        compareB = b.nome.toLowerCase()
-      } else if (sortBy === 'valor_planejado') {
-        compareA = a.valor_planejado
-        compareB = b.valor_planejado
-      } else if (sortBy === 'valor_realizado') {
-        compareA = a.valor_realizado
-        compareB = b.valor_realizado
-      } else if (sortBy === 'created_at') {
-        compareA = a.created_at instanceof Date ? a.created_at : new Date(a.created_at)
-        compareB = b.created_at instanceof Date ? b.created_at : new Date(b.created_at)
-        compareA = compareA.getTime()
-        compareB = compareB.getTime()
-      }
-
-      if (sortOrder === 'asc') {
-        return compareA > compareB ? 1 : compareA < compareB ? -1 : 0
-      } else {
-        return compareA < compareB ? 1 : compareA > compareB ? -1 : 0
-      }
-    })
-
-    // Se não aplicamos paginação via Dexie (caso fallback), aplica aqui
-    if (!options?.mesReferencia) {
-      const offset = options?.offset || 0
-      const limit = options?.limit
-      if (limit !== undefined) {
-        orcamentos = orcamentos.slice(offset, offset + limit)
-      } else if (offset > 0) {
-        orcamentos = orcamentos.slice(offset)
-      }
+    if (options?.mesReferencia) {
+      query = query.eq('mes_referencia', options.mesReferencia)
     }
 
-    return orcamentos
+    if (options?.tipo) {
+      query = query.eq('tipo', options.tipo)
+    }
+
+    if (options?.categoriaId) {
+      query = query.eq('categoria_id', options.categoriaId)
+    }
+
+    if (options?.centroCustoId) {
+      query = query.eq('centro_custo_id', options.centroCustoId)
+    }
+
+    if (options?.limit !== undefined) {
+      const offset = options?.offset || 0
+      query = query.range(offset, offset + options.limit - 1)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw new DatabaseError('Erro ao listar orçamentos', error as unknown as Error)
+
+    return (data || []).map(rowToOrcamento)
   }
 
-  /**
-   * Busca orçamento por ID
-   */
   async getOrcamentoById(id: string): Promise<Orcamento | null> {
-    const db = getDB()
-    const orcamento = await db.orcamentos.get(id)
-    return orcamento || null
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('orcamentos')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Erro ao buscar orçamento', error as unknown as Error)
+
+    return data ? rowToOrcamento(data) : null
   }
 
-  /**
-   * Busca orçamento com informações de progresso
-   */
   async getOrcamentoComProgresso(id: string): Promise<OrcamentoComProgresso | null> {
     const orcamento = await this.getOrcamentoById(id)
     if (!orcamento) return null
@@ -164,115 +139,96 @@ export class OrcamentoService {
     return this.enrichOrcamentoComProgresso(orcamento)
   }
 
-  /**
-   * Lista orçamentos com informações de progresso
-   */
   async listOrcamentosComProgresso(options?: {
     mesReferencia?: string
     tipo?: 'categoria' | 'centro_custo'
   }): Promise<OrcamentoComProgresso[]> {
-    const db = getDB()
+    const supabase = getSupabase()
     const orcamentos = await this.listOrcamentos(options)
 
-    // Otimização: evite N consultas por item; constroi mapas de relações
-    // Só carregamos tabelas necessárias conforme tipos existentes
     const needsCategoria = orcamentos.some((o) => o.tipo === 'categoria' && o.categoria_id)
     const needsCentro = orcamentos.some((o) => o.tipo === 'centro_custo' && o.centro_custo_id)
 
-    const [categorias, centros] = await Promise.all([
-      needsCategoria ? db.categorias.toArray() : Promise.resolve([]),
-      needsCentro ? db.centros_custo.toArray() : Promise.resolve([]),
+    const [categoriasData, centrosData] = await Promise.all([
+      needsCategoria
+        ? supabase.from('categorias').select('id, nome, icone, cor').then((r: { data: { id: string; nome: string; icone: string | null; cor: string | null }[] | null }) => r.data || [])
+        : Promise.resolve([]),
+      needsCentro
+        ? supabase.from('centros_custo').select('id, nome').then((r: { data: { id: string; nome: string }[] | null }) => r.data || [])
+        : Promise.resolve([]),
     ])
-    const categoriaById = new Map(categorias.map((c) => [c.id, c]))
-    const centroById = new Map(centros.map((c) => [c.id, c]))
+
+    const categoriaById = new Map((categoriasData || []).map((c: { id: string }) => [c.id, c]))
+    const centroById = new Map((centrosData || []).map((c: { id: string }) => [c.id, c]))
 
     return orcamentos.map((o) => {
-      const percentual_usado =
-        o.valor_planejado > 0 ? (o.valor_realizado / o.valor_planejado) * 100 : 0
+      const percentual_usado = o.valor_planejado > 0 ? (o.valor_realizado / o.valor_planejado) * 100 : 0
       const valor_restante = o.valor_planejado - o.valor_realizado
       let status: 'ok' | 'atencao' | 'excedido' = 'ok'
       if (percentual_usado >= 100) status = 'excedido'
       else if (percentual_usado >= 80) status = 'atencao'
 
-      const enriched: OrcamentoComProgresso = {
-        ...o,
-        percentual_usado,
-        valor_restante,
-        status,
-      }
+      const enriched: OrcamentoComProgresso = { ...o, percentual_usado, valor_restante, status }
 
       if (o.tipo === 'categoria' && o.categoria_id) {
-        const cat = categoriaById.get(o.categoria_id)
+        const cat = categoriaById.get(o.categoria_id) as { nome: string; icone?: string; cor?: string } | undefined
         if (cat) {
           enriched.categoria_nome = cat.nome
           enriched.categoria_icone = cat.icone
           enriched.categoria_cor = cat.cor
         }
       } else if (o.tipo === 'centro_custo' && o.centro_custo_id) {
-        const cc = centroById.get(o.centro_custo_id)
-        if (cc) {
-          enriched.centro_custo_nome = cc.nome
-        }
+        const cc = centroById.get(o.centro_custo_id) as { nome: string } | undefined
+        if (cc) enriched.centro_custo_nome = cc.nome
       }
       return enriched
     })
   }
 
-  /**
-   * Helper: Enriquece orçamento com dados de progresso e relações
-   */
   private async enrichOrcamentoComProgresso(orcamento: Orcamento): Promise<OrcamentoComProgresso> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    const percentual_usado =
-      orcamento.valor_planejado > 0
-        ? (orcamento.valor_realizado / orcamento.valor_planejado) * 100
-        : 0
-
+    const percentual_usado = orcamento.valor_planejado > 0
+      ? (orcamento.valor_realizado / orcamento.valor_planejado) * 100
+      : 0
     const valor_restante = orcamento.valor_planejado - orcamento.valor_realizado
-
     let status: 'ok' | 'atencao' | 'excedido' = 'ok'
-    if (percentual_usado >= 100) {
-      status = 'excedido'
-    } else if (percentual_usado >= 80) {
-      status = 'atencao'
-    }
+    if (percentual_usado >= 100) status = 'excedido'
+    else if (percentual_usado >= 80) status = 'atencao'
 
-    const enriched: OrcamentoComProgresso = {
-      ...orcamento,
-      percentual_usado,
-      valor_restante,
-      status,
-    }
+    const enriched: OrcamentoComProgresso = { ...orcamento, percentual_usado, valor_restante, status }
 
-    // Buscar informações da categoria (se aplicável)
     if (orcamento.tipo === 'categoria' && orcamento.categoria_id) {
-      const categoria = await db.categorias.get(orcamento.categoria_id)
-      if (categoria) {
-        enriched.categoria_nome = categoria.nome
-        enriched.categoria_icone = categoria.icone
-        enriched.categoria_cor = categoria.cor
+      const { data: cat } = await supabase
+        .from('categorias')
+        .select('nome, icone, cor')
+        .eq('id', orcamento.categoria_id)
+        .maybeSingle()
+
+      if (cat) {
+        enriched.categoria_nome = (cat as { nome: string }).nome
+        enriched.categoria_icone = (cat as { icone?: string }).icone
+        enriched.categoria_cor = (cat as { cor?: string }).cor
       }
     }
 
-    // Buscar informações do centro de custo (se aplicável)
     if (orcamento.tipo === 'centro_custo' && orcamento.centro_custo_id) {
-      const centroCusto = await db.centros_custo.get(orcamento.centro_custo_id)
-      if (centroCusto) {
-        enriched.centro_custo_nome = centroCusto.nome
-      }
+      const { data: cc } = await supabase
+        .from('centros_custo')
+        .select('nome')
+        .eq('id', orcamento.centro_custo_id)
+        .maybeSingle()
+
+      if (cc) enriched.centro_custo_nome = (cc as { nome: string }).nome
     }
 
     return enriched
   }
 
-  /**
-   * Cria novo orçamento
-   */
   async createOrcamento(data: CreateOrcamentoDTO): Promise<Orcamento> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
-    // Validações
     if (data.tipo === 'categoria' && !data.categoria_id) {
       throw new ValidationError('categoria_id é obrigatório quando tipo é "categoria"')
     }
@@ -285,175 +241,152 @@ export class OrcamentoService {
       throw new ValidationError('Valor planejado deve ser maior que zero')
     }
 
-    // Validar formato do mes_referencia (YYYY-MM)
     const mesRegex = /^\d{4}-\d{2}$/
     if (!mesRegex.test(data.mes_referencia)) {
       throw new ValidationError('mes_referencia deve estar no formato YYYY-MM (ex: 2025-11)')
     }
 
-    // Verificar se categoria/centro de custo existe
     if (data.tipo === 'categoria' && data.categoria_id) {
-      const categoria = await db.categorias.get(data.categoria_id)
-      if (!categoria) {
-        throw new NotFoundError('Categoria não encontrada')
-      }
+      const { data: cat } = await supabase
+        .from('categorias')
+        .select('id')
+        .eq('id', data.categoria_id)
+        .maybeSingle()
+      if (!cat) throw new NotFoundError('Categoria não encontrada')
     }
 
     if (data.tipo === 'centro_custo' && data.centro_custo_id) {
-      const centroCusto = await db.centros_custo.get(data.centro_custo_id)
-      if (!centroCusto) {
-        throw new NotFoundError('Centro de custo não encontrado')
-      }
+      const { data: cc } = await supabase
+        .from('centros_custo')
+        .select('id')
+        .eq('id', data.centro_custo_id)
+        .maybeSingle()
+      if (!cc) throw new NotFoundError('Centro de custo não encontrado')
     }
 
-    const now = new Date()
-    const currentUserId = getCurrentUserId()
+    const now = new Date().toISOString()
 
-    const orcamento: Orcamento = {
-      id: crypto.randomUUID(),
-      nome: data.nome,
-      tipo: data.tipo,
-      categoria_id: data.categoria_id,
-      centro_custo_id: data.centro_custo_id,
-      mes_referencia: data.mes_referencia,
-      valor_planejado: data.valor_planejado,
-      valor_realizado: 0,
-      alerta_80: data.alerta_80 ?? true,
-      alerta_100: data.alerta_100 ?? true,
-      alerta_80_enviado: false,
-      alerta_100_enviado: false,
-      usuario_id: currentUserId,
-      created_at: now,
-      updated_at: now,
+    const { data: inserted, error } = await supabase
+      .from('orcamentos')
+      .insert({
+        id: crypto.randomUUID(),
+        nome: data.nome,
+        tipo: data.tipo,
+        categoria_id: data.categoria_id || null,
+        centro_custo_id: data.centro_custo_id || null,
+        mes_referencia: data.mes_referencia,
+        valor_planejado: data.valor_planejado,
+        valor_realizado: 0,
+        alerta_80: data.alerta_80 ?? true,
+        alerta_100: data.alerta_100 ?? true,
+        alerta_80_enviado: false,
+        alerta_100_enviado: false,
+        usuario_id: userId,
+        created_at: now,
+        updated_at: now,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      throw new DatabaseError('Erro ao criar orçamento: ' + error.message)
     }
 
-    try {
-      await db.orcamentos.add(orcamento)
-      return orcamento
-    } catch (error) {
-      throw new DatabaseError(
-        'Erro ao criar orçamento: ' + (error instanceof Error ? error.message : 'desconhecido')
-      )
-    }
+    return rowToOrcamento(inserted)
   }
 
-  /**
-   * Atualiza orçamento existente
-   */
   async updateOrcamento(id: string, data: UpdateOrcamentoDTO): Promise<Orcamento> {
-    const db = getDB()
+    const supabase = getSupabase()
 
     const existing = await this.getOrcamentoById(id)
-    if (!existing) {
-      throw new NotFoundError('Orçamento não encontrado')
-    }
+    if (!existing) throw new NotFoundError('Orçamento não encontrado')
 
     if (data.valor_planejado !== undefined && data.valor_planejado <= 0) {
       throw new ValidationError('Valor planejado deve ser maior que zero')
     }
 
-    const updated: Partial<Orcamento> = {
-      updated_at: new Date(),
-    }
+    const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (data.nome !== undefined) updatePayload.nome = data.nome
+    if (data.valor_planejado !== undefined) updatePayload.valor_planejado = data.valor_planejado
+    if (data.alerta_80 !== undefined) updatePayload.alerta_80 = data.alerta_80
+    if (data.alerta_100 !== undefined) updatePayload.alerta_100 = data.alerta_100
 
-    if (data.nome !== undefined) updated.nome = data.nome
-    if (data.valor_planejado !== undefined) updated.valor_planejado = data.valor_planejado
-    if (data.alerta_80 !== undefined) updated.alerta_80 = data.alerta_80
-    if (data.alerta_100 !== undefined) updated.alerta_100 = data.alerta_100
+    const { data: updated, error } = await supabase
+      .from('orcamentos')
+      .update(updatePayload)
+      .eq('id', id)
+      .select()
+      .single()
 
-    try {
-      await db.orcamentos.update(id, updated)
-
-      const orcamentoAtualizado = await this.getOrcamentoById(id)
-      if (!orcamentoAtualizado) {
-        throw new NotFoundError('Orçamento não encontrado após atualização')
-      }
-
-      return orcamentoAtualizado
-    } catch (error) {
+    if (error) {
       if (error instanceof NotFoundError) throw error
-      throw new DatabaseError(
-        'Erro ao atualizar orçamento: ' + (error instanceof Error ? error.message : 'desconhecido')
-      )
+      throw new DatabaseError('Erro ao atualizar orçamento: ' + error.message)
     }
+
+    return rowToOrcamento(updated)
   }
 
-  /**
-   * Deleta orçamento
-   */
   async deleteOrcamento(id: string): Promise<void> {
-    const db = getDB()
+    const supabase = getSupabase()
 
     const existing = await this.getOrcamentoById(id)
-    if (!existing) {
-      throw new NotFoundError('Orçamento não encontrado')
-    }
+    if (!existing) throw new NotFoundError('Orçamento não encontrado')
 
-    await db.orcamentos.delete(id)
+    const { error } = await supabase.from('orcamentos').delete().eq('id', id)
+
+    if (error) throw new DatabaseError('Erro ao deletar orçamento', error as unknown as Error)
   }
 
   // ============================================================================
   // TRACKING - Valor Realizado
   // ============================================================================
 
-  /**
-   * Recalcula o valor realizado de um orçamento com base nas transações
-   */
   async recalcularValorRealizado(orcamentoId: string): Promise<Orcamento> {
-    const db = getDB()
+    const supabase = getSupabase()
 
     const orcamento = await this.getOrcamentoById(orcamentoId)
-    if (!orcamento) {
-      throw new NotFoundError('Orçamento não encontrado')
-    }
+    if (!orcamento) throw new NotFoundError('Orçamento não encontrado')
 
-    // Extrair ano e mês do mes_referencia (formato: YYYY-MM)
     const [ano, mes] = orcamento.mes_referencia.split('-').map(Number) as [number, number]
-    const dataInicio = new Date(ano, mes - 1, 1)
-    const dataFim = new Date(ano, mes, 0, 23, 59, 59)
+    const dataInicio = new Date(ano, mes - 1, 1).toISOString()
+    const dataFim = new Date(ano, mes, 0, 23, 59, 59).toISOString()
 
-    let valorRealizado = 0
+    let query = supabase
+      .from('transacoes')
+      .select('valor')
+      .eq('tipo', 'despesa')
+      .gte('data', dataInicio)
+      .lte('data', dataFim)
 
     if (orcamento.tipo === 'categoria' && orcamento.categoria_id) {
-      // Buscar pelo índice de data (muito mais eficiente) e filtrar categoria + tipo
-      const transacoes = await db.transacoes
-        .where('data')
-        .between(dataInicio, dataFim, true, true)
-        .and((t) => t.categoria_id === orcamento.categoria_id && t.tipo === 'despesa')
-        .toArray()
-
-      valorRealizado = transacoes.reduce((sum, t) => sum + Math.abs(t.valor), 0)
+      query = query.eq('categoria_id', orcamento.categoria_id)
     } else if (orcamento.tipo === 'centro_custo' && orcamento.centro_custo_id) {
-      // Buscar pelo índice de data e filtrar centro de custo + tipo
-      const transacoes = await db.transacoes
-        .where('data')
-        .between(dataInicio, dataFim, true, true)
-        .and((t) => t.centro_custo_id === orcamento.centro_custo_id && t.tipo === 'despesa')
-        .toArray()
-
-      valorRealizado = transacoes.reduce((sum, t) => sum + Math.abs(t.valor), 0)
+      query = query.eq('centro_custo_id', orcamento.centro_custo_id)
     }
 
-    // Atualizar valor_realizado (arredondado para evitar erros de ponto flutuante)
-    await db.orcamentos.update(orcamentoId, {
-      valor_realizado: roundCurrency(valorRealizado),
-      updated_at: new Date(),
-    })
+    const { data: transacoes } = await query
 
-    // Verificar alertas
+    const valorRealizado = (transacoes || []).reduce(
+      (sum: number, t: { valor: number }) => sum + Math.abs(t.valor),
+      0
+    )
+
+    await supabase
+      .from('orcamentos')
+      .update({
+        valor_realizado: roundCurrency(valorRealizado),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', orcamentoId)
+
     await this.verificarAlertas(orcamentoId)
 
     const orcamentoAtualizado = await this.getOrcamentoById(orcamentoId)
-    if (!orcamentoAtualizado) {
-      throw new NotFoundError('Orçamento não encontrado após recalcular')
-    }
+    if (!orcamentoAtualizado) throw new NotFoundError('Orçamento não encontrado após recalcular')
 
     return orcamentoAtualizado
   }
 
-  /**
-   * Recalcula o valor realizado de todos os orçamentos de um mês
-   */
   async recalcularTodosDoMes(mesReferencia: string): Promise<number> {
     const orcamentos = await this.listOrcamentos({ mesReferencia })
 
@@ -470,41 +403,29 @@ export class OrcamentoService {
     return count
   }
 
-  /**
-   * Verifica e atualiza flags de alertas (80% e 100%)
-   */
   private async verificarAlertas(orcamentoId: string): Promise<void> {
-    const db = getDB()
+    const supabase = getSupabase()
     const orcamento = await this.getOrcamentoById(orcamentoId)
     if (!orcamento) return
 
-    const percentualUsado =
-      orcamento.valor_planejado > 0
-        ? (orcamento.valor_realizado / orcamento.valor_planejado) * 100
-        : 0
+    const percentualUsado = orcamento.valor_planejado > 0
+      ? (orcamento.valor_realizado / orcamento.valor_planejado) * 100
+      : 0
 
-    const updates: Partial<Orcamento> = {}
+    const updates: Record<string, unknown> = {}
 
-    // Alerta 80%
     if (orcamento.alerta_80 && !orcamento.alerta_80_enviado && percentualUsado >= 80) {
       updates.alerta_80_enviado = true
-      // TODO: Enviar notificação/email (implementar depois)
-      console.log(
-        `⚠️ Alerta 80%: Orçamento "${orcamento.nome}" atingiu ${percentualUsado.toFixed(1)}%`
-      )
+      console.log(`Alerta 80%: Orçamento "${orcamento.nome}" atingiu ${percentualUsado.toFixed(1)}%`)
     }
 
-    // Alerta 100%
     if (orcamento.alerta_100 && !orcamento.alerta_100_enviado && percentualUsado >= 100) {
       updates.alerta_100_enviado = true
-      // TODO: Enviar notificação/email (implementar depois)
-      console.log(
-        `🚨 Alerta 100%: Orçamento "${orcamento.nome}" atingiu ${percentualUsado.toFixed(1)}%`
-      )
+      console.log(`Alerta 100%: Orçamento "${orcamento.nome}" atingiu ${percentualUsado.toFixed(1)}%`)
     }
 
     if (Object.keys(updates).length > 0) {
-      await db.orcamentos.update(orcamentoId, updates)
+      await supabase.from('orcamentos').update(updates).eq('id', orcamentoId)
     }
   }
 
@@ -512,9 +433,6 @@ export class OrcamentoService {
   // RELATÓRIOS E ANÁLISES
   // ============================================================================
 
-  /**
-   * Retorna resumo de todos os orçamentos de um mês
-   */
   async getResumoMensal(mesReferencia: string): Promise<{
     total_planejado: number
     total_realizado: number
@@ -531,25 +449,17 @@ export class OrcamentoService {
     const total_restante = total_planejado - total_realizado
     const percentual_usado = total_planejado > 0 ? (total_realizado / total_planejado) * 100 : 0
 
-    const orcamentos_ok = orcamentos.filter((o) => o.status === 'ok').length
-    const orcamentos_atencao = orcamentos.filter((o) => o.status === 'atencao').length
-    const orcamentos_excedidos = orcamentos.filter((o) => o.status === 'excedido').length
-
     return {
       total_planejado,
       total_realizado,
       total_restante,
       percentual_usado,
-      orcamentos_ok,
-      orcamentos_atencao,
-      orcamentos_excedidos,
+      orcamentos_ok: orcamentos.filter((o) => o.status === 'ok').length,
+      orcamentos_atencao: orcamentos.filter((o) => o.status === 'atencao').length,
+      orcamentos_excedidos: orcamentos.filter((o) => o.status === 'excedido').length,
     }
   }
 
-  /**
-   * Copia orçamentos de um mês para outro
-   * Útil para replicar planejamento mensal
-   */
   async copiarOrcamentosParaMes(mesOrigem: string, mesDestino: string): Promise<number> {
     const orcamentosOrigem = await this.listOrcamentos({ mesReferencia: mesOrigem })
 
@@ -575,40 +485,23 @@ export class OrcamentoService {
     return count
   }
 
-  /**
-   * Recalcula orçamentos afetados por transações
-   * Usado após updates em massa (importação, edições em lote, etc.)
-   *
-   * @param transacaoDatas - Array de datas das transações afetadas
-   * @returns Número de orçamentos recalculados
-   *
-   * @example
-   * // Após importar 50 transações em Janeiro/2025
-   * const datasAfetadas = transacoes.map(t => t.data);
-   * await orcamentoService.recalcularAfetados(datasAfetadas);
-   */
   async recalcularAfetados(transacaoDatas: Date[]): Promise<number> {
     if (transacaoDatas.length === 0) return 0
 
-    // Identifica meses únicos afetados
     const mesesAfetados = new Set<string>()
-
-    transacaoDatas.forEach((data) => {
+    for (const data of transacaoDatas) {
       const dataObj = data instanceof Date ? data : new Date(data)
       const ano = dataObj.getFullYear()
       const mes = (dataObj.getMonth() + 1).toString().padStart(2, '0')
-      const mesRef = `${ano}-${mes}`
-      mesesAfetados.add(mesRef)
-    })
+      mesesAfetados.add(`${ano}-${mes}`)
+    }
 
-    // Recalcula todos os orçamentos dos meses afetados
     let totalRecalculado = 0
-
     for (const mesRef of mesesAfetados) {
       try {
         const count = await this.recalcularTodosDoMes(mesRef)
         totalRecalculado += count
-        console.log(`✅ Recalculados ${count} orçamentos de ${mesRef}`)
+        console.log(`Recalculados ${count} orçamentos de ${mesRef}`)
       } catch (error) {
         console.error(`Erro ao recalcular orçamentos de ${mesRef}:`, error)
       }
@@ -617,23 +510,9 @@ export class OrcamentoService {
     return totalRecalculado
   }
 
-  /**
-   * Recalcula orçamentos de uma categoria específica
-   * Útil quando categoria é alterada em transações
-   *
-   * @param categoriaId - ID da categoria
-   * @param mesReferencia - Mês opcional (recalcula apenas este mês)
-   * @returns Número de orçamentos recalculados
-   */
   async recalcularPorCategoria(categoriaId: string, mesReferencia?: string): Promise<number> {
-    const filtros: Parameters<typeof this.listOrcamentos>[0] = {
-      tipo: 'categoria',
-      categoriaId,
-    }
-
-    if (mesReferencia) {
-      filtros.mesReferencia = mesReferencia
-    }
+    const filtros: Parameters<typeof this.listOrcamentos>[0] = { tipo: 'categoria', categoriaId }
+    if (mesReferencia) filtros.mesReferencia = mesReferencia
 
     const orcamentos = await this.listOrcamentos(filtros)
 
@@ -654,52 +533,38 @@ export class OrcamentoService {
   // AUTO-GERAÇÃO DE ORÇAMENTOS
   // ============================================================================
 
-  /**
-   * Gera sugestões de orçamento baseadas nos gastos dos últimos 3 meses.
-   * Analisa transações de despesa agrupadas por categoria e retorna
-   * sugestões com a média mensal arredondada.
-   *
-   * @param mesReferencia - Mês alvo para os orçamentos (YYYY-MM)
-   * @returns Array de sugestões com dados da categoria e valor sugerido
-   */
-  async gerarSugestoesOrcamento(mesReferencia: string): Promise<
-    Array<{
-      categoria_id: string
-      categoria_nome: string
-      categoria_icone?: string
-      media_mensal: number
-      valor_sugerido: number
-      total_transacoes: number
-      meses_com_gasto: number
-    }>
-  > {
-    const db = getDB()
-    const currentUserId = getCurrentUserId()
+  async gerarSugestoesOrcamento(mesReferencia: string): Promise<Array<{
+    categoria_id: string
+    categoria_nome: string
+    categoria_icone?: string
+    media_mensal: number
+    valor_sugerido: number
+    total_transacoes: number
+    meses_com_gasto: number
+  }>> {
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
-    // Calcular range dos últimos 3 meses antes do mês de referência
     const parts = mesReferencia.split('-').map(Number)
     const ano = parts[0] ?? 2026
     const mes = parts[1] ?? 1
-    const dataFim = new Date(ano, mes - 1, 0, 23, 59, 59) // último dia do mês anterior
-    const dataInicio = new Date(ano, mes - 4, 1) // 3 meses antes
+    const dataFim = new Date(ano, mes - 1, 0, 23, 59, 59).toISOString()
+    const dataInicio = new Date(ano, mes - 4, 1).toISOString()
 
-    // Buscar todas as despesas do período
-    const transacoes = await db.transacoes
-      .where('data')
-      .between(dataInicio, dataFim, true, true)
-      .and((t) => t.tipo === 'despesa' && !!t.categoria_id && t.usuario_id === currentUserId)
-      .toArray()
+    const { data: transacoes } = await supabase
+      .from('transacoes')
+      .select('categoria_id, valor, data')
+      .eq('tipo', 'despesa')
+      .eq('usuario_id', userId)
+      .not('categoria_id', 'is', null)
+      .gte('data', dataInicio)
+      .lte('data', dataFim)
 
-    // Agrupar por categoria
-    const porCategoria = new Map<
-      string,
-      { total: number; count: number; meses: Set<string> }
-    >()
+    const porCategoria = new Map<string, { total: number; count: number; meses: Set<string> }>()
 
-    for (const t of transacoes) {
-      const catId = t.categoria_id!
-      const d = t.data instanceof Date ? t.data : new Date(t.data)
-      const mesKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    for (const t of transacoes || []) {
+      const catId = t.categoria_id as string
+      const mesKey = new Date(t.data).toISOString().substring(0, 7)
 
       if (!porCategoria.has(catId)) {
         porCategoria.set(catId, { total: 0, count: 0, meses: new Set() })
@@ -710,19 +575,15 @@ export class OrcamentoService {
       entry.meses.add(mesKey)
     }
 
-    // Filtrar: mínimo 3 transações no período
-    const categoriasValidas = Array.from(porCategoria.entries()).filter(
-      ([, data]) => data.count >= 3
-    )
-
-    // Buscar dados das categorias
+    const categoriasValidas = Array.from(porCategoria.entries()).filter(([, data]) => data.count >= 3)
     const categoriaIds = categoriasValidas.map(([id]) => id)
-    const categorias = await db.categorias.bulkGet(categoriaIds)
-    const categoriaMap = new Map(
-      categorias.filter(Boolean).map((c) => [c!.id, c!])
-    )
 
-    // Verificar quais já têm orçamento no mês alvo
+    const { data: categorias } = categoriaIds.length > 0
+      ? await supabase.from('categorias').select('id, nome, icone').in('id', categoriaIds)
+      : { data: [] }
+
+    const categoriaMap = new Map((categorias || []).map((c: { id: string; nome: string; icone?: string }) => [c.id, c]))
+
     const orcamentosExistentes = await this.listOrcamentos({ mesReferencia })
     const categoriasComOrcamento = new Set(
       orcamentosExistentes
@@ -730,15 +591,12 @@ export class OrcamentoService {
         .map((o) => o.categoria_id!)
     )
 
-    // Montar sugestões (excluindo categorias que já têm orçamento)
-    const sugestoes = categoriasValidas
+    return categoriasValidas
       .filter(([catId]) => !categoriasComOrcamento.has(catId))
       .map(([catId, data]) => {
-        const cat = categoriaMap.get(catId)
+        const cat = categoriaMap.get(catId) as { nome: string; icone?: string } | undefined
         const mesesAtivos = Math.max(data.meses.size, 1)
         const mediaMensal = data.total / mesesAtivos
-
-        // Arredondar para cima ao múltiplo de 50 mais próximo
         const valorSugerido = Math.ceil(mediaMensal / 50) * 50
 
         return {
@@ -752,17 +610,8 @@ export class OrcamentoService {
         }
       })
       .sort((a, b) => b.valor_sugerido - a.valor_sugerido)
-
-    return sugestoes
   }
 
-  /**
-   * Cria orçamentos em lote a partir de sugestões aprovadas.
-   *
-   * @param sugestoes - Array com categoria_id e valor_planejado
-   * @param mesReferencia - Mês alvo (YYYY-MM)
-   * @returns Número de orçamentos criados
-   */
   async criarOrcamentosEmLote(
     sugestoes: Array<{ categoria_id: string; categoria_nome: string; valor_planejado: number }>,
     mesReferencia: string
@@ -783,7 +632,6 @@ export class OrcamentoService {
       }
     }
 
-    // Recalcular todos para ter valores realizados corretos
     await this.recalcularTodosDoMes(mesReferencia)
 
     return count

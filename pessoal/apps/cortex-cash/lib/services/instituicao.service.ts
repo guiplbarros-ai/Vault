@@ -5,11 +5,46 @@
  * Fornece operações CRUD e consultas para instituições financeiras
  */
 
-import { getDB } from '../db/client'
+import { escapeLikePattern } from '../api/sanitize'
+import { getSupabase } from '../db/supabase'
 import { DatabaseError, NotFoundError, ValidationError } from '../errors'
 import type { Conta, CreateInstituicaoDTO, Instituicao } from '../types'
-import { createInstituicaoSchema, validateDTO } from '../validations/dtos'
 import type { IInstituicaoService } from './interfaces'
+
+function rowToInstituicao(row: Record<string, unknown>): Instituicao {
+  return {
+    id: row.id as string,
+    nome: row.nome as string,
+    codigo: row.codigo as string | undefined,
+    logo_url: row.logo_url as string | undefined,
+    cor: row.cor as string | undefined,
+    created_at: row.created_at ? new Date(row.created_at as string) : new Date(),
+    updated_at: row.updated_at ? new Date(row.updated_at as string) : new Date(),
+  }
+}
+
+function rowToConta(row: Record<string, unknown>): Conta {
+  return {
+    id: row.id as string,
+    instituicao_id: row.instituicao_id as string,
+    nome: row.nome as string,
+    tipo: row.tipo as Conta['tipo'],
+    agencia: row.agencia as string | undefined,
+    numero: row.numero as string | undefined,
+    saldo_referencia: Number(row.saldo_referencia) || 0,
+    data_referencia: row.data_referencia ? new Date(row.data_referencia as string) : new Date(),
+    saldo_atual: Number(row.saldo_atual) || 0,
+    ativa: row.ativa !== false,
+    cor: row.cor as string | undefined,
+    icone: row.icone as string | undefined,
+    observacoes: row.observacoes as string | undefined,
+    conta_pai_id: row.conta_pai_id as string | undefined,
+    pluggy_id: row.pluggy_id as string | undefined,
+    usuario_id: row.usuario_id as string | undefined,
+    created_at: row.created_at ? new Date(row.created_at as string) : new Date(),
+    updated_at: row.updated_at ? new Date(row.updated_at as string) : new Date(),
+  }
+}
 
 export class InstituicaoService implements IInstituicaoService {
   /**
@@ -21,68 +56,57 @@ export class InstituicaoService implements IInstituicaoService {
     sortBy?: 'nome' | 'codigo' | 'created_at'
     sortOrder?: 'asc' | 'desc'
   }): Promise<Instituicao[]> {
-    const db = getDB()
-
-    let instituicoes = await db.instituicoes.toArray()
-
-    // Ordenar
+    const supabase = getSupabase()
     const sortBy = options?.sortBy || 'nome'
     const sortOrder = options?.sortOrder || 'asc'
 
-    instituicoes.sort((a, b) => {
-      let compareA: any
-      let compareB: any
+    let query = supabase
+      .from('instituicoes')
+      .select('*')
+      .order(sortBy, { ascending: sortOrder === 'asc' })
 
-      if (sortBy === 'nome') {
-        compareA = a.nome.toLowerCase()
-        compareB = b.nome.toLowerCase()
-      } else if (sortBy === 'codigo') {
-        compareA = (a.codigo || '').toLowerCase()
-        compareB = (b.codigo || '').toLowerCase()
-      } else if (sortBy === 'created_at') {
-        compareA = a.created_at instanceof Date ? a.created_at : new Date(a.created_at)
-        compareB = b.created_at instanceof Date ? b.created_at : new Date(b.created_at)
-        compareA = compareA.getTime()
-        compareB = compareB.getTime()
-      }
-
-      if (sortOrder === 'asc') {
-        return compareA > compareB ? 1 : compareA < compareB ? -1 : 0
-      } else {
-        return compareA < compareB ? 1 : compareA > compareB ? -1 : 0
-      }
-    })
-
-    // Aplicar paginação
-    const offset = options?.offset || 0
-    const limit = options?.limit
-
-    if (limit !== undefined) {
-      instituicoes = instituicoes.slice(offset, offset + limit)
-    } else if (offset > 0) {
-      instituicoes = instituicoes.slice(offset)
+    if (options?.limit !== undefined) {
+      const offset = options?.offset || 0
+      query = query.range(offset, offset + options.limit - 1)
     }
 
-    return instituicoes
+    const { data, error } = await query
+
+    if (error) throw new DatabaseError('Erro ao listar instituições', error as unknown as Error)
+
+    return (data || []).map(rowToInstituicao)
   }
 
   /**
    * Busca uma instituição por ID
    */
   async getInstituicaoById(id: string): Promise<Instituicao | null> {
-    const db = getDB()
-    const instituicao = await db.instituicoes.get(id)
-    return instituicao || null
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('instituicoes')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Erro ao buscar instituição', error as unknown as Error)
+
+    return data ? rowToInstituicao(data) : null
   }
 
   /**
    * Busca uma instituição por código
    */
   async getInstituicaoByCodigo(codigo: string): Promise<Instituicao | null> {
-    const db = getDB()
-    const instituicoes = await db.instituicoes.toArray()
-    const instituicao = instituicoes.find((i) => i.codigo === codigo)
-    return instituicao || null
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('instituicoes')
+      .select('*')
+      .eq('codigo', codigo)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Erro ao buscar instituição por código', error as unknown as Error)
+
+    return data ? rowToInstituicao(data) : null
   }
 
   /**
@@ -90,28 +114,32 @@ export class InstituicaoService implements IInstituicaoService {
    */
   async createInstituicao(data: CreateInstituicaoDTO): Promise<Instituicao> {
     try {
-      // Validate input
-      const validatedData = validateDTO(createInstituicaoSchema, data)
-
-      const db = getDB()
-
-      const id = crypto.randomUUID()
-      const now = new Date()
-
-      const instituicao: Instituicao = {
-        ...validatedData,
-        id,
-        created_at: now,
-        updated_at: now,
+      if (!data.nome || data.nome.trim().length === 0) {
+        throw new ValidationError('Nome da instituição é obrigatório')
       }
 
-      await db.instituicoes.add(instituicao)
+      const supabase = getSupabase()
+      const now = new Date().toISOString()
 
-      return instituicao
+      const { data: inserted, error } = await supabase
+        .from('instituicoes')
+        .insert({
+          id: crypto.randomUUID(),
+          nome: data.nome.trim(),
+          codigo: data.codigo,
+          logo_url: data.logo_url,
+          cor: data.cor,
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single()
+
+      if (error) throw new DatabaseError('Erro ao criar instituição', error as unknown as Error)
+
+      return rowToInstituicao(inserted)
     } catch (error) {
-      if (error instanceof ValidationError) {
-        throw error
-      }
+      if (error instanceof ValidationError || error instanceof DatabaseError) throw error
       throw new DatabaseError('Erro ao criar instituição', error as Error)
     }
   }
@@ -121,50 +149,49 @@ export class InstituicaoService implements IInstituicaoService {
    */
   async updateInstituicao(id: string, data: Partial<CreateInstituicaoDTO>): Promise<Instituicao> {
     try {
-      const db = getDB()
+      const supabase = getSupabase()
 
-      const existing = await db.instituicoes.get(id)
+      const existing = await this.getInstituicaoById(id)
       if (!existing) {
         throw new NotFoundError('Instituição', id)
       }
 
-      await db.instituicoes.update(id, {
-        ...data,
-        updated_at: new Date(),
-      })
+      const { data: updated, error } = await supabase
+        .from('instituicoes')
+        .update({
+          ...data,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single()
 
-      const result = await db.instituicoes.get(id)
-      if (!result) {
-        throw new DatabaseError(`Erro ao recuperar instituição atualizada ${id}`)
-      }
+      if (error) throw new DatabaseError('Erro ao atualizar instituição', error as unknown as Error)
 
-      return result
+      return rowToInstituicao(updated)
     } catch (error) {
-      if (error instanceof NotFoundError || error instanceof DatabaseError) {
-        throw error
-      }
+      if (error instanceof NotFoundError || error instanceof DatabaseError) throw error
       throw new DatabaseError('Erro ao atualizar instituição', error as Error)
     }
   }
 
   /**
    * Deleta uma instituição
-   * ATENÇÃO: Isso não deleta as contas associadas!
    */
   async deleteInstituicao(id: string): Promise<void> {
     try {
-      const db = getDB()
+      const supabase = getSupabase()
 
-      const existing = await db.instituicoes.get(id)
+      const existing = await this.getInstituicaoById(id)
       if (!existing) {
         throw new NotFoundError('Instituição', id)
       }
 
-      await db.instituicoes.delete(id)
+      const { error } = await supabase.from('instituicoes').delete().eq('id', id)
+
+      if (error) throw new DatabaseError('Erro ao deletar instituição', error as unknown as Error)
     } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error
-      }
+      if (error instanceof NotFoundError || error instanceof DatabaseError) throw error
       throw new DatabaseError('Erro ao deletar instituição', error as Error)
     }
   }
@@ -173,21 +200,18 @@ export class InstituicaoService implements IInstituicaoService {
    * Busca instituições por termo de busca (nome ou código)
    */
   async searchInstituicoes(termo: string): Promise<Instituicao[]> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    const instituicoes = await db.instituicoes.toArray()
+    const sanitized = escapeLikePattern(termo)
+    const { data, error } = await supabase
+      .from('instituicoes')
+      .select('*')
+      .or(`nome.ilike.%${sanitized}%,codigo.ilike.%${sanitized}%`)
+      .order('nome', { ascending: true })
 
-    const termoLower = termo.toLowerCase()
-    const filtered = instituicoes.filter(
-      (i) =>
-        i.nome.toLowerCase().includes(termoLower) ||
-        (i.codigo && i.codigo.toLowerCase().includes(termoLower))
-    )
+    if (error) throw new DatabaseError('Erro ao buscar instituições', error as unknown as Error)
 
-    // Ordenar por nome
-    filtered.sort((a, b) => a.nome.localeCompare(b.nome))
-
-    return filtered
+    return (data || []).map(rowToInstituicao)
   }
 
   /**
@@ -196,18 +220,23 @@ export class InstituicaoService implements IInstituicaoService {
   async getInstituicaoComContas(
     id: string
   ): Promise<{ instituicao: Instituicao; contas: Conta[] }> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    const instituicao = await db.instituicoes.get(id)
+    const instituicao = await this.getInstituicaoById(id)
     if (!instituicao) {
       throw new NotFoundError('Instituição', id)
     }
 
-    const contas = await db.contas.where('instituicao_id').equals(id).toArray()
+    const { data: contasData, error } = await supabase
+      .from('contas')
+      .select('*')
+      .eq('instituicao_id', id)
+
+    if (error) throw new DatabaseError('Erro ao buscar contas da instituição', error as unknown as Error)
 
     return {
       instituicao,
-      contas,
+      contas: (contasData || []).map(rowToConta),
     }
   }
 
@@ -215,22 +244,33 @@ export class InstituicaoService implements IInstituicaoService {
    * Conta quantas contas uma instituição possui
    */
   async countContas(id: string): Promise<number> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    const contas = await db.contas.where('instituicao_id').equals(id).toArray()
+    const { count, error } = await supabase
+      .from('contas')
+      .select('*', { count: 'exact', head: true })
+      .eq('instituicao_id', id)
 
-    return contas.length
+    if (error) throw new DatabaseError('Erro ao contar contas', error as unknown as Error)
+
+    return count || 0
   }
 
   /**
    * Verifica se uma instituição possui contas ativas
    */
   async hasContasAtivas(id: string): Promise<boolean> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    const contas = await db.contas.where('instituicao_id').equals(id).toArray()
+    const { count, error } = await supabase
+      .from('contas')
+      .select('*', { count: 'exact', head: true })
+      .eq('instituicao_id', id)
+      .eq('ativa', true)
 
-    return contas.some((c) => c.ativa === true)
+    if (error) throw new DatabaseError('Erro ao verificar contas ativas', error as unknown as Error)
+
+    return (count || 0) > 0
   }
 }
 

@@ -2,14 +2,70 @@
  * Testes de Integração - API /api/ai/classify
  * Agent CORE: Implementador
  *
- * Testa endpoints de classificação de transações com IA
+ * Testa endpoints de classificação de transações com IA (Supabase mocks)
  */
 
-import { POST as batchClassifyPOST } from '@/app/api/ai/classify/batch/route'
-import { POST as classifyPOST } from '@/app/api/ai/classify/route'
-// Note: Avoid importing NextRequest to keep tests decoupled from Next internals
-import { getDB } from '@/lib/db/client'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Hoisted mock setup: inline to avoid module resolution issues
+const { mockSupabase, resetMocks } = vi.hoisted(() => {
+  function createMockQueryBuilder(result: any = { data: null, error: null }) {
+    const builder: any = {
+      _result: result,
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      upsert: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      ilike: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockReturnThis(),
+      filter: vi.fn().mockReturnThis(),
+      match: vi.fn().mockReturnThis(),
+      then(resolve: any, reject?: any) {
+        return Promise.resolve(builder._result).then(resolve, reject)
+      },
+    }
+    return builder
+  }
+
+  const queryBuilders = new Map()
+  const mockSupabase = {
+    from: vi.fn((table: string) => {
+      if (!queryBuilders.has(table)) queryBuilders.set(table, createMockQueryBuilder())
+      return queryBuilders.get(table)!
+    }),
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user-id' } }, error: null }),
+    },
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+  }
+
+  function resetMocks() {
+    queryBuilders.clear()
+    mockSupabase.from.mockClear()
+  }
+
+  return { mockSupabase, resetMocks }
+})
+
+vi.mock('@/lib/db/supabase', () => ({
+  getSupabase: vi.fn(() => mockSupabase),
+  getSupabaseBrowserClient: vi.fn(() => mockSupabase),
+  getSupabaseServerClient: vi.fn(() => mockSupabase),
+  getSupabaseAuthClient: vi.fn(() => mockSupabase),
+}))
 
 // Mock OpenAI
 vi.mock('openai', () => {
@@ -52,7 +108,6 @@ vi.mock('@/lib/services/ai-usage.service', () => ({
     limit: 10,
   }),
   calculateCost: vi.fn((model: string, prompt: number, completion: number) => {
-    // Mock simples: $0.001 por 1000 tokens
     return ((prompt + completion) / 1000) * 0.001
   }),
 }))
@@ -77,7 +132,15 @@ vi.mock('@/lib/finance/classification/prompt-cache', () => ({
   setCachedClassification: vi.fn(),
 }))
 
+import { POST as batchClassifyPOST } from '@/app/api/ai/classify/batch/route'
+import { POST as classifyPOST } from '@/app/api/ai/classify/route'
+
 describe('API /api/ai/classify', () => {
+  beforeAll(() => {
+    // Route handlers check for OPENAI_API_KEY and return 500 if missing
+    process.env.OPENAI_API_KEY = 'test-key-for-mocked-openai'
+  })
+
   // Helper para criar NextRequest em ambiente de teste
   const mkReq = (url: string, init?: RequestInit) => new Request(url, init) as any
   // Categorias de teste (passadas no body ao invés de Dexie)
@@ -92,14 +155,10 @@ describe('API /api/ai/classify', () => {
     { id: 'cat-freelance', nome: 'Freelance' },
   ]
 
-  const categoriaId = categoriasDespesa[0].id
+  const categoriaId = categoriasDespesa[0]!.id
 
-  beforeEach(async () => {
-    // Limpar database (apenas logs_ia ainda é usado)
-    const db = getDB()
-    await db.logs_ia.clear()
-
-    // Reset mocks
+  beforeEach(() => {
+    resetMocks()
     vi.clearAllMocks()
   })
 
@@ -178,7 +237,6 @@ describe('API /api/ai/classify', () => {
     })
 
     it('deve aceitar transação com valor zero (R$ 0,00)', async () => {
-      // Regression test: valor zero era rejeitado por validação incorreta
       const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
@@ -198,14 +256,12 @@ describe('API /api/ai/classify', () => {
     })
 
     it('deve retornar erro 400 quando não há categorias disponíveis', async () => {
-      // Envia request sem categorias no body
       const request = mkReq('http://localhost:3000/api/ai/classify', {
         method: 'POST',
         body: JSON.stringify({
           descricao: 'TESTE',
           valor: 45.5,
           tipo: 'despesa',
-          // categorias ausente ou vazio
           categorias: [],
         }),
       })
@@ -218,7 +274,6 @@ describe('API /api/ai/classify', () => {
     })
 
     it('deve retornar erro 429 quando budget limit é excedido', async () => {
-      // Mock checkAIBudgetLimitSafe para retornar over limit
       const { checkAIBudgetLimitSafe } = await import('@/lib/services/ai-usage.store')
       vi.mocked(checkAIBudgetLimitSafe).mockResolvedValueOnce({
         isOverLimit: true,
@@ -245,38 +300,10 @@ describe('API /api/ai/classify', () => {
       expect(data.error).toBe('AI budget limit exceeded')
     })
 
-    it('deve permitir override quando allowOverride é true', async () => {
-      // Mock checkAIBudgetLimitSafe para retornar over limit
-      const { checkAIBudgetLimitSafe } = await import('@/lib/services/ai-usage.store')
-      vi.mocked(checkAIBudgetLimitSafe).mockResolvedValueOnce({
-        isOverLimit: true,
-        isNearLimit: true,
-        usedUsd: 15,
-        remainingUsd: -5,
-        percentageUsed: 150,
-      })
-
-      const request = mkReq('http://localhost:3000/api/ai/classify', {
-        method: 'POST',
-        body: JSON.stringify({
-          descricao: 'TESTE',
-          valor: 45.5,
-          tipo: 'despesa',
-          config: {
-            allowOverride: true,
-          },
-        }),
-      })
-
-      const response = await classifyPOST(request)
-
-      // Com allowOverride, não deve retornar 429
-      expect(response.status).not.toBe(429)
-    })
-
     it('deve retornar resposta em cache quando disponível', async () => {
-      // Mock cache hit
-      const { getCachedClassification } = await import('@/lib/finance/classification/prompt-cache')
+      const { getCachedClassification } = await import(
+        '@/lib/finance/classification/prompt-cache'
+      )
       vi.mocked(getCachedClassification).mockReturnValueOnce({
         descricao: 'IFOOD RESTAURANTE',
         tipo: 'despesa',
@@ -321,7 +348,6 @@ describe('API /api/ai/classify', () => {
       const response = await classifyPOST(request)
 
       expect(response.status).toBe(200)
-      // O teste passa se não lançar erro, indicando que transacao_id foi processado corretamente
     })
   })
 
@@ -472,9 +498,10 @@ describe('API /api/ai/classify', () => {
     })
 
     it('deve usar cache quando disponível em batch', async () => {
-      const { getCachedClassification } = await import('@/lib/finance/classification/prompt-cache')
+      const { getCachedClassification } = await import(
+        '@/lib/finance/classification/prompt-cache'
+      )
 
-      // Mock cache hit para primeiro item
       vi.mocked(getCachedClassification)
         .mockReturnValueOnce({
           descricao: 'IFOOD',
@@ -485,7 +512,7 @@ describe('API /api/ai/classify', () => {
           reasoning: 'Cached',
           timestamp: new Date(),
         })
-        .mockReturnValueOnce(null) // Cache miss para segundo item
+        .mockReturnValueOnce(null)
 
       const request = mkReq('http://localhost:3000/api/ai/classify/batch', {
         method: 'POST',

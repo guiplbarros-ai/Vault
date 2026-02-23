@@ -7,8 +7,7 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getDB } from '@/lib/db/client'
-import { getCurrentUserId } from '@/lib/db/seed-usuarios'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import { authService } from '@/lib/services/auth.service'
 import { AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -20,42 +19,43 @@ export default function AuthDiagnosticPage() {
   useEffect(() => {
     async function runDiagnostic() {
       try {
-        const db = getDB()
+        const supabase = getSupabaseBrowserClient()
 
         // 1. Verificar sessão atual
-        const session = authService.getSession()
+        const session = await authService.getSession()
         const currentUser = await authService.getCurrentUser()
-        const currentUserId = getCurrentUserId()
+        const currentUserId = await authService.getCurrentUserId()
 
         // 2. Listar todos os usuários
-        const allUsers = await db.usuarios.toArray()
+        const { data: allUsers } = await supabase.from('profiles').select('*')
 
         // 3. Contar dados por usuário
         const contasPorUsuario: Record<string, number> = {}
         const transacoesPorUsuario: Record<string, number> = {}
         const categoriasPorUsuario: Record<string, number> = {}
 
-        const contas = await db.contas.toArray()
-        const transacoes = await db.transacoes.toArray()
-        const categorias = await db.categorias.toArray()
+        const { data: contas } = await supabase.from('contas').select('usuario_id')
+        const { data: transacoes } = await supabase.from('transacoes').select('usuario_id')
+        const { data: categorias } = await supabase.from('categorias').select('usuario_id')
 
-        for (const conta of contas) {
-          if (conta.usuario_id) {
-            contasPorUsuario[conta.usuario_id] = (contasPorUsuario[conta.usuario_id] || 0) + 1
+        for (const conta of (contas || [])) {
+          if ((conta as any).usuario_id) {
+            const uid = (conta as any).usuario_id
+            contasPorUsuario[uid] = (contasPorUsuario[uid] || 0) + 1
           }
         }
 
-        for (const transacao of transacoes) {
-          if (transacao.usuario_id) {
-            transacoesPorUsuario[transacao.usuario_id] =
-              (transacoesPorUsuario[transacao.usuario_id] || 0) + 1
+        for (const transacao of (transacoes || [])) {
+          if ((transacao as any).usuario_id) {
+            const uid = (transacao as any).usuario_id
+            transacoesPorUsuario[uid] = (transacoesPorUsuario[uid] || 0) + 1
           }
         }
 
-        for (const categoria of categorias) {
-          if (categoria.usuario_id) {
-            categoriasPorUsuario[categoria.usuario_id] =
-              (categoriasPorUsuario[categoria.usuario_id] || 0) + 1
+        for (const categoria of (categorias || [])) {
+          if ((categoria as any).usuario_id) {
+            const uid = (categoria as any).usuario_id
+            categoriasPorUsuario[uid] = (categoriasPorUsuario[uid] || 0) + 1
           }
         }
 
@@ -63,13 +63,13 @@ export default function AuthDiagnosticPage() {
           session,
           currentUser,
           currentUserId,
-          allUsers,
+          allUsers: allUsers || [],
           contasPorUsuario,
           transacoesPorUsuario,
           categoriasPorUsuario,
-          totalContas: contas.length,
-          totalTransacoes: transacoes.length,
-          totalCategorias: categorias.length,
+          totalContas: (contas || []).length,
+          totalTransacoes: (transacoes || []).length,
+          totalCategorias: (categorias || []).length,
         })
       } catch (error) {
         console.error('Erro no diagnóstico:', error)

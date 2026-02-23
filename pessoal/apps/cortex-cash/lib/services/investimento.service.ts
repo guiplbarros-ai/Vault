@@ -5,8 +5,7 @@
  * Fornece operações CRUD e consultas para investimentos
  */
 
-import { getDB } from '../db/client'
-import { getCurrentUserId } from '../db/seed-usuarios'
+import { getSupabase } from '../db/supabase'
 import { DatabaseError, NotFoundError, ValidationError } from '../errors'
 import type {
   CreateHistoricoInvestimentoDTO,
@@ -24,6 +23,54 @@ import {
 import { contaService } from './conta.service'
 import { transacaoService } from './transacao.service'
 
+async function getUserId(): Promise<string> {
+  const supabase = getSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return user.id
+}
+
+function rowToInvestimento(row: Record<string, unknown>): Investimento {
+  return {
+    id: row.id as string,
+    instituicao_id: row.instituicao_id as string,
+    nome: row.nome as string,
+    tipo: row.tipo as TipoInvestimento,
+    ticker: row.ticker as string | undefined,
+    valor_aplicado: row.valor_aplicado as number,
+    valor_atual: row.valor_atual as number,
+    quantidade: row.quantidade as number | undefined,
+    data_aplicacao: new Date(row.data_aplicacao as string),
+    data_vencimento: row.data_vencimento ? new Date(row.data_vencimento as string) : undefined,
+    taxa_juros: row.taxa_juros as number | undefined,
+    rentabilidade_contratada: row.rentabilidade_contratada as number | undefined,
+    indexador: row.indexador as string | undefined,
+    status: row.status as 'ativo' | 'resgatado' | 'vencido',
+    conta_origem_id: row.conta_origem_id as string | undefined,
+    observacoes: row.observacoes as string | undefined,
+    cor: row.cor as string | undefined,
+    pluggy_id: row.pluggy_id as string | undefined,
+    usuario_id: row.usuario_id as string,
+    created_at: new Date(row.created_at as string),
+    updated_at: new Date(row.updated_at as string),
+  }
+}
+
+function rowToHistorico(row: Record<string, unknown>): HistoricoInvestimento {
+  return {
+    id: row.id as string,
+    investimento_id: row.investimento_id as string,
+    data: new Date(row.data as string),
+    valor: row.valor as number,
+    quantidade: row.quantidade as number | undefined,
+    tipo_movimentacao: row.tipo_movimentacao as 'aporte' | 'resgate' | 'rendimento' | 'ajuste',
+    observacoes: row.observacoes as string | undefined,
+    created_at: new Date(row.created_at as string),
+  }
+}
+
 export class InvestimentoService {
   /**
    * Lista todos os investimentos
@@ -37,62 +84,50 @@ export class InvestimentoService {
     sortBy?: 'nome' | 'valor_atual' | 'data_aplicacao' | 'rentabilidade'
     sortOrder?: 'asc' | 'desc'
   }): Promise<Investimento[]> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
-    let investimentos = await db.investimentos.toArray()
+    const sortBy = options?.sortBy === 'rentabilidade' ? 'valor_atual' : (options?.sortBy || 'data_aplicacao')
+    const sortOrder = options?.sortOrder || 'desc'
 
-    // Aplicar filtros
+    let query = supabase
+      .from('investimentos')
+      .select('*')
+      .eq('usuario_id', userId)
+      .order(sortBy, { ascending: sortOrder === 'asc' })
+
     if (options?.status) {
-      investimentos = investimentos.filter((i) => i.status === options.status)
+      query = query.eq('status', options.status)
     }
 
     if (options?.tipo) {
-      investimentos = investimentos.filter((i) => i.tipo === options.tipo)
+      query = query.eq('tipo', options.tipo)
     }
 
     if (options?.instituicao_id) {
-      investimentos = investimentos.filter((i) => i.instituicao_id === options.instituicao_id)
+      query = query.eq('instituicao_id', options.instituicao_id)
     }
 
-    // Ordenar
-    const sortBy = options?.sortBy || 'data_aplicacao'
-    const sortOrder = options?.sortOrder || 'desc'
+    if (options?.limit !== undefined) {
+      const offset = options?.offset || 0
+      query = query.range(offset, offset + options.limit - 1)
+    } else if (options?.offset && options.offset > 0) {
+      query = query.range(options.offset, 999999)
+    }
 
-    investimentos.sort((a, b) => {
-      let compareA: any
-      let compareB: any
+    const { data, error } = await query
 
-      if (sortBy === 'nome') {
-        compareA = a.nome.toLowerCase()
-        compareB = b.nome.toLowerCase()
-      } else if (sortBy === 'valor_atual') {
-        compareA = a.valor_atual
-        compareB = b.valor_atual
-      } else if (sortBy === 'data_aplicacao') {
-        compareA = a.data_aplicacao instanceof Date ? a.data_aplicacao : new Date(a.data_aplicacao)
-        compareB = b.data_aplicacao instanceof Date ? b.data_aplicacao : new Date(b.data_aplicacao)
-        compareA = compareA.getTime()
-        compareB = compareB.getTime()
-      } else if (sortBy === 'rentabilidade') {
-        compareA = ((a.valor_atual - a.valor_aplicado) / a.valor_aplicado) * 100
-        compareB = ((b.valor_atual - b.valor_aplicado) / b.valor_aplicado) * 100
-      }
+    if (error) throw new DatabaseError('Erro ao listar investimentos', error as unknown as Error)
 
-      if (sortOrder === 'asc') {
-        return compareA > compareB ? 1 : compareA < compareB ? -1 : 0
-      } else {
-        return compareA < compareB ? 1 : compareA > compareB ? -1 : 0
-      }
-    })
+    let investimentos: Investimento[] = (data || []).map((row: Record<string, unknown>) => rowToInvestimento(row))
 
-    // Aplicar paginação
-    const offset = options?.offset || 0
-    const limit = options?.limit
-
-    if (limit !== undefined) {
-      investimentos = investimentos.slice(offset, offset + limit)
-    } else if (offset > 0) {
-      investimentos = investimentos.slice(offset)
+    // Handle rentabilidade sort in-memory (computed field)
+    if (options?.sortBy === 'rentabilidade') {
+      investimentos.sort((a, b) => {
+        const rentA = ((a.valor_atual - a.valor_aplicado) / a.valor_aplicado) * 100
+        const rentB = ((b.valor_atual - b.valor_aplicado) / b.valor_aplicado) * 100
+        return sortOrder === 'asc' ? rentA - rentB : rentB - rentA
+      })
     }
 
     return investimentos
@@ -102,33 +137,66 @@ export class InvestimentoService {
    * Busca um investimento por ID
    */
   async getInvestimentoById(id: string): Promise<Investimento | null> {
-    const db = getDB()
-    const investimento = await db.investimentos.get(id)
-    return investimento || null
+    const supabase = getSupabase()
+
+    const { data, error } = await supabase
+      .from('investimentos')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Erro ao buscar investimento', error as unknown as Error)
+
+    return data ? rowToInvestimento(data) : null
   }
 
   /**
    * Busca um investimento por ID com relações (instituição, conta origem, histórico)
    */
   async getInvestimentoComRelacoes(id: string): Promise<InvestimentoComRelacoes | null> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    const investimento = await db.investimentos.get(id)
-    if (!investimento) {
-      return null
-    }
+    const investimento = await this.getInvestimentoById(id)
+    if (!investimento) return null
 
-    const instituicao = await db.instituicoes.get(investimento.instituicao_id)
-    if (!instituicao) {
-      throw new NotFoundError('Instituição', investimento.instituicao_id)
+    const { data: instData, error: instError } = await supabase
+      .from('instituicoes')
+      .select('*')
+      .eq('id', investimento.instituicao_id)
+      .maybeSingle()
+
+    if (instError) throw new DatabaseError('Erro ao buscar instituição', instError as unknown as Error)
+    if (!instData) throw new NotFoundError('Instituição', investimento.instituicao_id)
+
+    const instituicao = {
+      id: instData.id as string,
+      nome: instData.nome as string,
+      codigo: instData.codigo as string | undefined,
+      tipo: instData.tipo as string,
+      logo_url: instData.logo_url as string | undefined,
+      cor_primaria: instData.cor_primaria as string | undefined,
+      site: instData.site as string | undefined,
+      created_at: new Date(instData.created_at as string),
+      updated_at: new Date(instData.updated_at as string),
     }
 
     let conta_origem
     if (investimento.conta_origem_id) {
-      conta_origem = await db.contas.get(investimento.conta_origem_id)
+      const { data: contaData } = await supabase
+        .from('contas')
+        .select('*')
+        .eq('id', investimento.conta_origem_id)
+        .maybeSingle()
+      conta_origem = contaData || undefined
     }
 
-    const historico = await db.historico_investimentos.where('investimento_id').equals(id).toArray()
+    const { data: historicoData } = await supabase
+      .from('historico_investimentos')
+      .select('*')
+      .eq('investimento_id', id)
+      .order('data', { ascending: false })
+
+    const historico: HistoricoInvestimento[] = (historicoData || []).map((row: Record<string, unknown>) => rowToHistorico(row))
 
     return {
       ...investimento,
@@ -146,70 +214,85 @@ export class InvestimentoService {
       // Validate input
       const validatedData = validateDTO(createInvestimentoSchema, data)
 
-      const db = getDB()
+      const supabase = getSupabase()
+      const userId = await getUserId()
 
       const id = crypto.randomUUID()
-      const now = new Date()
-      const currentUserId = getCurrentUserId()
+      const now = new Date().toISOString()
 
-      const investimento: Investimento = {
-        id,
-        instituicao_id: validatedData.instituicao_id,
-        nome: validatedData.nome,
-        tipo: validatedData.tipo,
-        ticker: validatedData.ticker,
-        valor_aplicado: validatedData.valor_aplicado,
-        valor_atual: validatedData.valor_atual,
-        quantidade: validatedData.quantidade,
-        data_aplicacao:
-          typeof validatedData.data_aplicacao === 'string'
-            ? new Date(validatedData.data_aplicacao)
-            : validatedData.data_aplicacao,
-        data_vencimento: validatedData.data_vencimento
-          ? typeof validatedData.data_vencimento === 'string'
-            ? new Date(validatedData.data_vencimento)
-            : validatedData.data_vencimento
-          : undefined,
-        taxa_juros: validatedData.taxa_juros,
-        rentabilidade_contratada: validatedData.rentabilidade_contratada,
-        indexador: validatedData.indexador,
-        status: 'ativo',
-        conta_origem_id: validatedData.conta_origem_id,
-        observacoes: validatedData.observacoes,
-        cor: validatedData.cor,
-        usuario_id: currentUserId,
-        created_at: now,
-        updated_at: now,
-      }
+      const { data: inserted, error } = await supabase
+        .from('investimentos')
+        .insert({
+          id,
+          instituicao_id: validatedData.instituicao_id,
+          nome: validatedData.nome,
+          tipo: validatedData.tipo,
+          ticker: validatedData.ticker || null,
+          valor_aplicado: validatedData.valor_aplicado,
+          valor_atual: validatedData.valor_atual,
+          quantidade: validatedData.quantidade || null,
+          data_aplicacao:
+            typeof validatedData.data_aplicacao === 'string'
+              ? validatedData.data_aplicacao
+              : (validatedData.data_aplicacao as Date).toISOString(),
+          data_vencimento: validatedData.data_vencimento
+            ? typeof validatedData.data_vencimento === 'string'
+              ? validatedData.data_vencimento
+              : (validatedData.data_vencimento as Date).toISOString()
+            : null,
+          taxa_juros: validatedData.taxa_juros || null,
+          rentabilidade_contratada: validatedData.rentabilidade_contratada || null,
+          indexador: validatedData.indexador || null,
+          status: 'ativo',
+          conta_origem_id: validatedData.conta_origem_id || null,
+          observacoes: validatedData.observacoes || null,
+          cor: validatedData.cor || null,
+          usuario_id: userId,
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single()
 
-      await db.investimentos.add(investimento)
+      if (error) throw new DatabaseError('Erro ao criar investimento', error as unknown as Error)
+
+      const investimento = rowToInvestimento(inserted)
 
       // Criar histórico inicial
+      const dataAplicacao =
+        typeof validatedData.data_aplicacao === 'string'
+          ? new Date(validatedData.data_aplicacao)
+          : validatedData.data_aplicacao
+
       await this.createHistoricoInvestimento({
         investimento_id: id,
-        data: investimento.data_aplicacao,
-        valor: investimento.valor_aplicado,
-        quantidade: investimento.quantidade,
+        data: dataAplicacao as Date,
+        valor: validatedData.valor_aplicado,
+        quantidade: validatedData.quantidade,
         tipo_movimentacao: 'aporte',
         observacoes: 'Aplicação inicial',
       })
 
-      // Registrar movimentação financeira como transferência entre contas (se tivermos conta de origem)
-      if (investimento.conta_origem_id) {
-        const db = getDB()
-        const instituicao = await db.instituicoes.get(investimento.instituicao_id)
+      // Registrar movimentação financeira (se tivermos conta de origem)
+      if (validatedData.conta_origem_id) {
+        const { data: instData } = await supabase
+          .from('instituicoes')
+          .select('nome')
+          .eq('id', validatedData.instituicao_id)
+          .maybeSingle()
+
+        const instNome = instData ? (instData.nome as string) : 'Investimentos'
 
         // Encontrar (ou criar) conta de investimento da mesma instituição
         const contas = await contaService.listContas({ incluirInativas: false })
         let contaInvestimento = contas.find(
-          (c) => c.tipo === 'investimento' && c.instituicao_id === investimento.instituicao_id
+          (c) => c.tipo === 'investimento' && c.instituicao_id === validatedData.instituicao_id
         )
 
         if (!contaInvestimento) {
-          const currentUserId = getCurrentUserId()
           contaInvestimento = await contaService.createConta({
-            instituicao_id: investimento.instituicao_id,
-            nome: `${instituicao?.nome ?? 'Investimentos'} - Carteira`,
+            instituicao_id: validatedData.instituicao_id,
+            nome: `${instNome} - Carteira`,
             tipo: 'investimento',
             saldo_referencia: 0,
             data_referencia: new Date(),
@@ -218,25 +301,27 @@ export class InvestimentoService {
             cor: undefined,
             icone: undefined,
             observacoes: undefined,
-            usuario_id: currentUserId,
+            usuario_id: userId,
           })
         }
 
-        // Cria transferência: sai da conta origem e entra na conta de investimento
+        const dataApl =
+          typeof validatedData.data_aplicacao === 'string'
+            ? new Date(validatedData.data_aplicacao)
+            : (validatedData.data_aplicacao as Date)
+
         await transacaoService.createTransfer(
-          investimento.conta_origem_id,
+          validatedData.conta_origem_id,
           contaInvestimento.id,
-          investimento.valor_aplicado,
-          `Aporte em ${investimento.nome}`,
-          investimento.data_aplicacao
+          validatedData.valor_aplicado,
+          `Aporte em ${validatedData.nome}`,
+          dataApl
         )
       }
 
       return investimento
     } catch (error) {
-      if (error instanceof ValidationError) {
-        throw error
-      }
+      if (error instanceof ValidationError) throw error
       throw new DatabaseError('Erro ao criar investimento', error as Error)
     }
   }
@@ -249,41 +334,42 @@ export class InvestimentoService {
     data: Partial<CreateInvestimentoDTO>
   ): Promise<Investimento> {
     try {
-      const db = getDB()
+      const supabase = getSupabase()
 
-      const existing = await db.investimentos.get(id)
-      if (!existing) {
-        throw new NotFoundError('Investimento', id)
-      }
+      const existing = await this.getInvestimentoById(id)
+      if (!existing) throw new NotFoundError('Investimento', id)
 
-      const updateData = {
+      const updateData: Record<string, unknown> = {
         ...data,
-        // Convert string dates to Date objects
-        data_aplicacao: data.data_aplicacao
-          ? typeof data.data_aplicacao === 'string'
-            ? new Date(data.data_aplicacao)
-            : data.data_aplicacao
-          : undefined,
-        data_vencimento: data.data_vencimento
-          ? typeof data.data_vencimento === 'string'
-            ? new Date(data.data_vencimento)
-            : data.data_vencimento
-          : undefined,
-        updated_at: new Date(),
-      } as Partial<Investimento>
-
-      await db.investimentos.update(id, updateData)
-
-      const result = await db.investimentos.get(id)
-      if (!result) {
-        throw new DatabaseError(`Erro ao recuperar investimento atualizado ${id}`)
+        updated_at: new Date().toISOString(),
       }
 
-      return result
+      // Convert string dates to ISO strings
+      if (data.data_aplicacao) {
+        updateData.data_aplicacao =
+          typeof data.data_aplicacao === 'string'
+            ? data.data_aplicacao
+            : (data.data_aplicacao as Date).toISOString()
+      }
+      if (data.data_vencimento) {
+        updateData.data_vencimento =
+          typeof data.data_vencimento === 'string'
+            ? data.data_vencimento
+            : (data.data_vencimento as Date).toISOString()
+      }
+
+      const { data: updated, error } = await supabase
+        .from('investimentos')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw new DatabaseError('Erro ao atualizar investimento', error as unknown as Error)
+
+      return rowToInvestimento(updated)
     } catch (error) {
-      if (error instanceof NotFoundError || error instanceof DatabaseError) {
-        throw error
-      }
+      if (error instanceof NotFoundError || error instanceof DatabaseError) throw error
       throw new DatabaseError('Erro ao atualizar investimento', error as Error)
     }
   }
@@ -293,21 +379,19 @@ export class InvestimentoService {
    */
   async deleteInvestimento(id: string): Promise<void> {
     try {
-      const db = getDB()
+      const supabase = getSupabase()
 
-      const existing = await db.investimentos.get(id)
-      if (!existing) {
-        throw new NotFoundError('Investimento', id)
-      }
+      const existing = await this.getInvestimentoById(id)
+      if (!existing) throw new NotFoundError('Investimento', id)
 
-      await db.investimentos.update(id, {
-        status: 'resgatado',
-        updated_at: new Date(),
-      })
+      const { error } = await supabase
+        .from('investimentos')
+        .update({ status: 'resgatado', updated_at: new Date().toISOString() })
+        .eq('id', id)
+
+      if (error) throw new DatabaseError('Erro ao deletar investimento', error as unknown as Error)
     } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error
-      }
+      if (error instanceof NotFoundError) throw error
       throw new DatabaseError('Erro ao deletar investimento', error as Error)
     }
   }
@@ -317,32 +401,19 @@ export class InvestimentoService {
    */
   async hardDeleteInvestimento(id: string): Promise<void> {
     try {
-      const db = getDB()
+      const supabase = getSupabase()
 
-      const existing = await db.investimentos.get(id)
-      if (!existing) {
-        throw new NotFoundError('Investimento', id)
-      }
+      const existing = await this.getInvestimentoById(id)
+      if (!existing) throw new NotFoundError('Investimento', id)
 
       // Deletar histórico relacionado
-      const historico = await db.historico_investimentos
-        .where('investimento_id')
-        .equals(id)
-        .toArray()
+      await supabase.from('historico_investimentos').delete().eq('investimento_id', id)
 
-      await db.transaction('rw', [db.investimentos, db.historico_investimentos], async () => {
-        // Deletar histórico
-        for (const h of historico) {
-          await db.historico_investimentos.delete(h.id)
-        }
-
-        // Deletar investimento
-        await db.investimentos.delete(id)
-      })
+      // Deletar investimento
+      const { error } = await supabase.from('investimentos').delete().eq('id', id)
+      if (error) throw new DatabaseError('Erro ao deletar investimento', error as unknown as Error)
     } catch (error) {
-      if (error instanceof NotFoundError) {
-        throw error
-      }
+      if (error instanceof NotFoundError) throw error
       throw new DatabaseError('Erro ao deletar investimento permanentemente', error as Error)
     }
   }
@@ -357,32 +428,33 @@ export class InvestimentoService {
       // Validate input
       const validatedData = validateDTO(createHistoricoInvestimentoSchema, data)
 
-      const db = getDB()
-
+      const supabase = getSupabase()
       const id = crypto.randomUUID()
-      const now = new Date()
+      const now = new Date().toISOString()
 
-      const historico: HistoricoInvestimento = {
-        id,
-        investimento_id: validatedData.investimento_id,
-        data:
-          typeof validatedData.data === 'string'
-            ? new Date(validatedData.data)
-            : validatedData.data,
-        valor: validatedData.valor,
-        quantidade: validatedData.quantidade,
-        tipo_movimentacao: validatedData.tipo_movimentacao,
-        observacoes: validatedData.observacoes,
-        created_at: now,
-      }
+      const { data: inserted, error } = await supabase
+        .from('historico_investimentos')
+        .insert({
+          id,
+          investimento_id: validatedData.investimento_id,
+          data:
+            typeof validatedData.data === 'string'
+              ? validatedData.data
+              : (validatedData.data as Date).toISOString(),
+          valor: validatedData.valor,
+          quantidade: validatedData.quantidade || null,
+          tipo_movimentacao: validatedData.tipo_movimentacao,
+          observacoes: validatedData.observacoes || null,
+          created_at: now,
+        })
+        .select()
+        .single()
 
-      await db.historico_investimentos.add(historico)
+      if (error) throw new DatabaseError('Erro ao criar histórico', error as unknown as Error)
 
-      return historico
+      return rowToHistorico(inserted)
     } catch (error) {
-      if (error instanceof ValidationError) {
-        throw error
-      }
+      if (error instanceof ValidationError) throw error
       throw new DatabaseError('Erro ao criar histórico de investimento', error as Error)
     }
   }
@@ -391,21 +463,17 @@ export class InvestimentoService {
    * Lista histórico de um investimento
    */
   async getHistoricoInvestimento(investimento_id: string): Promise<HistoricoInvestimento[]> {
-    const db = getDB()
+    const supabase = getSupabase()
 
-    const historico = await db.historico_investimentos
-      .where('investimento_id')
-      .equals(investimento_id)
-      .toArray()
+    const { data, error } = await supabase
+      .from('historico_investimentos')
+      .select('*')
+      .eq('investimento_id', investimento_id)
+      .order('data', { ascending: false })
 
-    // Ordenar por data descendente
-    historico.sort((a, b) => {
-      const dateA = a.data instanceof Date ? a.data : new Date(a.data)
-      const dateB = b.data instanceof Date ? b.data : new Date(b.data)
-      return dateB.getTime() - dateA.getTime()
-    })
+    if (error) throw new DatabaseError('Erro ao buscar histórico', error as unknown as Error)
 
-    return historico
+    return (data || []).map((row: Record<string, unknown>) => rowToHistorico(row))
   }
 
   /**
@@ -416,40 +484,48 @@ export class InvestimentoService {
     rentabilidade_percentual: number
   }> {
     const investimento = await this.getInvestimentoById(id)
-    if (!investimento) {
-      throw new NotFoundError('Investimento', id)
-    }
+    if (!investimento) throw new NotFoundError('Investimento', id)
 
     const rentabilidade = investimento.valor_atual - investimento.valor_aplicado
     const rentabilidade_percentual = (rentabilidade / investimento.valor_aplicado) * 100
 
-    return {
-      rentabilidade,
-      rentabilidade_percentual,
-    }
+    return { rentabilidade, rentabilidade_percentual }
   }
 
   /**
    * Busca investimentos por tipo
    */
   async getInvestimentosPorTipo(tipo: TipoInvestimento): Promise<Investimento[]> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
-    const investimentos = await db.investimentos.where('tipo').equals(tipo).toArray()
+    const { data, error } = await supabase
+      .from('investimentos')
+      .select('*')
+      .eq('usuario_id', userId)
+      .eq('tipo', tipo)
 
-    return investimentos
+    if (error) throw new DatabaseError('Erro ao buscar investimentos por tipo', error as unknown as Error)
+
+    return (data || []).map((row: Record<string, unknown>) => rowToInvestimento(row))
   }
 
   /**
    * Busca investimentos ativos
    */
   async getInvestimentosAtivos(): Promise<Investimento[]> {
-    const db = getDB()
+    const supabase = getSupabase()
+    const userId = await getUserId()
 
-    let investimentos = await db.investimentos.toArray()
-    investimentos = investimentos.filter((i) => i.status === 'ativo')
+    const { data, error } = await supabase
+      .from('investimentos')
+      .select('*')
+      .eq('usuario_id', userId)
+      .eq('status', 'ativo')
 
-    return investimentos
+    if (error) throw new DatabaseError('Erro ao buscar investimentos ativos', error as unknown as Error)
+
+    return (data || []).map((row: Record<string, unknown>) => rowToInvestimento(row))
   }
 
   /**

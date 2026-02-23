@@ -27,9 +27,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(transactions)
   } catch (error: any) {
     console.error('Error fetching Pluggy transactions:', error)
-    const message = error?.response?.body?.message || error?.message || String(error)
     return NextResponse.json(
-      { error: 'Failed to fetch transactions', message },
+      { error: 'Failed to fetch transactions', message: 'Erro ao buscar transações' },
       { status: error?.response?.statusCode || 500 }
     )
   }

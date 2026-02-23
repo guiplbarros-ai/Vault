@@ -5,14 +5,16 @@
 
 import { addDays, startOfMonth, subDays } from 'date-fns'
 import type { Conta, Transacao } from '../types'
-import { getDB } from './client'
+import { getSupabaseBrowserClient } from './supabase'
 
 export async function seedMockTransactions(): Promise<void> {
-  const db = getDB()
+  const supabase = getSupabaseBrowserClient()
 
   // Verificar se já existem transações
-  const existingTransactions = await db.transacoes.count()
-  if (existingTransactions > 0) {
+  const { count: existingCount } = await supabase
+    .from('transacoes')
+    .select('*', { count: 'exact', head: true })
+  if ((existingCount ?? 0) > 0) {
     console.log('⚠️ Já existem transações no banco. Pulando seed de mock data.')
     return
   }
@@ -20,18 +22,20 @@ export async function seedMockTransactions(): Promise<void> {
   console.log('🔄 Criando mock data de transações...')
 
   // Buscar categorias e contas
-  const categorias = await db.categorias.toArray()
-  const contas = await db.contas.toArray()
-  const tags = await db.tags.toArray()
+  const { data: categorias } = await supabase.from('categorias').select('*')
+  const { data: contasData } = await supabase.from('contas').select('*')
+  const { data: tags } = await supabase.from('tags').select('*')
 
-  if (categorias.length === 0) {
+  const contas = contasData || []
+
+  if (!categorias || categorias.length === 0) {
     console.log('⚠️ Nenhuma categoria encontrada. Execute o seed de categorias primeiro.')
     return
   }
 
   // Criar uma conta padrão se não existir
   let contaPrincipal: Conta
-  if (contas.length === 0) {
+  if (!contas || contas.length === 0) {
     const contaId = crypto.randomUUID()
     const instituicaoId = crypto.randomUUID() // ID fictício de instituição
     contaPrincipal = {
@@ -48,13 +52,15 @@ export async function seedMockTransactions(): Promise<void> {
       updated_at: new Date(),
     }
     try {
-      await db.contas.add(contaPrincipal)
-      console.log('✅ Conta padrão criada')
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
+      const { error } = await supabase.from('contas').insert(contaPrincipal)
+      if (error && error.code !== '23505') throw error
+      if (error) {
+        console.log('⚠️ Conta padrão já existe, usando existente...')
+      } else {
+        console.log('✅ Conta padrão criada')
       }
-      console.log('⚠️ Conta padrão já existe, usando existente...')
+    } catch (error: any) {
+      throw error
     }
   } else {
     contaPrincipal = contas[0]!
@@ -62,13 +68,13 @@ export async function seedMockTransactions(): Promise<void> {
 
   // Mapear categorias por nome para facilitar
   const catMap: Record<string, string> = {}
-  categorias.forEach((cat) => {
+  ;(categorias || []).forEach((cat: any) => {
     catMap[cat.nome] = cat.id
   })
 
   // Mapear tags por nome
   const tagMap: Record<string, string> = {}
-  tags.forEach((tag) => {
+  ;(tags || []).forEach((tag: any) => {
     tagMap[tag.nome] = tag.id
   })
 
@@ -330,7 +336,7 @@ export async function seedMockTransactions(): Promise<void> {
       data: addDays(inicioMes, 5),
       tipo: 'receita',
       categoria_id:
-        catMap['Salário'] || categorias.find((c) => c.tipo === 'receita')?.id || categorias[0]!.id,
+        catMap['Salário'] || (categorias || []).find((c: any) => c.tipo === 'receita')?.id || (categorias || [])[0]?.id,
       conta_id: contaPrincipal.id,
       tags: ['Essencial', 'Recorrente'],
     },
@@ -342,8 +348,8 @@ export async function seedMockTransactions(): Promise<void> {
       categoria_id:
         catMap['Trabalho Autônomo'] ||
         catMap['Salário'] ||
-        categorias.find((c) => c.tipo === 'receita')?.id ||
-        categorias[0]!.id,
+        (categorias || []).find((c: any) => c.tipo === 'receita')?.id ||
+        (categorias || [])[0]?.id,
       conta_id: contaPrincipal.id,
       tags: ['Importante', 'Extraordinário'],
       observacoes: 'Desenvolvimento de landing page',
@@ -354,7 +360,7 @@ export async function seedMockTransactions(): Promise<void> {
       data: subDays(hoje, 10),
       tipo: 'receita',
       categoria_id:
-        catMap['Vendas'] || categorias.find((c) => c.tipo === 'receita')?.id || categorias[0]!.id,
+        catMap['Vendas'] || (categorias || []).find((c: any) => c.tipo === 'receita')?.id || (categorias || [])[0]?.id,
       conta_id: contaPrincipal.id,
       tags: ['Extraordinário'],
     },
@@ -381,11 +387,10 @@ export async function seedMockTransactions(): Promise<void> {
     })
   )
 
-  try {
-    await db.transacoes.bulkAdd(transacoesParaInserir)
-  } catch (error: any) {
-    if (error?.name !== 'ConstraintError') {
-      throw error
+  const { error: insertError } = await supabase.from('transacoes').insert(transacoesParaInserir)
+  if (insertError) {
+    if (insertError.code !== '23505') {
+      throw insertError
     }
     console.log('⚠️ Algumas transações já existem, pulando duplicatas...')
   }
@@ -399,7 +404,7 @@ export async function seedMockTransactions(): Promise<void> {
  * Helper para deletar todas as transações (útil para testar)
  */
 export async function clearMockTransactions(): Promise<void> {
-  const db = getDB()
-  await db.transacoes.clear()
+  const supabase = getSupabaseBrowserClient()
+  await supabase.from('transacoes').delete().neq('id', '')
   console.log('✅ Todas as transações foram removidas')
 }

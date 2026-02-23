@@ -18,8 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getDB } from '@/lib/db/client'
-import type { LogIA } from '@/lib/types'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import { CHART_COLORS } from '@/lib/utils/chart-theme'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -47,6 +46,20 @@ import {
   YAxis,
 } from 'recharts'
 import { toast } from 'sonner'
+
+interface LogIA {
+  id: string
+  transacao_id: string | null
+  prompt: string | null
+  resposta: string | null
+  modelo: string
+  tokens_total: number
+  custo_usd: number
+  categoria_sugerida_id: string | null
+  confianca: number | null
+  confirmada: boolean
+  created_at: string
+}
 
 interface UsageStats {
   total_requests: number
@@ -88,15 +101,18 @@ export default function AIUsagePage() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const db = getDB()
+      const supabase = getSupabaseBrowserClient()
 
       // Busca todos os logs do mês atual
       const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-      const allLogs = await db.logs_ia.toArray()
-      const monthLogs = allLogs.filter((log) => {
-        const logDate = log.created_at instanceof Date ? log.created_at : new Date(log.created_at)
-        return logDate >= startOfMonth
-      })
+
+      const { data: logsData } = await supabase
+        .from('logs_ia')
+        .select('*')
+        .gte('created_at', startOfMonth.toISOString())
+        .order('created_at', { ascending: false })
+
+      const monthLogs: LogIA[] = logsData ?? []
 
       // Calcula stats
       const USD_TO_BRL = 6.0 // TODO: pegar taxa atual
@@ -124,7 +140,7 @@ export default function AIUsagePage() {
       // Agrupa por dia
       const dailyMap = new Map<string, { requests: number; cost_brl: number; tokens: number }>()
       monthLogs.forEach((log) => {
-        const date = log.created_at instanceof Date ? log.created_at : new Date(log.created_at)
+        const date = new Date(log.created_at)
         const dateKey = format(date, 'yyyy-MM-dd')
         const existing = dailyMap.get(dateKey) || { requests: 0, cost_brl: 0, tokens: 0 }
         dailyMap.set(dateKey, {
@@ -516,8 +532,7 @@ export default function AIUsagePage() {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {logs.map((log) => {
-                    const logDate =
-                      log.created_at instanceof Date ? log.created_at : new Date(log.created_at)
+                    const logDate = new Date(log.created_at)
                     return (
                       <tr key={log.id} className="hover:bg-white/5 transition-colors">
                         <td className="px-4 py-3 text-sm text-white/80">

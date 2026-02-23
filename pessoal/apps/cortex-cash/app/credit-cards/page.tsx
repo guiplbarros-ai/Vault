@@ -145,8 +145,8 @@ export default function CreditCardsPage() {
         })
       } else {
         // Modo criação - buscar primeira instituição disponível
-        const db = (await import('@/lib/db/client')).getDB()
-        const instituicoes = await db.instituicoes.toArray()
+        const { instituicaoService } = await import('@/lib/services/instituicao.service')
+        const instituicoes = await instituicaoService.listInstituicoes({ limit: 1 })
 
         if (instituicoes.length === 0) {
           toast.error('Nenhuma instituição encontrada', {

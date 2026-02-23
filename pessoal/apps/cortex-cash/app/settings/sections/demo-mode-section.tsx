@@ -140,13 +140,13 @@ export function DemoModeSection() {
     setClearing(true)
     try {
       // Limpar todas as tabelas
-      const { getDB } = await import('@/lib/db/client')
-      const db = getDB()
+      const { getSupabaseBrowserClient } = await import('@/lib/db/supabase')
+      const supabase = getSupabaseBrowserClient()
 
-      await db.transaction('rw', [db.transacoes, db.contas], async () => {
-        await db.transacoes.clear()
-        await db.contas.clear()
-      })
+      await Promise.all([
+        supabase.from('transacoes').delete().neq('id', ''),
+        supabase.from('contas').delete().neq('id', ''),
+      ])
 
       // Atualiza lastPopulated mas mantém o estado do modo demo
       const newSettings: DemoModeSettings = {

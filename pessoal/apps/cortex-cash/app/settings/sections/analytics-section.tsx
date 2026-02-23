@@ -11,7 +11,7 @@ import { useSetting } from '@/app/providers/settings-provider'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
 import { CHART_COLORS, CHART_THEME } from '@/lib/utils/chart-theme'
 import { cn } from '@/lib/utils'
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
@@ -83,30 +83,42 @@ export function AnalyticsSection() {
   const loadAnalytics = async () => {
     try {
       setLoading(true)
-      const db = getDB()
+      const supabase = getSupabaseBrowserClient()
 
       const now = new Date()
       const monthsToSubtract = timeRange === '3m' ? 3 : timeRange === '6m' ? 6 : 12
       const startDate = subMonths(now, monthsToSubtract)
 
-      const transacoes = await db.transacoes.where('data').between(startDate, now).toArray()
+      const { data: transacoesData } = await supabase
+        .from('transacoes')
+        .select('classificacao_origem, classificacao_confianca, data')
+        .gte('data', startDate.toISOString())
+        .lte('data', now.toISOString())
 
-      const aiLogs = await db.logs_ia.where('created_at').between(startDate, now).toArray()
+      const transacoes = transacoesData ?? []
 
-      const byRules = transacoes.filter((t) => t.classificacao_origem === 'regra').length
-      const byAI = transacoes.filter((t) => t.classificacao_origem === 'ia').length
-      const manual = transacoes.filter((t) => t.classificacao_origem === 'manual').length
+      const { data: aiLogsData } = await supabase
+        .from('logs_ia')
+        .select('created_at, confirmada, custo_usd, confianca')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', now.toISOString())
+
+      const aiLogs = aiLogsData ?? []
+
+      const byRules = transacoes.filter((t: any) => t.classificacao_origem === 'regra').length
+      const byAI = transacoes.filter((t: any) => t.classificacao_origem === 'ia').length
+      const manual = transacoes.filter((t: any) => t.classificacao_origem === 'manual').length
       const total = transacoes.length
 
-      const confirmedAI = aiLogs.filter((log) => log.confirmada).length
+      const confirmedAI = aiLogs.filter((log: any) => log.confirmada).length
       const accuracyRate = byAI > 0 ? (confirmedAI / byAI) * 100 : 0
 
-      const totalCost = aiLogs.reduce((sum, log) => sum + (log.custo_usd || 0), 0)
+      const totalCost = aiLogs.reduce((sum: any, log: any) => sum + (log.custo_usd || 0), 0)
       const avgConfidence =
         byAI > 0
           ? transacoes
-              .filter((t) => t.classificacao_origem === 'ia' && t.classificacao_confianca)
-              .reduce((sum, t) => sum + (t.classificacao_confianca || 0), 0) / byAI
+              .filter((t: any) => t.classificacao_origem === 'ia' && t.classificacao_confianca)
+              .reduce((sum: any, t: any) => sum + (t.classificacao_confianca || 0), 0) / byAI
           : 0
 
       const timeline = []
@@ -115,25 +127,25 @@ export function AnalyticsSection() {
         const monthEnd = endOfMonth(subMonths(now, i))
         const monthLabel = format(monthStart, 'MMM/yy', { locale: ptBR })
 
-        const monthTransactions = transacoes.filter((t) => {
-          const tDate = t.data instanceof Date ? t.data : new Date(t.data)
+        const monthTransactions = transacoes.filter((t: any) => {
+          const tDate = new Date(t.data)
           return tDate >= monthStart && tDate <= monthEnd
         })
 
         const monthRules = monthTransactions.filter(
-          (t) => t.classificacao_origem === 'regra'
+          (t: any) => t.classificacao_origem === 'regra'
         ).length
-        const monthAI = monthTransactions.filter((t) => t.classificacao_origem === 'ia').length
+        const monthAI = monthTransactions.filter((t: any) => t.classificacao_origem === 'ia').length
         const monthManual = monthTransactions.filter(
-          (t) => t.classificacao_origem === 'manual'
+          (t: any) => t.classificacao_origem === 'manual'
         ).length
 
-        const monthAILogs = aiLogs.filter((log) => {
-          const logDate = log.created_at instanceof Date ? log.created_at : new Date(log.created_at)
+        const monthAILogs = aiLogs.filter((log: any) => {
+          const logDate = new Date(log.created_at)
           return logDate >= monthStart && logDate <= monthEnd
         })
 
-        const monthConfirmed = monthAILogs.filter((log) => log.confirmada).length
+        const monthConfirmed = monthAILogs.filter((log: any) => log.confirmada).length
         const monthAccuracy = monthAI > 0 ? (monthConfirmed / monthAI) * 100 : 0
 
         timeline.unshift({
@@ -151,12 +163,12 @@ export function AnalyticsSection() {
         const monthEnd = endOfMonth(subMonths(now, i))
         const monthLabel = format(monthStart, 'MMM/yy', { locale: ptBR })
 
-        const monthLogs = aiLogs.filter((log) => {
-          const logDate = log.created_at instanceof Date ? log.created_at : new Date(log.created_at)
+        const monthLogs = aiLogs.filter((log: any) => {
+          const logDate = new Date(log.created_at)
           return logDate >= monthStart && logDate <= monthEnd
         })
 
-        const monthCost = monthLogs.reduce((sum, log) => sum + (log.custo_usd || 0), 0)
+        const monthCost = monthLogs.reduce((sum: any, log: any) => sum + (log.custo_usd || 0), 0)
 
         costs.unshift({
           month: monthLabel,

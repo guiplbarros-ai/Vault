@@ -2,7 +2,9 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { getDB } from '@/lib/db/client'
+import { getSupabaseBrowserClient } from '@/lib/db/supabase'
+import { contaService } from '@/lib/services/conta.service'
+import { instituicaoService } from '@/lib/services/instituicao.service'
 import type { Conta, Instituicao } from '@/lib/types'
 import { useEffect, useState } from 'react'
 
@@ -16,10 +18,9 @@ export default function CheckAccountsPage() {
   }, [])
 
   const loadData = async () => {
-    const db = getDB()
     const [accountsData, institutionsData] = await Promise.all([
-      db.contas.toArray(),
-      db.instituicoes.toArray(),
+      contaService.listContas({ incluirInativas: true }),
+      instituicaoService.listInstituicoes(),
     ])
     setAccounts(accountsData)
     setInstitutions(institutionsData)
@@ -37,7 +38,7 @@ export default function CheckAccountsPage() {
     }
 
     setFixing(true)
-    const db = getDB()
+    const supabase = getSupabaseBrowserClient()
     let fixed = 0
 
     try {
@@ -82,10 +83,10 @@ export default function CheckAccountsPage() {
         }
 
         if (foundInst) {
-          await db.contas.update(account.id, {
-            instituicao_id: foundInst.id,
-            updated_at: new Date(),
-          })
+          await supabase
+            .from('contas')
+            .update({ instituicao_id: foundInst.id, updated_at: new Date().toISOString() })
+            .eq('id', account.id)
           fixed++
         }
       }

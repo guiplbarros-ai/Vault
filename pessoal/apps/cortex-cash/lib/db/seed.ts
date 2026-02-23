@@ -509,11 +509,12 @@ export const CATEGORIAS_PADRAO: Omit<Categoria, 'id' | 'created_at' | 'updated_a
 ]
 
 /**
- * Função para inserir categorias padrão no banco (Dexie)
+ * Função para inserir categorias padrão no banco (Supabase)
+ * Aceita um cliente Supabase como parâmetro (db: any para compatibilidade de assinatura)
  */
 export async function seedCategorias(db: any): Promise<void> {
   try {
-    const now = new Date()
+    const now = new Date().toISOString()
 
     // Mapear categorias principais primeiro (sem grupo)
     const principais = CATEGORIAS_PADRAO.filter((c) => !c.grupo)
@@ -528,66 +529,54 @@ export async function seedCategorias(db: any): Promise<void> {
         nome: categoria.nome,
         tipo: categoria.tipo,
         grupo: categoria.grupo,
-        pai_id: undefined, // Categorias principais não têm pai
+        pai_id: null,
         icone: categoria.icone,
         cor: categoria.cor,
         ordem: categoria.ordem,
         ativa: categoria.ativa,
-        is_sistema: true, // Categorias padrão são do sistema
-        usuario_id: undefined, // Categorias do sistema não pertencem a nenhum usuário
+        is_sistema: true,
+        usuario_id: null,
         created_at: now,
         updated_at: now,
       }
     })
 
-    // Usa bulkAdd - se já existir, o erro é ignorado silenciosamente
-    try {
-      await db.categorias.bulkAdd(categoriasParaInserir)
-    } catch (error: any) {
-      // Ignora erro de chave duplicada (dados já existem)
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Algumas categorias já existem, pulando duplicatas...')
+    const { error: err1 } = await db.from('categorias').upsert(categoriasParaInserir, { onConflict: 'id' })
+    if (err1 && err1.code !== '23505') {
+      console.warn('Aviso ao inserir categorias principais:', err1.message)
     }
 
     // Agora inserir subcategorias com pai_id correto
     const subcategorias = CATEGORIAS_PADRAO.filter((c) => c.grupo)
     const subcategoriasParaInserir = subcategorias.map((categoria) => {
-      const paiId = mapa[categoria.grupo!]
+      const paiId = mapa[categoria.grupo!] || null
       return {
         id: crypto.randomUUID(),
         nome: categoria.nome,
         tipo: categoria.tipo,
         grupo: categoria.grupo,
-        pai_id: paiId, // Relaciona com a categoria pai
+        pai_id: paiId,
         icone: categoria.icone,
         cor: categoria.cor,
         ordem: categoria.ordem,
         ativa: categoria.ativa,
-        is_sistema: true, // Categorias padrão são do sistema
-        usuario_id: undefined, // Categorias do sistema não pertencem a nenhum usuário
+        is_sistema: true,
+        usuario_id: null,
         created_at: now,
         updated_at: now,
       }
     })
 
-    // Usa bulkAdd - se já existir, o erro é ignorado silenciosamente
-    try {
-      await db.categorias.bulkAdd(subcategoriasParaInserir)
-    } catch (error: any) {
-      // Ignora erro de chave duplicada (dados já existem)
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Algumas subcategorias já existem, pulando duplicatas...')
+    const { error: err2 } = await db.from('categorias').upsert(subcategoriasParaInserir, { onConflict: 'id' })
+    if (err2 && err2.code !== '23505') {
+      console.warn('Aviso ao inserir subcategorias:', err2.message)
     }
 
-    console.log(`✅ ${CATEGORIAS_PADRAO.length} categorias padrão inseridas com sucesso!`)
+    console.log(`${CATEGORIAS_PADRAO.length} categorias padrao inseridas com sucesso!`)
     console.log(`   - ${principais.length} categorias principais`)
     console.log(`   - ${subcategorias.length} subcategorias`)
   } catch (error) {
-    console.error('❌ Erro ao inserir categorias padrão:', error)
+    console.error('Erro ao inserir categorias padrao:', error)
     throw error
   }
 }
@@ -598,12 +587,12 @@ export async function seedCategorias(db: any): Promise<void> {
  */
 export async function seedInstituicoesPadrao(db: any): Promise<void> {
   try {
-    const now = new Date()
+    const now = new Date().toISOString()
 
     // Verifica se já existem instituições
-    const existingCount = await db.instituicoes.count()
-    if (existingCount > 0) {
-      console.log('✅ Instituições já existem no banco')
+    const { count: existingCount } = await db.from('instituicoes').select('*', { count: 'exact', head: true })
+    if ((existingCount ?? 0) > 0) {
+      console.log('Instituicoes ja existem no banco')
       return
     }
 
@@ -646,7 +635,7 @@ export async function seedInstituicoesPadrao(db: any): Promise<void> {
       },
       {
         id: crypto.randomUUID(),
-        nome: 'Itaú',
+        nome: 'Itau',
         codigo: '341',
         logo_url: null,
         cor: '#EC7000',
@@ -673,7 +662,7 @@ export async function seedInstituicoesPadrao(db: any): Promise<void> {
       },
       {
         id: crypto.randomUUID(),
-        nome: 'Caixa Econômica Federal',
+        nome: 'Caixa Economica Federal',
         codigo: '104',
         logo_url: null,
         cor: '#0066A1',
@@ -745,50 +734,47 @@ export async function seedInstituicoesPadrao(db: any): Promise<void> {
       },
     ]
 
-    try {
-      await db.instituicoes.bulkAdd(instituicoes)
-      console.log(`✅ ${instituicoes.length} instituições padrão inseridas`)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Algumas instituições já existem, pulando duplicatas...')
+    const { error } = await db.from('instituicoes').upsert(instituicoes, { onConflict: 'id' })
+    if (error && error.code !== '23505') {
+      console.warn('Aviso ao inserir instituicoes padrao:', error.message)
+    } else {
+      console.log(`${instituicoes.length} instituicoes padrao inseridas`)
     }
   } catch (error) {
-    console.error('❌ Erro ao inserir instituições padrão:', error)
+    console.error('Erro ao inserir instituicoes padrao:', error)
     throw error
   }
 }
 
 /**
- * Verifica se o banco já possui categorias (Dexie)
+ * Verifica se o banco já possui categorias (Supabase)
  */
 export async function hasCategories(db: any): Promise<boolean> {
   try {
-    const count = await db.categorias.count()
-    return count > 0
+    const { count } = await db.from('categorias').select('*', { count: 'exact', head: true })
+    return (count ?? 0) > 0
   } catch {
     return false
   }
 }
 
 /**
- * Inicializa o banco com dados padrão se necessário (Dexie)
+ * Inicializa o banco com dados padrão se necessário (Supabase)
  */
 export async function initializeSeedData(db: any): Promise<void> {
   const hasData = await hasCategories(db)
 
   if (!hasData) {
-    console.log('📦 Banco vazio detectado. Inserindo dados padrão...')
+    console.log('Banco vazio detectado. Inserindo dados padrao...')
     await seedInstituicoesPadrao(db)
     await seedCategorias(db)
   } else {
-    console.log('✅ Banco já possui categorias.')
+    console.log('Banco ja possui categorias.')
 
     // Verifica se possui instituições, mesmo que já tenha categorias
-    const instituicoesCount = await db.instituicoes.count()
-    if (instituicoesCount === 0) {
-      console.log('📦 Adicionando instituições padrão...')
+    const { count: instituicoesCount } = await db.from('instituicoes').select('*', { count: 'exact', head: true })
+    if ((instituicoesCount ?? 0) === 0) {
+      console.log('Adicionando instituicoes padrao...')
       await seedInstituicoesPadrao(db)
     }
   }
@@ -800,7 +786,7 @@ export async function initializeSeedData(db: any): Promise<void> {
  */
 export async function seedMockData(db: any): Promise<void> {
   try {
-    const now = new Date()
+    const now = new Date().toISOString()
 
     // 1. Instituições
     const instituicoes = [
@@ -830,14 +816,11 @@ export async function seedMockData(db: any): Promise<void> {
       },
     ]
 
-    try {
-      await db.instituicoes.bulkAdd(instituicoes)
-      console.log(`✅ ${instituicoes.length} instituições inseridas`)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Algumas instituições já existem, pulando duplicatas...')
+    const { error: errInst } = await db.from('instituicoes').upsert(instituicoes, { onConflict: 'id' })
+    if (errInst && errInst.code !== '23505') {
+      console.warn('Aviso ao inserir instituicoes:', errInst.message)
+    } else {
+      console.log(`${instituicoes.length} instituicoes inseridas`)
     }
 
     // 2. Contas
@@ -847,7 +830,7 @@ export async function seedMockData(db: any): Promise<void> {
         instituicao_id: instituicoes[0]!.id, // Nubank
         nome: 'Nubank - Conta Corrente',
         tipo: 'corrente',
-        saldo_referencia: 5000.0, // User é soberano!
+        saldo_referencia: 5000.0,
         data_referencia: now,
         saldo_atual: 5000.0,
         ativa: true,
@@ -857,7 +840,7 @@ export async function seedMockData(db: any): Promise<void> {
       {
         id: crypto.randomUUID(),
         instituicao_id: instituicoes[1]!.id, // Bradesco
-        nome: 'Bradesco - Poupança',
+        nome: 'Bradesco - Poupanca',
         tipo: 'poupanca',
         saldo_referencia: 15000.0,
         data_referencia: now,
@@ -892,23 +875,21 @@ export async function seedMockData(db: any): Promise<void> {
       },
     ]
 
-    try {
-      await db.contas.bulkAdd(contas)
-      console.log(`✅ ${contas.length} contas inseridas`)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Algumas contas já existem, pulando duplicatas...')
+    const { error: errContas } = await db.from('contas').upsert(contas, { onConflict: 'id' })
+    if (errContas && errContas.code !== '23505') {
+      console.warn('Aviso ao inserir contas:', errContas.message)
+    } else {
+      console.log(`${contas.length} contas inseridas`)
     }
 
     // 3. Buscar categorias já inseridas
-    const categorias = await db.categorias.toArray()
+    const { data: categoriasData } = await db.from('categorias').select('*')
+    const categorias = categoriasData || []
     console.log('='.repeat(60))
-    console.log('📦 INICIANDO SEED DE TRANSAÇÕES')
-    console.log(`📦 Total de categorias disponíveis: ${categorias.length}`)
+    console.log('INICIANDO SEED DE TRANSACOES')
+    console.log(`Total de categorias disponíveis: ${categorias.length}`)
     console.log(
-      '📦 Primeiras 5 categorias:',
+      'Primeiras 5 categorias:',
       categorias.slice(0, 5).map((c: any) => `${c.nome} (${c.tipo})`)
     )
     console.log('='.repeat(60))
@@ -948,12 +929,11 @@ export async function seedMockData(db: any): Promise<void> {
         id: crypto.randomUUID(),
         conta_id: contas[0]!.id,
         categoria_id: getCategoriaByNome('Salário', 'receita'),
-        data: salarioDate,
+        data: salarioDate.toISOString(),
         tipo: 'receita',
-        descricao: 'Salário - Empresa XYZ',
+        descricao: 'Salario - Empresa XYZ',
         valor: Math.round(salario * 100) / 100,
         observacoes: 'Pagamento mensal',
-        tags: ['salário', 'fixo'],
         hash: null,
         created_at: now,
         updated_at: now,
@@ -995,12 +975,11 @@ export async function seedMockData(db: any): Promise<void> {
           id: crypto.randomUUID(),
           conta_id: contas[0]!.id,
           categoria_id: getCategoriaByNome(despesa.categoria, 'despesa'),
-          data: dataTransacao,
+          data: dataTransacao.toISOString(),
           tipo: 'despesa',
           descricao: despesa.descricao,
           valor: Math.round(despesa.valor * 100) / 100,
           observacoes: null,
-          tags: ['fixo'],
           hash: null,
           created_at: now,
           updated_at: now,
@@ -1049,12 +1028,11 @@ export async function seedMockData(db: any): Promise<void> {
           id: crypto.randomUUID(),
           conta_id: contas[0]!.id,
           categoria_id: getCategoriaByNome(despesaTemplate.categoria, 'despesa'),
-          data: dataTransacao,
+          data: dataTransacao.toISOString(),
           tipo: 'despesa',
           descricao: descricao,
           valor: Math.round(valor * 100) / 100,
           observacoes: null,
-          tags: [],
           hash: null,
           created_at: now,
           updated_at: now,
@@ -1091,12 +1069,11 @@ export async function seedMockData(db: any): Promise<void> {
         id: crypto.randomUUID(),
         conta_id: contas[1]!.id, // Bradesco Poupança
         categoria_id: getCategoriaByNome(categoria, 'receita'),
-        data: mesDate,
+        data: mesDate.toISOString(),
         tipo: 'receita',
         descricao: descricao,
         valor: Math.round(valor * 100) / 100,
         observacoes: null,
-        tags: [],
         hash: null,
         created_at: now,
         updated_at: now,
@@ -1118,12 +1095,11 @@ export async function seedMockData(db: any): Promise<void> {
         id: crypto.randomUUID(),
         conta_id: contas[2]!.id, // Inter Investimentos
         categoria_id: getCategoriaByNome('Investimentos', 'despesa'),
-        data: investDate,
+        data: investDate.toISOString(),
         tipo: 'despesa',
         descricao: 'Tesouro Selic - Aporte',
         valor: -Math.round(aporte * 100) / 100,
         observacoes: 'Aporte mensal',
-        tags: ['investimento', 'fixo'],
         hash: null,
         created_at: now,
         updated_at: now,
@@ -1148,19 +1124,16 @@ export async function seedMockData(db: any): Promise<void> {
     }
     console.log('='.repeat(60))
 
-    try {
-      await db.transacoes.bulkAdd(transacoes)
-      console.log(`✅ ${transacoes.length} transações inseridas`)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Algumas transações já existem, pulando duplicatas...')
+    const { error: errTx } = await db.from('transacoes').upsert(transacoes, { onConflict: 'id' })
+    if (errTx && errTx.code !== '23505') {
+      console.warn('Aviso ao inserir transacoes:', errTx.message)
+    } else {
+      console.log(`${transacoes.length} transacoes inseridas`)
     }
 
-    console.log('🎉 Mock data completo inserido com sucesso!')
+    console.log('Mock data completo inserido com sucesso!')
   } catch (error) {
-    console.error('❌ Erro ao inserir mock data:', error)
+    console.error('Erro ao inserir mock data:', error)
     throw error
   }
 }
@@ -1170,18 +1143,25 @@ export async function seedMockData(db: any): Promise<void> {
  */
 export async function seedInvestimentos(db: any): Promise<void> {
   try {
-    const now = new Date()
+    const now = new Date().toISOString()
 
     // Buscar instituições existentes
-    const instituicoes = await db.instituicoes.toArray()
+    const { data: instituicoesData } = await db.from('instituicoes').select('*')
+    const instituicoes = instituicoesData || []
     if (instituicoes.length === 0) {
-      console.log('⚠️  Nenhuma instituição encontrada. Execute seedMockData primeiro.')
+      console.log('Nenhuma instituicao encontrada. Execute seedMockData primeiro.')
       return
     }
 
     // Buscar contas existentes
-    const contas = await db.contas.toArray()
+    const { data: contasData } = await db.from('contas').select('*')
+    const contas = contasData || []
     const contaInvestimento = contas.find((c: any) => c.tipo === 'investimento')
+
+    const d = (offsetMonths: number) =>
+      new Date(new Date().setMonth(new Date().getMonth() + offsetMonths)).toISOString()
+    const dYear = (offsetYears: number) =>
+      new Date(new Date().setFullYear(new Date().getFullYear() + offsetYears)).toISOString()
 
     const investimentos = [
       // Renda Fixa
@@ -1194,14 +1174,14 @@ export async function seedInvestimentos(db: any): Promise<void> {
         valor_aplicado: 10000.0,
         valor_atual: 10650.0,
         quantidade: null,
-        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 6)),
-        data_vencimento: new Date(new Date().setMonth(new Date().getMonth() + 18)),
+        data_aplicacao: d(-6),
+        data_vencimento: d(18),
         taxa_juros: 13.75,
         rentabilidade_contratada: 125,
         indexador: 'CDI',
         status: 'ativo',
         conta_origem_id: contaInvestimento?.id || null,
-        observacoes: 'CDB com liquidez diária',
+        observacoes: 'CDB com liquidez diaria',
         cor: '#10b981',
         created_at: now,
         updated_at: now,
@@ -1215,14 +1195,14 @@ export async function seedInvestimentos(db: any): Promise<void> {
         valor_aplicado: 15000.0,
         valor_atual: 15975.0,
         quantidade: null,
-        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 8)),
-        data_vencimento: new Date('2027-03-01'),
+        data_aplicacao: d(-8),
+        data_vencimento: new Date('2027-03-01').toISOString(),
         taxa_juros: 13.65,
         rentabilidade_contratada: 100,
         indexador: 'SELIC',
         status: 'ativo',
         conta_origem_id: contaInvestimento?.id || null,
-        observacoes: 'Tesouro Direto - Rentabilidade pós-fixada',
+        observacoes: 'Tesouro Direto - Rentabilidade pos-fixada',
         cor: '#059669',
         created_at: now,
         updated_at: now,
@@ -1236,8 +1216,8 @@ export async function seedInvestimentos(db: any): Promise<void> {
         valor_aplicado: 20000.0,
         valor_atual: 21200.0,
         quantidade: null,
-        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 10)),
-        data_vencimento: new Date(new Date().setMonth(new Date().getMonth() + 14)),
+        data_aplicacao: d(-10),
+        data_vencimento: d(14),
         taxa_juros: 12.35,
         rentabilidade_contratada: 95,
         indexador: 'CDI',
@@ -1259,14 +1239,14 @@ export async function seedInvestimentos(db: any): Promise<void> {
         valor_aplicado: 8000.0,
         valor_atual: 9200.0,
         quantidade: 200,
-        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 4)),
+        data_aplicacao: d(-4),
         data_vencimento: null,
         taxa_juros: null,
         rentabilidade_contratada: null,
         indexador: null,
         status: 'ativo',
         conta_origem_id: contaInvestimento?.id || null,
-        observacoes: 'Ações Petrobras - 200 ações @ R$ 40,00',
+        observacoes: 'Acoes Petrobras - 200 acoes @ R$ 40,00',
         cor: '#3b82f6',
         created_at: now,
         updated_at: now,
@@ -1274,20 +1254,20 @@ export async function seedInvestimentos(db: any): Promise<void> {
       {
         id: crypto.randomUUID(),
         instituicao_id: instituicoes[2]!.id, // Inter
-        nome: 'Itaúsa PN',
+        nome: 'Itausa PN',
         tipo: 'renda_variavel',
         ticker: 'ITSA4',
         valor_aplicado: 5000.0,
         valor_atual: 5350.0,
         quantidade: 500,
-        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 12)),
+        data_aplicacao: d(-12),
         data_vencimento: null,
         taxa_juros: null,
         rentabilidade_contratada: null,
         indexador: null,
         status: 'ativo',
         conta_origem_id: contaInvestimento?.id || null,
-        observacoes: 'Ações Itaúsa - Recebendo dividendos',
+        observacoes: 'Acoes Itausa - Recebendo dividendos',
         cor: '#60a5fa',
         created_at: now,
         updated_at: now,
@@ -1301,14 +1281,14 @@ export async function seedInvestimentos(db: any): Promise<void> {
         valor_aplicado: 12000.0,
         valor_atual: 12840.0,
         quantidade: 100,
-        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 7)),
+        data_aplicacao: d(-7),
         data_vencimento: null,
         taxa_juros: null,
         rentabilidade_contratada: null,
         indexador: null,
         status: 'ativo',
         conta_origem_id: contaInvestimento?.id || null,
-        observacoes: 'Fundo Imobiliário - Dividend Yield ~0.8%/mês',
+        observacoes: 'Fundo Imobiliario - Dividend Yield ~0.8%/mes',
         cor: '#93c5fd',
         created_at: now,
         updated_at: now,
@@ -1324,7 +1304,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
         valor_aplicado: 25000.0,
         valor_atual: 26125.0,
         quantidade: 2545.32,
-        data_aplicacao: new Date(new Date().setFullYear(new Date().getFullYear() - 1)),
+        data_aplicacao: dYear(-1),
         data_vencimento: null,
         taxa_juros: null,
         rentabilidade_contratada: null,
@@ -1337,24 +1317,24 @@ export async function seedInvestimentos(db: any): Promise<void> {
         updated_at: now,
       },
 
-      // Previdência
+      // Previdencia
       {
         id: crypto.randomUUID(),
         instituicao_id: instituicoes[1]!.id, // Bradesco
-        nome: 'PGBL Bradesco Previdência',
+        nome: 'PGBL Bradesco Previdencia',
         tipo: 'previdencia',
         ticker: null,
         valor_aplicado: 18000.0,
         valor_atual: 18900.0,
         quantidade: null,
-        data_aplicacao: new Date(new Date().setFullYear(new Date().getFullYear() - 2)),
+        data_aplicacao: dYear(-2),
         data_vencimento: null,
         taxa_juros: null,
         rentabilidade_contratada: null,
         indexador: null,
         status: 'ativo',
         conta_origem_id: contaInvestimento?.id || null,
-        observacoes: 'Previdência privada - Aporte mensal R$ 750',
+        observacoes: 'Previdencia privada - Aporte mensal R$ 750',
         cor: '#8b5cf6',
         created_at: now,
         updated_at: now,
@@ -1370,7 +1350,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
         valor_aplicado: 3000.0,
         valor_atual: 3450.0,
         quantidade: 0.015,
-        data_aplicacao: new Date(new Date().setMonth(new Date().getMonth() - 3)),
+        data_aplicacao: d(-3),
         data_vencimento: null,
         taxa_juros: null,
         rentabilidade_contratada: null,
@@ -1384,18 +1364,16 @@ export async function seedInvestimentos(db: any): Promise<void> {
       },
     ]
 
-    try {
-      await db.investimentos.bulkAdd(investimentos)
-      console.log(`✅ ${investimentos.length} investimentos inseridos`)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Alguns investimentos já existem, pulando duplicatas...')
+    const { error: errInv } = await db.from('investimentos').upsert(investimentos, { onConflict: 'id' })
+    if (errInv && errInv.code !== '23505') {
+      console.warn('Aviso ao inserir investimentos:', errInv.message)
+    } else {
+      console.log(`${investimentos.length} investimentos inseridos`)
     }
 
     // Criar histórico para cada investimento
     const historicos = []
+    const nowMs = Date.now()
 
     for (const inv of investimentos) {
       // Histórico inicial (aporte)
@@ -1406,14 +1384,14 @@ export async function seedInvestimentos(db: any): Promise<void> {
         valor: inv.valor_aplicado,
         quantidade: inv.quantidade,
         tipo_movimentacao: 'aporte',
-        observacoes: 'Aplicação inicial',
+        observacoes: 'Aplicacao inicial',
         created_at: now,
       })
 
       // Adicionar alguns rendimentos mensais
       if (inv.tipo === 'renda_fixa' || inv.tipo === 'fundo_investimento') {
         const mesesDecorridos = Math.floor(
-          (now.getTime() - new Date(inv.data_aplicacao).getTime()) / (1000 * 60 * 60 * 24 * 30)
+          (nowMs - new Date(inv.data_aplicacao).getTime()) / (1000 * 60 * 60 * 24 * 30)
         )
 
         for (let i = 1; i <= Math.min(mesesDecorridos, 3); i++) {
@@ -1425,7 +1403,7 @@ export async function seedInvestimentos(db: any): Promise<void> {
           historicos.push({
             id: crypto.randomUUID(),
             investimento_id: inv.id,
-            data: rendimentoDate,
+            data: rendimentoDate.toISOString(),
             valor: valorRendimento,
             quantidade: null,
             tipo_movimentacao: 'rendimento',
@@ -1436,19 +1414,16 @@ export async function seedInvestimentos(db: any): Promise<void> {
       }
     }
 
-    try {
-      await db.historico_investimentos.bulkAdd(historicos)
-      console.log(`✅ ${historicos.length} registros de histórico inseridos`)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Alguns históricos já existem, pulando duplicatas...')
+    const { error: errHist } = await db.from('historico_investimentos').upsert(historicos, { onConflict: 'id' })
+    if (errHist && errHist.code !== '23505') {
+      console.warn('Aviso ao inserir historico de investimentos:', errHist.message)
+    } else {
+      console.log(`${historicos.length} registros de historico inseridos`)
     }
 
-    console.log('🎉 Seed de investimentos completo!')
+    console.log('Seed de investimentos completo!')
   } catch (error) {
-    console.error('❌ Erro ao inserir investimentos:', error)
+    console.error('Erro ao inserir investimentos:', error)
     throw error
   }
 }
@@ -1458,18 +1433,20 @@ export async function seedInvestimentos(db: any): Promise<void> {
  */
 export async function seedCartoes(db: any) {
   try {
-    console.log('📋 Seeding cartões de crédito...')
+    console.log('Seeding cartoes de credito...')
 
-    const instituicoes = await db.instituicoes.toArray()
+    const { data: instituicoesData } = await db.from('instituicoes').select('*')
+    const instituicoes = instituicoesData || []
     if (instituicoes.length === 0) {
-      console.log('⚠️ Nenhuma instituição encontrada. Execute seedInstituicoes() primeiro.')
+      console.log('Nenhuma instituicao encontrada. Execute seedInstituicoes() primeiro.')
       return
     }
 
-    const contas = await db.contas.toArray()
+    const { data: contasData } = await db.from('contas').select('*')
+    const contas = contasData || []
     const contaCorrente = contas.find((c: any) => c.tipo === 'corrente')
 
-    const now = new Date()
+    const now = new Date().toISOString()
 
     // Criar cartões de crédito de exemplo
     const cartoes = [
@@ -1520,53 +1497,34 @@ export async function seedCartoes(db: any) {
       },
     ]
 
-    try {
-      await db.cartoes_config.bulkAdd(cartoes)
-      console.log(`✅ ${cartoes.length} cartões inseridos`)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Alguns cartões já existem, pulando duplicatas...')
+    const { error: errCartoes } = await db.from('cartoes_config').upsert(cartoes, { onConflict: 'id' })
+    if (errCartoes && errCartoes.code !== '23505') {
+      console.warn('Aviso ao inserir cartoes:', errCartoes.message)
+    } else {
+      console.log(`${cartoes.length} cartoes inseridos`)
     }
 
     // Criar faturas de exemplo para cada cartão
-    const faturas = []
-    const lancamentos = []
+    const faturas: any[] = []
+    const lancamentos: any[] = []
 
     for (const cartao of cartoes) {
       // Fatura do mês atual
       const hoje = new Date()
       const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
-      const dataFechamento = new Date(hoje.getFullYear(), hoje.getMonth(), cartao.dia_fechamento)
-      const dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth(), cartao.dia_vencimento)
+      const dataFechamento = new Date(hoje.getFullYear(), hoje.getMonth(), cartao.dia_fechamento).toISOString()
+      const dataVencimento = new Date(hoje.getFullYear(), hoje.getMonth(), cartao.dia_vencimento).toISOString()
 
-      const faturaAtual = {
-        id: crypto.randomUUID(),
-        cartao_id: cartao.id,
-        mes_referencia: mesAtual,
-        data_fechamento: dataFechamento,
-        data_vencimento: dataVencimento,
-        valor_total: 0, // Será calculado com base nos lançamentos
-        valor_minimo: 0,
-        valor_pago: 0,
-        status: 'aberta',
-        fechada_automaticamente: false,
-        data_pagamento: null,
-        transacao_pagamento_id: null,
-        created_at: now,
-        updated_at: now,
-      }
-
-      faturas.push(faturaAtual)
+      const faturaAtualId = crypto.randomUUID()
+      let valorTotalAtual = 0
 
       // Criar alguns lançamentos de exemplo
       const lancamentosExemplo = [
         {
           id: crypto.randomUUID(),
-          fatura_id: faturaAtual.id,
+          fatura_id: faturaAtualId,
           transacao_id: null,
-          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 5),
+          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 5).toISOString(),
           descricao: 'Supermercado Extra',
           valor_brl: 450.0,
           parcela_numero: null,
@@ -1579,9 +1537,9 @@ export async function seedCartoes(db: any) {
         },
         {
           id: crypto.randomUUID(),
-          fatura_id: faturaAtual.id,
+          fatura_id: faturaAtualId,
           transacao_id: null,
-          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 8),
+          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 8).toISOString(),
           descricao: 'Restaurante Outback',
           valor_brl: 280.0,
           parcela_numero: null,
@@ -1594,9 +1552,9 @@ export async function seedCartoes(db: any) {
         },
         {
           id: crypto.randomUUID(),
-          fatura_id: faturaAtual.id,
+          fatura_id: faturaAtualId,
           transacao_id: null,
-          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 12),
+          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 12).toISOString(),
           descricao: 'Netflix - Assinatura',
           valor_brl: 55.9,
           parcela_numero: null,
@@ -1609,10 +1567,10 @@ export async function seedCartoes(db: any) {
         },
         {
           id: crypto.randomUUID(),
-          fatura_id: faturaAtual.id,
+          fatura_id: faturaAtualId,
           transacao_id: null,
-          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 15),
-          descricao: 'Posto Shell - Combustível',
+          data_compra: new Date(hoje.getFullYear(), hoje.getMonth(), 15).toISOString(),
+          descricao: 'Posto Shell - Combustivel',
           valor_brl: 320.0,
           parcela_numero: null,
           parcela_total: null,
@@ -1625,25 +1583,32 @@ export async function seedCartoes(db: any) {
       ]
 
       lancamentos.push(...lancamentosExemplo)
+      valorTotalAtual = lancamentosExemplo.reduce((sum, l) => sum + l.valor_brl, 0)
 
-      // Atualizar valor total da fatura
-      faturaAtual.valor_total = lancamentosExemplo.reduce((sum, l) => sum + l.valor_brl, 0)
-      faturaAtual.valor_minimo = faturaAtual.valor_total * 0.15
+      faturas.push({
+        id: faturaAtualId,
+        cartao_id: cartao.id,
+        mes_referencia: mesAtual,
+        data_fechamento: dataFechamento,
+        data_vencimento: dataVencimento,
+        valor_total: valorTotalAtual,
+        valor_minimo: valorTotalAtual * 0.15,
+        valor_pago: 0,
+        status: 'aberta',
+        fechada_automaticamente: false,
+        data_pagamento: null,
+        transacao_pagamento_id: null,
+        created_at: now,
+        updated_at: now,
+      })
 
       // Fatura do mês anterior (paga)
       const mesAnterior = `${hoje.getFullYear()}-${String(hoje.getMonth()).padStart(2, '0')}`
-      const dataFechamentoAnterior = new Date(
-        hoje.getFullYear(),
-        hoje.getMonth() - 1,
-        cartao.dia_fechamento
-      )
-      const dataVencimentoAnterior = new Date(
-        hoje.getFullYear(),
-        hoje.getMonth() - 1,
-        cartao.dia_vencimento
-      )
+      const dataFechamentoAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, cartao.dia_fechamento).toISOString()
+      const dataVencimentoAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, cartao.dia_vencimento).toISOString()
+      const dataPagamentoAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, cartao.dia_vencimento - 2).toISOString()
 
-      const faturaAnterior = {
+      faturas.push({
         id: crypto.randomUUID(),
         cartao_id: cartao.id,
         mes_referencia: mesAnterior,
@@ -1654,42 +1619,30 @@ export async function seedCartoes(db: any) {
         valor_pago: 1850.0,
         status: 'paga',
         fechada_automaticamente: true,
-        data_pagamento: new Date(
-          hoje.getFullYear(),
-          hoje.getMonth() - 1,
-          cartao.dia_vencimento - 2
-        ),
+        data_pagamento: dataPagamentoAnterior,
         transacao_pagamento_id: null,
         created_at: now,
         updated_at: now,
-      }
-
-      faturas.push(faturaAnterior)
+      })
     }
 
-    try {
-      await db.faturas.bulkAdd(faturas)
-      console.log(`✅ ${faturas.length} faturas inseridas`)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Algumas faturas já existem, pulando duplicatas...')
+    const { error: errFaturas } = await db.from('faturas').upsert(faturas, { onConflict: 'id' })
+    if (errFaturas && errFaturas.code !== '23505') {
+      console.warn('Aviso ao inserir faturas:', errFaturas.message)
+    } else {
+      console.log(`${faturas.length} faturas inseridas`)
     }
 
-    try {
-      await db.faturas_lancamentos.bulkAdd(lancamentos)
-      console.log(`✅ ${lancamentos.length} lançamentos de fatura inseridos`)
-    } catch (error: any) {
-      if (error?.name !== 'ConstraintError') {
-        throw error
-      }
-      console.log('⚠️ Alguns lançamentos já existem, pulando duplicatas...')
+    const { error: errLanc } = await db.from('faturas_lancamentos').upsert(lancamentos, { onConflict: 'id' })
+    if (errLanc && errLanc.code !== '23505') {
+      console.warn('Aviso ao inserir lancamentos de fatura:', errLanc.message)
+    } else {
+      console.log(`${lancamentos.length} lancamentos de fatura inseridos`)
     }
 
-    console.log('🎉 Seed de cartões completo!')
+    console.log('Seed de cartoes completo!')
   } catch (error) {
-    console.error('❌ Erro ao inserir cartões:', error)
+    console.error('Erro ao inserir cartoes:', error)
     throw error
   }
 }
