@@ -191,6 +191,9 @@ cmd_deploy() {
   info "Step 3/7: copy relay server.js"
   run "cp $INFRA_DIR/claude-relay/server.js $OPENCLAW_DIR/claude-relay/server.js"
 
+  info "Step 3b/7: copy MCP browser config"
+  run "cp $INFRA_DIR/claude-relay/mcp-headless-browser.json $OPENCLAW_DIR/claude-relay/mcp-headless-browser.json 2>/dev/null || true"
+
   info "Step 4/7: copy daily-sync"
   run "cp $INFRA_DIR/daily-sync/daily-sync.js $OPENCLAW_DIR/daily-sync/daily-sync.js 2>/dev/null || true"
   run "cp $INFRA_DIR/daily-sync/daily-sync.service ~/.config/systemd/user/daily-sync.service 2>/dev/null || true"
@@ -226,7 +229,84 @@ cmd_deploy() {
     notify "Deploy completo (com aviso)" "Relay: $status | Health: not responding" $COLOR_WARN
   fi
 
+  info "Step 8/8: smoke test"
+  cmd_smoke_test
+
   ok "Deploy complete"
+}
+
+cmd_smoke_test() {
+  header "Smoke Test"
+  local failures=0
+
+  # 1. Required env vars loaded by relay
+  local required_vars="CORTEX_CASH_API_KEY ANTHROPIC_API_KEY OPENCLAW_GATEWAY_TOKEN DISCORD_BOT_PESSOAL"
+  for var in $required_vars; do
+    local val
+    val=$(run "grep -c '^${var}=' $OPENCLAW_DIR/.env 2>/dev/null" || echo "0")
+    if [ "$val" -gt 0 ]; then
+      ok "env: $var"
+    else
+      fail "env: $var MISSING in .env"
+      failures=$((failures + 1))
+    fi
+  done
+
+  # 2. Tools directory and executables
+  if run "test -d $OPENCLAW_DIR/tools" 2>/dev/null; then
+    ok "dir: tools/"
+    local tools
+    tools=$(run "ls $OPENCLAW_DIR/tools/ 2>/dev/null" || echo "")
+    for tool in $tools; do
+      if run "test -x $OPENCLAW_DIR/tools/$tool" 2>/dev/null; then
+        ok "tool: $tool (executable)"
+      else
+        fail "tool: $tool (not executable)"
+        failures=$((failures + 1))
+      fi
+    done
+  else
+    fail "dir: tools/ MISSING"
+    failures=$((failures + 1))
+  fi
+
+  # 3. Workspace directories exist
+  for agent in backstage data review ops pessoal; do
+    if run "test -d $OPENCLAW_DIR/workspace-$agent" 2>/dev/null; then
+      ok "workspace: $agent"
+    else
+      fail "workspace: $agent MISSING"
+      failures=$((failures + 1))
+    fi
+  done
+
+  # 4. Required system tools
+  local sys_tools="curl jq git node"
+  for tool in $sys_tools; do
+    if run "which $tool" &>/dev/null; then
+      ok "sys: $tool"
+    else
+      fail "sys: $tool NOT FOUND"
+      failures=$((failures + 1))
+    fi
+  done
+
+  # 5. cortex-cash-api connectivity test
+  local api_test
+  api_test=$(run "export CORTEX_CASH_API_KEY=\$(grep CORTEX_CASH_API_KEY $OPENCLAW_DIR/.env | cut -d= -f2) && curl -sf -o /dev/null -w '%{http_code}' https://cortex-cash.fly.dev/api/financeiro/resumo -H \"Authorization: Bearer \$CORTEX_CASH_API_KEY\" 2>/dev/null" || echo "000")
+  if [ "$api_test" = "200" ]; then
+    ok "api: cortex-cash (HTTP 200)"
+  else
+    fail "api: cortex-cash (HTTP $api_test)"
+    failures=$((failures + 1))
+  fi
+
+  if [ "$failures" -gt 0 ]; then
+    warn "$failures issue(s) found — check above"
+    notify "Smoke test: $failures issue(s)" "Deploy needs attention" $COLOR_WARN
+  else
+    ok "All checks passed"
+  fi
 }
 
 cmd_logs() {
@@ -296,6 +376,7 @@ cmd_help() {
   echo "  deploy              Full deploy (pull, sync, copy, restart)"
   echo "  logs [service]      View logs (relay|daily-sync|gateway|tailscale)"
   echo "  stats               Relay usage stats for today"
+  echo "  smoke-test          Validate env vars, tools, workspaces, connectivity"
   echo "  notify <t> [desc]   Send notification to Discord #status"
   echo "  exec <cmd>          Run arbitrary command on WSL2"
   echo "  ssh                 Interactive SSH session"
@@ -314,6 +395,7 @@ case "${1:-help}" in
   restart-gateway)  cmd_restart_gateway ;;
   sync)             cmd_sync ;;
   deploy)           cmd_deploy ;;
+  smoke-test)       cmd_smoke_test ;;
   logs)             shift; cmd_logs "$@" ;;
   stats)            cmd_stats ;;
   notify)           shift; cmd_notify "$@" ;;

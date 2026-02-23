@@ -7,11 +7,12 @@ Type=simple
 ExecStart=/usr/bin/node /home/guipl/.openclaw/claude-relay/server.js
 Restart=on-failure
 RestartSec=5
+EnvironmentFile=/home/guipl/.openclaw/.env
 Environment=PORT=18790
 Environment=CLAUDE_BIN=claude
 Environment=MAX_CONCURRENT=3
 Environment=TIMEOUT_MS=600000
-Environment=PATH=/home/guipl/.bun/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/home/guipl/.bun/bin:/home/guipl/.openclaw/tools:/usr/local/bin:/usr/bin:/bin
 
 [Install]
 WantedBy=default.target

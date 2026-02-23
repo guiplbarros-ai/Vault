@@ -1,0 +1,78 @@
+#!/bin/bash
+#
+# cortex-cash-api — CLI wrapper para a API financeira do Cortex Cash
+#
+# Uso: cortex-cash-api <comando> [opções]
+# Comandos: resumo, transacoes, contas, score, patrimonio, orcamento
+#
+# Requer: CORTEX_CASH_API_KEY no ambiente (~/.openclaw/.env)
+
+set -euo pipefail
+
+API_KEY="${CORTEX_CASH_API_KEY:-}"
+BASE_URL="${CORTEX_CASH_URL:-https://cortex-cash.fly.dev}"
+
+if [ -z "$API_KEY" ]; then
+  echo "ERRO: CORTEX_CASH_API_KEY não configurada"
+  echo "Adicione ao ~/.openclaw/.env: CORTEX_CASH_API_KEY=<supabase_service_role_key>"
+  exit 1
+fi
+
+fetch() {
+  local endpoint="$1"
+  shift
+  curl -sf "${BASE_URL}/api/financeiro/${endpoint}$*" \
+    -H "Authorization: Bearer ${API_KEY}" \
+    -H "Content-Type: application/json" | jq .
+}
+
+case "${1:-help}" in
+  resumo)
+    echo "=== Resumo Financeiro ==="
+    fetch "resumo"
+    ;;
+  transacoes)
+    limit="${2:-10}"
+    echo "=== Últimas ${limit} Transações ==="
+    fetch "transacoes" "?limit=${limit}"
+    ;;
+  contas)
+    echo "=== Contas Bancárias ==="
+    fetch "contas"
+    ;;
+  score)
+    echo "=== Health Score ==="
+    fetch "health-score"
+    ;;
+  patrimonio)
+    echo "=== Patrimônio ==="
+    fetch "patrimonio"
+    ;;
+  orcamento)
+    mes="${2:-}"
+    echo "=== Orçamento ==="
+    if [ -n "$mes" ]; then
+      fetch "orcamento" "?mes=${mes}"
+    else
+      fetch "orcamento"
+    fi
+    ;;
+  help|--help|-h)
+    echo "cortex-cash-api — CLI para dados financeiros"
+    echo ""
+    echo "Comandos:"
+    echo "  resumo              Resumo mensal (saldo, receitas, despesas)"
+    echo "  transacoes [N]      Últimas N transações (default: 10)"
+    echo "  contas              Contas bancárias ativas"
+    echo "  score               Health score financeiro"
+    echo "  patrimonio          Patrimônio + investimentos"
+    echo "  orcamento [YYYY-MM] Orçamentos do mês"
+    echo ""
+    echo "Exemplo: cortex-cash-api resumo"
+    ;;
+  *)
+    echo "Comando desconhecido: $1"
+    echo "Use: cortex-cash-api help"
+    exit 1
+    ;;
+esac

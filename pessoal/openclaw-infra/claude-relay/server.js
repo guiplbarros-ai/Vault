@@ -19,14 +19,16 @@ const MAX_RETRIES = Number(process.env.MAX_RETRIES || 3)
 const RETRY_BASE_DELAY_MS = Number(process.env.RETRY_BASE_DELAY_MS || 60_000) // 60s
 
 const AGENT_CONFIG = {
-  'relay/backstage': { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 25 },
-  'relay/data':      { model: 'opus',   cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 25 },
-  'relay/review':    { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 15 },
-  'relay/ops':       { model: 'haiku',  cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 10 },
-  'relay/pessoal':   { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/pessoal-repo/pessoal', maxTurns: 25 },
+  'relay/backstage': { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 25, hasBrowser: true },
+  'relay/data':      { model: 'opus',   cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 25, hasBrowser: false },
+  'relay/review':    { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 15, hasBrowser: true },
+  'relay/ops':       { model: 'haiku',  cwd: '/mnt/c/Users/guipl/Documents/Coding/Freelaw/freelaw', maxTurns: 10, hasBrowser: false },
+  'relay/pessoal':   { model: 'sonnet', cwd: '/mnt/c/Users/guipl/Documents/Coding/pessoal-repo/pessoal', maxTurns: 25, hasBrowser: true },
 }
 
-const QUEUE_CONCURRENCY = Number(process.env.QUEUE_CONCURRENCY || 1) // serialize by default
+const MCP_CONFIG_PATH = path.join(os.homedir(), '.openclaw', 'claude-relay', 'mcp-headless-browser.json')
+
+const QUEUE_CONCURRENCY = Number(process.env.QUEUE_CONCURRENCY || 2) // allow 2 parallel CLI processes
 const MIN_DELAY_BETWEEN_MS = Number(process.env.MIN_DELAY_BETWEEN_MS || 3_000) // 3s between requests
 
 // ── State ───────────────────────────────────────────────────────────────────
@@ -142,6 +144,9 @@ function parseClaudeOutput(stdout) {
   const trimmed = stdout.trim()
   if (!trimmed) throw new Error('Empty output from claude CLI')
 
+  // Debug: log raw output size for troubleshooting
+  log('debug', `[parseClaudeOutput] ${trimmed.length} chars, starts: ${trimmed.slice(0, 100).replace(/\n/g, '\\n')}`)
+
   const parsed = JSON.parse(trimmed)
   const emptyMeta = { cost_usd: 0, duration_ms: 0, num_turns: 0, session_id: null }
 
@@ -149,8 +154,12 @@ function parseClaudeOutput(stdout) {
   if (!Array.isArray(parsed)) {
     if (parsed.type === 'result') {
       if (parsed.is_error) throw new Error(`Claude error: ${parsed.result}`)
+      const isMaxTurns = parsed.subtype === 'error_max_turns'
+      const fallback = isMaxTurns
+        ? `⚠️ Atingi o limite de ${parsed.num_turns || '?'} turnos sem conseguir completar. Tente uma pergunta mais simples.`
+        : '(sem resposta)'
       return {
-        text: parsed.result,
+        text: parsed.result || fallback,
         cost_usd: parsed.total_cost_usd || 0,
         duration_ms: parsed.duration_ms || 0,
         num_turns: parsed.num_turns || 0,
@@ -249,6 +258,34 @@ function buildOpenAIResponse(text, model) {
   }
 }
 
+function buildStreamChunk(text, model, id, finishReason) {
+  return {
+    id,
+    object: 'chat.completion.chunk',
+    created: Math.floor(Date.now() / 1000),
+    model,
+    choices: [{
+      index: 0,
+      delta: text !== null ? { role: 'assistant', content: text } : {},
+      finish_reason: finishReason || null,
+    }],
+  }
+}
+
+function sendSSEResponse(res, text, model) {
+  const id = `chatcmpl-${crypto.randomUUID()}`
+  res.writeHead(200, {
+    'content-type': 'text/event-stream',
+    'cache-control': 'no-cache',
+    'connection': 'keep-alive',
+    'access-control-allow-origin': '*',
+  })
+  res.write(`data: ${JSON.stringify(buildStreamChunk(text, model, id, null))}\n\n`)
+  res.write(`data: ${JSON.stringify(buildStreamChunk(null, model, id, 'stop'))}\n\n`)
+  res.write('data: [DONE]\n\n')
+  res.end()
+}
+
 // ── Error Classification ────────────────────────────────────────────────────
 
 function classifyError(stderr, stdout) {
@@ -267,7 +304,13 @@ function spawnClaude(args, config) {
     const proc = spawn(CLAUDE_BIN, args, {
       cwd: config.cwd,
       timeout: TIMEOUT_MS,
-      env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/local/bin:/usr/bin:/bin:${process.env.PATH || ''}` },
+      env: {
+        ...process.env,
+        PATH: `${process.env.HOME}/.bun/bin:${process.env.HOME}/.openclaw/tools:/usr/local/bin:/usr/bin:/bin`,
+        BROWSER: 'echo',           // prevent CLI from opening browser windows
+        DISPLAY: '',               // no X11 display
+        WSL_INTEROP: '',           // block WSL→Windows interop (prevents launching .exe)
+      },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
 
@@ -339,6 +382,7 @@ async function handleChatCompletion(req, res) {
     return sendJson(res, 400, { error: { message: 'Invalid JSON body', type: 'invalid_request' } })
   }
 
+  log("debug", `[REQUEST] model=${body.model} stream=${body.stream} messages=${(body.messages||[]).length} keys=${Object.keys(body).join(",")}`)
   const modelName = body.model || 'relay/ops'
   const config = AGENT_CONFIG[modelName]
   if (!config) {
@@ -375,6 +419,13 @@ async function handleChatCompletion(req, res) {
         '--dangerously-skip-permissions',
       ]
 
+      // Add headless browser MCP config for agents that need browsing
+      if (config.hasBrowser && fs.existsSync(MCP_CONFIG_PATH)) {
+        args.push('--mcp-config', MCP_CONFIG_PATH)
+        // Block built-in web tools so agents use MCP playwright (headless) instead
+        args.push('--disallowedTools', 'WebFetch', 'WebSearch')
+      }
+
       if (systemPrompt) {
         if (systemPromptFile) {
           args.push('--append-system-prompt', fs.readFileSync(systemPromptFile, 'utf-8'))
@@ -392,13 +443,13 @@ async function handleChatCompletion(req, res) {
         const elapsedMs = Date.now() - startMs
         const elapsed = (elapsedMs / 1000).toFixed(1)
         const { text, cost_usd, duration_ms: cliDuration, num_turns } = parseClaudeOutput(stdout)
-        log('info', `[${modelName}] Done in ${elapsed}s (${text.length} chars, ${num_turns} turns, $${cost_usd.toFixed(4)})`)
+        log('info', `[${modelName}] Done in ${elapsed}s (${(text || '').length} chars, ${num_turns} turns, $${cost_usd.toFixed(4)})`)
 
         recordUsage(modelName, {
           cost_usd,
           duration_ms: elapsedMs,
           num_turns,
-          response_chars: text.length,
+          response_chars: (text || '').length,
           model: config.model,
         })
 
@@ -430,6 +481,9 @@ async function handleChatCompletion(req, res) {
     })
 
     if (result.ok) {
+      if (body.stream) {
+        return sendSSEResponse(res, result.data.choices[0].message.content, result.data.model)
+      }
       return sendJson(res, 200, result.data)
     } else {
       return sendJson(res, 500, {
