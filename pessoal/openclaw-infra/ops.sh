@@ -113,6 +113,28 @@ cmd_status() {
     warn "$timer_status"
   fi
 
+  header "Transaction Monitor Timer"
+  local txm_status
+  txm_status=$(run "systemctl --user is-active tx-monitor.timer 2>/dev/null" || echo "inactive")
+  if [ "$txm_status" = "active" ]; then
+    local txm_next
+    txm_next=$(run "systemctl --user show tx-monitor.timer --property=NextElapseUSecRealtime --value 2>/dev/null" || echo "unknown")
+    ok "active (next: $txm_next)"
+  else
+    warn "$txm_status"
+  fi
+
+  header "Weekly Balance Timer"
+  local wb_status
+  wb_status=$(run "systemctl --user is-active weekly-balance.timer 2>/dev/null" || echo "inactive")
+  if [ "$wb_status" = "active" ]; then
+    local wb_next
+    wb_next=$(run "systemctl --user show weekly-balance.timer --property=NextElapseUSecRealtime --value 2>/dev/null" || echo "unknown")
+    ok "active (next: $wb_next)"
+  else
+    warn "$wb_status"
+  fi
+
   header "Ports"
   run "ss -tlnp 2>/dev/null | grep -E '18789|18790|:22 ' || echo '  no relevant ports'"
 }
@@ -199,12 +221,26 @@ cmd_deploy() {
   run "cp $INFRA_DIR/daily-sync/daily-sync.service ~/.config/systemd/user/daily-sync.service 2>/dev/null || true"
   run "cp $INFRA_DIR/daily-sync/daily-sync.timer ~/.config/systemd/user/daily-sync.timer 2>/dev/null || true"
 
+  info "Step 4b/7: copy cortex-cash-monitor"
+  run "mkdir -p $OPENCLAW_DIR/cortex-cash-monitor"
+  run "cp $INFRA_DIR/cortex-cash-monitor/tx-monitor.js $OPENCLAW_DIR/cortex-cash-monitor/tx-monitor.js 2>/dev/null || true"
+  run "cp $INFRA_DIR/cortex-cash-monitor/tx-monitor.service ~/.config/systemd/user/tx-monitor.service 2>/dev/null || true"
+  run "cp $INFRA_DIR/cortex-cash-monitor/tx-monitor.timer ~/.config/systemd/user/tx-monitor.timer 2>/dev/null || true"
+
+  info "Step 4c/7: copy weekly-balance"
+  run "mkdir -p $OPENCLAW_DIR/weekly-balance"
+  run "cp $INFRA_DIR/weekly-balance/weekly-balance.js $OPENCLAW_DIR/weekly-balance/weekly-balance.js 2>/dev/null || true"
+  run "cp $INFRA_DIR/weekly-balance/weekly-balance.service ~/.config/systemd/user/weekly-balance.service 2>/dev/null || true"
+  run "cp $INFRA_DIR/weekly-balance/weekly-balance.timer ~/.config/systemd/user/weekly-balance.timer 2>/dev/null || true"
+
   info "Step 5/7: copy relay service"
   run "cp $INFRA_DIR/claude-relay/claude-relay.service ~/.config/systemd/user/claude-relay.service 2>/dev/null || true"
 
-  info "Step 6/7: daemon-reload + restart relay"
+  info "Step 6/7: daemon-reload + restart relay + enable timers"
   run "systemctl --user daemon-reload"
   run "systemctl --user restart claude-relay"
+  run "systemctl --user enable --now tx-monitor.timer 2>/dev/null || true"
+  run "systemctl --user enable --now weekly-balance.timer 2>/dev/null || true"
   sleep 3
 
   info "Step 7/7: verify"
@@ -240,7 +276,7 @@ cmd_smoke_test() {
   local failures=0
 
   # 1. Required env vars loaded by relay
-  local required_vars="CORTEX_CASH_API_KEY ANTHROPIC_API_KEY OPENCLAW_GATEWAY_TOKEN DISCORD_BOT_PESSOAL"
+  local required_vars="CORTEX_CASH_API_KEY ANTHROPIC_API_KEY OPENCLAW_GATEWAY_TOKEN DISCORD_BOT_PESSOAL DISCORD_WEBHOOK_CORTEX_CASH"
   for var in $required_vars; do
     local val
     val=$(run "grep -c '^${var}=' $OPENCLAW_DIR/.env 2>/dev/null" || echo "0")

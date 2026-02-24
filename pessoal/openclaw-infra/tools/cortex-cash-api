@@ -57,6 +57,16 @@ case "${1:-help}" in
       fetch "orcamento"
     fi
     ;;
+  transacoes-recentes)
+    since="${2:-}"
+    if [ -z "$since" ]; then
+      echo "Uso: cortex-cash-api transacoes-recentes <ISO-timestamp>"
+      echo "Ex:  cortex-cash-api transacoes-recentes 2026-02-23T00:00:00Z"
+      exit 1
+    fi
+    echo "=== Transações Recentes (desde $since) ==="
+    fetch "transacoes/recent" "?since=${since}"
+    ;;
   help|--help|-h)
     echo "cortex-cash-api — CLI para dados financeiros"
     echo ""
@@ -67,6 +77,7 @@ case "${1:-help}" in
     echo "  score               Health score financeiro"
     echo "  patrimonio          Patrimônio + investimentos"
     echo "  orcamento [YYYY-MM] Orçamentos do mês"
+    echo "  transacoes-recentes <ISO> Transações desde timestamp"
     echo ""
     echo "Exemplo: cortex-cash-api resumo"
     ;;

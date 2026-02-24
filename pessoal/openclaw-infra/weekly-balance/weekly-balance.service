@@ -1,0 +1,10 @@
+[Unit]
+Description=Cortex Cash Weekly Balance Summary — posts to Discord
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/node /home/guipl/.openclaw/weekly-balance/weekly-balance.js
+EnvironmentFile=/home/guipl/.openclaw/.env
+Environment=PATH=/home/guipl/.openclaw/tools:/usr/local/bin:/usr/bin:/bin
+TimeoutStartSec=60

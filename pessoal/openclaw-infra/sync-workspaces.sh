@@ -31,7 +31,21 @@ if [ -d "$OPENCLAW_DIR" ]; then
   echo "✓ Synced daily-sync → ~/.openclaw/"
 fi
 
-# 4. Copiar tools para ~/.openclaw
+# 4. Copiar cortex-cash-monitor para ~/.openclaw
+if [ -d "$OPENCLAW_DIR" ]; then
+  mkdir -p "$OPENCLAW_DIR/cortex-cash-monitor"
+  cp "$SCRIPT_DIR/cortex-cash-monitor/"*.js "$OPENCLAW_DIR/cortex-cash-monitor/" 2>/dev/null
+  echo "✓ Synced cortex-cash-monitor → ~/.openclaw/"
+fi
+
+# 4b. Copiar weekly-balance para ~/.openclaw
+if [ -d "$OPENCLAW_DIR" ]; then
+  mkdir -p "$OPENCLAW_DIR/weekly-balance"
+  cp "$SCRIPT_DIR/weekly-balance/"*.js "$OPENCLAW_DIR/weekly-balance/" 2>/dev/null
+  echo "✓ Synced weekly-balance → ~/.openclaw/"
+fi
+
+# 4c. Copiar tools para ~/.openclaw
 if [ -d "$OPENCLAW_DIR" ] && [ -d "$SCRIPT_DIR/tools" ]; then
   mkdir -p "$OPENCLAW_DIR/tools"
   cp "$SCRIPT_DIR/tools/"* "$OPENCLAW_DIR/tools/" 2>/dev/null

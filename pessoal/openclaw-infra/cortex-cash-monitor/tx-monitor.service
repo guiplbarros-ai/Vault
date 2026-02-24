@@ -1,0 +1,10 @@
+[Unit]
+Description=Cortex Cash Transaction Monitor — posts new transactions to Discord
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/node /home/guipl/.openclaw/cortex-cash-monitor/tx-monitor.js
+EnvironmentFile=/home/guipl/.openclaw/.env
+Environment=PATH=/home/guipl/.openclaw/tools:/usr/local/bin:/usr/bin:/bin
+TimeoutStartSec=60
