@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Vault One",
+    "slug": "vault-one",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "vault-one",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0e1411"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vaultone.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "backgroundColor": "#0e1411"
+      },
+      "package": "com.vaultone.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
