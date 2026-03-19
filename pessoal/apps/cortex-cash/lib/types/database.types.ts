@@ -1,8 +1,8 @@
 /**
  * Supabase Database Types — schema cortex_cash
  *
- * Generated manually from supabase/migrations/001_initial_schema.sql
- * TODO: Replace with auto-generated types when Supabase CLI access is configured:
+ * Manually maintained from supabase/migrations/001_initial_schema.sql
+ * Covers all 26 tables. Run this to auto-generate when CLI is available:
  *   supabase gen types typescript --project-id prvxkdzmlemyhzarilhr --schema cortex_cash
  */
 
@@ -501,6 +501,135 @@ export interface Database {
         }
         Update: Partial<Database['cortex_cash']['Tables']['objetivos_financeiros']['Insert']>
       }
+      configuracoes_comportamento: {
+        Row: {
+          id: string
+          cenario_id: string
+          tipo: 'receita' | 'despesa' | 'investimento' | 'evento_unico'
+          categoria_id: string | null
+          modo: 'manter_padrao' | 'percentual' | 'valor_fixo' | 'zerar'
+          percentual_mudanca: number | null
+          valor_fixo: number | null
+          data_aplicacao: string | null
+          percentual_saving: number | null
+          taxa_retorno_mensal: number | null
+          evento_descricao: string | null
+          evento_valor: number | null
+          evento_data: string | null
+          evento_tipo: 'receita' | 'despesa' | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['cortex_cash']['Tables']['configuracoes_comportamento']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+          id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['cortex_cash']['Tables']['configuracoes_comportamento']['Insert']>
+      }
+      rendimentos_tributaveis: {
+        Row: {
+          id: string
+          declaracao_id: string
+          tipo: 'salario' | 'prolabore' | 'aposentadoria' | 'aluguel' | 'outro'
+          fonte_pagadora_nome: string
+          fonte_pagadora_cnpj: string | null
+          valor_bruto: number
+          imposto_retido: number
+          inss_retido: number
+          contribuicao_previdenciaria: number
+          pensao_alimenticia_paga: number
+          mes_inicio: number
+          mes_fim: number
+          observacoes: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['cortex_cash']['Tables']['rendimentos_tributaveis']['Row'], 'id' | 'created_at' | 'imposto_retido' | 'inss_retido' | 'contribuicao_previdenciaria' | 'pensao_alimenticia_paga'> & {
+          id?: string
+          imposto_retido?: number
+          inss_retido?: number
+          contribuicao_previdenciaria?: number
+          pensao_alimenticia_paga?: number
+          created_at?: string
+        }
+        Update: Partial<Database['cortex_cash']['Tables']['rendimentos_tributaveis']['Insert']>
+      }
+      rendimentos_isentos: {
+        Row: {
+          id: string
+          declaracao_id: string
+          tipo: 'poupanca' | 'indenizacao' | 'doacao' | 'heranca' | 'seguro_vida' | 'outro'
+          descricao: string
+          valor: number
+          observacoes: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['cortex_cash']['Tables']['rendimentos_isentos']['Row'], 'id' | 'created_at'> & {
+          id?: string
+          created_at?: string
+        }
+        Update: Partial<Database['cortex_cash']['Tables']['rendimentos_isentos']['Insert']>
+      }
+      despesas_dedutiveis: {
+        Row: {
+          id: string
+          declaracao_id: string
+          tipo: 'saude' | 'educacao' | 'previdencia_privada' | 'pensao_alimenticia'
+          beneficiario_nome: string
+          beneficiario_cpf: string | null
+          prestador_nome: string
+          prestador_cnpj: string | null
+          valor: number
+          data_pagamento: string
+          observacoes: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['cortex_cash']['Tables']['despesas_dedutiveis']['Row'], 'id' | 'created_at'> & {
+          id?: string
+          created_at?: string
+        }
+        Update: Partial<Database['cortex_cash']['Tables']['despesas_dedutiveis']['Insert']>
+      }
+      bens_direitos: {
+        Row: {
+          id: string
+          declaracao_id: string
+          codigo_receita: string
+          tipo: 'imovel' | 'veiculo' | 'investimento' | 'outros'
+          descricao: string
+          valor_inicial: number
+          valor_final: number
+          observacoes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['cortex_cash']['Tables']['bens_direitos']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+          id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['cortex_cash']['Tables']['bens_direitos']['Insert']>
+      }
+      dividas_onus: {
+        Row: {
+          id: string
+          declaracao_id: string
+          tipo: 'financiamento' | 'emprestimo' | 'cartao_credito' | 'outros'
+          credor_nome: string
+          credor_cnpj: string | null
+          valor_inicial: number
+          valor_final: number
+          observacoes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['cortex_cash']['Tables']['dividas_onus']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+          id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['cortex_cash']['Tables']['dividas_onus']['Insert']>
+      }
     }
   }
 }
@@ -526,3 +655,9 @@ export type PatrimonioSnapshot = Database['cortex_cash']['Tables']['patrimonio_s
 export type DeclaracaoIR = Database['cortex_cash']['Tables']['declaracoes_ir']['Row']
 export type Cenario = Database['cortex_cash']['Tables']['cenarios']['Row']
 export type ObjetivoFinanceiro = Database['cortex_cash']['Tables']['objetivos_financeiros']['Row']
+export type ConfiguracaoComportamento = Database['cortex_cash']['Tables']['configuracoes_comportamento']['Row']
+export type RendimentoTributavel = Database['cortex_cash']['Tables']['rendimentos_tributaveis']['Row']
+export type RendimentoIsento = Database['cortex_cash']['Tables']['rendimentos_isentos']['Row']
+export type DespesaDedutivel = Database['cortex_cash']['Tables']['despesas_dedutiveis']['Row']
+export type BemDireito = Database['cortex_cash']['Tables']['bens_direitos']['Row']
+export type DividaOnus = Database['cortex_cash']['Tables']['dividas_onus']['Row']

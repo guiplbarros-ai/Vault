@@ -47,10 +47,16 @@ pessoal/
 ### Budget Cortihouse
 Orçamento para construção da casa.
 
-### Cortex Cash
-App Next.js para gestão financeira pessoal.
-- **Tech**: Next.js, React, TypeScript
+### Vault One (dir: cortex-cash)
+App financeiro pessoal completo. Renomeado de "Cortex Cash" para "Vault One".
+- **Versao**: v0.5.0-dev (features de v0.1 a v0.5 implementadas)
+- **Tech**: Next.js 16 + React 19 + TypeScript + Supabase + Tailwind 4 + shadcn/ui
+- **IA**: OpenAI GPT-4o-mini (classificacao de transacoes)
+- **Open Finance**: Pluggy SDK
+- **DB**: Supabase PostgreSQL (26 tabelas, RLS, Drizzle ORM)
 - **Deploy**: Vercel
+- **Status**: Ver `apps/cortex-cash/docs/STATUS_MARCO_2026.md`
+- **Proximo**: Fase 1 (consolidacao) -> Fase 2 (mobile Expo)
 
 ### Gestor Obsidian
 Bot TypeScript para gerenciar vaults do Obsidian via Telegram.

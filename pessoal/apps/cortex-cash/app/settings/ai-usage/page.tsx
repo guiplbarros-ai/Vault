@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { getSupabaseBrowserClient } from '@/lib/db/supabase'
+import { getUsdBrlRate } from '@/lib/utils/currency'
 import { CHART_COLORS } from '@/lib/utils/chart-theme'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -91,6 +92,7 @@ export default function AIUsagePage() {
     size: number
     max_size: number
   } | null>(null)
+  const [usdBrlRate, setUsdBrlRate] = useState(6.0)
 
   // Filtros
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
@@ -115,7 +117,8 @@ export default function AIUsagePage() {
       const monthLogs: LogIA[] = logsData ?? []
 
       // Calcula stats
-      const USD_TO_BRL = 6.0 // TODO: pegar taxa atual
+      const USD_TO_BRL = await getUsdBrlRate()
+      setUsdBrlRate(USD_TO_BRL)
       const total_tokens = monthLogs.reduce((sum, log) => sum + log.tokens_total, 0)
       const total_cost_usd = monthLogs.reduce((sum, log) => sum + log.custo_usd, 0)
       const suggestions = monthLogs.filter((log) => log.categoria_sugerida_id)
@@ -547,7 +550,7 @@ export default function AIUsagePage() {
                           {log.tokens_total.toLocaleString()}
                         </td>
                         <td className="px-4 py-3 text-sm text-white/80">
-                          R$ {(log.custo_usd * 6.0).toFixed(4)}
+                          R$ {(log.custo_usd * usdBrlRate).toFixed(4)}
                         </td>
                         <td className="px-4 py-3 text-sm">
                           {log.confianca !== null && log.confianca !== undefined ? (

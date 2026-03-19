@@ -20,7 +20,18 @@ import { BANDEIRAS } from '@/lib/constants'
 import { cartaoService } from '@/lib/services/cartao.service'
 import type { CartaoConfig, Fatura } from '@/lib/types'
 import type { CartaoFormData } from '@/lib/validations'
-import { CreditCard, DollarSign, Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { contaService } from '@/lib/services/conta.service'
+import type { Conta } from '@/lib/types'
+import { CreditCard, DollarSign, Eye, EyeOff, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -39,6 +50,17 @@ export default function CreditCardsPage() {
   const [faturas, setFaturas] = useState<Record<string, Fatura[]>>({})
   const [limites, setLimites] = useState<Record<string, any>>({})
   const [activeTab, setActiveTab] = useState('overview')
+  // Payment dialog state
+  const [payDialogOpen, setPayDialogOpen] = useState(false)
+  const [payFaturaId, setPayFaturaId] = useState<string | null>(null)
+  const [payFatura, setPayFatura] = useState<Fatura | null>(null)
+  const [payCartaoNome, setPayCartaoNome] = useState('')
+  const [payLoading, setPayLoading] = useState(false)
+  const [payContas, setPayContas] = useState<Conta[]>([])
+  const [payContaId, setPayContaId] = useState('')
+  const [payValor, setPayValor] = useState('')
+  const [payData, setPayData] = useState(new Date().toISOString().split('T')[0])
+  const [payObs, setPayObs] = useState('')
 
   // Carrega cartões do banco
   useEffect(() => {
@@ -208,6 +230,92 @@ export default function CreditCardsPage() {
     setEditMode(false)
     setSelectedCartao(null)
     setFormDialogOpen(true)
+  }
+
+  const handleOpenPayDialog = async (faturaId: string) => {
+    // Find the fatura and its cartao
+    let foundFatura: Fatura | null = null
+    let cartaoNome = ''
+    let cartaoContaPagamentoId: string | null = null
+
+    for (const cartao of cartoes) {
+      const cartaoFaturas = faturas[cartao.id] || []
+      const f = cartaoFaturas.find((fat: Fatura) => fat.id === faturaId)
+      if (f) {
+        foundFatura = f
+        cartaoNome = cartao.nome
+        cartaoContaPagamentoId = cartao.conta_pagamento_id
+        break
+      }
+    }
+
+    if (!foundFatura) {
+      toast.error('Fatura não encontrada')
+      return
+    }
+
+    setPayFaturaId(faturaId)
+    setPayFatura(foundFatura)
+    setPayCartaoNome(cartaoNome)
+    setPayValor((foundFatura.valor_total - (foundFatura.valor_pago || 0)).toFixed(2))
+    setPayData(new Date().toISOString().split('T')[0])
+    setPayObs('')
+
+    // Load available accounts
+    try {
+      const contas = await contaService.listContas({ incluirInativas: false })
+      setPayContas(contas)
+      // Pre-select the card's linked payment account if available
+      if (cartaoContaPagamentoId) {
+        setPayContaId(cartaoContaPagamentoId)
+      } else if (contas.length > 0) {
+        setPayContaId(contas[0]!.id)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar contas:', error)
+      setPayContas([])
+    }
+
+    setPayDialogOpen(true)
+  }
+
+  const handleConfirmPayment = async () => {
+    if (!payFaturaId || !payContaId) {
+      toast.error('Selecione uma conta para pagamento')
+      return
+    }
+
+    const valorNum = Number.parseFloat(payValor.replace(',', '.'))
+    if (Number.isNaN(valorNum) || valorNum <= 0) {
+      toast.error('Informe um valor válido')
+      return
+    }
+
+    setPayLoading(true)
+    try {
+      await cartaoService.pagarFatura({
+        fatura_id: payFaturaId,
+        conta_pagamento_id: payContaId,
+        valor_pago: valorNum,
+        data_pagamento: payData,
+        observacoes: payObs || undefined,
+      })
+
+      toast.success('Pagamento registrado', {
+        description: `Pagamento de ${formatCurrency(valorNum)} registrado com sucesso.`,
+      })
+
+      setPayDialogOpen(false)
+      // Reload data
+      await loadCartoes()
+    } catch (error: any) {
+      console.error('Erro ao pagar fatura:', error)
+      toast.error('Erro ao registrar pagamento', {
+        description: error?.message || 'Tente novamente.',
+      })
+    } finally {
+      setPayLoading(false)
+    }
   }
 
   const formatCurrency = (value: number) => {
@@ -586,8 +694,7 @@ export default function CreditCardsPage() {
                               router.push(`/credit-cards/${cartao.id}/faturas/${faturaId}`)
                             }}
                             onPay={(id) => {
-                              // TODO: Implementar pagamento de fatura
-                              console.log('Pagar fatura:', id)
+                              handleOpenPayDialog(id)
                             }}
                           />
                         ))}
@@ -653,6 +760,123 @@ export default function CreditCardsPage() {
           onConfirm={handleDelete}
           isDark={true}
         />
+
+        {/* Payment Dialog */}
+        <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
+          <DialogContent className="max-w-md bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">Pagar Fatura</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                {payCartaoNome}
+                {payFatura && ` - ${new Date(Number.parseInt(payFatura.mes_referencia.split('-')[0]!), Number.parseInt(payFatura.mes_referencia.split('-')[1]!) - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {/* Resumo da fatura */}
+              {payFatura && (
+                <div className="p-3 rounded-lg bg-muted/50 space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Valor total</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(payFatura.valor_total)}</span>
+                  </div>
+                  {(payFatura.valor_pago || 0) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Já pago</span>
+                      <span className="text-success">{formatCurrency(payFatura.valor_pago || 0)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-border pt-1">
+                    <span className="text-muted-foreground">Restante</span>
+                    <span className="font-bold text-foreground">
+                      {formatCurrency(payFatura.valor_total - (payFatura.valor_pago || 0))}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Conta de pagamento */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Conta de Pagamento</Label>
+                <Select value={payContaId} onValueChange={setPayContaId}>
+                  <SelectTrigger className="bg-background border-border">
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {payContas.map((conta) => (
+                      <SelectItem key={conta.id} value={conta.id}>
+                        {conta.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Valor */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Valor do Pagamento (R$)</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={payValor}
+                  onChange={(e) => setPayValor(e.target.value)}
+                  placeholder="0,00"
+                  className="bg-background border-border"
+                />
+              </div>
+
+              {/* Data */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Data do Pagamento</Label>
+                <Input
+                  type="date"
+                  value={payData}
+                  onChange={(e) => setPayData(e.target.value)}
+                  className="bg-background border-border"
+                />
+              </div>
+
+              {/* Observações */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Observações (opcional)</Label>
+                <Input
+                  value={payObs}
+                  onChange={(e) => setPayObs(e.target.value)}
+                  placeholder="Ex: Pagamento parcial..."
+                  className="bg-background border-border"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setPayDialogOpen(false)}
+                disabled={payLoading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-primary text-foreground"
+                onClick={handleConfirmPayment}
+                disabled={payLoading || !payContaId}
+              >
+                {payLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Confirmar Pagamento
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   )
