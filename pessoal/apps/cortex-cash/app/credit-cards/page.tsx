@@ -244,7 +244,7 @@ export default function CreditCardsPage() {
       if (f) {
         foundFatura = f
         cartaoNome = cartao.nome
-        cartaoContaPagamentoId = cartao.conta_pagamento_id
+        cartaoContaPagamentoId = cartao.conta_pagamento_id ?? null
         break
       }
     }
@@ -297,7 +297,7 @@ export default function CreditCardsPage() {
         fatura_id: payFaturaId,
         conta_pagamento_id: payContaId,
         valor_pago: valorNum,
-        data_pagamento: payData,
+        data_pagamento: payData || new Date().toISOString().split('T')[0]!,
         observacoes: payObs || undefined,
       })
 
