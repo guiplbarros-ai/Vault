@@ -1,15 +1,15 @@
 /**
- * Supabase Database Types — schema cortex_cash
+ * Supabase Database Types — schema vault_one
  *
  * Manually maintained from supabase/migrations/001_initial_schema.sql
  * Covers all 26 tables. Run this to auto-generate when CLI is available:
- *   supabase gen types typescript --project-id prvxkdzmlemyhzarilhr --schema cortex_cash
+ *   supabase gen types typescript --project-id prvxkdzmlemyhzarilhr --schema vault_one
  */
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export interface Database {
-  cortex_cash: {
+  vault_one: {
     Tables: {
       profiles: {
         Row: {
@@ -27,11 +27,11 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'> & {
+        Insert: Omit<Database['vault_one']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'> & {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['profiles']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['profiles']['Insert']>
       }
       instituicoes: {
         Row: {
@@ -43,12 +43,12 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['instituicoes']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+        Insert: Omit<Database['vault_one']['Tables']['instituicoes']['Row'], 'id' | 'created_at' | 'updated_at'> & {
           id?: string
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['instituicoes']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['instituicoes']['Insert']>
       }
       contas: {
         Row: {
@@ -71,7 +71,7 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['contas']['Row'], 'id' | 'created_at' | 'updated_at' | 'saldo_referencia' | 'saldo_atual' | 'ativa'> & {
+        Insert: Omit<Database['vault_one']['Tables']['contas']['Row'], 'id' | 'created_at' | 'updated_at' | 'saldo_referencia' | 'saldo_atual' | 'ativa'> & {
           id?: string
           saldo_referencia?: number
           saldo_atual?: number
@@ -79,7 +79,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['contas']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['contas']['Insert']>
       }
       categorias: {
         Row: {
@@ -97,7 +97,7 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['categorias']['Row'], 'id' | 'created_at' | 'updated_at' | 'ordem' | 'ativa' | 'is_sistema'> & {
+        Insert: Omit<Database['vault_one']['Tables']['categorias']['Row'], 'id' | 'created_at' | 'updated_at' | 'ordem' | 'ativa' | 'is_sistema'> & {
           id?: string
           ordem?: number
           ativa?: boolean
@@ -105,7 +105,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['categorias']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['categorias']['Insert']>
       }
       tags: {
         Row: {
@@ -117,13 +117,13 @@ export interface Database {
           is_sistema: boolean
           created_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['tags']['Row'], 'id' | 'created_at' | 'tipo' | 'is_sistema'> & {
+        Insert: Omit<Database['vault_one']['Tables']['tags']['Row'], 'id' | 'created_at' | 'tipo' | 'is_sistema'> & {
           id?: string
           tipo?: 'sistema' | 'customizada'
           is_sistema?: boolean
           created_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['tags']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['tags']['Insert']>
       }
       centros_custo: {
         Row: {
@@ -137,13 +137,13 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['centros_custo']['Row'], 'id' | 'created_at' | 'updated_at' | 'ativo'> & {
+        Insert: Omit<Database['vault_one']['Tables']['centros_custo']['Row'], 'id' | 'created_at' | 'updated_at' | 'ativo'> & {
           id?: string
           ativo?: boolean
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['centros_custo']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['centros_custo']['Insert']>
       }
       transacoes: {
         Row: {
@@ -173,14 +173,14 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['transacoes']['Row'], 'id' | 'created_at' | 'updated_at' | 'parcelado' | 'classificacao_confirmada'> & {
+        Insert: Omit<Database['vault_one']['Tables']['transacoes']['Row'], 'id' | 'created_at' | 'updated_at' | 'parcelado' | 'classificacao_confirmada'> & {
           id?: string
           parcelado?: boolean
           classificacao_confirmada?: boolean
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['transacoes']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['transacoes']['Insert']>
       }
       templates_importacao: {
         Row: {
@@ -201,7 +201,7 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['templates_importacao']['Row'], 'id' | 'created_at' | 'updated_at' | 'encoding' | 'pular_linhas' | 'formato_data' | 'separador_decimal' | 'contador_uso' | 'is_favorite'> & {
+        Insert: Omit<Database['vault_one']['Tables']['templates_importacao']['Row'], 'id' | 'created_at' | 'updated_at' | 'encoding' | 'pular_linhas' | 'formato_data' | 'separador_decimal' | 'contador_uso' | 'is_favorite'> & {
           id?: string
           encoding?: string
           pular_linhas?: number
@@ -212,7 +212,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['templates_importacao']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['templates_importacao']['Insert']>
       }
       regras_classificacao: {
         Row: {
@@ -231,7 +231,7 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['regras_classificacao']['Row'], 'id' | 'created_at' | 'updated_at' | 'prioridade' | 'ativa' | 'total_aplicacoes' | 'total_confirmacoes' | 'total_rejeicoes'> & {
+        Insert: Omit<Database['vault_one']['Tables']['regras_classificacao']['Row'], 'id' | 'created_at' | 'updated_at' | 'prioridade' | 'ativa' | 'total_aplicacoes' | 'total_confirmacoes' | 'total_rejeicoes'> & {
           id?: string
           prioridade?: number
           ativa?: boolean
@@ -241,7 +241,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['regras_classificacao']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['regras_classificacao']['Insert']>
       }
       logs_ia: {
         Row: {
@@ -259,12 +259,12 @@ export interface Database {
           confirmada: boolean
           created_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['logs_ia']['Row'], 'id' | 'created_at' | 'confirmada'> & {
+        Insert: Omit<Database['vault_one']['Tables']['logs_ia']['Row'], 'id' | 'created_at' | 'confirmada'> & {
           id?: string
           confirmada?: boolean
           created_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['logs_ia']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['logs_ia']['Insert']>
       }
       orcamentos: {
         Row: {
@@ -284,7 +284,7 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['orcamentos']['Row'], 'id' | 'created_at' | 'updated_at' | 'valor_realizado' | 'alerta_80' | 'alerta_100' | 'alerta_80_enviado' | 'alerta_100_enviado'> & {
+        Insert: Omit<Database['vault_one']['Tables']['orcamentos']['Row'], 'id' | 'created_at' | 'updated_at' | 'valor_realizado' | 'alerta_80' | 'alerta_100' | 'alerta_80_enviado' | 'alerta_100_enviado'> & {
           id?: string
           valor_realizado?: number
           alerta_80?: boolean
@@ -294,7 +294,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['orcamentos']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['orcamentos']['Insert']>
       }
       cartoes_config: {
         Row: {
@@ -314,13 +314,13 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['cartoes_config']['Row'], 'id' | 'created_at' | 'updated_at' | 'ativo'> & {
+        Insert: Omit<Database['vault_one']['Tables']['cartoes_config']['Row'], 'id' | 'created_at' | 'updated_at' | 'ativo'> & {
           id?: string
           ativo?: boolean
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['cartoes_config']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['cartoes_config']['Insert']>
       }
       faturas: {
         Row: {
@@ -340,7 +340,7 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['faturas']['Row'], 'id' | 'created_at' | 'updated_at' | 'valor_total' | 'valor_minimo' | 'valor_pago' | 'status' | 'fechada_automaticamente'> & {
+        Insert: Omit<Database['vault_one']['Tables']['faturas']['Row'], 'id' | 'created_at' | 'updated_at' | 'valor_total' | 'valor_minimo' | 'valor_pago' | 'status' | 'fechada_automaticamente'> & {
           id?: string
           valor_total?: number
           valor_minimo?: number
@@ -350,7 +350,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['faturas']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['faturas']['Insert']>
       }
       faturas_lancamentos: {
         Row: {
@@ -368,11 +368,11 @@ export interface Database {
           categoria_id: string | null
           created_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['faturas_lancamentos']['Row'], 'id' | 'created_at'> & {
+        Insert: Omit<Database['vault_one']['Tables']['faturas_lancamentos']['Row'], 'id' | 'created_at'> & {
           id?: string
           created_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['faturas_lancamentos']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['faturas_lancamentos']['Insert']>
       }
       investimentos: {
         Row: {
@@ -398,13 +398,13 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['investimentos']['Row'], 'id' | 'created_at' | 'updated_at' | 'status'> & {
+        Insert: Omit<Database['vault_one']['Tables']['investimentos']['Row'], 'id' | 'created_at' | 'updated_at' | 'status'> & {
           id?: string
           status?: 'ativo' | 'resgatado' | 'vencido'
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['investimentos']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['investimentos']['Insert']>
       }
       historico_investimentos: {
         Row: {
@@ -417,11 +417,11 @@ export interface Database {
           observacoes: string | null
           created_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['historico_investimentos']['Row'], 'id' | 'created_at'> & {
+        Insert: Omit<Database['vault_one']['Tables']['historico_investimentos']['Row'], 'id' | 'created_at'> & {
           id?: string
           created_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['historico_investimentos']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['historico_investimentos']['Insert']>
       }
       patrimonio_snapshots: {
         Row: {
@@ -433,11 +433,11 @@ export interface Database {
           patrimonio_total: number
           created_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['patrimonio_snapshots']['Row'], 'id' | 'created_at'> & {
+        Insert: Omit<Database['vault_one']['Tables']['patrimonio_snapshots']['Row'], 'id' | 'created_at'> & {
           id?: string
           created_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['patrimonio_snapshots']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['patrimonio_snapshots']['Insert']>
       }
       declaracoes_ir: {
         Row: {
@@ -453,13 +453,13 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['declaracoes_ir']['Row'], 'id' | 'created_at' | 'updated_at' | 'status'> & {
+        Insert: Omit<Database['vault_one']['Tables']['declaracoes_ir']['Row'], 'id' | 'created_at' | 'updated_at' | 'status'> & {
           id?: string
           status?: 'rascunho' | 'finalizada' | 'enviada' | 'processada'
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['declaracoes_ir']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['declaracoes_ir']['Insert']>
       }
       cenarios: {
         Row: {
@@ -473,13 +473,13 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['cenarios']['Row'], 'id' | 'created_at' | 'updated_at' | 'tipo'> & {
+        Insert: Omit<Database['vault_one']['Tables']['cenarios']['Row'], 'id' | 'created_at' | 'updated_at' | 'tipo'> & {
           id?: string
           tipo?: 'base' | 'personalizado'
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['cenarios']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['cenarios']['Insert']>
       }
       objetivos_financeiros: {
         Row: {
@@ -493,13 +493,13 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['objetivos_financeiros']['Row'], 'id' | 'created_at' | 'updated_at' | 'prioridade'> & {
+        Insert: Omit<Database['vault_one']['Tables']['objetivos_financeiros']['Row'], 'id' | 'created_at' | 'updated_at' | 'prioridade'> & {
           id?: string
           prioridade?: 'alta' | 'media' | 'baixa'
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['objetivos_financeiros']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['objetivos_financeiros']['Insert']>
       }
       configuracoes_comportamento: {
         Row: {
@@ -520,12 +520,12 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['configuracoes_comportamento']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+        Insert: Omit<Database['vault_one']['Tables']['configuracoes_comportamento']['Row'], 'id' | 'created_at' | 'updated_at'> & {
           id?: string
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['configuracoes_comportamento']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['configuracoes_comportamento']['Insert']>
       }
       rendimentos_tributaveis: {
         Row: {
@@ -544,7 +544,7 @@ export interface Database {
           observacoes: string | null
           created_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['rendimentos_tributaveis']['Row'], 'id' | 'created_at' | 'imposto_retido' | 'inss_retido' | 'contribuicao_previdenciaria' | 'pensao_alimenticia_paga'> & {
+        Insert: Omit<Database['vault_one']['Tables']['rendimentos_tributaveis']['Row'], 'id' | 'created_at' | 'imposto_retido' | 'inss_retido' | 'contribuicao_previdenciaria' | 'pensao_alimenticia_paga'> & {
           id?: string
           imposto_retido?: number
           inss_retido?: number
@@ -552,7 +552,7 @@ export interface Database {
           pensao_alimenticia_paga?: number
           created_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['rendimentos_tributaveis']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['rendimentos_tributaveis']['Insert']>
       }
       rendimentos_isentos: {
         Row: {
@@ -564,11 +564,11 @@ export interface Database {
           observacoes: string | null
           created_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['rendimentos_isentos']['Row'], 'id' | 'created_at'> & {
+        Insert: Omit<Database['vault_one']['Tables']['rendimentos_isentos']['Row'], 'id' | 'created_at'> & {
           id?: string
           created_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['rendimentos_isentos']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['rendimentos_isentos']['Insert']>
       }
       despesas_dedutiveis: {
         Row: {
@@ -584,11 +584,11 @@ export interface Database {
           observacoes: string | null
           created_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['despesas_dedutiveis']['Row'], 'id' | 'created_at'> & {
+        Insert: Omit<Database['vault_one']['Tables']['despesas_dedutiveis']['Row'], 'id' | 'created_at'> & {
           id?: string
           created_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['despesas_dedutiveis']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['despesas_dedutiveis']['Insert']>
       }
       bens_direitos: {
         Row: {
@@ -603,12 +603,12 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['bens_direitos']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+        Insert: Omit<Database['vault_one']['Tables']['bens_direitos']['Row'], 'id' | 'created_at' | 'updated_at'> & {
           id?: string
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['bens_direitos']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['bens_direitos']['Insert']>
       }
       dividas_onus: {
         Row: {
@@ -623,41 +623,41 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['cortex_cash']['Tables']['dividas_onus']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+        Insert: Omit<Database['vault_one']['Tables']['dividas_onus']['Row'], 'id' | 'created_at' | 'updated_at'> & {
           id?: string
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['cortex_cash']['Tables']['dividas_onus']['Insert']>
+        Update: Partial<Database['vault_one']['Tables']['dividas_onus']['Insert']>
       }
     }
   }
 }
 
 // Convenience type aliases for common row types
-export type Profile = Database['cortex_cash']['Tables']['profiles']['Row']
-export type Instituicao = Database['cortex_cash']['Tables']['instituicoes']['Row']
-export type Conta = Database['cortex_cash']['Tables']['contas']['Row']
-export type Categoria = Database['cortex_cash']['Tables']['categorias']['Row']
-export type Tag = Database['cortex_cash']['Tables']['tags']['Row']
-export type CentroCusto = Database['cortex_cash']['Tables']['centros_custo']['Row']
-export type Transacao = Database['cortex_cash']['Tables']['transacoes']['Row']
-export type TemplateImportacao = Database['cortex_cash']['Tables']['templates_importacao']['Row']
-export type RegraClassificacao = Database['cortex_cash']['Tables']['regras_classificacao']['Row']
-export type LogIA = Database['cortex_cash']['Tables']['logs_ia']['Row']
-export type Orcamento = Database['cortex_cash']['Tables']['orcamentos']['Row']
-export type CartaoConfig = Database['cortex_cash']['Tables']['cartoes_config']['Row']
-export type Fatura = Database['cortex_cash']['Tables']['faturas']['Row']
-export type FaturaLancamento = Database['cortex_cash']['Tables']['faturas_lancamentos']['Row']
-export type Investimento = Database['cortex_cash']['Tables']['investimentos']['Row']
-export type HistoricoInvestimento = Database['cortex_cash']['Tables']['historico_investimentos']['Row']
-export type PatrimonioSnapshot = Database['cortex_cash']['Tables']['patrimonio_snapshots']['Row']
-export type DeclaracaoIR = Database['cortex_cash']['Tables']['declaracoes_ir']['Row']
-export type Cenario = Database['cortex_cash']['Tables']['cenarios']['Row']
-export type ObjetivoFinanceiro = Database['cortex_cash']['Tables']['objetivos_financeiros']['Row']
-export type ConfiguracaoComportamento = Database['cortex_cash']['Tables']['configuracoes_comportamento']['Row']
-export type RendimentoTributavel = Database['cortex_cash']['Tables']['rendimentos_tributaveis']['Row']
-export type RendimentoIsento = Database['cortex_cash']['Tables']['rendimentos_isentos']['Row']
-export type DespesaDedutivel = Database['cortex_cash']['Tables']['despesas_dedutiveis']['Row']
-export type BemDireito = Database['cortex_cash']['Tables']['bens_direitos']['Row']
-export type DividaOnus = Database['cortex_cash']['Tables']['dividas_onus']['Row']
+export type Profile = Database['vault_one']['Tables']['profiles']['Row']
+export type Instituicao = Database['vault_one']['Tables']['instituicoes']['Row']
+export type Conta = Database['vault_one']['Tables']['contas']['Row']
+export type Categoria = Database['vault_one']['Tables']['categorias']['Row']
+export type Tag = Database['vault_one']['Tables']['tags']['Row']
+export type CentroCusto = Database['vault_one']['Tables']['centros_custo']['Row']
+export type Transacao = Database['vault_one']['Tables']['transacoes']['Row']
+export type TemplateImportacao = Database['vault_one']['Tables']['templates_importacao']['Row']
+export type RegraClassificacao = Database['vault_one']['Tables']['regras_classificacao']['Row']
+export type LogIA = Database['vault_one']['Tables']['logs_ia']['Row']
+export type Orcamento = Database['vault_one']['Tables']['orcamentos']['Row']
+export type CartaoConfig = Database['vault_one']['Tables']['cartoes_config']['Row']
+export type Fatura = Database['vault_one']['Tables']['faturas']['Row']
+export type FaturaLancamento = Database['vault_one']['Tables']['faturas_lancamentos']['Row']
+export type Investimento = Database['vault_one']['Tables']['investimentos']['Row']
+export type HistoricoInvestimento = Database['vault_one']['Tables']['historico_investimentos']['Row']
+export type PatrimonioSnapshot = Database['vault_one']['Tables']['patrimonio_snapshots']['Row']
+export type DeclaracaoIR = Database['vault_one']['Tables']['declaracoes_ir']['Row']
+export type Cenario = Database['vault_one']['Tables']['cenarios']['Row']
+export type ObjetivoFinanceiro = Database['vault_one']['Tables']['objetivos_financeiros']['Row']
+export type ConfiguracaoComportamento = Database['vault_one']['Tables']['configuracoes_comportamento']['Row']
+export type RendimentoTributavel = Database['vault_one']['Tables']['rendimentos_tributaveis']['Row']
+export type RendimentoIsento = Database['vault_one']['Tables']['rendimentos_isentos']['Row']
+export type DespesaDedutivel = Database['vault_one']['Tables']['despesas_dedutiveis']['Row']
+export type BemDireito = Database['vault_one']['Tables']['bens_direitos']['Row']
+export type DividaOnus = Database['vault_one']['Tables']['dividas_onus']['Row']

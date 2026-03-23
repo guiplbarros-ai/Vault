@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      db: { schema: 'cortex_cash' },
+      db: { schema: 'vault_one' },
       cookies: {
         getAll() {
           return request.cookies.getAll()

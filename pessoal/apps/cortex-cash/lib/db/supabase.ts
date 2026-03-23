@@ -23,7 +23,7 @@ export function getSupabaseBrowserClient(): SupabaseClient {
   if (browserClient) return browserClient
 
   browserClient = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    db: { schema: 'cortex_cash' },
+    db: { schema: 'vault_one' },
   })
 
   return browserClient
@@ -37,7 +37,7 @@ export function getSupabaseServerClient() {
   }
 
   return createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    db: { schema: 'cortex_cash' },
+    db: { schema: 'vault_one' },
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -51,7 +51,7 @@ export function getSupabaseAuthClient(accessToken?: string) {
   const key = accessToken || SUPABASE_ANON_KEY
 
   return createSupabaseClient(SUPABASE_URL, key, {
-    db: { schema: 'cortex_cash' },
+    db: { schema: 'vault_one' },
     global: {
       headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
     },
