@@ -12,7 +12,7 @@ import { DashboardLayout } from '@/components/dashboard-layout'
 import { Separator } from '@/components/ui/separator'
 import type { UICategory } from '@/lib/types/settings'
 import { cn } from '@/lib/utils'
-import { DollarSign, Globe, Landmark, Palette, Upload, User } from 'lucide-react'
+import { DollarSign, Globe, Palette, Upload, User } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -20,7 +20,6 @@ import { AppearanceSection } from './sections/appearance-section'
 import { BudgetAlertsSection } from './sections/budget-alerts-section'
 import { ImportSection } from './sections/import-section'
 import { LocalizationSection } from './sections/localization-section'
-import { PluggySection } from './sections/pluggy-section'
 // Import sections (ONLY user-level settings)
 import { ProfileSection } from './sections/profile-section'
 
@@ -60,12 +59,6 @@ const CATEGORIES: Array<{
     description: 'Alertas e projeções',
     icon: DollarSign,
   },
-  {
-    key: 'pluggy',
-    label: 'Open Finance',
-    description: 'Sincronizar contas via Pluggy',
-    icon: Landmark,
-  },
 ]
 
 export default function SettingsPage() {
@@ -92,8 +85,6 @@ export default function SettingsPage() {
         return <ImportSection />
       case 'budgetAlerts':
         return <BudgetAlertsSection />
-      case 'pluggy':
-        return <PluggySection />
       default:
         return null
     }

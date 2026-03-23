@@ -18,7 +18,6 @@ import {
   assignPriorities,
 } from '@/lib/constants/classification-rules'
 import { getSupabaseBrowserClient } from '@/lib/db/supabase'
-import { matchTypeReclassRule } from '@/lib/pluggy/transaction-type-rules'
 import { logger } from '@/lib/utils/logger'
 import { Play, CheckCircle, AlertCircle } from 'lucide-react'
 
@@ -76,31 +75,11 @@ export function AutoCategorize({ onComplete }: AutoCategorizeProps) {
       const usuarioId = user?.id
 
       // =====================================================================
-      // STEP 0: Reclassificar tipos de transação
+      // STEP 0: Reclassificação de tipos (Pluggy deprecated — skip)
       // =====================================================================
       setStep('reclassify')
-      addLog('🔄 Reclassificando tipos de transação...')
-
-      const { data: pluggyTransactions } = await supabase
-        .from('transacoes')
-        .select('id, descricao, tipo')
-        .eq('origem_arquivo', 'pluggy')
-        .neq('tipo', 'transferencia')
-
-      addLog(`  📊 ${pluggyTransactions?.length ?? 0} transações Pluggy para verificar`)
-
-      for (const tx of pluggyTransactions ?? []) {
-        const newType = matchTypeReclassRule(tx.descricao)
-        if (newType && newType !== tx.tipo) {
-          await supabase
-            .from('transacoes')
-            .update({ tipo: newType, updated_at: new Date().toISOString() })
-            .eq('id', tx.id)
-          stats.tiposReclassificados++
-        }
-      }
-
-      addLog(`  ✓ ${stats.tiposReclassificados} transações reclassificadas como transferência`)
+      addLog('🔄 Verificando tipos de transação...')
+      addLog('  ✓ Pluggy deprecated — reclassificação automática desabilitada')
       setProgress(10)
 
       // =====================================================================

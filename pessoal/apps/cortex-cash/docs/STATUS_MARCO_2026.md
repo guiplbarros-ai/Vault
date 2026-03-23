@@ -10,9 +10,9 @@ O app avancou significativamente alem do roadmap original. Todas as versoes de v
 - **Backend**: Supabase (PostgreSQL) + Drizzle ORM
 - **Auth**: Supabase Auth + RLS (Row Level Security)
 - **IA**: OpenAI GPT-4o-mini (classificacao de transacoes)
-- **Open Finance**: Pluggy SDK
+- **Bank Sync**: Bradesco Infoemail (Gmail → PDF → Parse) via vault-zero
 - **Testes**: Vitest + Happy DOM
-- **Deploy**: Vercel (web), Docker/Fly.io ready
+- **Deploy**: Docker Compose on Hetzner (https://89-167-95-71.sslip.io)
 
 ### Features Implementadas
 
@@ -33,7 +33,7 @@ O app avancou significativamente alem do roadmap original. Todas as versoes de v
 | Imposto de Renda | OK | Declaracoes, rendimentos, deducoes, bens |
 | Planejamento financeiro | OK | Cenarios, projecoes 5 anos |
 | Relatorios comparativos | OK | M/M, YTD, dia da semana |
-| Integracao Pluggy (Open Finance) | OK | Contas, transacoes, investimentos |
+| ~~Integracao Pluggy (Open Finance)~~ | DEPRECATED | Removido em 2026-03-23 — substituído por Bradesco email sync |
 | API publica (Bearer token) | OK | Para Discord bots, ferramentas externas |
 | Auth + multi-tenant (RLS) | OK | Isolamento por usuario |
 | PWA (offline, service worker) | OK | Cache strategies, manifest |

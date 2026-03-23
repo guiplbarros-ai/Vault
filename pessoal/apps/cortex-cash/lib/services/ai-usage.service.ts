@@ -28,12 +28,14 @@ const PRICING = {
   },
 } as const
 
+export type AIModel = keyof typeof PRICING
+
 export interface AIUsageLog {
   id: string
   transacao_id: string | null
   prompt: string
   resposta: string
-  modelo: string
+  modelo: AIModel
   tokens_prompt: number
   tokens_resposta: number
   tokens_total: number
@@ -48,7 +50,7 @@ export interface CreateAIUsageLogDTO {
   transacao_id?: string
   prompt: string
   resposta: string
-  modelo: keyof typeof PRICING
+  modelo: AIModel
   tokens_prompt: number
   tokens_resposta: number
   categoria_sugerida_id?: string
@@ -76,13 +78,13 @@ export interface AIUsageByPeriod {
  * Calcula o custo em USD baseado no modelo e tokens
  */
 export function calculateCost(
-  modelo: keyof typeof PRICING,
+  modelo: AIModel,
   tokens_prompt: number,
   tokens_resposta: number
 ): number {
   const pricing = PRICING[modelo]
   if (!pricing) {
-    throw new ValidationError(`Modelo não suportado: ${modelo}`)
+    throw new ValidationError(`Modelo não suportado: ${modelo}. Modelos válidos: ${Object.keys(PRICING).join(', ')}`)
   }
 
   const inputCost = (tokens_prompt / 1_000_000) * pricing.input
@@ -160,6 +162,16 @@ export async function confirmAISuggestion(logId: string): Promise<void> {
 }
 
 /**
+ * Retorna início e fim do mês de uma data
+ */
+function getMonthDateRange(date: Date): { start: Date; end: Date } {
+  return {
+    start: new Date(date.getFullYear(), date.getMonth(), 1),
+    end: new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59),
+  }
+}
+
+/**
  * Obtém resumo de uso de IA (mês atual por padrão)
  */
 export async function getAIUsageSummary(
@@ -169,7 +181,8 @@ export async function getAIUsageSummary(
 ): Promise<AIUsageSummary> {
   try {
     const supabase = getSupabase()
-    const start = startDate ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    const currentMonth = getMonthDateRange(new Date())
+    const start = startDate ?? currentMonth.start
     const end = endDate ?? new Date()
 
     const { data, error } = await supabase
@@ -307,11 +320,8 @@ export async function checkAIBudgetLimit(
     throw new ValidationError('Limite de gastos deve ser maior ou igual a zero')
   }
 
-  const summary = await getAIUsageSummary(
-    new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1),
-    new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0),
-    usdToBrl
-  )
+  const { start, end } = getMonthDateRange(currentMonth)
+  const summary = await getAIUsageSummary(start, end, usdToBrl)
 
   const usedUsd = summary.total_cost_usd
   const remainingUsd = Math.max(0, limitUsd - usedUsd)

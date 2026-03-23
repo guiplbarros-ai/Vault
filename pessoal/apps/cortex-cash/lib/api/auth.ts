@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/db/supabase'
 
 /**
  * Validates the API key from the Authorization header.
+ * Accepts VAULT_ONE_API_KEY (dedicated) or SUPABASE_SERVICE_ROLE_KEY (legacy).
  * Returns the token if valid, or a 401 NextResponse if invalid.
  */
 export function validateApiKey(request: Request): NextResponse | string {
@@ -12,9 +13,12 @@ export function validateApiKey(request: Request): NextResponse | string {
   }
 
   const token = authHeader.slice(7)
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const validKeys = [
+    process.env.VAULT_ONE_API_KEY,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  ].filter(Boolean)
 
-  if (!serviceRoleKey || token !== serviceRoleKey) {
+  if (validKeys.length === 0 || !validKeys.includes(token)) {
     return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
   }
 

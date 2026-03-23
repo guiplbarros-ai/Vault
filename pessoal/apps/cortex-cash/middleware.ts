@@ -5,7 +5,6 @@ import { checkRateLimit } from '@/lib/api/rate-limit'
 // Rate limits per API path prefix (requests per minute)
 const API_RATE_LIMITS: Record<string, { limit: number; windowMs: number }> = {
   '/api/ai/': { limit: 10, windowMs: 60_000 },
-  '/api/pluggy/': { limit: 20, windowMs: 60_000 },
   '/api/import/': { limit: 5, windowMs: 60_000 },
   '/api/financeiro/': { limit: 30, windowMs: 60_000 },
 }
